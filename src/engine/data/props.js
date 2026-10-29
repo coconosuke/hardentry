@@ -1,0 +1,51 @@
+// 家具・小物の種類。大きさ w(左右) d(奥行) h(高さ) はメートル、向き0のとき w がX方向。
+// boxes: 当たり（弾・視線・移動）の箱 [x0,y0,z0, x1,y1,z1, 材質]（中心が原点、床が y=0）
+// solid: 移動を止める（低いものは足元を越えられる）。vault: 乗り越えられる。hide: 容疑者や市民が隠れる場所。
+import { M } from './materials.js';
+
+const B = (w, h, d, mat, y0 = 0, ox = 0, oz = 0) => [ox - w / 2, y0, oz - d / 2, ox + w / 2, y0 + h, oz + d / 2, mat];
+
+export const PROPS = {
+  table: { name: 'テーブル', w: 1.4, d: 0.8, h: 0.76, boxes: [B(1.4, 0.05, 0.8, M.FURN, 0.71)], solid: true, vault: true, foot: [1.4, 0.8] },
+  desk: { name: '机', w: 1.4, d: 0.7, h: 0.76, boxes: [B(1.4, 0.05, 0.7, M.FURN, 0.71), B(0.42, 0.7, 0.66, M.FURN, 0, 0.47, 0)], solid: true, vault: true, foot: [1.4, 0.7] },
+  chair: { name: '椅子', w: 0.46, d: 0.46, h: 0.9, boxes: [B(0.44, 0.04, 0.44, M.FURN, 0.44)], solid: false },
+  stool: { name: '丸椅子', w: 0.4, d: 0.4, h: 0.75, boxes: [], solid: false },
+  sofa: { name: 'ソファ', w: 2.0, d: 0.9, h: 0.85, boxes: [B(2.0, 0.45, 0.9, M.FABRIC), B(2.0, 0.4, 0.22, M.FABRIC, 0.45, 0, -0.34)], solid: true, vault: true, foot: [2.0, 0.9] },
+  armchair: { name: 'ひじ掛け椅子', w: 0.9, d: 0.9, h: 0.85, boxes: [B(0.9, 0.45, 0.9, M.FABRIC), B(0.9, 0.4, 0.22, M.FABRIC, 0.45, 0, -0.34)], solid: true, vault: true, foot: [0.9, 0.9] },
+  bed: { name: 'ベッド', w: 1.6, d: 2.0, h: 0.55, boxes: [B(1.6, 0.5, 2.0, M.FABRIC, 0.05)], solid: true, vault: true, hide: 'under', foot: [1.6, 2.0] },
+  bedS: { name: 'ベッド（1人用）', w: 1.0, d: 2.0, h: 0.55, boxes: [B(1.0, 0.5, 2.0, M.FABRIC, 0.05)], solid: true, vault: true, hide: 'under', foot: [1.0, 2.0] },
+  counter: { name: 'カウンター', w: 2.0, d: 0.65, h: 0.95, boxes: [B(2.0, 0.95, 0.65, M.CERAMIC)], solid: true, vault: true, foot: [2.0, 0.65], resizable: true },
+  bar: { name: 'バーカウンター', w: 3.0, d: 0.7, h: 1.08, boxes: [B(3.0, 1.08, 0.7, M.FURN)], solid: true, vault: true, foot: [3.0, 0.7], resizable: true },
+  shelf: { name: '商品棚', w: 1.8, d: 0.6, h: 1.7, boxes: [B(1.8, 1.7, 0.6, M.METALFURN)], solid: true, vault: false, foot: [1.8, 0.6], resizable: true },
+  bookshelf: { name: '本棚', w: 1.0, d: 0.35, h: 1.9, boxes: [B(1.0, 1.9, 0.35, M.FURN)], solid: true, vault: false, foot: [1.0, 0.35] },
+  wardrobe: { name: 'たんす', w: 1.2, d: 0.6, h: 2.0, boxes: [B(1.2, 2.0, 0.6, M.FURN)], solid: true, vault: false, hide: 'in', foot: [1.2, 0.6] },
+  cabinet: { name: '書類棚', w: 0.9, d: 0.5, h: 1.3, boxes: [B(0.9, 1.3, 0.5, M.METALFURN)], solid: true, vault: false, foot: [0.9, 0.5] },
+  locker: { name: 'ロッカー', w: 0.9, d: 0.5, h: 1.9, boxes: [B(0.9, 1.9, 0.5, M.METALFURN)], solid: true, vault: false, hide: 'in', foot: [0.9, 0.5] },
+  fridge: { name: '冷蔵庫', w: 0.8, d: 0.7, h: 1.8, boxes: [B(0.8, 1.8, 0.7, M.METALFURN)], solid: true, vault: false, foot: [0.8, 0.7] },
+  cooler: { name: 'ショーケース', w: 2.0, d: 0.75, h: 1.95, boxes: [B(2.0, 1.95, 0.75, M.METALFURN)], solid: true, vault: false, foot: [2.0, 0.75], resizable: true },
+  stove: { name: 'コンロ', w: 1.2, d: 0.7, h: 0.92, boxes: [B(1.2, 0.92, 0.7, M.METALFURN)], solid: true, vault: true, foot: [1.2, 0.7] },
+  crate: { name: '木箱', w: 1.0, d: 1.0, h: 1.0, boxes: [B(1.0, 1.0, 1.0, M.FURN)], solid: true, vault: true, foot: [1.0, 1.0] },
+  crates: { name: '積んだ木箱', w: 1.2, d: 1.2, h: 2.0, boxes: [B(1.2, 2.0, 1.2, M.FURN)], solid: true, vault: false, foot: [1.2, 1.2] },
+  pallet: { name: 'パレットの荷', w: 1.2, d: 1.0, h: 1.4, boxes: [B(1.2, 1.4, 1.0, M.FURN)], solid: true, vault: false, foot: [1.2, 1.0] },
+  barrel: { name: 'ドラム缶', w: 0.6, d: 0.6, h: 0.9, boxes: [B(0.58, 0.9, 0.58, M.METALFURN)], solid: true, vault: true, foot: [0.6, 0.6] },
+  container: { name: 'コンテナ', w: 6.0, d: 2.4, h: 2.6, boxes: [B(6.0, 2.6, 2.4, M.METAL)], solid: true, vault: false, foot: [6.0, 2.4] },
+  car: { name: '車', w: 1.8, d: 4.4, h: 1.45, boxes: [B(1.8, 0.95, 4.4, M.CAR, 0.25), B(1.6, 0.5, 2.2, M.CAR, 0.95, 0, 0.2)], solid: true, vault: false, foot: [1.8, 4.4] },
+  van: { name: 'SWATの車', w: 2.1, d: 5.6, h: 2.4, boxes: [B(2.1, 2.1, 5.6, M.CAR, 0.3)], solid: true, vault: false, foot: [2.1, 5.6] },
+  dumpster: { name: 'ゴミ箱（大）', w: 2.0, d: 1.2, h: 1.3, boxes: [B(2.0, 1.3, 1.2, M.METALFURN)], solid: true, vault: true, hide: 'in', foot: [2.0, 1.2] },
+  pump: { name: '給油機', w: 0.9, d: 0.6, h: 1.8, boxes: [B(0.9, 1.8, 0.6, M.METALFURN)], solid: true, vault: false, foot: [0.9, 0.6] },
+  vending: { name: '自販機', w: 0.95, d: 0.8, h: 1.9, boxes: [B(0.95, 1.9, 0.8, M.METALFURN)], solid: true, vault: false, foot: [0.95, 0.8] },
+  toilet: { name: 'トイレ', w: 0.4, d: 0.65, h: 0.75, boxes: [B(0.4, 0.42, 0.6, M.CERAMIC)], solid: true, vault: true, foot: [0.4, 0.65] },
+  sink: { name: '洗面台', w: 0.6, d: 0.5, h: 0.85, boxes: [B(0.6, 0.85, 0.5, M.CERAMIC)], solid: true, vault: true, foot: [0.6, 0.5] },
+  tvstand: { name: 'テレビ台', w: 1.6, d: 0.45, h: 1.15, boxes: [B(1.6, 0.5, 0.45, M.FURN)], solid: true, vault: true, foot: [1.6, 0.45] },
+  plant: { name: '観葉植物', w: 0.5, d: 0.5, h: 1.3, boxes: [B(0.4, 0.4, 0.4, M.CERAMIC)], solid: true, vault: true, foot: [0.5, 0.5] },
+  server: { name: 'サーバー棚', w: 0.7, d: 1.0, h: 2.0, boxes: [B(0.7, 2.0, 1.0, M.METALFURN)], solid: true, vault: false, foot: [0.7, 1.0] },
+  piano: { name: 'ピアノ', w: 1.5, d: 0.6, h: 1.25, boxes: [B(1.5, 1.25, 0.6, M.FURN)], solid: true, vault: false, foot: [1.5, 0.6] },
+  boxes: { name: '段ボール', w: 0.8, d: 0.6, h: 0.8, boxes: [B(0.8, 0.8, 0.6, M.FABRIC)], solid: true, vault: true, foot: [0.8, 0.6] },
+  speaker: { name: 'スピーカー', w: 0.8, d: 0.6, h: 1.6, boxes: [B(0.8, 1.6, 0.6, M.FURN)], solid: true, vault: false, foot: [0.8, 0.6] },
+  booth: { name: 'ボックス席', w: 2.0, d: 0.7, h: 1.1, boxes: [B(2.0, 0.45, 0.7, M.FABRIC), B(2.0, 0.65, 0.18, M.FABRIC, 0.45, 0, -0.26)], solid: true, vault: true, foot: [2.0, 0.7] },
+  target: { name: '標的', w: 0.6, d: 0.1, h: 1.8, boxes: [], solid: false },
+  sandbag: { name: '土のう', w: 1.6, d: 0.6, h: 0.9, boxes: [B(1.6, 0.9, 0.6, M.FABRIC)], solid: true, vault: true, foot: [1.6, 0.6] },
+  jersey: { name: 'コンクリート柵', w: 2.0, d: 0.6, h: 0.85, boxes: [B(2.0, 0.85, 0.6, M.CONCRETE)], solid: true, vault: true, foot: [2.0, 0.6] },
+  tree: { name: '木', w: 0.5, d: 0.5, h: 5.0, boxes: [B(0.35, 5.0, 0.35, M.FURN)], solid: true, vault: false, foot: [0.5, 0.5] },
+  lamp: { name: '街灯', w: 0.25, d: 0.25, h: 4.5, boxes: [B(0.18, 4.5, 0.18, M.METAL)], solid: true, vault: false, foot: [0.25, 0.25] },
+};
