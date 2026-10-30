@@ -51,5 +51,7 @@ export const PROPS = {
   mailbox: { name: '集合郵便受け', w: 1.2, d: 0.4, h: 1.6, boxes: [B(1.2, 1.6, 0.4, M.METALFURN)], solid: true, vault: false, foot: [1.2, 0.4] },
   bathtub: { name: '浴槽', w: 0.75, d: 1.6, h: 0.55, boxes: [B(0.75, 0.55, 1.6, M.CERAMIC)], solid: true, vault: true, foot: [0.75, 1.6] },
   heater: { name: '給湯器', w: 0.6, d: 0.6, h: 1.5, boxes: [B(0.56, 1.5, 0.56, M.METALFURN)], solid: true, vault: false, foot: [0.6, 0.6] },
+  neon: { name: 'ネオンの看板', w: 1.6, d: 0.12, h: 2.6, boxes: [], solid: false },
+  stage: { name: 'ステージ', w: 2.0, d: 2.0, h: 0.4, boxes: [B(2.0, 0.4, 2.0, M.FURN)], solid: true, vault: true, foot: [2.0, 2.0], resizable: true },
   lamp: { name: '街灯', w: 0.25, d: 0.25, h: 4.5, boxes: [B(0.18, 4.5, 0.18, M.METAL)], solid: true, vault: false, foot: [0.25, 0.25] },
 };

@@ -339,6 +339,25 @@ const MODELS = {
     B.box(-0.09, 0.2, 0.25, 0.09, 0.36, 0.3, LAYER.plain, C.dgray);
     B.emit = 0.8; B.box(-0.02, 0.29, 0.3, 0.02, 0.33, 0.302, LAYER.plain, H('#ff9a30'), { faces: 16 }); B.emit = 0;
   },
+  // ネオンの看板（壁に掛ける。光る管で囲みと文字のような線）
+  neon(B, G, P, o, s) {
+    const cols = ['#ff3fb4', '#3fd8ff', '#9a5cff', '#ff4a3a'].map(H);
+    const c = cols[s % cols.length];
+    B.box(-0.8, 1.9, -0.06, 0.8, 2.6, -0.02, LAYER.metal, H('#16171a'));
+    B.emit = 3.2;
+    const t = 0.022;
+    B.box(-0.74, 1.96, -0.02, 0.74, 1.96 + t, 0.01, LAYER.plain, c); B.box(-0.74, 2.54 - t, -0.02, 0.74, 2.54, 0.01, LAYER.plain, c);
+    B.box(-0.74, 1.96, -0.02, -0.74 + t, 2.54, 0.01, LAYER.plain, c); B.box(0.74 - t, 1.96, -0.02, 0.74, 2.54, 0.01, LAYER.plain, c);
+    for (let k = 0; k < 5; k++) { const x0 = -0.56 + k * 0.24; B.box(x0, 2.08, -0.02, x0 + t, 2.42, 0.01, LAYER.plain, c); if (k % 2 === 0) B.box(x0, 2.42 - t, -0.02, x0 + 0.14, 2.42, 0.01, LAYER.plain, c); else B.box(x0, 2.08, -0.02, x0 + 0.14, 2.08 + t, 0.01, LAYER.plain, c); }
+    B.emit = 0;
+  },
+  // ステージ（低い台）: 黒い天板と縁
+  stage(B, G, P, o, s) {
+    const w = 1.0, d = 1.0; // 大きさは置くときの o.w / o.d で引き伸ばす
+    B.box(-w, 0, -d, w, 0.36, d, LAYER.plywood, H('#24252a'), { aoBottom: 0.6 });
+    B.box(-w, 0.36, -d, w, 0.4, d, LAYER.rubber, H('#18191c'));
+    B.emit = 1.6; B.box(-w, 0.1, d, w, 0.13, d + 0.005, LAYER.plain, H('#9a5cff'), { faces: 16 }); B.emit = 0;
+  },
   piano(B, G, P, o, s) {
     B.box(-0.75, 0, -0.3, 0.75, 1.25, 0.15, LAYER.wood, C.black);
     B.box(-0.75, 0.68, 0.15, 0.75, 0.75, 0.3, LAYER.wood, C.black);

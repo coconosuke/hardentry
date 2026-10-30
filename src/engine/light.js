@@ -24,6 +24,10 @@ export const LIGHT_KIND = {
   street: { col: [1.0, 0.72, 0.38], I: 3.2, R: 13.0, down: 0.85, h: 4.3 },
   dim: { col: [0.85, 0.85, 1.0], I: 0.7, R: 4.5, down: 0.5 },
   red: { col: [1.0, 0.18, 0.12], I: 1.2, R: 5.0, down: 0.3 },
+  // クラブの照明（ネオン）
+  magenta: { col: [1.0, 0.22, 0.78], I: 1.5, R: 7.0, down: 0.45 },
+  cyan: { col: [0.2, 0.85, 1.0], I: 1.4, R: 7.0, down: 0.45 },
+  purple: { col: [0.55, 0.3, 1.0], I: 1.4, R: 7.5, down: 0.5 },
 };
 
 function clear(w, ax, ay, az, bx, by, bz) { return !occluded(w, ax, ay, az, bx, by, bz, null, false); }
