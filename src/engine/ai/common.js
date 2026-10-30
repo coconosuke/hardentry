@@ -106,10 +106,10 @@ export function goTo(S, w, a, inp, tx, ty, tz, o = {}) {
   if (Math.hypot(tx - a.x, tz - a.z) < arriveR && Math.abs(levelOfY(ty + 0.3) - levelOfY(a.y + 0.3)) === 0) { ai.nav = null; return 'arrived'; }
   if (!nv || nv.tk !== tk || (S.t - nv.t) * S.dt > 6 || nv.bad) {
     const lc = leafCells(w, S);
-    const p = findPath(w, S, here, tk, { unlock: !!(o.unlock || kick), wedgeOK: false, avoid: o.avoid, leaf: lc });
+    const p = findPath(w, S, here, tk, { unlock: !!(o.unlock || kick), wedgeOK: false, breakBar: !!o.breakBar, avoid: o.avoid, leaf: lc });
     if (!p) {
       // 開いた扉の板が通り道をふさいでいるだけなら、その扉を向こうへ押し開ける（板の陰の袋小路から出る）
-      const p2 = lc && lc.size ? findPath(w, S, here, tk, { unlock: !!(o.unlock || kick), wedgeOK: false, avoid: o.avoid }) : null;
+      const p2 = lc && lc.size ? findPath(w, S, here, tk, { unlock: !!(o.unlock || kick), wedgeOK: false, breakBar: !!o.breakBar, avoid: o.avoid }) : null;
       if (p2 && !o.noDoors) {
         let bd = 2.6, best = -1;
         for (let i = 0; i < w.doors.length; i++) {
@@ -156,6 +156,11 @@ export function goTo(S, w, a, inp, tx, ty, tz, o = {}) {
       if (dd < 1.7) {
         steerToward(a, inp, d.cx, d.cz, 0);
         if (o.noDoors) return 'door';
+        // バリケード（対戦）: 壊して通る
+        if (ds.bar > 0 && o.breakBar) {
+          if (!ai.doorT || (S.t - ai.doorT) * S.dt > 0.7) { ai.doorT = S.t; pushAct(inp, { a: 'op', k: 'door', id: did, op: 'bash' }); }
+          return 'door';
+        }
         if (!ai.doorT || (S.t - ai.doorT) * S.dt > 1.2) {
           ai.doorT = S.t;
           if (ds.locked && !ds.lockBroken && o.unlock) pushAct(inp, { a: 'unlockDoor', id: did });

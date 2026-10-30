@@ -120,11 +120,11 @@ function bombThink(S, w, a, inp, dt, ctx, sk) {
       }
       // 味方が先に入ってから
       const ahead = S.actors.filter(b => b.team === a.team && b !== a && b.alive && Math.hypot(b.x - site.x, b.z - site.z) < dd);
-      const r = goTo(S, w, a, inp, site.x, site.y, site.z, { speed: ahead.length ? 0.85 : 0.6, r: 0.6, unlock: true });
+      const r = goTo(S, w, a, inp, site.x, site.y, site.z, { speed: ahead.length ? 0.85 : 0.6, r: 0.6, unlock: true, breakBar: true });
       return inp;
     }
     // 運び手を守りながら場所へ
-    const r = goTo(S, w, a, inp, site.x + (hrand(a.id, 3, 221) - 0.5) * 3, site.y, site.z + (hrand(a.id, 4, 222) - 0.5) * 3, { speed: 0.9, r: 1.2, unlock: true });
+    const r = goTo(S, w, a, inp, site.x + (hrand(a.id, 3, 221) - 0.5) * 3, site.y, site.z + (hrand(a.id, 4, 222) - 0.5) * 3, { speed: 0.9, r: 1.2, unlock: true, breakBar: true });
     inp.sprint = r === 'moving' && Math.hypot(site.x - a.x, site.z - a.z) > 18;
     return inp;
   }

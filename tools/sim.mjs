@@ -63,7 +63,7 @@ export function runPvp(map, mode, seed, o = {}) {
         if (b && a && b.team !== a.team) kills[b.team]++;
         const t = S.t * S.dt; gaps.push(t - lastKill); gapMax = Math.max(gapMax, t - lastKill); lastKill = t;
       }
-      if (e.e === 'planted') plants++;
+      if (e.e === 'plant') plants++;
       if (e.e === 'round') { const t = S.t * S.dt; rounds.push({ win: e.win, why: e.why, len: Math.round(t - roundStart) }); roundStart = t; lastKill = t; }
       if (e.e === 'phase' && e.p === 'action') roundStart = S.t * S.dt;
     }
