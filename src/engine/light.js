@@ -86,7 +86,14 @@ export function bakeLight(w, def, opt = {}) {
         if (t === C.OUT) out = true;
         if (ci >= 0 && cj >= 0 && ci < w.W && cj < w.D && nearOpen[w.idx(L, ci, cj)]) open = true;
       }
-      if (!any) continue;
+      if (!any) {
+        // 上の階の、建物の外の空中（木の葉や屋根の上の物）: 下の階の一番上の光をそのまま使う
+        if (L > 0) {
+          const src = pidx(i, j, (L - 1) * 3 + 2);
+          for (let hh = 0; hh < 3; hh++) { const pp = pidx(i, j, L * 3 + hh); for (let a = 0; a < 18; a++) data[pp * 18 + a] = data[src * 18 + a]; sunVisA[pp] = sunVisA[src]; skyVisA[pp] = skyVisA[src]; }
+        }
+        continue;
+      }
       const x = i * CS, z = j * CS;
       const exterior = out || open || !indoor || voidN;
       for (let hh = 0; hh < 3; hh++) {

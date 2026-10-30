@@ -83,7 +83,7 @@ export default {
   levels: [{ rows: a.rows() }, { rows: b.rows() }],
   stairs: [{ i: 15, j: 30, w: 3, len: 8, dir: 'n', L: 0 }],
   paint: { '居間': '#d8cfbf', '台所': '#e4e1d6', '食堂': '#d6c8b0', '書斎': '#b8c2b8', '廊下': '#d8d2c4', '玄関': '#d8d2c4', '主寝室': '#c9c2d6', '寝室2': '#cfd9e0', '寝室3': '#e0d6c2', '寝室4': '#d6e0cc', '浴室': '#cfdde2', '洗面所': '#cfdde2', '洗濯室': '#dadada', '車庫': '#b8b4ac', '2階廊下': '#d8d2c4', '物置': '#cfc8ba' },
-  extBrick: '#9a6a4e', ceiling: 'plaster', carpet: '#6a6050', homey: true, winFrame: '#ebe8e1',
+  extBrick: '#9a6a4e', extWood: '#c9cfcf', ceiling: 'plaster', carpet: '#6a6050', homey: true, winFrame: '#ebe8e1',
   props: [
     // 洗濯室・洗面所
     ['counter', 18.5, 15.7, 0, 0, { w: 1.6, top: '#d8d8d8', body: '#e8e8e8' }], ['cabinet', 20.3, 19, 0, 3],

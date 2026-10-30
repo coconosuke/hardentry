@@ -105,6 +105,43 @@ export class MeshBuilder {
       poly([P(0, g), P(1, g), P(2, g)], n, faceCol(1, sy));
     }
   }
+  // 凸な多角形の面。点の並びは法線 n の側から見て反時計回りになるよう自動でそろえる
+  poly(pts, n, layer, col, ao = 1) {
+    const m = pts.length;
+    if (m < 3) return;
+    let nx = 0, ny = 0, nz = 0;
+    for (let i = 0; i < m; i++) { const a = pts[i], b = pts[(i + 1) % m]; nx += (a[1] - b[1]) * (a[2] + b[2]); ny += (a[2] - b[2]) * (a[0] + b[0]); nz += (a[0] - b[0]) * (a[1] + b[1]); }
+    if (nx * n[0] + ny * n[1] + nz * n[2] < 0) pts = pts.slice().reverse();
+    const ax = Math.abs(n[0]), ay = Math.abs(n[1]), az = Math.abs(n[2]);
+    const base = this.n;
+    for (const p of pts) {
+      const uv = ay >= ax && ay >= az ? [p[0], p[2]] : ax >= az ? [n[0] > 0 ? -p[2] : p[2], p[1]] : [n[2] > 0 ? p[0] : -p[0], p[1]];
+      this.vert(p, n, uv[0], uv[1], layer, col, ao);
+    }
+    for (let i = 1; i < m - 1; i++) this.i.push(base, base + i, base + i + 1);
+  }
+  // 横（X）へ押し出した凸な多角形。pts = [[z, y], ...]（z を右・y を上に見て反時計回り）。
+  // o.edgeCols: 辺ごとの色（ガラスなど）、o.bevel: 両側の縁の面取り、o.capCol: 両側の面の色
+  prismX(pts, x0, x1, layer, col, o = {}) {
+    const m = pts.length, ec = o.edgeCols || [], bv = o.bevel || 0;
+    let cu = 0, cv = 0; for (const q of pts) { cu += q[0]; cv += q[1]; } cu /= m; cv /= m;
+    const shrink = (q) => { const du = q[0] - cu, dv = q[1] - cv, d = Math.hypot(du, dv) || 1; const k = Math.max(0, 1 - bv / d); return [cu + du * k, cv + dv * k]; };
+    const xa = x0 + bv, xb = x1 - bv, capC = o.capCol || col;
+    for (let i = 0; i < m; i++) {
+      const a = pts[i], b = pts[(i + 1) % m];
+      const du = b[0] - a[0], dv = b[1] - a[1], L = Math.hypot(du, dv) || 1;
+      this.poly([[xa, a[1], a[0]], [xb, a[1], a[0]], [xb, b[1], b[0]], [xa, b[1], b[0]]], [0, -du / L, dv / L], layer, ec[i] || col);
+    }
+    const S = bv > 0 ? pts.map(shrink) : pts;
+    for (const [xs, xe, sg] of [[xb, x1, 1], [xa, x0, -1]]) {
+      this.poly(S.map(q => [xe, q[1], q[0]]), [sg, 0, 0], layer, capC);
+      if (bv > 0) for (let i = 0; i < m; i++) {
+        const a = pts[i], b = pts[(i + 1) % m], sa = S[i], sb = S[(i + 1) % m];
+        const du = b[0] - a[0], dv = b[1] - a[1], L = Math.hypot(du, dv) || 1;
+        this.poly([[xs, a[1], a[0]], [xs, b[1], b[0]], [xe, sb[1], sb[0]], [xe, sa[1], sa[0]]], nrm([sg, -du / L, dv / L]), layer, mixc(ec[i] || col, capC, 0.5));
+      }
+    }
+  }
   // 中心と大きさの箱
   cbox(cx, cy, cz, sx, sy, sz, layer, col, o) { this.box(cx - sx / 2, cy - sy / 2, cz - sz / 2, cx + sx / 2, cy + sy / 2, cz + sz / 2, layer, col, o); }
   // 円柱（Y軸、y0..y1）。seg角形

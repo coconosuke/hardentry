@@ -24,7 +24,14 @@ export function buildProp(B, G, p, def) {
   const xf = xfYaw(p.x, p.y, p.z, -p.rot * Math.PI / 2, p.sx, p.sy, p.sz);
   B.setXf(xf); G.setXf(xf);
   const seed = p.opt.color != null ? p.opt.color : (p.id * 7 + Math.round(p.x * 3 + p.z * 5));
-  fn(B, G, P, p.opt, seed);
+  // 家具の箱は角を落とす（BattleBit のように縁に光が乗る）。2.5cmより細い部品はそのまま
+  const box0 = B.box;
+  B.box = function (x0, y0, z0, x1, y1, z1, layer, col, o = {}) {
+    const m = Math.min(x1 - x0, y1 - y0, z1 - z0);
+    if (m >= 0.025 && !o.sharp) return this.bbox(x0, y0, z0, x1, y1, z1, Math.min(0.016, Math.max(0.004, m * 0.1)), layer, col, o);
+    return box0.call(this, x0, y0, z0, x1, y1, z1, layer, col, o);
+  };
+  try { fn(B, G, P, p.opt, seed); } finally { B.box = box0; }
   B.setXf(null); G.setXf(null);
 }
 
@@ -41,9 +48,28 @@ function goods(B, x0, x1, y, z0, z1, seed, hMax = 0.28) {
   const cols = ['#c23b2e', '#e2b13c', '#3d7cc9', '#4c9a4c', '#e8e2d0', '#8a4fa0', '#e07a2e', '#2f2f33'].map(H);
   while (x < x1 - 0.06) {
     const r = ((seed * 9301 + n * 49297) % 233280) / 233280;
-    const w = 0.07 + r * 0.12, h = 0.1 + ((r * 7) % 1) * (hMax - 0.1), dd = Math.min(z1 - z0 - 0.04, 0.12 + ((r * 13) % 1) * 0.2);
+    const kind = Math.floor(((r * 31) % 1) * 4); // 0 箱・1 缶の列・2 びん・3 袋
+    const col = cols[Math.floor(r * 97) % cols.length];
+    if (kind === 1 || kind === 2) {
+      // 缶・びん: 細い円柱を前から奥へ並べる（ラベルの帯）
+      const rr = kind === 1 ? 0.033 : 0.038, hh = kind === 1 ? 0.12 : Math.min(hMax, 0.24 + ((r * 7) % 1) * 0.06), nn = Math.max(1, Math.min(3, Math.floor((z1 - z0 - 0.04) / (rr * 2.2))));
+      if (x + rr * 2 > x1 - 0.02) break;
+      for (let q = 0; q < nn; q++) {
+        const cz = z1 - 0.02 - rr - q * rr * 2.2, cx = x + rr;
+        if (kind === 1) { B.cyl(cx, cz, y, y + hh, rr, rr, 8, LAYER.metal, mulc(col, 0.9), { capT: true }); B.cyl(cx, cz, y + hh * 0.25, y + hh * 0.8, rr + 0.001, rr + 0.001, 8, LAYER.paint, col, { capT: false }); }
+        else { B.cyl(cx, cz, y, y + hh * 0.62, rr, rr, 8, LAYER.plain, mixc(col, H('#d8e4e6'), 0.55), { capT: false }); B.cyl(cx, cz, y + hh * 0.62, y + hh * 0.85, rr, rr * 0.4, 8, LAYER.plain, mixc(col, H('#d8e4e6'), 0.55), { capT: false }); B.cyl(cx, cz, y + hh * 0.85, y + hh, rr * 0.4, rr * 0.4, 6, LAYER.paint, col, { capT: true }); B.cyl(cx, cz, y + hh * 0.18, y + hh * 0.45, rr + 0.001, rr + 0.001, 8, LAYER.paint, col, { capT: false }); }
+      }
+      x += rr * 2 + 0.012; n++;
+      continue;
+    }
+    const w = 0.07 + r * 0.12, h = kind === 3 ? Math.min(hMax, 0.16 + ((r * 7) % 1) * 0.08) : 0.1 + ((r * 7) % 1) * (hMax - 0.1), dd = Math.min(z1 - z0 - 0.04, 0.12 + ((r * 13) % 1) * 0.2);
     if (x + w > x1 - 0.02) break;
-    B.box(x, y, z1 - 0.02 - dd, x + w, y + h, z1 - 0.02, LAYER.paint, cols[Math.floor(r * 97) % cols.length], { faces: 1 | 2 | 4 | 16 });
+    if (kind === 3) { B.bbox(x, y, z1 - 0.02 - dd * 0.6, x + w, y + h, z1 - 0.02, Math.min(0.03, w * 0.3), LAYER.nylon, col); }
+    else {
+      B.box(x, y, z1 - 0.02 - dd, x + w, y + h, z1 - 0.02, LAYER.paint, col, { faces: 1 | 2 | 4 | 16, sharp: true });
+      // 箱の前の白いラベル
+      if (w > 0.09 && h > 0.14) B.box(x + w * 0.15, y + h * 0.45, z1 - 0.019, x + w * 0.85, y + h * 0.75, z1 - 0.018, LAYER.plain, H('#ece8de'), { faces: 16 });
+    }
     x += w + 0.015; n++;
   }
 }
@@ -219,8 +245,23 @@ const MODELS = {
     B.box(-0.45, 0, -0.3, 0.45, 0.2, 0.3, LAYER.concrete, C.concrete);
     B.box(-0.4, 0.2, -0.25, 0.4, 1.8, 0.25, LAYER.paint, C.white);
     B.box(-0.41, 1.45, -0.26, 0.41, 1.8, 0.26, LAYER.paint, C.red);
-    B.emit = 0.6; B.box(-0.18, 1.1, 0.25, 0.18, 1.32, 0.255, LAYER.plain, H('#3c5f3c'), { faces: 16 }); B.emit = 0;
-    for (const sx of [-1, 1]) { B.box(sx * 0.4 - 0.05, 0.7, -0.08, sx * 0.4 + 0.05, 0.95, 0.08, LAYER.plain, C.black); }
+    B.box(-0.42, 1.8, -0.27, 0.42, 1.84, 0.27, LAYER.paint, mulc(C.red, 0.8));
+    // 表示（金額・量）と、ボタン・カードの差し込み口
+    for (const sz of [1, -1]) {
+      const zf = sz * 0.25;
+      B.box(-0.3, 1.02, Math.min(zf, zf + sz * 0.012), 0.3, 1.38, Math.max(zf, zf + sz * 0.012), LAYER.plain, C.dgray, { sharp: true });
+      B.emit = 0.6; B.box(-0.24, 1.22, Math.min(zf + sz * 0.012, zf + sz * 0.014), 0.24, 1.33, Math.max(zf + sz * 0.012, zf + sz * 0.014), LAYER.plain, H('#3c6a3c'), { faces: sz > 0 ? 16 : 32, sharp: true });
+      B.box(-0.24, 1.07, Math.min(zf + sz * 0.012, zf + sz * 0.014), 0.05, 1.17, Math.max(zf + sz * 0.012, zf + sz * 0.014), LAYER.plain, H('#7a5a2a'), { faces: sz > 0 ? 16 : 32, sharp: true }); B.emit = 0;
+      for (let q = 0; q < 3; q++) B.box(0.1 + q * 0.06, 1.08, Math.min(zf + sz * 0.012, zf + sz * 0.02), 0.14 + q * 0.06, 1.12, Math.max(zf + sz * 0.012, zf + sz * 0.02), LAYER.rubber, [H('#c8b23a'), H('#3a8a3a'), H('#c03a2e')][q], { sharp: true });
+    }
+    // ノズルの掛け金・ホース（横から下へ垂れて戻る）・ノズル
+    for (const sx of [-1, 1]) {
+      const xs = sx * 0.4;
+      B.box(xs - 0.05, 0.75, -0.09, xs + 0.05, 0.98, 0.09, LAYER.plain, C.black);
+      B.tube([xs + sx * 0.04, 0.85, 0], [xs + sx * 0.13, 0.86, 0.02], 0.022, 0.02, 6, LAYER.rubber, C.black, { caps: true });
+      B.tube([xs, 1.4, 0.12], [xs + sx * 0.06, 0.55, 0.16], 0.016, 0.016, 6, LAYER.rubber, C.black);
+      B.tube([xs + sx * 0.06, 0.55, 0.16], [xs + sx * 0.04, 0.82, 0.05], 0.016, 0.016, 6, LAYER.rubber, C.black);
+    }
   },
   vending(B, G, P, o, s) {
     B.box(-0.47, 0, -0.4, 0.47, 1.9, 0.4, LAYER.paint, pick(['#a3241e', '#20406a', '#d9d9d6'].map(H), s));
@@ -338,37 +379,74 @@ function foliage(B, x, y, z, r, h, col) {
   ], 7, LAYER.leaves, col, { capTop: true, capBot: true, rot: x * 3 });
 }
 function car(B, G, col, van) {
-  const L = van ? 5.6 : 4.4, Wd = van ? 2.1 : 1.8;
-  const hw = Wd / 2, hl = L / 2;
-  const dark = H('#151618'), glass = H('#2a3640'), chrome = H('#a8acb0');
+  const dark = H('#141517'), glass = H('#26323b'), chrome = H('#b4b8bc'), trim = H('#2a2b2e'), lamp = H('#fff2c8'), tail = H('#c41f1a');
+  const hw = van ? 1.02 : 0.9;
+  // 車輪: タイヤ・ホイール・車輪の穴（車体の横の黒い半円）
+  const wheel = (z, r, wdt) => {
+    for (const sx of [-1, 1]) {
+      const xo = sx * hw, xi = sx * (hw - wdt);
+      // タイヤの外の面は車輪の穴より少し外（穴の黒の手前に見える）
+      B.tube([xi, r, z], [xo + sx * 0.012, r, z], r, r, 12, LAYER.rubber, dark, { caps: true });
+      B.tube([xo + sx * 0.011, r, z], [xo + sx * 0.02, r, z], r * 0.6, r * 0.6, 10, LAYER.metal, chrome, { caps: true });
+      B.tube([xo + sx * 0.02, r, z], [xo + sx * 0.028, r, z], r * 0.18, r * 0.14, 8, LAYER.metal, mulc(chrome, 0.7), { caps: true });
+      const ar = r + 0.06, pts = [[z - ar, 0.29], [z + ar, 0.29]];
+      for (let k = 0; k <= 6; k++) { const a = k / 6 * Math.PI; pts.push([z + Math.cos(a) * ar, r + Math.sin(a) * ar]); }
+      B.poly(pts.map(q => [xo + sx * 0.003, q[1], q[0]]), [sx, 0, 0], LAYER.plain, H('#0d0e0f'));
+    }
+  };
   if (!van) {
-    B.box(-hw, 0.3, -hl, hw, 0.85, hl, LAYER.paint, col);
-    B.box(-hw + 0.02, 0.18, -hl + 0.05, hw - 0.02, 0.3, hl - 0.05, LAYER.plain, dark);
-    // 車室
-    B.box(-hw + 0.08, 0.85, -0.85, hw - 0.08, 1.38, 1.0, LAYER.paint, col);
-    B.box(-hw + 0.075, 0.9, -0.8, hw - 0.075, 1.33, 0.95, LAYER.plain, glass, { faces: 1 | 2 });
-    B.box(-hw + 0.12, 0.9, 1.0, hw - 0.12, 1.32, 1.02, LAYER.plain, glass, { faces: 16 });
-    B.box(-hw + 0.12, 0.9, -0.87, hw - 0.12, 1.32, -0.85, LAYER.plain, glass, { faces: 32 });
-    // 灯火
-    B.emit = 0.4; B.box(-hw + 0.12, 0.6, hl, -hw + 0.42, 0.72, hl + 0.01, LAYER.plain, H('#fff2c8'), { faces: 16 }); B.box(hw - 0.42, 0.6, hl, hw - 0.12, 0.72, hl + 0.01, LAYER.plain, H('#fff2c8'), { faces: 16 });
-    B.box(-hw + 0.12, 0.6, -hl - 0.01, -hw + 0.42, 0.72, -hl, LAYER.plain, H('#c02020'), { faces: 32 }); B.box(hw - 0.42, 0.6, -hl - 0.01, hw - 0.12, 0.72, -hl, LAYER.plain, H('#c02020'), { faces: 32 }); B.emit = 0;
-    B.box(-hw, 0.3, hl, hw, 0.42, hl + 0.06, LAYER.plain, chrome); B.box(-hw, 0.3, -hl - 0.06, hw, 0.42, -hl, LAYER.plain, chrome);
+    // 車体（下）と車室。窓は暗いガラス
+    const body = [[-2.25, 0.3], [2.2, 0.3], [2.33, 0.45], [2.33, 0.68], [2.22, 0.82], [1.15, 0.92], [-1.35, 0.94], [-2.2, 0.9], [-2.3, 0.75], [-2.3, 0.42]];
+    B.prismX(body, -hw, hw, LAYER.paint, col, { bevel: 0.05 });
+    B.prismX([[-1.35, 0.92], [1.15, 0.9], [0.35, 1.38], [-0.85, 1.4]], -hw + 0.12, hw - 0.12, LAYER.paint, col, { bevel: 0.035, edgeCols: [col, glass, col, glass] });
+    for (const sx of [-1, 1]) {
+      const x = sx * (hw - 0.12 + 0.004);
+      B.poly([[x, 0.98, -1.18], [x, 0.97, 1.0], [x, 1.33, 0.33], [x, 1.35, -0.78]], [sx, 0, 0], LAYER.plain, glass);
+      // 柱（B・C）と、ドアの継ぎ目・取っ手・ミラー
+      B.bbox(x - 0.006, 0.96, -0.16, x + 0.006, 1.37, -0.06, 0.004, LAYER.paint, col);
+      const xs = sx * (hw + 0.002);
+      for (const z of [0.98, -0.1, -1.12]) B.box(Math.min(xs, xs - sx * 0.006), 0.38, z - 0.006, Math.max(xs, xs - sx * 0.006), 0.9, z + 0.006, LAYER.plain, trim);
+      for (const z of [0.55, -0.55]) B.bbox(Math.min(xs, xs + sx * 0.02), 0.8, z - 0.07, Math.max(xs, xs + sx * 0.02), 0.83, z + 0.07, 0.004, LAYER.metal, chrome);
+      B.bbox(Math.min(sx * (hw - 0.14), sx * (hw + 0.1)), 0.95, 0.9, Math.max(sx * (hw - 0.14), sx * (hw + 0.1)), 1.06, 1.02, 0.015, LAYER.paint, col);
+    }
+    // 前: グリル・灯火・ナンバー。後ろ: 尾灯・ナンバー。下: 黒い樹脂のバンパー
+    B.bbox(-hw + 0.04, 0.34, 2.24, hw - 0.04, 0.5, 2.37, 0.03, LAYER.rubber, trim);
+    B.bbox(-hw + 0.04, 0.34, -2.37, hw - 0.04, 0.5, -2.24, 0.03, LAYER.rubber, trim);
+    B.bbox(-0.36, 0.56, 2.32, 0.36, 0.7, 2.345, 0.008, LAYER.metal, dark);
+    for (let y = 0.58; y < 0.69; y += 0.035) B.box(-0.34, y, 2.344, 0.34, y + 0.012, 2.348, LAYER.metal, chrome, { faces: 16 });
+    B.emit = 0.45;
+    for (const sx of [-1, 1]) {
+      B.bbox(Math.min(sx * 0.48, sx * 0.8), 0.62, 2.28, Math.max(sx * 0.48, sx * 0.8), 0.74, 2.335, 0.012, LAYER.plain, lamp);
+      B.bbox(Math.min(sx * 0.52, sx * 0.86), 0.7, -2.31, Math.max(sx * 0.52, sx * 0.86), 0.83, -2.27, 0.012, LAYER.plain, tail);
+    }
+    B.emit = 0;
+    B.bbox(-0.26, 0.4, 2.37, 0.26, 0.52, 2.385, 0.004, LAYER.plain, H('#e9e8e2'));
+    B.bbox(-0.26, 0.55, -2.33, 0.26, 0.67, -2.315, 0.004, LAYER.plain, H('#e9e8e2'));
+    wheel(1.38, 0.33, 0.22); wheel(-1.42, 0.33, 0.22);
   } else {
-    B.box(-hw, 0.45, -hl, hw, 2.2, hl, LAYER.paint, col);
-    B.box(-hw + 0.05, 0.3, -hl + 0.1, hw - 0.05, 0.45, hl - 0.1, LAYER.plain, dark);
-    B.box(-hw - 0.005, 1.45, 0.9, hw + 0.005, 1.95, 2.0, LAYER.plain, glass, { faces: 1 | 2 });
-    B.box(-hw + 0.1, 1.45, hl, hw - 0.1, 1.95, hl + 0.01, LAYER.plain, glass, { faces: 16 });
-    B.box(-hw + 0.1, 0.5, hl, hw - 0.1, 0.75, hl + 0.12, LAYER.metal, dark);
-    // 警察の文字の帯と赤青の灯
-    B.box(-hw - 0.006, 1.0, -hl + 0.3, hw + 0.006, 1.15, hl - 0.4, LAYER.plain, H('#c9ccd0'), { faces: 1 | 2 });
-    B.emit = 1.5; B.box(-0.5, 2.2, 1.6, -0.05, 2.32, 1.8, LAYER.plain, H('#ff3020')); B.box(0.05, 2.2, 1.6, 0.5, 2.32, 1.8, LAYER.plain, H('#2050ff')); B.emit = 0;
-    B.box(-hw - 0.08, 0.5, 0.8, -hw, 1.9, 0.86, LAYER.metal, dark);
-  }
-  // 車輪
-  const wy = van ? 0.45 : 0.33, wr = van ? 0.45 : 0.33;
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-    const x = sx * (hw - 0.12), z = sz * (hl - (van ? 1.0 : 0.85));
-    B.tube([x - 0.12, wy, z], [x + 0.12, wy, z], wr, wr, 10, LAYER.rubber, dark, { caps: true });
-    B.tube([x + sx * 0.121, wy, z], [x + sx * 0.125, wy, z], wr * 0.55, wr * 0.55, 8, LAYER.metal, chrome, { caps: true });
+    // 警察のバン（SWAT）: 箱の車体、斜めの前の窓、屋根の赤青の灯、白い帯
+    B.prismX([[-2.8, 0.42], [2.65, 0.42], [2.8, 0.6], [2.8, 1.05], [2.4, 1.2], [-2.8, 1.2]], -hw, hw, LAYER.paint, col, { bevel: 0.05 });
+    B.prismX([[-2.8, 1.18], [2.4, 1.18], [1.75, 2.15], [-2.8, 2.2]], -hw, hw, LAYER.paint, col, { bevel: 0.06, edgeCols: [col, glass, col, col] });
+    for (const sx of [-1, 1]) {
+      const x = sx * (hw + 0.003);
+      B.poly([[x, 1.32, 1.0], [x, 1.32, 2.15], [x, 1.98, 1.72], [x, 1.98, 1.0]], [sx, 0, 0], LAYER.plain, glass);
+      B.box(Math.min(x, x + sx * 0.004), 1.0, -2.6, Math.max(x, x + sx * 0.004), 1.15, 0.85, LAYER.plain, H('#c9ccd0'), { faces: sx > 0 ? 1 : 2 });
+      for (const z of [0.9, -0.4, -1.6]) B.box(Math.min(x, x - sx * 0.006), 0.48, z - 0.006, Math.max(x, x - sx * 0.006), 2.05, z + 0.006, LAYER.plain, trim);
+      B.bbox(Math.min(sx * (hw - 0.05), sx * (hw + 0.14)), 1.55, 2.0, Math.max(sx * (hw - 0.05), sx * (hw + 0.14)), 1.8, 2.1, 0.02, LAYER.paint, dark);
+      // 乗り降りの段
+      B.bbox(Math.min(sx * (hw - 0.3), sx * (hw + 0.06)), 0.42, -1.4, Math.max(sx * (hw - 0.3), sx * (hw + 0.06)), 0.47, 0.6, 0.01, LAYER.metal, dark);
+    }
+    B.bbox(-hw + 0.03, 0.45, 2.75, hw - 0.03, 0.72, 2.92, 0.03, LAYER.metal, dark);
+    B.bbox(-0.55, 0.78, 2.79, 0.55, 1.0, 2.81, 0.01, LAYER.metal, dark);
+    B.bbox(-hw + 0.03, 0.45, -2.92, hw - 0.03, 0.62, -2.78, 0.03, LAYER.metal, dark);
+    B.box(-0.006, 0.6, -2.805, 0.006, 2.1, -2.8, LAYER.plain, trim, { faces: 32 });
+    B.emit = 0.45;
+    for (const sx of [-1, 1]) { B.bbox(Math.min(sx * 0.62, sx * 0.92), 0.8, 2.76, Math.max(sx * 0.62, sx * 0.92), 0.95, 2.81, 0.012, LAYER.plain, lamp); B.bbox(Math.min(sx * 0.75, sx * 0.95), 0.9, -2.82, Math.max(sx * 0.75, sx * 0.95), 1.3, -2.78, 0.012, LAYER.plain, tail); }
+    B.emit = 1.5;
+    B.bbox(-0.62, 2.2, 1.35, -0.04, 2.32, 1.62, 0.02, LAYER.plain, H('#ff3020'));
+    B.bbox(0.04, 2.2, 1.35, 0.62, 2.32, 1.62, 0.02, LAYER.plain, H('#2050ff'));
+    B.emit = 0;
+    B.bbox(-0.7, 2.18, 1.3, 0.7, 2.21, 1.67, 0.01, LAYER.metal, dark);
+    wheel(1.75, 0.42, 0.26); wheel(-1.75, 0.42, 0.26);
   }
 }

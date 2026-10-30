@@ -1,9 +1,9 @@
 // 手続きのテクスチャ（外部の画像なし）。BattleBit のように低い解像度でやわらかい質感。128×128 のテクスチャ配列の各層
 export const TEX = 128;
 export const LAYER = {
-  plain: 0, concrete: 1, brick: 2, plaster: 3, woodfloor: 4, tile: 5, carpet: 6, asphalt: 7, grass: 8, dirt: 9, metal: 10, wood: 11, fabric: 12, ceiling: 13, skin: 14, cloth: 15, plywood: 16, sidewalk: 17, nylon: 18, paint: 19, rubber: 20, leaves: 21,
+  plain: 0, concrete: 1, brick: 2, plaster: 3, woodfloor: 4, tile: 5, carpet: 6, asphalt: 7, grass: 8, dirt: 9, metal: 10, wood: 11, fabric: 12, ceiling: 13, skin: 14, cloth: 15, plywood: 16, sidewalk: 17, nylon: 18, paint: 19, rubber: 20, leaves: 21, siding: 22,
 };
-export const NLAYER = 22;
+export const NLAYER = 23;
 
 function rng(seed) { let s = seed >>> 0 || 1; return () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
 // 繰り返しのある値ノイズ
@@ -95,6 +95,13 @@ export function makeTextures() {
   put(LAYER.rubber, (x, y, i) => { const v = 0.9 + (white[i] - 0.5) * 0.12; return [v, v, v]; });
   // 21 葉（木）
   put(LAYER.leaves, (x, y, i) => { const t = n2[i] * 0.6 + white[i] * 0.4; return [0.2 + t * 0.12, 0.32 + t * 0.2, 0.12 + t * 0.05]; });
+  // 22 下見板（住宅の外壁）: 1枚16cm。下の縁が張り出して明るく、その下に影の線
+  put(LAYER.siding, (x, y, i) => {
+    const bh = 128 / 6.25, yy = y % bh, f = yy / bh;
+    let v = 0.86 + f * 0.08 + (grain[i] - 0.5) * 0.05 + (n2[i] - 0.5) * 0.04;
+    if (f > 0.9) v += 0.06; if (f < 0.08) v -= 0.3;
+    return [v, v, v];
+  });
   // 色は頂点の色で決めるので、テクスチャは明るさの細かさだけ（平均0.85にそろえる）
   for (let L = 0; L < NLAYER; L++) {
     const o = L * N * N * 4;
