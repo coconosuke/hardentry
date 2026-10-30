@@ -117,8 +117,9 @@ export function computePose(p, out) {
   // 伏せ: 体を前に倒す（腰を支点に）
   let tUp = rotAxis(up, left, torsoBend);
   // 体の傾き（リーン）: 前の軸まわり
+  // lean > 0 は右へ（ローカルの +x は左なので、前の軸まわりに＋に回すと右へ倒れる）
   const leanAng = lean * 0.36;
-  tUp = rotAxis(tUp, fwd, -leanAng);
+  tUp = rotAxis(tUp, fwd, leanAng);
   P = madd(P, left, -lean * 0.07 * s);
   // 伏せの混ぜ: 胴が水平に近づく
   if (prone > 0) {
@@ -136,7 +137,7 @@ export function computePose(p, out) {
   let headFwd = norm(v3(0, Math.sin(pitch), Math.cos(pitch)));
   if (prone > 0) headFwd = norm(lerp3(headFwd, norm(v3(0, Math.sin(pitch) + 0.2, 1)), prone));
   let headUp = norm(sub(up, mul(headFwd, dot(up, headFwd))));
-  headUp = rotAxis(headUp, headFwd, -leanAng * 0.6);
+  headUp = rotAxis(headUp, headFwd, leanAng * 0.6);
   if (state === 'cuffed' || state === 'kneel') headFwd = norm(v3(0, -0.15, 1));
   if (state === 'cower' || state === 'stun') { headFwd = norm(v3(0, -0.6, 0.8)); headUp = norm(v3(0, 0.8, 0.6)); }
   const neckTop = madd(N, norm(lerp3(chestUp, headUp, 0.5)), D.neck * s);

@@ -8,7 +8,7 @@ export default {
   init(S, w, o) {
     const def = MAPS[S.map];
     const sp = def.spawn;
-    const roster = o.roster || [{ pid: 0, name: 'あなた', lo: LOADOUTS.player }];
+    const roster = o.roster || [{ pid: 0, name: 'リード', lo: LOADOUTS.player }];
     const at = o.start === 'range' ? sp.train.range : o.start === 'house' ? sp.train.house : sp.swat[0];
     let k = 0;
     for (const r of roster) {

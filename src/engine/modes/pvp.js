@@ -29,7 +29,7 @@ export function makePvpMode(kind) {
         respawn: [], sites: [], defuser: null, reinfLeft: 0, intel: {}, log: [], over: false, sizes, mvp: null,
       };
       // 名簿: プレイヤー＋ボット
-      const roster = o.roster || [{ pid: 0, name: 'あなた', team: 0 }];
+      const roster = o.roster || [{ pid: 0, name: 'リード', team: 0 }];
       const byTeam = [[], []];
       for (const p of roster) byTeam[p.team || 0].push(p);
       let bn = 0;

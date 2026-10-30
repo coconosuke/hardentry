@@ -28,7 +28,9 @@ export class Hud {
     const r = this.root;
     r.innerHTML = '';
     // 情報
-    const mm = el('div', 'hud-mm'); const mc = document.createElement('canvas'); mc.width = 240; mc.height = 240; mm.appendChild(mc); mm.appendChild(el('div', 'hud-mm-n', 'N'));
+    // ミニマップ: タップで地図を開く（地図のボタンの代わり）
+    const mm = el('div', 'hud-mm'); const mc = document.createElement('canvas'); mc.width = 240; mc.height = 240; mm.appendChild(mc); mm.appendChild(el('div', 'hud-mm-n', 'N')); mm.appendChild(el('div', 'hud-mm-x', svg('expand')));
+    mm.dataset.btn = 'map'; mm.setAttribute('role', 'button'); mm.setAttribute('aria-label', '地図を開く');
     this.info.minimap = mm; this.mmCanvas = mc; this.mmCtx = mc.getContext('2d');
     this.info.compass = el('div', 'hud-compass', '<div class="hud-compass-in"></div><div class="hud-compass-tick"></div>');
     this.info.obj = el('div', 'hud-obj');
@@ -36,6 +38,7 @@ export class Hud {
     this.info.squad = el('div', 'hud-squad');
     this.info.vitals = el('div', 'hud-vitals', '<div class="hp"><i></i><b></b></div><div class="plates"></div><div class="st"></div>');
     this.info.ammo = el('div', 'hud-ammo', '<div class="mode"></div><div class="cnt"><b>0</b><span>/0</span></div><div class="mags"></div>');
+    this.info.subs = el('div', 'hud-subs'); this.subs = this.info.subs;
     for (const [id, e] of Object.entries(this.info)) { e.dataset.info = id; r.appendChild(e); }
     // 中央の物
     this.cross = el('div', 'hud-cross', '<i class="c"></i><i class="t"></i><i class="b"></i><i class="l"></i><i class="r"></i>'); r.appendChild(this.cross);
@@ -45,7 +48,6 @@ export class Hud {
     this.dmg = el('div', 'hud-dmg'); r.appendChild(this.dmg);
     this.prog = el('div', 'hud-prog', '<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="26" class="bg"/><circle cx="32" cy="32" r="26" class="fg"/></svg><div class="lb"></div>'); r.appendChild(this.prog);
     this.prompt = el('div', 'hud-prompt'); r.appendChild(this.prompt);
-    this.subs = el('div', 'hud-subs'); r.appendChild(this.subs);
     this.banner = el('div', 'hud-banner'); r.appendChild(this.banner);
     this.mirror = el('div', 'hud-mirror'); r.appendChild(this.mirror);
     this.stickEl = el('div', 'hud-stick', '<div class="knob"></div><div class="spr">ダッシュ</div>'); r.appendChild(this.stickEl);
@@ -60,13 +62,13 @@ export class Hud {
     }
     this.btn.team.querySelector('.lb').textContent = '全員';
     // 編集の道具
-    this.editBar = el('div', 'hud-editbar', `<div class="nm">ボタンを選んでください</div>
+    this.editBar = el('div', 'hud-editbar', `<div class="nm">項目を選択</div>
       <label>大きさ <input type="range" min="0.6" max="1.8" step="0.05" data-k="s"></label>
       <label>濃さ <input type="range" min="0.15" max="1" step="0.05" data-k="o"></label>
-      <button data-a="hide">隠す</button><button data-a="reset1">この1つを戻す</button><button data-a="resetAll">すべて初期化</button><button data-a="done" class="pri">保存して戻る</button>`);
+      <button data-a="hide">隠す</button><button data-a="reset1">元に戻す</button><button data-a="resetAll">すべて初期化</button><button data-a="done" class="pri">保存</button>`);
     r.appendChild(this.editBar);
   }
-  setSettings(s) { this.S = s; this.layout(); }
+  setSettings(s) { this.S = s; this.root.style.setProperty('--subbg', String(s.subBg ?? 0.42)); this.layout(); }
   setMode(m) { this.mode = m; this.layout(); }
   show(on) { this.on = on; this.root.classList.toggle('on', on); }
 
@@ -74,6 +76,7 @@ export class Hud {
   posOf(def, ov) {
     const st = this.stage, sf = st.safe, k = this.k();
     const x = (ov && ov.x != null) ? ov.x : def.x, y = (ov && ov.y != null) ? ov.y : def.y;
+    if (ov && ov.ay) def = { ...def, ay: ov.ay };
     let px, py;
     const left = this.S.handed === 'left' ? (def.ax === 'l' ? 'r' : def.ax === 'r' ? 'l' : 'c') : def.ax;
     if (left === 'l') px = sf.l + x * k; else if (left === 'r') px = st.w - sf.r - x * k; else px = st.w / 2 + (this.S.handed === 'left' ? -x : x) * k;
@@ -105,7 +108,8 @@ export class Hud {
       const sc = (ov.s || 1) * k;
       e.style.left = x + 'px'; e.style.top = y + 'px';
       e.style.transform = `translate(-50%,-50%) scale(${sc})`;
-      e.classList.toggle('hidden', !!ov.hide || (id === 'squad' && !this.mode.pve) || (id === 'minimap' && this.S.minimap === false));
+      e.classList.toggle('hidden', (!!ov.hide && !this.editing) || (id === 'squad' && !this.mode.pve) || (id === 'minimap' && this.S.minimap === false) || (id === 'subs' && this.S.subtitles === false && !this.editing));
+      if (this.editing) e.style.opacity = ov.hide ? 0.25 : 1; else e.style.opacity = '';
     }
     // スティックの家（固定のとき）
     const sk = this.S.handed === 'left' ? 'r' : 'l';
@@ -288,7 +292,7 @@ export class Hud {
     if (this.S.subtitles === false) return;
     const e = el('div', 'si', `<b style="color:${col || '#9cd0ff'}">${who}</b>${text}`);
     this.subs.appendChild(e);
-    while (this.subs.children.length > 3) this.subs.firstChild.remove();
+    while (this.subs.children.length > 2) this.subs.firstChild.remove();
     setTimeout(() => { e.classList.add('old'); setTimeout(() => e.remove(), 500); }, 3600);
   }
   hit(kind) { this.hitm.className = 'hud-hit on ' + (kind || ''); clearTimeout(this._hitT); this._hitT = setTimeout(() => { this.hitm.className = 'hud-hit'; }, kind === 'kill' ? 380 : 160); }
@@ -348,12 +352,12 @@ export class Hud {
       const ov = H[id] || {};
       bar.querySelector('[data-k="s"]').value = ov.s || 1;
       bar.querySelector('[data-k="o"]').value = ov.o ?? (settings.hudOpacity ?? 0.85);
-      bar.querySelector('[data-a="hide"]').textContent = ov.hide ? '表示する' : '隠す';
+      bar.querySelector('[data-a="hide"]').textContent = ov.hide ? '表示' : '隠す';
     };
     let drag = null;
     this._editDown = (e) => {
       let t = e.target, id = null;
-      while (t && t !== this.root) { if (t.dataset && t.dataset.btn) { id = t.dataset.btn; break; } if (t.dataset && t.dataset.info) { id = 'i_' + t.dataset.info; break; } if (t === bar) return; t = t.parentNode; }
+      while (t && t !== this.root) { if (t.dataset && t.dataset.info) { id = 'i_' + t.dataset.info; break; } if (t.dataset && t.dataset.btn) { id = t.dataset.btn; break; } if (t === bar) return; t = t.parentNode; }
       if (!id) return;
       e.preventDefault(); e.stopPropagation();
       pick(id);
@@ -371,7 +375,8 @@ export class Hud {
       const lr = this.S.handed === 'left' ? (d.ax === 'l' ? 'r' : d.ax === 'r' ? 'l' : 'c') : d.ax;
       const ov = H[drag.id] || (H[drag.id] = {});
       ov.x = Math.round(drag.x0 + (lr === 'r' ? -dx : lr === 'c' && this.S.handed === 'left' ? -dx : dx));
-      ov.y = Math.round(drag.y0 + (d.ay === 'b' ? -dy : dy));
+      ov.y = Math.round(drag.y0 + ((ov.ay || d.ay) === 'b' ? -dy : dy));
+      delete ov.preset;
       this.layout();
     };
     this._editUp = (e) => { if (drag && e.pointerId === drag.pid) { drag = null; onSave(settings); } };
@@ -385,7 +390,7 @@ export class Hud {
     onTap(btns.hide, () => { if (!this.sel) return; const ov = H[this.sel] || (H[this.sel] = {}); ov.hide = !ov.hide; pick(this.sel); this.layout(); onSave(settings); });
     onTap(btns.reset1, () => { if (!this.sel) return; delete H[this.sel]; pick(this.sel); this.layout(); onSave(settings); });
     let armed = false;
-    onTap(btns.resetAll, () => { if (!armed) { armed = true; btns.resetAll.textContent = 'もう一度押すと初期化'; setTimeout(() => { armed = false; btns.resetAll.textContent = 'すべて初期化'; }, 2500); return; } armed = false; btns.resetAll.textContent = 'すべて初期化'; for (const k of Object.keys(H)) delete H[k]; this.layout(); onSave(settings); });
+    onTap(btns.resetAll, () => { if (!armed) { armed = true; btns.resetAll.textContent = 'もう一度押して初期化'; setTimeout(() => { armed = false; btns.resetAll.textContent = 'すべて初期化'; }, 2500); return; } armed = false; btns.resetAll.textContent = 'すべて初期化'; for (const k of Object.keys(H)) delete H[k]; this.layout(); onSave(settings); });
     onTap(btns.done, () => {
       this.editing = false;
       this.root.classList.remove('editing');

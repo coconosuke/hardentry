@@ -19,7 +19,6 @@ export const BTN = {
   light: { name: 'ライト', ax: 'r', ay: 't', x: 170, y: 92, s: 36, icon: 'light' },
   nvg: { name: '暗視装置', ax: 'r', ay: 't', x: 126, y: 92, s: 36, icon: 'nvg' },
   low: { name: 'ローレディ', ax: 'r', ay: 't', x: 258, y: 92, s: 36, icon: 'low' },
-  map: { name: '地図', ax: 'l', ay: 't', x: 124, y: 122, s: 32, icon: 'map' },
   pause: { name: 'メニュー', ax: 'r', ay: 't', x: 30, y: 28, s: 38, icon: 'pause' },
   drone: { name: 'ドローン', ax: 'r', ay: 't', x: 82, y: 92, s: 40, icon: 'drone', pvp: true },
   wpn1: { name: '主武器', ax: 'c', ay: 'b', x: -64, y: 22, s: 40, w: 120, icon: 'wpn', group: 'wpn' },
@@ -34,8 +33,10 @@ export const INFO = {
   feed: { name: '出来事', ax: 'r', ay: 't', x: 128, y: 150, s: 80, w: 240 },
   vitals: { name: '体力', ax: 'c', ay: 'b', x: -230, y: 22, s: 30, w: 150 },
   ammo: { name: '弾', ax: 'c', ay: 'b', x: 210, y: 26, s: 38, w: 110 },
+  subs: { name: '字幕', ax: 'c', ay: 'b', x: 0, y: 78, s: 30, w: 340 },
 };
 export const ICONS = {
+  expand: '<path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>',
   fire: '<circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2.2" fill="currentColor"/><path d="M12 1v5M12 18v5M1 12h5M18 12h5" stroke="currentColor" stroke-width="2"/>',
   ads: '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 5v4M12 15v4M5 12h4M15 12h4" stroke="currentColor" stroke-width="2"/>',
   reload: '<path d="M8 3h8v4H8zM9 7h6v13H9z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 11h2M11 14h2M11 17h2" stroke="currentColor" stroke-width="1.5"/>',

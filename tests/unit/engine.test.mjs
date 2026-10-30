@@ -1,6 +1,7 @@
 import { test, ok, eq, near } from '../lib/t.mjs';
 import { createGame, step, dump, load } from '../../src/engine/engine.js';
 import { WEAPONS } from '../../src/engine/data/weapons.js';
+import { eyeOf } from '../../src/engine/combat.js';
 
 function mk(o = {}) { return createGame({ map: 'training', mode: 'train', seed: 7, team: 1, house: false, ...o }); }
 
@@ -57,4 +58,12 @@ test('engine: 通常のリロードは弾倉を残し、速いリロードは捨
   step(G, { [p.id]: { yaw: p.yaw, pitch: 0, act: [{ a: 'reload', fast: true }] } });
   for (let i = 0; i < 200; i++) step(G, { [p.id]: { yaw: p.yaw, pitch: 0 } });
   eq(wi.mags.length, n0 - 1, '速いリロードは1本減る');
+});
+
+test('engine: 右のリーンで目が右へ、左のリーンで左へ動く（表記と向きが合う）', () => {
+  const G = mk();
+  const p = G.S.actors[0];
+  const off = (lean) => { for (let i = 0; i < 60; i++) step(G, { [p.id]: { mx: 0, mz: 0, yaw: p.yaw, pitch: 0, stance: 0, lean } }); const e = eyeOf(G.S, p); return (e[0] - p.x) * -Math.cos(p.yaw) + (e[2] - p.z) * Math.sin(p.yaw); };
+  ok(off(1) > 0.2, '右へ ' + off(1));
+  ok(off(-1) < -0.2, '左へ ' + off(-1));
 });

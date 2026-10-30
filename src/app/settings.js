@@ -12,7 +12,7 @@ export const DEFAULTS = {
   adsMode: 'tap', // tap（押すたび切替）| hold（押している間）| mixed（短く押すと切替・長く押すと押している間）
   leanMode: 'toggle', stickMode: 'float', stickSprint: true, handed: 'right', leftFire: true, confirm: 'auto',
   // HUD
-  hud: {}, hudOpacity: 0.85, hudScale: 1.0, crosshair: 'cross', crossColor: '#ffffff', minimap: true, subtitles: true, hitMarker: true,
+  hud: {}, hudOpacity: 0.85, hudScale: 1.0, crosshair: 'cross', crossColor: '#ffffff', minimap: true, subtitles: true, subBg: 0.42, hitMarker: true,
   // 画面
   quality: 'medium', fps: 60, scale: 1.0, autoRes: true, fov: 52, blood: true, shake: true, showFps: false, bright: 1.0,
   // 音
@@ -29,8 +29,8 @@ export function loadSettings() {
 export function saveSettings(s) { save('settings', s); }
 
 // 名前（オンラインと結果に出る）
-export const DEFAULT_PROFILE = { name: 'あなた' };
-export function loadProfile() { return { ...DEFAULT_PROFILE, ...(load('profile', {}) || {}) }; }
+export const DEFAULT_PROFILE = { name: 'リード' };
+export function loadProfile() { const p = { ...DEFAULT_PROFILE, ...(load('profile', {}) || {}) }; if (p.name === 'あなた') p.name = DEFAULT_PROFILE.name; return p; }
 export function saveProfile(p) { save('profile', p); }
 
 // 装備（自分とAI隊員4人、対戦の陣営ごと）

@@ -7,7 +7,7 @@ export const MISSIONS = {
   },
   hostage: {
     name: '人質救出', en: 'HOSTAGE RESCUE',
-    desc: '人質犯が人質をとっている。警察に気づかれると、しばらくして人質を殺し始める。静かに、すばやく近づくこと。',
+    desc: '人質犯が人質をとっている。警官に気づくと、しばらくして人質を撃つ。静かに、素早く制圧する。',
     sus: [3, 5], civ: [1, 2], hostages: [2, 3], prof: ['robber', 'taker', 'thug'], evidence: [1, 3], lockChance: 0.35, trapChance: 0.08,
   },
   bomb: {
@@ -29,9 +29,9 @@ export const MISSIONS = {
 export const MISSION_LIST = ['barricade', 'hostage', 'bomb', 'raid', 'active'];
 // 難しさ: cap = 容疑者 → プレイヤーの1発の上限（RoN 70/80 を 100HP に換算）
 export const DIFFS = {
-  normal: { name: 'ふつう', cap: 44, susMul: 1.0, exec: 12, trapMul: 1, desc: '容疑者の1発のダメージに上限（44）。反応はゆっくりめ。' },
-  hard: { name: 'むずかしい', cap: 50, susMul: 1.15, exec: 9, trapMul: 1.5, desc: '上限50。容疑者が多く、反応が速い。人質を撃つまでが早い。' },
-  hardcore: { name: 'ハードコア', cap: 999, susMul: 1.3, exec: 7, trapMul: 2, desc: '上限なし。1発で倒れることもある。HUDは最小限。' },
+  normal: { name: '標準', cap: 44, susMul: 1.0, exec: 12, trapMul: 1, desc: '被弾1発のダメージ上限44。容疑者の反応は遅め。' },
+  hard: { name: 'ハード', cap: 50, susMul: 1.15, exec: 9, trapMul: 1.5, desc: '上限50。容疑者が多く、反応が速い。人質の処刑が早い。' },
+  hardcore: { name: 'ハードコア', cap: 999, susMul: 1.3, exec: 7, trapMul: 2, desc: '上限なし。一発で倒れることもある。HUDは最小限。' },
 };
 export const EVIDENCE = {
   drugs: { name: '麻薬の包み' }, phone: { name: '携帯電話' }, docs: { name: '書類' }, cash: { name: '現金の束' }, drive: { name: 'ハードディスク' }, guns: { name: '銃のケース' },

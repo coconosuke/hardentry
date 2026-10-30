@@ -88,11 +88,16 @@ export function thinkSuspect(S, w, a, dt, ctx) {
     if (tgt && td < 9) { if (hrand(a.id, S.t, 72) < 0.03) surrender(S, w, a, ctx); }
     return fleeOrHide(S, w, a, inp, dt, tgt);
   }
-  // 人質犯: 警官に気づいたら、時間で人質を撃つ
-  if (ai.hostage != null && ai.alert) {
+  // 人質犯: 警官を見たら（または近くで突入・銃声を聞いたら）、しばらくして人質を撃つ。足音だけでは数え始めない
+  if (ai.hostage != null && !ai.execArmed) {
+    if (tgt) ai.execArmed = 1;
+    else if (h && (h.k === 'breach' || h.k === 'boom' || (h.k === 'shot' && h.team !== a.team)) && Math.hypot(h.x - a.x, h.z - a.z) < 12) ai.execArmed = 2;
+  }
+  if (ai.hostage != null && ai.execArmed) {
     const hs = S.byId[ai.hostage];
     if (hs && hs.alive && !hs.cuffed) {
-      if (ai.execAt == null) ai.execAt = S.t + Math.round((S.m.execDelay || 9) / S.dt * (0.8 + 0.4 * hrand(a.id, 1, 73)));
+      // 見たとき: 難しさの秒数。音だけ: その倍
+      if (ai.execAt == null) ai.execAt = S.t + Math.round((S.m.execDelay || 9) * (ai.execArmed === 2 ? 2 : 1) / S.dt * (0.8 + 0.4 * hrand(a.id, 1, 73)));
       if (S.t >= ai.execAt && (!tgt || td > 6)) {
         // 人質を撃つ
         const e2 = eyeOf(S, hs);

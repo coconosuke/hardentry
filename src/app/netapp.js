@@ -1,4 +1,4 @@
-// みんなで遊ぶ（通信）の入口。App に混ぜ込む。部屋を作る・入る・ロビー・開始・結果・抜ける・読み込み直したら戻る。
+// オンライン（通信）の入口。App に混ぜ込む。部屋を作る・入る・ロビー・開始・結果・抜ける・読み込み直したら戻る。
 import { normCode, codeFromHash, joinLink, makeCode, makeCid } from '../net/code.js';
 import { openLink } from '../net/link.js';
 import { HostSession, GuestSession } from '../net/session.js';
@@ -16,13 +16,13 @@ export function netMixin(App) {
   P.inClaude = function () { return !!(globalThis.claude && typeof globalThis.claude.use === 'function'); };
   P.netNote = function () {
     return this.inClaude()
-      ? 'Claudeの中では、このページを共有されてログインしている人どうしで遊べます（リンクを知っているだけの人は入れません）。届く場合は公開の中継サーバーも使います（送るのは名前・装備・動きだけ）。つながらないときは、ホーム画面のアプリ版どうしで遊んでください。'
-      : '通信は公開の中継サーバーを通り、つながればお互いの端末どうしで直接やりとりします。送るのは名前・装備・動きだけです。';
+      ? 'Claude内: このページを共有され、ログインしている人と接続。中継サーバーも併用（送信はコールサイン・装備・動きのみ）。つながらない場合はホーム画面のアプリ版どうしで。'
+      : '中継サーバー経由で接続し、可能なら端末間で直接通信。送信はコールサイン・装備・動きのみ。';
   };
   P.connText = function (info) {
     if (!info) return '';
-    const one = (i) => i.kind === 'room' ? (i.ok ? 'Claudeの部屋' : 'Claudeの部屋（接続中）') : (i.servers && i.servers.length ? (i.p2p ? `直接${i.p2p}・` : '') + '中継' : '中継（接続中）');
-    return '通信: ' + (info.parts ? info.parts.map(one).join(' + ') : one(info));
+    const one = (i) => i.kind === 'room' ? (i.ok ? 'Claude' : 'Claude（接続中）') : (i.servers && i.servers.length ? (i.p2p ? `直接${i.p2p}・` : '') + '中継' : '中継（接続中）');
+    return '回線: ' + (info.parts ? info.parts.map(one).join(' + ') : one(info));
   };
   P._cid = function () {
     let c = null;
@@ -74,17 +74,17 @@ export function netMixin(App) {
         const link = await openLink({ ...o, ...this._netCfg() });
         if (this.netTicket !== ticket) { link.close(); return null; }
         return link;
-      } catch (e) { console.warn('つながらない', e && e.message); await new Promise(r => setTimeout(r, 800)); }
+      } catch (e) { console.warn('接続失敗', e && e.message); await new Promise(r => setTimeout(r, 800)); }
     }
-    if (this.netTicket === ticket) this.screens.netError('通信がつながりませんでした。電波の具合を確かめて、もう一度試してください。');
+    if (this.netTicket === ticket) this.screens.netError('接続できませんでした。通信環境を確認してください。');
     return null;
   };
   P.hostRoom = async function (kind) {
     this.leaveRoom(true);
     const ticket = this.netTicket = {};
-    this.screens.netWait('部屋を作っています…', () => { this.netTicket = null; this.screens.reset('title'); });
+    this.screens.netWait('ルーム作成中…', () => { this.netTicket = null; this.screens.reset('title'); });
     const code = makeCode(), cid = this._cid();
-    const link = await this._openLink({ code, role: 'host', cid }, ticket, '部屋を作っています…');
+    const link = await this._openLink({ code, role: 'host', cid }, ticket, 'ルーム作成中…');
     if (!link) return;
     const slow = link.kind === 'room';
     const cfg = kind === 'pvp' ? { ...this.screens.pv, teams: [4, 4] } : { ...this.screens.sel };
@@ -92,7 +92,7 @@ export function netMixin(App) {
     this.net = { role: 'host', sess, link, code };
     sess.on('roster', () => { this.screens.netRoster(); this._saveNet(); });
     sess.on('joined', () => this.audio.ui('ok'));
-    sess.on('left', (r) => { if (this.game) this.hud.feed(`${r.name} が抜けた`, 'warn'); });
+    sess.on('left', (r) => { if (this.game) this.hud.feed(`${r.name} 退出`, 'warn'); });
     link.onStatus = () => this.screens.netRoster();
     this._saveNet();
     this.screens.stack = [['title', []]];
@@ -103,8 +103,8 @@ export function netMixin(App) {
   P.restoreHost = async function (sv) {
     this.leaveRoom(true);
     const ticket = this.netTicket = {};
-    this.screens.netWait(`部屋 ${sv.code} を開き直しています…`, () => { this.netTicket = null; this._clearNet(); this.screens.reset('title'); });
-    const link = await this._openLink({ code: sv.code, role: 'host', cid: sv.cid }, ticket, `部屋 ${sv.code} を開き直しています…`);
+    this.screens.netWait(`ルーム ${sv.code} に再接続中…`, () => { this.netTicket = null; this._clearNet(); this.screens.reset('title'); });
+    const link = await this._openLink({ code: sv.code, role: 'host', cid: sv.cid }, ticket, `ルーム ${sv.code} に再接続中…`);
     if (!link) { this._clearNet(); return; }
     const slow = link.kind === 'room';
     const sess = new HostSession({ link, cid: sv.cid, code: sv.code, profile: this.profile, kind: sv.kind, cfg: sv.cfg, lo: this._netLo(sv.kind), rate: slow ? { lobby: 300, game: 100, end: 500 } : undefined });
@@ -118,18 +118,18 @@ export function netMixin(App) {
       sess.phase = 'game'; sess.seed = sv.seed;
       this.destroyGame();
       try { this.game = new Match(this, { dump: sv.dump, cam: sv.cam, pid: 0, net: { role: 'host', sess } }); }
-      catch (e) { console.warn('開き直せない', e); sess.phase = 'lobby'; sess.backToLobby(); this.screens.reset('lobby'); return; }
+      catch (e) { console.warn('再接続できません', e); sess.phase = 'lobby'; sess.backToLobby(); this.screens.reset('lobby'); return; }
       this._play();
-      this.hud.showBanner('部屋を開き直しました', 2400);
+      this.hud.showBanner('ルームに再接続', 2400);
     } else { sess.backToLobby(); this.screens.reset('lobby'); this._requestWake(); }
     this._saveNet();
   };
   P.joinRoom = async function (code) {
     this.leaveRoom(true);
     const ticket = this.netTicket = {};
-    this.screens.netWait(`部屋 ${code} を探しています…`, () => { this.netTicket = null; if (this.net) this.leaveRoom(true); this.screens.reset('title'); });
+    this.screens.netWait(`ルーム ${code} を検索中…`, () => { this.netTicket = null; if (this.net) this.leaveRoom(true); this.screens.reset('title'); });
     const cid = this._cid();
-    const link = await this._openLink({ code, role: 'guest', cid }, ticket, `部屋 ${code} を探しています…`);
+    const link = await this._openLink({ code, role: 'guest', cid }, ticket, `ルーム ${code} を検索中…`);
     if (!link) return;
     const slow = link.kind === 'room';
     const sess = new GuestSession({ link, cid, code, profile: this.profile, lo: null, rate: slow ? { join: 500, lobby: 500, game: 100, end: 1000 } : undefined });
@@ -151,11 +151,11 @@ export function netMixin(App) {
   };
   P._netFail = function (why, info) {
     const msg = {
-      version: `版がちがうので一緒に遊べません（ホスト v${info && info.host || '?'} / あなた v${VERSION}）。両方ともページを読み込み直してから、もう一度試してください。`,
-      full: '部屋がいっぱいです。', playing: 'この部屋は試合中です。終わってから入り直してください。',
-      notfound: '部屋が見つかりませんでした。コードを確かめてください（ホストが部屋を開いたままか、も確かめてください）。',
-      closed: 'ホストが部屋を閉じました。', lost: 'ホストとの通信が切れました。',
-    }[why] || '通信が切れました。';
+      version: `バージョンが違います（ホスト v${info && info.host || '?'} / 自分 v${VERSION}）。両方とも再読み込みしてください。`,
+      full: 'ルームが満員です。', playing: '試合中のため参加できません。',
+      notfound: 'ルームが見つかりません。コードを確認してください。',
+      closed: 'ホストがルームを閉じました。', lost: 'ホストとの接続が切れました。',
+    }[why] || '接続が切れました。';
     const n = this.net; this.net = null; this._clearNet();
     if (n) { try { n.link.close(); } catch (e) { /* なし */ } }
     this.destroyGame();
@@ -166,15 +166,15 @@ export function netMixin(App) {
   };
   P.shareRoom = async function () {
     if (!this.net) return;
-    const url = joinLink(this.net.code), text = `HARD ENTRY で一緒に遊ぼう。部屋のコード: ${this.net.code}`;
+    const url = joinLink(this.net.code), text = `HARD ENTRY ルームコード: ${this.net.code}`;
     try { if (navigator.share) { await navigator.share({ title: 'HARD ENTRY', text, url }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
     let ok = false;
     try { await navigator.clipboard.writeText(url); ok = true; } catch (e) { /* なし */ }
-    this.screens.flash(ok ? '招待リンクをコピーしました' : `コピーできませんでした。コード ${this.net.code} を伝えてください`);
+    this.screens.flash(ok ? '招待リンクをコピー' : `コピー失敗。コード: ${this.net.code}`);
   };
   P.hostStart = function () {
     const N = this.net;
-    if (!N || N.role !== 'host' || !N.sess.canStart()) { this.screens.flash('全員がそろうと始められます'); return; }
+    if (!N || N.role !== 'host' || !N.sess.canStart()) { this.screens.flash('全員の準備待ち'); return; }
     N.sess.setLoadout(this._netLo(N.sess.kind));
     const seed = (Math.floor(Math.random() * 2 ** 31) ^ Date.now()) >>> 0;
     this.startNetGame(N.sess.start(seed));
@@ -183,7 +183,7 @@ export function netMixin(App) {
     const N = this.net;
     if (!N) return;
     this.destroyGame();
-    this.screens.loading('現場へ向かっています…', 0.5);
+    this.screens.loading('現場へ移動中…', 0.5);
     this.mode = 'loading';
     await nextFrame();
     try {
@@ -206,7 +206,7 @@ export function netMixin(App) {
     } catch (e) {
       console.error(e);
       this.leaveRoom(true);
-      this.screens.netError('試合を始められませんでした。もう一度試してください。');
+      this.screens.netError('開始できませんでした。再試行してください。');
       return;
     }
     this._play();

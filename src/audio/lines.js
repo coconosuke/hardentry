@@ -44,6 +44,6 @@ export const LINES = {
 };
 // 話す人（声の種類）: 自分 p、隊員 o0..o3、容疑者 s0..s2、市民 c0..c2、本部 toc
 export const SPEAKERS = {
-  p: { who: 'swat', name: 'あなた' }, o0: { who: 'swat' }, o1: { who: 'swat' }, o2: { who: 'swat' }, o3: { who: 'swat' },
+  p: { who: 'swat', name: 'リード' }, o0: { who: 'swat' }, o1: { who: 'swat' }, o2: { who: 'swat' }, o3: { who: 'swat' },
   s0: { who: 'sus' }, s1: { who: 'sus' }, s2: { who: 'sus' }, c0: { who: 'civ' }, c1: { who: 'civ' }, c2: { who: 'civ' }, toc: { who: 'toc' },
 };

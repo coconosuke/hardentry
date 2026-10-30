@@ -1,6 +1,6 @@
 // 隊員AI（Ready Or Not の命令を再現）: 追従・移動・待機・援護・スタック・突入（開け方×投げ物）・ミラー・ウェッジ・罠の解除・ピッキング・拘束・投入・捜索して確保
 // 命令がなくても: 交戦規定にしたがって撃つ、呼びかける、投降した人を拘束する、倒れた人を報告する
-import { baseInput, pushAct, visibility, detect, goTo, steerToward, aimAt, trigger, canFight, hasGun, aimingAt, angDiff, yawTo, turnToward, roomAtPos, SKILL } from './common.js';
+import { baseInput, pushAct, visibility, detect, goTo, steerToward, aimAt, trigger, canFight, hasGun, aimingAt, angDiff, yawTo, turnToward, roomAtPos, hearNearest, SKILL } from './common.js';
 import { navCell, cellCenter, nearestWalk, buildNav, snapFloor } from './nav.js';
 import { eyeOf } from '../combat.js';
 import { curW, curWeapon, ammoCount } from '../actor.js';
@@ -33,12 +33,26 @@ export function thinkSwat(S, w, a, dt, ctx) {
   const inp = baseInput(a);
   if (!a.alive || a.down) return inp;
   const sk = SKILL.swat;
+  // 警戒: 撃たれた・弾がそばを抜けた・近くで敵の銃声 → 見つけるのが速くなり、撃ってきた方を見る（6秒）
+  {
+    let src = null;
+    const hs = hearNearest(S, w, a, 22, (h) => h.k === 'shot' && h.team !== a.team && h.team >= 0);
+    if (hs) src = [hs.x, hs.y, hs.z];
+    const by = (a.lastHit && sec(S, a.lastHit.t) < 0.6 && S.byId[a.lastHit.by]) || (a.whizT != null && sec(S, a.whizT) < 0.6 && S.byId[a.whizBy]) || null;
+    if (by && by.team !== a.team) src = [by.x, by.y, by.z];
+    if (src) { ai.alarmT = S.t; ai.alarm = src; }
+  }
+  const alarmed = ai.alarmT != null && sec(S, ai.alarmT) < 6;
+  ai.alert = alarmed;
+  const alarmYaw = alarmed && ai.alarm ? yawTo(ai.alarm[0] - a.x, ai.alarm[2] - a.z) : null;
   // 見張り: 容疑者・市民
   const threats = [], people = [];
   for (const b of ctx.others) {
     if (b.kind !== 'sus' && b.kind !== 'civ') continue;
     if (!b.alive && !b.dead) continue;
-    const v = b.alive ? visibility(S, w, a, b, { fov: 100, maxD: 40 }) : 0;
+    let v = b.alive ? visibility(S, w, a, b, { fov: 100, maxD: 40 }) : 0;
+    // 警戒中: 撃ってきた方（±35°）に見える相手は、暗くても見つけやすい
+    if (v > 0 && alarmYaw != null && Math.abs(angDiff(yawTo(b.x - a.x, b.z - a.z), alarmYaw)) < 0.6) v = Math.max(v, 0.7);
     const seen = detect(S, a, b, v, dt);
     if (!seen) continue;
     const d = Math.hypot(b.x - a.x, b.z - a.z);
@@ -80,7 +94,17 @@ export function thinkSwat(S, w, a, dt, ctx) {
   }
   // 呼びかけ相手がいれば、そちらへ銃を向ける（撃たない）
   if (yelling && !a.act) { aimAt(S, a, inp, yelling.x, yelling.y + 1.1, yelling.z, sk, dt, { id: yelling.id, errMul: 0.5 }); inp.ads = Math.hypot(yelling.x - a.x, yelling.z - a.z) < 10; inp.low = false; }
+  // 警戒中で相手が見えていない: 撃ってきた方へ向く（扉の操作中は除く）。動く向きは保つ
+  else if (alarmYaw != null && !a.act && !(o && (o.stage === 'open' || o.ph === 'doing'))) { lookKeepMove(inp, turnToward(inp.yaw, alarmYaw, 7 * dt)); inp.ads = true; inp.low = false; }
   return inp;
+}
+
+// 体の向きだけを変え、世界での動く向きは保つ（mx/mz は体の向きに対する値なので直す）
+function lookKeepMove(inp, yaw) {
+  const s0 = Math.sin(inp.yaw), c0 = Math.cos(inp.yaw);
+  const wx = s0 * inp.mz - c0 * inp.mx, wz = c0 * inp.mz + s0 * inp.mx;
+  const s1 = Math.sin(yaw), c1 = Math.cos(yaw);
+  inp.yaw = yaw; inp.mz = wx * s1 + wz * c1; inp.mx = -wx * c1 + wz * s1;
 }
 
 // 脅威か: 撃った・構えた（直前）・戦っている
@@ -289,16 +313,19 @@ function breach(S, w, a, inp, dt, o, ctx, sk) {
   const issuer = S.byId[o.by];
   const side = o.side0 ?? (o.side0 = sideOf(d, issuer ? issuer.x : a.x, issuer ? issuer.z : a.z));
   // 全員で共有する進み具合（同じ命令番号）
-  const team = S.actors.filter(b => b.kind === 'swat' && b.ai && b.ai.order && b.ai.order.seq === o.seq && b.alive && !b.down);
+  // 突入の命令をまだ実行中の隊員だけ（待機に移った人は数えない。数えると段階が最初に戻る）
+  const team = S.actors.filter(b => b.kind === 'swat' && b.ai && b.ai.order && b.ai.order.seq === o.seq && b.ai.order.cmd === 'breach' && b.alive && !b.down);
   const lead = team.reduce((m, b) => (b.ai.order.role < m.ai.order.role ? b : m), team[0] || a);
   const T = lead.ai.order;
   if (!T.stage) { T.stage = 'stack'; T.stT = S.t; }
   const stage = T.stage;
+  // 遠い隊員（別の階・8mより先）は待たない（あとから追いつく）
+  const far = (b) => levelOfY(b.y + 0.3) !== d.L || Math.hypot(b.x - d.cx, b.z - d.cz) > 8;
   if (stage === 'stack') {
     stackAt(S, w, a, inp, dt, o, 'split');
     if (a === lead) {
-      const ready = team.every(b => b.ai.order.inPos) || sec(S, T.stT) > 8;
-      if (ready) { T.stage = 'open'; T.stT = S.t; pushAct(inp, { a: 'shout', line: 'swat_breaching' }); }
+      const ready = team.every(b => b.ai.order.inPos || far(b)) || sec(S, T.stT) > 8;
+      if (ready) { T.stage = 'open'; T.stT = S.t; T.party = team.filter(b => b.ai.order.inPos).map(b => b.id); pushAct(inp, { a: 'shout', line: 'swat_breaching' }); }
     }
     return true;
   }
@@ -354,16 +381,20 @@ function breach(S, w, a, inp, dt, o, ctx, sk) {
     const inside = sideOf(d, a.x, a.z) !== side;
     if (inside) { inp.yaw = turnToward(a.yaw, yawTo(P[2] - a.x, P[3] - a.z), 7 * dt); inp.mz = Math.min(inp.mz, 0.8); }
     if (r !== 'moving') { o.inRoom = true; inp.yaw = turnToward(a.yaw, yawTo(P[2] - a.x, P[3] - a.z), 6 * dt); }
-    if (a === lead && team.every(b => b.ai.order.inRoom || !b.alive)) { if (!T.clearT) T.clearT = S.t; if (sec(S, T.clearT) > 1.5) { T.stage = 'clear'; T.stT = S.t; } }
+    // スタックにいた隊員（party）が部屋に入ったら制圧へ
+    const party = T.party && T.party.length ? T.party : team.map(b => b.id);
+    if (a === lead && team.every(b => !party.includes(b.id) || b.ai.order.inRoom || !b.alive)) { if (!T.clearT) T.clearT = S.t; if (sec(S, T.clearT) > 1.5) { T.stage = 'clear'; T.stT = S.t; } }
     if (sec(S, T.stT) > 18) { T.stage = 'clear'; T.stT = S.t; }
     return true;
   }
   if (stage === 'clear') {
     if (a === lead && !T.said) { T.said = true; pushAct(inp, { a: 'shout', line: 'swat_clear' }); }
-    // その場で見張る（指揮する人が動いたら追従へ）
+    // その場で見張る。少したったら全員そろって待機へ（指揮する人が動いたら追従へ）
     const P = entryPoint(S, w, d, side, o.role);
     inp.yaw = turnToward(a.yaw, yawTo(P[2] - a.x, P[3] - a.z), 4 * dt);
-    if (sec(S, T.stT) > 2.5) { a.ai.order = { cmd: 'hold', hy: a.yaw, role: o.role, seq: o.seq, cnt: o.cnt, ph: 'go', phT: S.t, by: o.by, team: o.team, t: S.t }; }
+    if (a === lead && sec(S, T.stT) > 2.5) {
+      for (const b of team) { const bo = b.ai.order; b.ai.order = { cmd: 'hold', hy: b.yaw, role: bo.role, seq: bo.seq, cnt: bo.cnt, ph: 'go', phT: S.t, by: bo.by, team: bo.team, t: S.t, doneT: S.t }; }
+    }
     return true;
   }
   return false;

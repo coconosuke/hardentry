@@ -195,7 +195,7 @@ export class Match {
         case 'light': if (k === 'tap') this.acts.push({ a: 'light' }); break;
         case 'nvg': if (k === 'tap' && p.armor.head === 'nvg') { this.nvgOn = !this.nvgOn; p.nvgOn = this.nvgOn; this.au.sfx('nvg', null, { vol: 0.5 }); } break;
         case 'low': if (k === 'tap') this.lowOn = !this.lowOn; break;
-        case 'map': if (k === 'tap') this.app.openTablet(); break;
+        case 'map': if (k === 'tap' || (k === 'longup' && !e.key)) this.app.openTablet(); break;
         case 'pause': if (k === 'tap' || (k === 'down' && e.key)) this.app.pauseGame(); break;
         case 'drone': if (k === 'tap') this._droneToggle(); break;
         case 'radial': if (k === 'pick' && e.item && e.item.go) e.item.go(); break;
@@ -415,7 +415,7 @@ export class Match {
         }
         case 'down': {
           const v = S.byId[e.id];
-          if (v === p) { hud.showBanner(S.pvp ? 'ダウン — 味方の手当てを待つ' : '行動不能', 3000, 'bad'); }
+          if (v === p) { hud.showBanner(S.pvp ? 'ダウン — 救助待ち' : '行動不能', 3000, 'bad'); }
           if (v && S.pvp) hud.feed(`${nm(S.byId[e.by])} が ${nm(v)} を倒した（ダウン）`);
           break;
         }
@@ -423,7 +423,7 @@ export class Match {
         case 'report': { const v = S.byId[e.id]; hud.feed(`TOCへ報告: ${v.kind === 'sus' ? '容疑者' : v.kind === 'civ' ? '市民' : '隊員'}（${e.st === 'dead' ? '死亡' : e.st === 'down' ? '行動不能' : '拘束'}）`, 'ok'); this._say(null, 'toc_copy', false, 'TOC'); break; }
         case 'evidence': hud.feed('証拠を回収', 'ok'); au.ui('pickup'); break;
         case 'bombdone': hud.feed('爆弾を解除', 'ok'); au.ui('ok'); this._say(null, 'toc_bomb', false, 'TOC'); break;
-        case 'soft': hud.showBanner('主目的を達成<br><small>本部へ戻る（メニュー）か、残りの目的を続ける</small>', 4500, 'ok'); au.ui('ok'); this._say(null, 'toc_soft', false, 'TOC'); break;
+        case 'soft': hud.showBanner('主目的 達成<br><small>メニューから作戦終了、または続行</small>', 4500, 'ok'); au.ui('ok'); this._say(null, 'toc_soft', false, 'TOC'); break;
         case 'glass': { const k = e.k, i = k % this.w.W, j = Math.floor((k % (this.w.W * this.w.D)) / this.w.W), L = Math.floor(k / (this.w.W * this.w.D)); fx.glassBreak((i + 0.5) * CS, L * LH + 0.7, (j + 0.5) * CS); au.sfx('glass', [(i + 0.5) * CS, L * LH + 1.2, (j + 0.5) * CS]); this.r.rebuildCells([k], S); break; }
         case 'block': { const k = e.k, i = k % this.w.W, j = Math.floor((k % (this.w.W * this.w.D)) / this.w.W), L = Math.floor(k / (this.w.W * this.w.D)); fx.debris((i + 0.5) * CS, L * LH + e.q * 0.7 + 0.35, (j + 0.5) * CS, e.m === M.BRICK ? [0.45, 0.25, 0.2] : e.m === M.WOOD ? [0.5, 0.38, 0.25] : [0.82, 0.8, 0.76]); this._rebuild = this._rebuild || new Set(); this._rebuild.add(k); au.sfx('wallBreak', [(i + 0.5) * CS, L * LH + 1, (j + 0.5) * CS]); break; }
         case 'reinf': this._rebuild = this._rebuild || new Set(); this._rebuild.add(e.k); au.sfx('reinforce', null); break;
@@ -436,7 +436,7 @@ export class Match {
           if (e.k === 'locked' && e.id !== me && S.byId[e.id] && S.byId[e.id].kind === 'swat') this._say(S.byId[e.id], 'swat_locked');
           break;
         }
-        case 'deny': if (e.id === me) { const why = { locked: '鍵がかかっている', wedged: 'ウェッジで開かない', barred: 'バリケードがある', nogear: 'もう持っていない', nodet: '起爆する物がない', open: '扉が開いている', broken: '壊れている' }[e.why]; if (why) hud.showBanner(why, 1400); au.ui('deny'); } break;
+        case 'deny': if (e.id === me) { const why = { locked: '鍵がかかっている', wedged: 'ウェッジで開かない', barred: 'バリケード', nogear: '残数なし', nodet: '起爆対象なし', open: '開いている', broken: '破損' }[e.why]; if (why) hud.showBanner(why, 1400); au.ui('deny'); } break;
         case 'nade': { if (e.type === 'cs') { for (let i = 0; i < 8; i++) fx.smoke(e.x, e.y + 0.4, e.z, 1.2, [0.85, 0.85, 0.8], 0.5, 6); au.sfx('gasPop', [e.x, e.y, e.z]); } else { fx.explosion(e.x, e.y, e.z, 3, e.type === 'flash' ? 'flash' : 'stinger'); au.sfx(e.type === 'flash' ? 'flashbang' : 'stinger', [e.x, e.y, e.z]); } const d = Math.hypot(e.x - this.cam.x, e.z - this.cam.z); this.shake = Math.max(this.shake, Math.max(0, 1 - d / 10) * 0.6); break; }
         case 'boom': case 'c2': { fx.explosion(e.x, e.y, e.z, e.r || 3, e.kind || 'c2'); au.sfx('explosion', [e.x, e.y, e.z], { vol: 1.2 }); const d = Math.hypot(e.x - this.cam.x, e.z - this.cam.z); this.shake = Math.max(this.shake, Math.max(0, 1 - d / 18)); break; }
         case 'flashed': if (e.id === me) { this.flashW = Math.max(this.flashW, Math.min(1, 0.4 + e.k * 1.2)); au.deafen(2 + 4 * e.k); } break;
@@ -501,7 +501,7 @@ export class Match {
     if (this.lastSub[key] && now - this.lastSub[key] < 2500) return;
     this.lastSub[key] = now;
     const v = L.v ? L.v[Math.floor(Math.random() * L.v.length)] : null;
-    const speaker = who || (a ? (a === this.p ? 'あなた' : a.kind === 'swat' ? a.name : a.kind === 'sus' ? '容疑者' : a.kind === 'civ' ? '市民' : a.name) : '');
+    const speaker = who || (a ? (a === this.p ? (this.p.name || 'リード') : a.kind === 'swat' ? a.name : a.kind === 'sus' ? '容疑者' : a.kind === 'civ' ? '市民' : a.name) : '');
     const col = a && a.kind === 'sus' ? '#ff8a7a' : a && a.kind === 'civ' ? '#9fe0a0' : who === 'TOC' ? '#ffd27a' : '#9cd0ff';
     const idx = L.v ? L.v.indexOf(v) : 0;
     this.hud.subtitle(speaker, (L.ja && L.ja[idx]) || L.ja[0], col);
@@ -511,7 +511,7 @@ export class Match {
   _onDeath() {
     this.dead = true;
     this.adsOn = false;
-    this.hud.showBanner(this.S.pvp ? (this.S.m.kind === 'tdm' ? '倒された — 4秒で復活' : '倒された — 味方を見ています') : '倒された — 味方を見ています', 3000, 'bad');
+    this.hud.showBanner(this.S.pvp ? (this.S.m.kind === 'tdm' ? 'KIA — 4秒後に復帰' : 'KIA — 観戦中') : 'KIA — 観戦中', 3000, 'bad');
     this.au.deafen(1.5);
   }
 
@@ -537,7 +537,7 @@ export class Match {
         x: e[0], y: e[1], z: e[2],
         yaw: p.yaw + (p.ws.ry * DEG) + Math.sin(t * 37) * 0.012 * sh + p.flinch * 0.03 * Math.sin(t * 23),
         pitch: p.pitch + (p.ws.rp * DEG) + Math.sin(t * 41) * 0.012 * sh + p.flinch * 0.04,
-        roll: -p.lean * 0.16 + Math.sin(t * 29) * 0.01 * sh,
+        roll: p.lean * 0.16 + Math.sin(t * 29) * 0.01 * sh,
         fov: 2 * Math.atan(Math.tan(fov0 / 2) / z),
       };
       if (!this.av.hidden.has(p.id)) this.av.hidden.add(p.id);
@@ -669,9 +669,9 @@ export class Match {
     if (this.droneId != null) v.hideCross = true;
     // 案内
     let prompt = '';
-    if (c) prompt = `${ctxName(c, S)}: ${OP_NAME[c.def.op] || c.def.op}` + (c.ops.length > 1 ? '（長押しで他の操作）' : '');
+    if (c) prompt = `${ctxName(c, S)}: ${OP_NAME[c.def.op] || c.def.op}` + (c.ops.length > 1 ? '（長押し: メニュー）' : '');
     if (p.act) { v.prog = Math.min(1, p.act.t / p.act.dur); v.progLabel = OP_NAME[p.act.k] || ''; prompt = ''; }
-    if (this.droneId != null) prompt = 'ドローン: 射撃で敵に印・乗り越えでジャンプ・ドローンのボタンで戻る';
+    if (this.droneId != null) prompt = 'ドローン ― 射撃: マーク／乗り越え: ジャンプ／ドローン: 戻る';
     v.prompt = prompt;
     // 目的
     const ob = this._objectives();

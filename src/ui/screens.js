@@ -1,5 +1,5 @@
 // 画面: 読み込み・タイトル・作戦の準備（マップ・作戦・難易度・人数・突入口）・ブリーフィング・装備・対戦の準備・
-// みんなで（部屋を作る/入る・ロビー）・一時停止・地図（タブレット）・結果・設定・資料室（手順書と資料）
+// オンライン（ルームを作る/参加・ロビー）・一時停止・地図（タブレット）・結果・設定・資料室（手順書と資料）
 import { onTap } from './input.js';
 import { Scroller, slider, chips, confirmTap, textModal, copyText, esc } from './widgets.js';
 import { MAPS, MAP_LIST, PVE_MAPS, PVP_MAPS } from '../engine/maps/index.js';
@@ -69,14 +69,14 @@ export class Screens {
   _title() {
     const a = this.app, run = a.savedRun();
     const el = this._mk('title', `
-      <div class="t-logo"><div class="t-badge">SWAT · CQB</div><h1>HARD<b>ENTRY</b></h1><p>突入、制圧、確保。撃つのは最後の手段。</p></div>
+      <div class="t-logo"><div class="t-badge">SWAT · CQB</div><h1>HARD<b>ENTRY</b></h1><p>突入。制圧。確保。</p></div>
       <nav class="t-menu" aria-label="メニュー">
         ${run ? `<button class="mi main" data-a="continue"><span class="mi-l">続きから</span><span class="mi-d">${esc(run.label)}</span></button>` : ''}
-        <button class="mi ${run ? '' : 'main'}" data-a="pve"><span class="mi-l">作戦</span><span class="mi-d">PvE · ひとり／みんなで</span></button>
+        <button class="mi ${run ? '' : 'main'}" data-a="pve"><span class="mi-l">作戦</span><span class="mi-d">PvE · ソロ／協力</span></button>
         <button class="mi" data-a="pvp"><span class="mi-l">対戦</span><span class="mi-d">PvP · 1v1〜4v4</span></button>
         <button class="mi" data-a="train"><span class="mi-l">訓練</span><span class="mi-d">射撃場・キルハウス</span></button>
         <button class="mi" data-a="settings"><span class="mi-l">設定</span></button>
-        <button class="mi" data-a="book"><span class="mi-l">資料室</span><span class="mi-d">手順書・交戦規定・装備ファイル</span></button>
+        <button class="mi" data-a="book"><span class="mi-l">資料室</span><span class="mi-d">手順・交戦規定・装備</span></button>
       </nav>
       <div class="t-foot"><span>ヘッドホン推奨</span><span class="ver">互換${COMPAT} · v${VERSION}</span></div>`);
     this._acts(el, {
@@ -92,20 +92,20 @@ export class Screens {
   }
   _pveMenu() {
     const a = this.app;
-    const el = this._mk('pveMenu', `<div class="sc-wrap"><header class="sc-head">${BACK}<h2>作戦</h2><span class="hint">Ready Or Not のように、建物の中の目的を達成する</span></header>
+    const el = this._mk('pveMenu', `<div class="sc-wrap"><header class="sc-head">${BACK}<h2>作戦</h2></header>
       <div class="big-choice">
-        <button class="bc" data-a="solo"><b>ひとりで</b><span>AIの隊員（0〜3人）を率いる。命令で扉を開けさせ、突入させる。</span></button>
-        <button class="bc" data-a="multi"><b>みんなで</b><span>2〜4人で協力。空いた枠はAIの隊員が入る。部屋のコードかリンクで招く。</span></button>
+        <button class="bc" data-a="solo"><b>ソロ</b><span>AI隊員（最大3名）を指揮して突入。</span></button>
+        <button class="bc" data-a="multi"><b>協力（オンライン）</b><span>2〜4名で出動。空き枠はAI隊員。</span></button>
       </div></div>`, 'dim');
     this._acts(el, { solo: () => this.open('mission'), multi: () => this.open('multi', 'pve') });
     this.show('pveMenu'); a.scene('menu');
   }
   _pvpMenu() {
     const a = this.app;
-    const el = this._mk('pvpMenu', `<div class="sc-wrap"><header class="sc-head">${BACK}<h2>対戦</h2><span class="hint">SWAT 対 立てこもり犯。シージ式の攻守も</span></header>
+    const el = this._mk('pvpMenu', `<div class="sc-wrap"><header class="sc-head">${BACK}<h2>対戦</h2><span class="hint">SWAT 対 立てこもり犯</span></header>
       <div class="big-choice">
-        <button class="bc" data-a="solo"><b>ひとりで（ボット）</b><span>自分以外はすべてボット。人数・モード・強さを決めて練習できる。</span></button>
-        <button class="bc" data-a="multi"><b>みんなで</b><span>1v1〜4v4、人数の違う組み合わせも。空いた枠はボットが入る。</span></button>
+        <button class="bc" data-a="solo"><b>ボット戦</b><span>自分以外はボット。人数・モード・強さを設定。</span></button>
+        <button class="bc" data-a="multi"><b>オンライン対戦</b><span>1v1〜4v4。空き枠はボット。</span></button>
       </div></div>`, 'dim');
     this._acts(el, { solo: () => this.open('pvpSetup', null), multi: () => this.open('multi', 'pvp') });
     this.show('pvpMenu'); a.scene('menu');
@@ -114,9 +114,9 @@ export class Screens {
     const a = this.app;
     const el = this._mk('train', `<div class="sc-wrap"><header class="sc-head">${BACK}<h2>訓練</h2></header>
       <div class="big-choice three">
-        <button class="bc" data-a="range"><b>射撃場</b><span>的を撃って反動と照準を確かめる。弾はその場で補給される。</span></button>
-        <button class="bc" data-a="house"><b>キルハウス</b><span>役者（訓練弾）相手に、呼びかけ・拘束・命令を練習する。</span></button>
-        <button class="bc" data-a="lo"><b>装備</b><span>訓練で使う装備（作戦と同じ）を選ぶ。</span></button>
+        <button class="bc" data-a="range"><b>射撃場</b><span>反動と照準の確認。弾は無制限。</span></button>
+        <button class="bc" data-a="house"><b>キルハウス</b><span>役者相手に警告・拘束・命令を訓練。</span></button>
+        <button class="bc" data-a="lo"><b>装備</b><span>作戦と共通の装備。</span></button>
       </div></div>`, 'dim');
     this._acts(el, { range: () => a.startTrain({ start: 'range' }), house: () => a.startTrain({ start: 'house' }), lo: () => this.open('loadout', { kind: 'pve' }) });
     this.show('train'); a.scene('menu');
@@ -130,7 +130,7 @@ export class Screens {
     const entries = (def.spawn.swat || []).map((e, i) => [i, e.name]);
     if (s.entry >= entries.length) s.entry = 0;
     const net = !!opt.net;
-    const el = this._mk('mission', `<div class="sc-wrap"><header class="sc-head">${BACK}<h2>${net ? '作戦の設定' : '作戦の準備'}</h2><span class="hint">${esc(def.name)}</span></header>
+    const el = this._mk('mission', `<div class="sc-wrap"><header class="sc-head">${BACK}<h2>${net ? '作戦設定' : '作戦準備'}</h2><span class="hint">${esc(def.name)}</span></header>
       <div class="split">
         <div class="pane maps scroll">${PVE_MAPS.map(id => { const m = MAPS[id]; return `<button class="mapcard${id === s.map ? ' on' : ''}" data-map="${id}"><b>${esc(m.name)}</b><small>${esc(m.en)} · ${TIME_JA[m.time] || ''}${m.levels.length > 1 ? ` · ${m.levels.length}階` : ''}</small></button>`; }).join('')}</div>
         <div class="pane rows scroll">
@@ -138,16 +138,16 @@ export class Screens {
           <p class="note mdesc">${esc(MISSIONS[s.mission].desc)}</p>
           <div class="row"><div class="rl"><b>難易度</b></div><div class="rc" data-k="diff"></div></div>
           <p class="note ddesc">${esc(DIFFS[s.diff].desc)}</p>
-          ${net ? '' : `<div class="row"><div class="rl"><b>隊の人数</b><small>あなた＋AI</small></div><div class="rc" data-k="team"></div></div>`}
+          ${net ? '' : `<div class="row"><div class="rl"><b>人数</b><small>自分＋AI隊員</small></div><div class="rc" data-k="team"></div></div>`}
           <div class="row"><div class="rl"><b>突入口</b></div><div class="rc" data-k="entry"></div></div>
           <p class="note">${esc(def.desc)}</p>
         </div>
       </div>
-      <div class="sc-foot"><button class="btn ghost" data-a="lo">装備</button><button class="btn primary" data-a="go">${net ? '決定' : 'ブリーフィングへ'}</button></div></div>`, 'dim');
+      <div class="sc-foot"><button class="btn ghost" data-a="lo">装備</button><button class="btn primary" data-a="go">${net ? '決定' : 'ブリーフィング'}</button></div></div>`, 'dim');
     el.querySelectorAll('[data-map]').forEach(b => onTap(b, () => { s.map = b.dataset.map; s.entry = 0; this.app.audio.ui('tap'); this._mission(opt); }));
     chips(el.querySelector('[data-k="mission"]'), MISSION_LIST.filter(m => !def.missions || def.missions[m]).map(m => [m, MISSIONS[m].name]), s.mission, (v) => { s.mission = v; el.querySelector('.mdesc').textContent = MISSIONS[v].desc; });
     chips(el.querySelector('[data-k="diff"]'), Object.keys(DIFFS).map(d => [d, DIFFS[d].name]), s.diff, (v) => { s.diff = v; el.querySelector('.ddesc').textContent = DIFFS[v].desc; });
-    if (!net) chips(el.querySelector('[data-k="team"]'), [[1, 'ひとり'], [2, '2人'], [3, '3人'], [4, '4人']], s.team, (v) => { s.team = v; });
+    if (!net) chips(el.querySelector('[data-k="team"]'), [[1, '1名'], [2, '2名'], [3, '3名'], [4, '4名']], s.team, (v) => { s.team = v; });
     chips(el.querySelector('[data-k="entry"]'), entries, s.entry, (v) => { s.entry = v; });
     this._acts(el, {
       lo: () => this.open('loadout', { kind: 'pve', team: net ? 1 : s.team }),
@@ -163,7 +163,7 @@ export class Screens {
         <div class="pane rows scroll">
           <h3>状況</h3><p>${esc(M.desc)}</p>
           <h3>目的</h3><ul class="obj">${objectives(s.mission).map(o => `<li>${esc(o)}</li>`).join('')}</ul>
-          <h3>交戦規定</h3><p class="note">致死的な力（実弾）を使ってよいのは、相手が銃を向けた・撃った・抜こうとしたとき、または武器を持ったまま何度警告しても従わないときだけ。投降した人・拘束した人・丸腰の人・市民を撃つと大きく減点。まず「警告」で呼びかけ、従った人は拘束し、本部（TOC）へ報告する。</p>
+          <h3>交戦規定</h3><p class="note">実弾は、相手が銃を向けた・撃った・抜こうとしたとき、または武装したまま警告に従わないときのみ。投降者・拘束者・丸腰の者・市民への発砲は重大な違反。警告 → 拘束 → TOCへ報告。</p>
           <h3>突入口</h3><p>${esc(def.spawn.swat[s.entry].name)}</p>
         </div>
       </div>
@@ -176,7 +176,7 @@ export class Screens {
   _drawPlan(box, mapId, o = {}) {
     const def = MAPS[mapId];
     let w;
-    try { w = baseWorld(mapId); } catch (e) { box.innerHTML = '<p class="note">見取り図を作れませんでした</p>'; return; }
+    try { w = baseWorld(mapId); } catch (e) { box.innerHTML = '<p class="note">見取り図なし</p>'; return; }
     const plan = buildPlan(w, def, 5);
     const cv = box.querySelector('canvas'), lv = box.querySelector('.plan-lv');
     let L = o.level ?? 0;
@@ -199,7 +199,7 @@ export class Screens {
   // ---- 装備
   _loadout(o = {}) {
     const a = this.app;
-    const el = this._mk('loadout', `<div class="sc-wrap"><header class="sc-head">${BACK}<h2>装備</h2><span class="hint">${o.kind === 'pvp' ? '対戦の装備（陣営ごと）' : '自分とAI隊員の装備'}</span></header><div class="lo-host"></div></div>`, 'dim');
+    const el = this._mk('loadout', `<div class="sc-wrap"><header class="sc-head">${BACK}<h2>装備</h2><span class="hint">${o.kind === 'pvp' ? '対戦（陣営ごと）' : '自分とAI隊員'}</span></header><div class="lo-host"></div></div>`, 'dim');
     this.lo = new LoadoutEditor(a, el.querySelector('.lo-host'), o);
     this.show('loadout'); a.scene('menu');
   }
@@ -211,19 +211,19 @@ export class Screens {
     const maps = MAP_LIST.filter(id => (PVP_MAPS.includes(id) || PVE_MAPS.includes(id)) && id !== 'training');
     if (!maps.includes(s.map)) s.map = maps[0];
     const def = MAPS[s.map];
-    const el = this._mk('pvpSetup', `<div class="sc-wrap"><header class="sc-head">${BACK}<h2>${net ? '部屋の設定' : '対戦の準備'}</h2><span class="hint">${esc(MODE_INFO[s.mode].name)} · ${esc(def.name)}</span></header>
+    const el = this._mk('pvpSetup', `<div class="sc-wrap"><header class="sc-head">${BACK}<h2>${net ? 'ルーム設定' : '対戦設定'}</h2><span class="hint">${esc(MODE_INFO[s.mode].name)} · ${esc(def.name)}</span></header>
       <div class="split">
         <div class="pane maps scroll">${maps.map(id => { const m = MAPS[id]; return `<button class="mapcard${id === s.map ? ' on' : ''}" data-map="${id}"><b>${esc(m.name)}</b><small>${PVP_MAPS.includes(id) && !PVE_MAPS.includes(id) ? '対戦用' : '作戦と共用'} · ${TIME_JA[m.time] || ''}</small></button>`; }).join('')}</div>
         <div class="pane rows scroll">
           <div class="row"><div class="rl"><b>モード</b></div><div class="rc" data-k="mode"></div></div>
           <p class="note modedesc">${esc(MODE_INFO[s.mode].desc)}</p>
-          ${net ? '' : `<div class="row"><div class="rl"><b>あなたのチーム</b><small>人数（自分を含む）</small></div><div class="rc" data-k="t0"></div></div>
-          <div class="row"><div class="rl"><b>相手チーム</b><small>人数</small></div><div class="rc" data-k="t1"></div></div>
-          <div class="row"><div class="rl"><b>陣営</b><small>最初の陣営</small></div><div class="rc" data-k="side"></div></div>`}
+          ${net ? '' : `<div class="row"><div class="rl"><b>自チーム</b><small>自分を含む</small></div><div class="rc" data-k="t0"></div></div>
+          <div class="row"><div class="rl"><b>敵チーム</b></div><div class="rc" data-k="t1"></div></div>
+          <div class="row"><div class="rl"><b>陣営</b><small>前半</small></div><div class="rc" data-k="side"></div></div>`}
           <div class="row"><div class="rl"><b>ボットの強さ</b></div><div class="rc" data-k="bot"></div></div>
           <div class="row tdm-only"><div class="rl"><b>時間</b></div><div class="rc" data-k="time"></div></div>
           <div class="row rnd-only"><div class="rl"><b>勝利ラウンド</b><small>先に取った方の勝ち</small></div><div class="rc" data-k="wins"></div></div>
-          <div class="row"><div class="rl"><b>エイムアシスト</b><small>タッチの人だけ</small></div><div class="rc" data-k="aa"></div></div>
+          <div class="row"><div class="rl"><b>エイムアシスト</b><small>タッチ操作のみ</small></div><div class="rc" data-k="aa"></div></div>
           <div class="row"><div class="rl"><b>味方撃ち</b></div><div class="rc" data-k="ff"></div></div>
         </div>
       </div>
@@ -232,15 +232,15 @@ export class Screens {
     el.querySelectorAll('[data-map]').forEach(b => onTap(b, () => { s.map = b.dataset.map; this.app.audio.ui('tap'); this._pvpSetup(opt); }));
     chips(el.querySelector('[data-k="mode"]'), PVP_MODES.map(m => [m, MODE_INFO[m].name]), s.mode, (v) => { s.mode = v; el.querySelector('.modedesc').textContent = MODE_INFO[v].desc; vis(); });
     if (!net) {
-      chips(el.querySelector('[data-k="t0"]'), [1, 2, 3, 4].map(n => [n, n + '人']), s.teams[0], (v) => { s.teams[0] = v; });
-      chips(el.querySelector('[data-k="t1"]'), [1, 2, 3, 4].map(n => [n, n + '人']), s.teams[1], (v) => { s.teams[1] = v; });
+      chips(el.querySelector('[data-k="t0"]'), [1, 2, 3, 4].map(n => [n, n + '名']), s.teams[0], (v) => { s.teams[0] = v; });
+      chips(el.querySelector('[data-k="t1"]'), [1, 2, 3, 4].map(n => [n, n + '名']), s.teams[1], (v) => { s.teams[1] = v; });
       chips(el.querySelector('[data-k="side"]'), [[0, 'SWAT'], [1, '立てこもり犯']], s.side, (v) => { s.side = v; });
     }
-    chips(el.querySelector('[data-k="bot"]'), [[1, '弱い'], [2, 'ふつう'], [3, '強い']], s.botLevel, (v) => { s.botLevel = v; });
+    chips(el.querySelector('[data-k="bot"]'), [[1, '弱'], [2, '標準'], [3, '強']], s.botLevel, (v) => { s.botLevel = v; });
     chips(el.querySelector('[data-k="time"]'), [[5, '5分'], [8, '8分'], [10, '10分'], [15, '15分']], s.time, (v) => { s.time = v; });
     chips(el.querySelector('[data-k="wins"]'), [[2, '2'], [3, '3'], [4, '4'], [5, '5']], s.wins, (v) => { s.wins = v; });
-    chips(el.querySelector('[data-k="aa"]'), [[0, 'なし'], [1, '弱い'], [2, 'ふつう']], s.aimAssist, (v) => { s.aimAssist = v; });
-    chips(el.querySelector('[data-k="ff"]'), [[false, 'なし'], [true, 'あり']], s.ff, (v) => { s.ff = v; });
+    chips(el.querySelector('[data-k="aa"]'), [[0, 'オフ'], [1, '弱'], [2, '標準']], s.aimAssist, (v) => { s.aimAssist = v; });
+    chips(el.querySelector('[data-k="ff"]'), [[false, 'オフ'], [true, 'オン']], s.ff, (v) => { s.ff = v; });
     vis();
     this._acts(el, {
       lo: () => this.open('loadout', { kind: 'pvp' }),
@@ -249,24 +249,24 @@ export class Screens {
     this.show('pvpSetup'); a.scene('menu');
   }
 
-  // ---- みんなで: 部屋を作る／入る
+  // ---- オンライン: ルームを作る／参加
   _multi(kind) {
     const a = this.app;
-    const el = this._mk('multi', `<div class="sc-wrap"><header class="sc-head">${BACK}<h2>みんなで（${kind === 'pvp' ? '対戦' : '作戦'}）</h2></header>
+    const el = this._mk('multi', `<div class="sc-wrap"><header class="sc-head">${BACK}<h2>${kind === 'pvp' ? 'オンライン対戦' : '協力（オンライン）'}</h2></header>
       <div class="big-choice">
-        <button class="bc" data-a="host"><b>部屋を作る</b><span>5文字のコードと招待リンクができる。設定を決めて、そろったら始める。</span></button>
-        <button class="bc" data-a="join"><b>コードで入る</b><span>友達から聞いた5文字のコードを入れる（招待リンクを開いた場合はそのまま入れる）。</span></button>
+        <button class="bc" data-a="host"><b>ルーム作成</b><span>5文字のコードと招待リンクを発行。</span></button>
+        <button class="bc" data-a="join"><b>コードで参加</b><span>5文字のコードを入力。招待リンクなら自動で参加。</span></button>
       </div>
       <p class="note center">${esc(a.netNote())}</p></div>`, 'dim');
     this._acts(el, {
       host: () => a.hostRoom(kind),
-      join: async () => { const v = await textModal({ title: '部屋のコード', note: '5文字（例: KX7QM）', maxLength: 8, validate: (t) => a.normCode(t) ? '' : '5文字のコードを入れてください（使えない字が入っています）' }); if (v) a.joinRoom(a.normCode(v)); },
+      join: async () => { const v = await textModal({ title: 'ルームコード', note: '5文字（例: KX7QM）', maxLength: 8, validate: (t) => a.normCode(t) ? '' : '5文字のコードを入力（使えない文字があります）' }); if (v) a.joinRoom(a.normCode(v)); },
     });
     this.show('multi'); a.scene('menu');
   }
   _join(code) { this.app.joinRoom(code); }
   netWait(msg, onCancel) {
-    const el = this._mk('netwait', `<div class="ld"><div class="ld-name">${TITLE}</div><p class="nw-msg">${esc(msg)}</p><div class="spin"></div><button class="btn ghost" data-a="cancel">やめる</button></div>`);
+    const el = this._mk('netwait', `<div class="ld"><div class="ld-name">${TITLE}</div><p class="nw-msg">${esc(msg)}</p><div class="spin"></div><button class="btn ghost" data-a="cancel">中止</button></div>`);
     this._acts(el, { cancel: () => onCancel && onCancel() });
     this.show('netwait');
   }
@@ -280,12 +280,12 @@ export class Screens {
     const a = this.app, N = a.net;
     if (!N) { this.reset('title'); return; }
     const host = N.role === 'host';
-    const el = this._mk('lobby', `<div class="sc-wrap"><header class="sc-head"><button class="back" data-a="leave"><span>部屋を出る</span></button><h2>ロビー</h2><span class="hint code">部屋 <b>${esc(N.code)}</b></span><button class="btn small" data-a="share">招待</button></header>
+    const el = this._mk('lobby', `<div class="sc-wrap"><header class="sc-head"><button class="back" data-a="leave"><span>退出</span></button><h2>ロビー</h2><span class="hint code">ルーム <b>${esc(N.code)}</b></span><button class="btn small" data-a="share">招待</button></header>
       <div class="split lobby">
         <div class="pane roster scroll"></div>
         <div class="pane rows scroll lob-set"></div>
       </div>
-      <div class="sc-foot"><span class="conn"></span>${host ? '<button class="btn ghost" data-a="set">設定を変える</button><button class="btn primary" data-a="start">始める</button>' : '<span class="wait">ホストが始めるのを待っています…</span>'}<button class="btn ghost" data-a="lo">装備</button></div></div>`, 'dim');
+      <div class="sc-foot"><span class="conn"></span>${host ? '<button class="btn ghost" data-a="set">設定</button><button class="btn primary" data-a="start">開始</button>' : '<span class="wait">ホストの開始待ち…</span>'}<button class="btn ghost" data-a="lo">装備</button></div></div>`, 'dim');
     this._acts(el, {
       leave: () => a.leaveRoom(),
       share: () => a.shareRoom(),
@@ -304,13 +304,13 @@ export class Screens {
     const pvp = S.kind === 'pvp';
     const ro = S.roster || [];
     const teamOf = (r) => r.team || 0;
-    const rowHTML = (r) => `<div class="pl${r.on ? '' : ' off'}"><b>${esc(r.name)}</b>${r.host ? '<em>ホスト</em>' : ''}${r.cid === S.cid ? '<em class="me">あなた</em>' : ''}${r.on ? '' : '<em class="bad">応答なし</em>'}${pvp && host ? `<button class="chip small" data-team="${esc(r.cid)}">${teamOf(r) ? '赤へ' : '青へ'}</button>` : ''}</div>`;
+    const rowHTML = (r) => `<div class="pl${r.on ? '' : ' off'}"><b>${esc(r.name)}</b>${r.host ? '<em>ホスト</em>' : ''}${r.cid === S.cid ? '<em class="me">自分</em>' : ''}${r.on ? '' : '<em class="bad">応答なし</em>'}${pvp && host ? `<button class="chip small" data-team="${esc(r.cid)}">${teamOf(r) ? '赤へ' : '青へ'}</button>` : ''}</div>`;
     let html;
     if (pvp) {
       const sizes = cfg.teams || [4, 4];
-      html = [0, 1].map(t => { const list = ro.filter(r => teamOf(r) === t); return `<div class="team t${t}"><h4>${t === 0 ? '青チーム' : '赤チーム'} <small>${list.length}人＋ボット${Math.max(0, sizes[t] - list.length)}</small></h4>${list.map(rowHTML).join('')}</div>`; }).join('');
-      if (host) html += `<div class="row"><div class="rl"><b>チームの人数</b><small>空きはボット</small></div><div class="rc"><span class="mini">青</span><span data-k="s0"></span><span class="mini">赤</span><span data-k="s1"></span></div></div>`;
-    } else html = `<h4>隊員 <small>${ro.length}人＋AI${Math.max(0, 4 - ro.length)}人</small></h4>` + ro.map(rowHTML).join('');
+      html = [0, 1].map(t => { const list = ro.filter(r => teamOf(r) === t); return `<div class="team t${t}"><h4>${t === 0 ? '青チーム' : '赤チーム'} <small>${list.length}名＋ボット${Math.max(0, sizes[t] - list.length)}</small></h4>${list.map(rowHTML).join('')}</div>`; }).join('');
+      if (host) html += `<div class="row"><div class="rl"><b>人数</b><small>空き枠はボット</small></div><div class="rc"><span class="mini">青</span><span data-k="s0"></span><span class="mini">赤</span><span data-k="s1"></span></div></div>`;
+    } else html = `<h4>隊員 <small>${ro.length}名＋AI${Math.max(0, 4 - ro.length)}</small></h4>` + ro.map(rowHTML).join('');
     el.querySelector('.roster').innerHTML = html;
     if (pvp && host) {
       el.querySelectorAll('[data-team]').forEach(b => onTap(b, () => S.setTeam(b.dataset.team, teamOf(ro.find(r => r.cid === b.dataset.team)) ? 0 : 1)));
@@ -320,8 +320,8 @@ export class Screens {
     }
     // 設定の要約
     const set = el.querySelector('.lob-set');
-    if (pvp) set.innerHTML = `<h3>${esc(MODE_INFO[cfg.mode] ? MODE_INFO[cfg.mode].name : '')}</h3><p>${esc(MAPS[cfg.map] ? MAPS[cfg.map].name : '')}</p><dl class="kv"><dt>ボット</dt><dd>${['', '弱い', 'ふつう', '強い'][cfg.botLevel || 2]}</dd>${cfg.mode === 'tdm' ? `<dt>時間</dt><dd>${cfg.time}分</dd>` : `<dt>勝利ラウンド</dt><dd>${cfg.wins}</dd>`}<dt>エイムアシスト</dt><dd>${['なし', '弱い', 'ふつう'][cfg.aimAssist ?? 1]}</dd><dt>味方撃ち</dt><dd>${cfg.ff ? 'あり' : 'なし'}</dd></dl>`;
-    else set.innerHTML = `<h3>${esc(MISSIONS[cfg.mission] ? MISSIONS[cfg.mission].name : '')}</h3><p>${esc(MAPS[cfg.map] ? MAPS[cfg.map].name : '')}</p><dl class="kv"><dt>難易度</dt><dd>${esc(DIFFS[cfg.diff] ? DIFFS[cfg.diff].name : '')}</dd><dt>突入口</dt><dd>${esc(MAPS[cfg.map] && MAPS[cfg.map].spawn.swat[cfg.entry || 0] ? MAPS[cfg.map].spawn.swat[cfg.entry || 0].name : '')}</dd></dl><p class="note">空いた枠（4人まで）はAIの隊員が入ります。</p>`;
+    if (pvp) set.innerHTML = `<h3>${esc(MODE_INFO[cfg.mode] ? MODE_INFO[cfg.mode].name : '')}</h3><p>${esc(MAPS[cfg.map] ? MAPS[cfg.map].name : '')}</p><dl class="kv"><dt>ボット</dt><dd>${['', '弱', '標準', '強'][cfg.botLevel || 2]}</dd>${cfg.mode === 'tdm' ? `<dt>時間</dt><dd>${cfg.time}分</dd>` : `<dt>勝利ラウンド</dt><dd>${cfg.wins}</dd>`}<dt>エイムアシスト</dt><dd>${['オフ', '弱', '標準'][cfg.aimAssist ?? 1]}</dd><dt>味方撃ち</dt><dd>${cfg.ff ? 'オン' : 'オフ'}</dd></dl>`;
+    else set.innerHTML = `<h3>${esc(MISSIONS[cfg.mission] ? MISSIONS[cfg.mission].name : '')}</h3><p>${esc(MAPS[cfg.map] ? MAPS[cfg.map].name : '')}</p><dl class="kv"><dt>難易度</dt><dd>${esc(DIFFS[cfg.diff] ? DIFFS[cfg.diff].name : '')}</dd><dt>突入口</dt><dd>${esc(MAPS[cfg.map] && MAPS[cfg.map].spawn.swat[cfg.entry || 0] ? MAPS[cfg.map].spawn.swat[cfg.entry || 0].name : '')}</dd></dl><p class="note">空き枠（最大4名）はAI隊員。</p>`;
     el.querySelector('.conn').textContent = a.connText(N.link.info && N.link.info());
     const st = el.querySelector('[data-a="start"]');
     if (st) st.classList.toggle('dis', !S.canStart());
@@ -332,14 +332,14 @@ export class Screens {
     const a = this.app, g = a.game;
     const pve = g && !g.S.pvp && g.S.m && g.S.m.kind === 'pve';
     const net = !!(g && g.net);
-    const el = this._mk('pause', `<div class="pz"><h2>一時停止${net ? '<small>みんなで遊んでいる間は止まりません</small>' : ''}</h2>
+    const el = this._mk('pause', `<div class="pz"><h2>一時停止${net ? '<small>オンライン中は停止しません</small>' : ''}</h2>
       <nav class="t-menu">
         <button class="mi main" data-a="resume"><span class="mi-l">再開</span></button>
         <button class="mi" data-a="tablet"><span class="mi-l">地図・目的</span></button>
         <button class="mi" data-a="settings"><span class="mi-l">設定</span></button>
         <button class="mi" data-a="book"><span class="mi-l">資料室</span></button>
-        ${pve && (!net || a.net.role === 'host') ? `<button class="mi" data-a="abort"><span class="mi-l">${g.S.m.softDone ? '本部へ戻る（完了）' : '撤収する（作戦を終える）'}</span></button>` : ''}
-        <button class="mi danger" data-a="quit"><span class="mi-l">${net ? '部屋を出る' : 'タイトルへ'}</span></button>
+        ${pve && (!net || a.net.role === 'host') ? `<button class="mi" data-a="abort"><span class="mi-l">${g.S.m.softDone ? '作戦終了' : '撤収'}</span></button>` : ''}
+        <button class="mi danger" data-a="quit"><span class="mi-l">${net ? '退出' : 'タイトルへ'}</span></button>
       </nav></div>`, 'dim');
     this._acts(el, {
       resume: () => a.resumeGame(),
@@ -361,7 +361,7 @@ export class Screens {
     const el = this._mk('tablet', `<div class="sc-wrap"><header class="sc-head">${BACK}<h2>地図</h2><span class="hint">${esc(def.name)}</span></header>
       <div class="split brief"><div class="pane planbox"><canvas class="plan"></canvas><div class="plan-lv"></div></div>
       <div class="pane rows scroll"><h3>目的</h3><div class="tab-obj">${ob.html}</div>${!S.pvp && S.m.kind === 'pve' ? `<ul class="obj">${objectives(S.m.mission).map(o => `<li>${esc(o)}</li>`).join('')}</ul>` : ''}
-      <p class="note">黄色の点があなた、青は味方、赤は見つけた容疑者、緑は市民、黄土色は投降・拘束した人。</p></div></div></div>`, 'dim');
+      <p class="note">黄: 自分　青: 味方　赤: 容疑者　緑: 市民　黄土: 投降・拘束</p></div></div></div>`, 'dim');
     const marks = [];
     for (const b of S.actors) {
       if (b.isDrone || (!b.alive && !b.dead)) continue;
@@ -382,7 +382,7 @@ export class Screens {
     if (res.pvp) return this._resultPvp(res);
     const sc = res.score || { parts: [], total: 0, grade: 'F', viol: [], stats: {} };
     const M = MISSIONS[res.mission] || { name: '' };
-    const why = { wiped: '隊が全滅した', hostages: '人質が全員死亡した', bomb: '爆弾が爆発した', player: '', ai: 'AIの隊が任務を終えた' }[res.why] || '';
+    const why = { wiped: '部隊全滅', hostages: '人質全員死亡', bomb: '爆弾爆発', player: '', ai: 'AI部隊が任務終了' }[res.why] || '';
     const VN = { kill_unjust: '不当な殺傷', civkill: '市民の死亡', civhurt: '市民の負傷', civforce: '市民への実力行使', force: '不当な実力行使', ff: '味方への発砲' };
     const st = sc.stats || {};
     const acc = res.me && res.me.sh ? Math.round(100 * res.me.hi / res.me.sh) : 0;
@@ -391,9 +391,9 @@ export class Screens {
         <div class="pane gradebox"><div class="grade" style="color:${GRADE_COL[sc.grade]}">${sc.grade}</div><div class="total">${sc.total}<small>/100</small></div>
           <dl class="kv"><dt>時間</dt><dd>${fmtTime(st.time || 0)}</dd><dt>逮捕</dt><dd>${st.arrested || 0}/${st.susTotal || 0}</dd><dt>容疑者の死亡</dt><dd>${st.killed || 0}</dd><dt>救出</dt><dd>${st.rescued || 0}/${st.civTotal || 0}</dd><dt>命中率</dt><dd>${acc}%</dd></dl></div>
         <div class="pane rows scroll"><table class="score"><tbody>${sc.parts.map(p => `<tr><th>${esc(p.name)}<small>${esc(p.note || '')}</small></th><td>${p.got}<small>/${p.max}</small></td></tr>`).join('')}</tbody></table>
-          ${sc.viol.length ? `<h3>違反</h3><ul class="viol">${sc.viol.map(v => `<li><b>${esc(VN[v.v] || v.v)}</b>${v.byName ? `（${esc(v.byName)}）` : ''} −${v.pen}</li>`).join('')}</ul>` : '<p class="good">交戦規定の違反はありません。</p>'}</div>
+          ${sc.viol.length ? `<h3>違反</h3><ul class="viol">${sc.viol.map(v => `<li><b>${esc(VN[v.v] || v.v)}</b>${v.byName ? `（${esc(v.byName)}）` : ''} −${v.pen}</li>`).join('')}</ul>` : '<p class="good">交戦規定違反なし</p>'}</div>
       </div>
-      <div class="sc-foot">${res.net ? (a.net && a.net.role === 'host' ? '<button class="btn primary" data-a="again">ロビーへ</button>' : '<span class="wait">ホストを待っています…</span>') : '<button class="btn ghost" data-a="lo">装備を変えて</button><button class="btn primary" data-a="again">もう一度</button>'}<button class="btn ghost" data-a="title">${res.net ? '部屋を出る' : 'タイトルへ'}</button></div></div>`, 'dim');
+      <div class="sc-foot">${res.net ? (a.net && a.net.role === 'host' ? '<button class="btn primary" data-a="again">ロビーへ</button>' : '<span class="wait">ホスト待ち…</span>') : '<button class="btn ghost" data-a="lo">装備</button><button class="btn primary" data-a="again">再出動</button>'}<button class="btn ghost" data-a="title">${res.net ? '退出' : 'タイトルへ'}</button></div></div>`, 'dim');
     this._acts(el, {
       again: () => res.net ? a.netAgain() : a.startPve(a.lastPve),
       lo: () => this.open('loadout', { kind: 'pve', team: a.lastPve ? a.lastPve.team : 4 }),
@@ -409,7 +409,7 @@ export class Screens {
     const el = this._mk('result', `<div class="sc-wrap"><header class="sc-head"><h2 class="${res.win < 0 ? '' : mine ? 'good' : 'bad'}">${res.win < 0 ? '引き分け' : mine ? '勝利' : '敗北'}</h2><span class="hint">${esc(MODE.name)} · ${esc(MAPS[res.map].name)} · ${fmtTime(res.time || 0)}</span></header>
       <div class="pvp-score"><b class="t0">${res.score[res.myTeam]}</b><span>—</span><b class="t1">${res.score[1 - res.myTeam]}</b></div>
       <div class="pane scroll"><table class="board"><thead><tr><th>名前</th><th>キル</th><th>デス</th><th>アシスト</th></tr></thead><tbody>${rows.map((r, i) => `<tr class="${r.team === res.myTeam ? 'ally' : 'enemy'}${r.me ? ' me' : ''}"><th>${i === 0 ? '<em>MVP</em>' : ''}${esc(r.name)}${r.bot ? '<small>ボット</small>' : ''}</th><td>${r.k}</td><td>${r.d}</td><td>${r.a}</td></tr>`).join('')}</tbody></table></div>
-      <div class="sc-foot">${res.net ? (a.net && a.net.role === 'host' ? '<button class="btn primary" data-a="again">ロビーへ</button>' : '<span class="wait">ホストを待っています…</span>') : '<button class="btn primary" data-a="again">もう一度</button>'}<button class="btn ghost" data-a="title">${res.net ? '部屋を出る' : 'タイトルへ'}</button></div></div>`, 'dim');
+      <div class="sc-foot">${res.net ? (a.net && a.net.role === 'host' ? '<button class="btn primary" data-a="again">ロビーへ</button>' : '<span class="wait">ホスト待ち…</span>') : '<button class="btn primary" data-a="again">再戦</button>'}<button class="btn ghost" data-a="title">${res.net ? '退出' : 'タイトルへ'}</button></div></div>`, 'dim');
     this._acts(el, { again: () => res.net ? a.netAgain() : a.startPvp(a.lastPvp), title: () => res.net ? a.leaveRoom() : a.toTitle() });
     this.show('result'); a.scene('pause');
   }
@@ -430,71 +430,75 @@ export class Screens {
     const sl = (k, min, max, step, fmt, path) => binds.push(() => slider(this.stage, body.querySelector(`[data-k="${k}"]`), { min, max, step, value: getP(S, path || k), fmt, label: k, onInput: (v) => { setP(S, path || k, v); save(); } }));
     const pct = (v) => Math.round(v * 100) + '%';
     if (tab === 'ctrl') {
-      row('構える（ADS）', '射撃ボタンの上の照準ボタン', 'adsMode'); ch('adsMode', [['tap', '押すたび切替'], ['hold', '押している間'], ['mixed', '両方']]);
-      row('リーン', '左右にのぞく', 'leanMode'); ch('leanMode', [['toggle', '押すたび切替'], ['hold', '押している間']]);
-      row('移動スティック', '', 'stickMode'); ch('stickMode', [['float', '左側のどこでも'], ['fixed', '決まった場所']]);
-      row('スティックでダッシュ', '対戦だけ。上に倒しきる', 'stickSprint'); ch('stickSprint', [[true, 'する'], [false, 'しない']]);
-      row('射撃ボタン（左）', '左手でも撃てる', 'leftFire'); ch('leftFire', [[true, '出す'], [false, '出さない']]);
-      row('射撃ボタンで見回す', '押したまま指をずらすと視点が動く', 'fireLook'); ch('fireLook', [[true, 'する'], [false, 'しない']]);
-      row('利き手', 'ボタンの左右を入れ替える', 'handed'); ch('handed', [['right', '右'], ['left', '左']]);
-      row('やり直せない操作', '撤収・タイトルへ など', 'confirm'); ch('confirm', [['auto', '自動（タッチは2回）'], ['two', 'いつも2回'], ['one', 'いつも1回']]);
-      note('パソコン: WASDで移動、マウスで見回し（画面をクリック）、左クリック射撃、右クリック構える、Q/Eリーン、Cしゃがみ、Z伏せ、Rリロード（長押しで速い）、F警告、V調べる、H命令、Tabで命令する隊、G投げ物、1/2持ち替え、Xモード、Tライト、Nナイトビジョン、Bローレディ、M地図、Esc一時停止。');
+      row('ADS', '照準ボタン', 'adsMode'); ch('adsMode', [['tap', '切替'], ['hold', '長押し'], ['mixed', '両方']]);
+      row('リーン', '', 'leanMode'); ch('leanMode', [['toggle', '切替'], ['hold', '長押し']]);
+      row('移動スティック', '', 'stickMode'); ch('stickMode', [['float', '可変'], ['fixed', '固定']]);
+      row('スティックでダッシュ', '対戦のみ。上に倒しきる', 'stickSprint'); ch('stickSprint', [[true, 'オン'], [false, 'オフ']]);
+      row('射撃ボタン（左）', '', 'leftFire'); ch('leftFire', [[true, '表示'], [false, '非表示']]);
+      row('射撃ボタンで視点移動', '押したままドラッグ', 'fireLook'); ch('fireLook', [[true, 'オン'], [false, 'オフ']]);
+      row('利き手', 'ボタンの左右を反転', 'handed'); ch('handed', [['right', '右'], ['left', '左']]);
+      row('確認が必要な操作', '撤収・タイトルへ など', 'confirm'); ch('confirm', [['auto', '自動（タッチは2回）'], ['two', '常に2回'], ['one', '常に1回']]);
+      note('キーボード: WASD 移動／マウス 視点（画面をクリック）／左クリック 射撃／右クリック ADS／Q・E リーン／C しゃがみ／Z 伏せ／R リロード（長押しで高速）／F 警告／V 調べる／H 命令／Tab 隊の切替／G 投げ物／1・2 武器／X 射撃モード／T ライト／N 暗視／B ローレディ／M 地図／Esc 一時停止');
     } else if (tab === 'sens') {
-      row('見回し', '', 'sens'); sl('sens', 0.2, 3, 0.05, (v) => v.toFixed(2));
-      row('構えたとき', '等倍の照準', 'sensAds'); sl('sensAds', 0.2, 1.5, 0.05, pct);
-      row('スコープ', '倍率のある照準', 'sensScope'); sl('sensScope', 0.1, 1.2, 0.05, pct);
-      row('撃っている間', '射撃ボタンを押したまま見回すとき', 'sensFire'); sl('sensFire', 0.3, 1.5, 0.05, pct);
-      row('上下の反転', '', 'invertY'); ch('invertY', [[false, 'しない'], [true, 'する']]);
-      row('エイムアシスト', '作戦だけ（対戦は部屋の設定）', 'aimAssist'); ch('aimAssist', [['off', 'なし'], ['weak', '弱い'], ['strong', 'ふつう']]);
-      row('ジャイロ', '端末を傾けて照準（PUBGモバイル式）', 'gyro'); ch('gyro', [['off', 'オフ'], ['ads', '構えたときだけ'], ['always', 'いつも']]);
-      row('ジャイロの感度', '', 'gyroSens'); sl('gyroSens', 0.2, 3, 0.05, (v) => v.toFixed(2));
-      row('ジャイロの左右', '', 'gyroInvX'); ch('gyroInvX', [[false, 'ふつう'], [true, '反転']]);
-      row('ジャイロの上下', '', 'gyroInvY'); ch('gyroInvY', [[false, 'ふつう'], [true, '反転']]);
-      R.push('<div class="row"><div class="rl"><b>ジャイロの許可</b><small>iPhoneは最初に許可が要る</small></div><div class="rc"><button class="btn small" data-a="gyroPerm">許可する</button></div></div>');
+      row('視点', '', 'sens'); sl('sens', 0.2, 3, 0.05, (v) => v.toFixed(2));
+      row('ADS', '等倍', 'sensAds'); sl('sensAds', 0.2, 1.5, 0.05, pct);
+      row('スコープ', '倍率あり', 'sensScope'); sl('sensScope', 0.1, 1.2, 0.05, pct);
+      row('射撃中', '射撃ボタンで視点移動', 'sensFire'); sl('sensFire', 0.3, 1.5, 0.05, pct);
+      row('上下反転', '', 'invertY'); ch('invertY', [[false, 'オフ'], [true, 'オン']]);
+      row('エイムアシスト', '作戦のみ（対戦はルーム設定）', 'aimAssist'); ch('aimAssist', [['off', 'オフ'], ['weak', '弱'], ['strong', '標準']]);
+      row('ジャイロ', '端末の傾きで照準', 'gyro'); ch('gyro', [['off', 'オフ'], ['ads', 'ADS時'], ['always', '常時']]);
+      row('ジャイロ感度', '', 'gyroSens'); sl('gyroSens', 0.2, 3, 0.05, (v) => v.toFixed(2));
+      row('ジャイロ 左右', '', 'gyroInvX'); ch('gyroInvX', [[false, '標準'], [true, '反転']]);
+      row('ジャイロ 上下', '', 'gyroInvY'); ch('gyroInvY', [[false, '標準'], [true, '反転']]);
+      R.push('<div class="row"><div class="rl"><b>ジャイロの許可</b><small>iPhoneは初回に許可が必要</small></div><div class="rc"><button class="btn small" data-a="gyroPerm">許可</button></div></div>');
     } else if (tab === 'hud') {
-      R.push('<div class="row"><div class="rl"><b>ボタンの配置</b><small>位置・大きさ・濃さをボタンごとに変える</small></div><div class="rc"><button class="btn small" data-a="editHud">配置を編集</button></div></div>');
+      R.push('<div class="row"><div class="rl"><b>HUDの配置</b><small>ボタン・字幕などの位置・大きさ・濃さ</small></div><div class="rc"><button class="btn small" data-a="editHud">配置を編集</button></div></div>');
       row('全体の濃さ', '', 'hudOpacity'); sl('hudOpacity', 0.2, 1, 0.05, pct);
       row('全体の大きさ', '', 'hudScale'); sl('hudScale', 0.75, 1.3, 0.05, pct);
-      row('照準の形', '腰だめのとき', 'crosshair'); ch('crosshair', [['cross', '十字'], ['dot', '点'], ['none', 'なし']]);
+      row('照準', '腰だめ', 'crosshair'); ch('crosshair', [['cross', '十字'], ['dot', '点'], ['none', 'なし']]);
       row('照準の色', '', 'crossColor'); binds.push(() => chips(body.querySelector('[data-k="crossColor"]'), [['#ffffff', '白'], ['#7dff7a', '緑'], ['#ffe14a', '黄'], ['#4ae8ff', '水色'], ['#ff5ad2', '桃']], S.crossColor, (v) => { S.crossColor = v; save(); }, { swatch: true }));
-      row('ミニマップ', '', 'minimap'); ch('minimap', [[true, '出す'], [false, '出さない']]);
-      row('字幕', '無線と呼びかけ', 'subtitles'); ch('subtitles', [[true, '出す'], [false, '出さない']]);
-      row('命中の印', '', 'hitMarker'); ch('hitMarker', [[true, '出す'], [false, '出さない']]);
+      row('ミニマップ', 'タップで地図', 'minimap'); ch('minimap', [[true, '表示'], [false, '非表示']]);
+      row('字幕', '無線と呼びかけ', 'subtitles'); ch('subtitles', [[true, '表示'], [false, '非表示']]);
+      row('字幕の位置', '自由な位置は「配置を編集」', 'subPos');
+      binds.push(() => { const H = S.hud || (S.hud = {}); const cur = H.i_subs && H.i_subs.ay === 't' ? 't' : (H.i_subs && (H.i_subs.x || H.i_subs.y != null) && !H.i_subs.preset ? 'free' : 'b'); chips(body.querySelector('[data-k="subPos"]'), [['b', '下'], ['t', '上'], ...(cur === 'free' ? [['free', '自由']] : [])], cur, (v) => { if (v === 'free') return; const o = H.i_subs || (H.i_subs = {}); o.ay = v; o.x = 0; o.y = v === 't' ? 84 : 78; o.preset = true; save(); }); });
+      row('字幕の大きさ', '', 'subSize'); binds.push(() => { const H = S.hud || (S.hud = {}); slider(this.stage, body.querySelector('[data-k="subSize"]'), { min: 0.7, max: 1.6, step: 0.05, value: (H.i_subs && H.i_subs.s) || 1, fmt: pct, label: '字幕の大きさ', onInput: (v) => { const o = H.i_subs || (H.i_subs = {}); o.s = v; save(); } }); });
+      row('字幕の濃さ', '後ろの帯', 'subBg'); sl('subBg', 0, 0.9, 0.05, pct);
+      row('ヒットマーカー', '', 'hitMarker'); ch('hitMarker', [[true, '表示'], [false, '非表示']]);
     } else if (tab === 'gfx') {
-      row('画質', '影・光のにじみ・なめらかさ', 'quality'); ch('quality', Object.keys(QUALITY).map(k => [k, QUALITY[k].name]));
-      row('上限のこま数', '', 'fps'); ch('fps', [[30, '30'], [60, '60']]);
+      row('画質', '影・ブルーム・アンチエイリアス', 'quality'); ch('quality', Object.keys(QUALITY).map(k => [k, QUALITY[k].name]));
+      row('フレームレート上限', '', 'fps'); ch('fps', [[30, '30'], [60, '60']]);
       row('解像度', '', 'scale'); sl('scale', 0.5, 1, 0.05, pct);
-      row('解像度の自動調整', '重いときに下げる', 'autoRes'); ch('autoRes', [[true, 'する'], [false, 'しない']]);
+      row('解像度の自動調整', '重いときに下げる', 'autoRes'); ch('autoRes', [[true, 'オン'], [false, 'オフ']]);
       row('視野角', '', 'fov'); sl('fov', 45, 75, 1, (v) => v + '°');
       row('明るさ', '', 'bright'); sl('bright', 0.6, 1.6, 0.05, pct);
-      row('血の表現', '', 'blood'); ch('blood', [[true, 'あり'], [false, 'なし']]);
-      row('画面の揺れ', '', 'shake'); ch('shake', [[true, 'あり'], [false, '弱く']]);
-      row('こま数の表示', '', 'showFps'); ch('showFps', [[false, '出さない'], [true, '出す']]);
+      row('流血表現', '', 'blood'); ch('blood', [[true, 'オン'], [false, 'オフ']]);
+      row('画面の揺れ', '', 'shake'); ch('shake', [[true, '標準'], [false, '弱']]);
+      row('FPS表示', '', 'showFps'); ch('showFps', [[false, 'オフ'], [true, 'オン']]);
     } else if (tab === 'snd') {
       row('全体', '', 'vm'); sl('vm', 0, 1, 0.05, pct, 'vol.master');
-      row('効果音', '銃声・足音など', 'vs'); sl('vs', 0, 1, 0.05, pct, 'vol.sfx');
-      row('声', '呼びかけ・無線', 'vv'); sl('vv', 0, 1, 0.05, pct, 'vol.voice');
+      row('効果音', '', 'vs'); sl('vs', 0, 1, 0.05, pct, 'vol.sfx');
+      row('ボイス', '', 'vv'); sl('vv', 0, 1, 0.05, pct, 'vol.voice');
       row('BGM', '', 'vb'); sl('vb', 0, 1, 0.05, pct, 'vol.bgm');
-      row('画面の音', 'ボタン・命中の音', 'vu'); sl('vu', 0, 1, 0.05, pct, 'vol.ui');
-      row('消音モードでも鳴らす', 'オンにすると、ロック画面などに「再生中」が出ます', 'playSilent'); ch('playSilent', [[false, 'しない'], [true, 'する']]);
-      note('足音と銃声の向きが分かるよう、ヘッドホンを使うのがおすすめです。');
+      row('UI', 'ボタン・ヒット音', 'vu'); sl('vu', 0, 1, 0.05, pct, 'vol.ui');
+      row('消音モードでも再生', 'オンでロック画面に再生中と表示', 'playSilent'); ch('playSilent', [[false, 'オフ'], [true, 'オン']]);
+      note('ヘッドホン推奨（足音と銃声の方向が分かる）');
     } else {
-      R.push(`<div class="row"><div class="rl"><b>名前</b><small>みんなで遊ぶときと結果に出る</small></div><div class="rc"><span class="nmv">${esc(a.profile.name)}</span><button class="btn small" data-a="rename">変える</button></div></div>`);
-      R.push('<div class="row"><div class="rl"><b>引き継ぎコード</b><small>設定・名前・装備・記録を別の場所へ（ホーム画面のアプリは保存場所が別）</small></div><div class="rc"><button class="btn small" data-a="exp">書き出す</button><button class="btn small" data-a="imp">読み込む</button></div></div>');
-      R.push('<div class="row"><div class="rl"><b>記録を消す</b></div><div class="rc"><button class="btn small danger" data-a="clr">消す</button></div></div>');
+      R.push(`<div class="row"><div class="rl"><b>コールサイン</b><small>オンラインと結果に表示</small></div><div class="rc"><span class="nmv">${esc(a.profile.name)}</span><button class="btn small" data-a="rename">変更</button></div></div>`);
+      R.push('<div class="row"><div class="rl"><b>引き継ぎコード</b><small>設定・コールサイン・装備・記録を移す</small></div><div class="rc"><button class="btn small" data-a="exp">書き出し</button><button class="btn small" data-a="imp">読み込み</button></div></div>');
+      R.push('<div class="row"><div class="rl"><b>記録の消去</b></div><div class="rc"><button class="btn small danger" data-a="clr">消去</button></div></div>');
       note(`版: 互換${COMPAT} · v${VERSION}`);
     }
     body.innerHTML = R.join('');
     for (const f of binds) f();
     this._acts(body, {
-      gyroPerm: async () => { const ok = await a.input.requestGyro(); this.flash(ok ? 'ジャイロを使えます' : '許可されませんでした'); },
+      gyroPerm: async () => { const ok = await a.input.requestGyro(); this.flash(ok ? 'ジャイロ有効' : '許可されませんでした'); },
       editHud: () => a.editHud(() => this._settings('hud')),
-      rename: async () => { const v = await textModal({ title: '名前', value: a.profile.name, maxLength: 12, validate: (t) => t.trim() ? '' : '名前を入れてください' }); if (v) { a.profile.name = v.trim().slice(0, 12); a.saveProfile(); this._settings('etc'); } },
-      exp: async () => { const code = a.exportCode(); const ok = await copyText(code); await textModal({ title: '引き継ぎコード', note: ok ? 'コピーしました。移したい場所で「読み込む」に貼り付けてください。' : '下のコードを選んでコピーしてください。', value: code, readonly: true, multiline: true, ok: '閉じる' }); },
-      imp: async () => { const v = await textModal({ title: '引き継ぎコードを貼り付け', multiline: true, validate: (t) => a.checkCode(t) ? '' : 'コードが正しくありません' }); if (v && a.importCode(v)) { this.flash('読み込みました'); this._settings('etc'); } },
+      rename: async () => { const v = await textModal({ title: 'コールサイン', value: a.profile.name, maxLength: 12, validate: (t) => t.trim() ? '' : '入力してください' }); if (v) { a.profile.name = v.trim().slice(0, 12); a.saveProfile(); this._settings('etc'); } },
+      exp: async () => { const code = a.exportCode(); const ok = await copyText(code); await textModal({ title: '引き継ぎコード', note: ok ? 'コピーしました。移行先の「読み込み」に貼り付け。' : 'コードを選択してコピー。', value: code, readonly: true, multiline: true, ok: '閉じる' }); },
+      imp: async () => { const v = await textModal({ title: '引き継ぎコード', multiline: true, validate: (t) => a.checkCode(t) ? '' : 'コードが正しくありません' }); if (v && a.importCode(v)) { this.flash('読み込み完了'); this._settings('etc'); } },
     });
     const clr = body.querySelector('[data-a="clr"]');
-    if (clr) confirmTap(clr, () => a.confirmMode(), () => { a.clearRecords(); this.flash('記録を消しました'); }, 'もう一度押すと消す');
+    if (clr) confirmTap(clr, () => a.confirmMode(), () => { a.clearRecords(); this.flash('記録を消去'); }, 'もう一度押して消去');
     this.show('settings');
   }
 

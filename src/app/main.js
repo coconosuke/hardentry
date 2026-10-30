@@ -71,17 +71,17 @@ class App {
     this.input.getStickHome = () => this.hud.stickHome;
     this.fpsEl = $('#fps'); this.fadeEl = $('#fade'); this.ctxEl = $('.ctxlost');
     this.stage.onLayout(() => { this._resize(); if (this.game && (this.mode === 'pause' || this.mode === 'result')) this.game.redraw(); });
-    this.screens.loading('準備しています…', 0.05);
+    this.screens.loading('準備中…', 0.05);
     await nextFrame();
     try {
       this.renderer = new Renderer(this.canvas, { quality: this.settings.quality });
     } catch (e) {
-      this.screens.error('この端末では3Dの画面を出せません。WebGL2に対応したブラウザ（iPhoneならiOS 15以降のSafari）で開いてください。', String(e.message || e));
+      this.screens.error('この端末は3D表示に対応していません。WebGL2対応のブラウザ（iPhoneはiOS 15以降のSafari）で開いてください。', String(e.message || e));
       return;
     }
     this._resize();
     try {
-      this.screens.loading('無線を合わせています…', 0.4); await nextFrame();
+      this.screens.loading('無線を調整中…', 0.4); await nextFrame();
       try {
         const vidx = JSON.parse(new TextDecoder().decode(await getAsset('voices/index.json')));
         this.audio.loadVoices(vidx, (spk) => getAsset('voices/' + spk + '.m4a'));
@@ -90,12 +90,12 @@ class App {
         const mm = JSON.parse(new TextDecoder().decode(await getAsset('music/music.json')));
         this.audio.loadMusic(mm, (name) => getAsset('music/' + name + '.m4a'));
       } catch (e) { console.warn('BGMがない', e && e.message); }
-      this.screens.loading('現場を組み立てています…', 0.7); await nextFrame();
+      this.screens.loading('現場を準備中…', 0.7); await nextFrame();
       this.titleScene = new TitleScene(this);
       this.titleScene.prepare();
     } catch (e) {
       console.error(e);
-      this.screens.error('読み込みに失敗しました。ページを開き直してください。', String(e.message || e));
+      this.screens.error('読み込みに失敗しました。再読み込みしてください。', String(e.message || e));
       return;
     }
     this.applySettings(false);
@@ -253,7 +253,7 @@ class App {
     this.mode = 'loading';
     await nextFrame();
     try { this.game = new Match(this, o); }
-    catch (e) { console.error(e); this.screens.error('試合を始められませんでした。', String(e && e.message || e)); return; }
+    catch (e) { console.error(e); this.screens.error('開始できませんでした。', String(e && e.message || e)); return; }
     this._play();
   }
   startPve(sel) {
@@ -271,11 +271,11 @@ class App {
     const lo = { swat: L.swat, sus: L.sus, armor: ((side === 0 ? L.swat : L.sus) || {}).armor || 'medium' };
     const roster = [{ pid: 0, name: this.profile.name, team: side, lo }];
     const rules = { botLevel: cfg.botLevel, wins: cfg.wins, time: (cfg.time || 8) * 60, aimAssist: cfg.aimAssist, ff: cfg.ff };
-    return this._start({ mode: cfg.mode, map: cfg.map, teams, roster, rules, seed: this._seed() }, '対戦の準備をしています…');
+    return this._start({ mode: cfg.mode, map: cfg.map, teams, roster, rules, seed: this._seed() }, '準備中…');
   }
   startTrain(o) {
     const roster = [{ pid: 0, name: this.profile.name, lo: this.loadouts.player }];
-    return this._start({ mode: 'train', map: 'training', start: o.start, house: o.start === 'house', team: o.start === 'house' ? 3 : 1, roster, seed: this._seed() }, '訓練場へ向かっています…');
+    return this._start({ mode: 'train', map: 'training', start: o.start, house: o.start === 'house', team: o.start === 'house' ? 3 : 1, roster, seed: this._seed() }, '訓練場へ移動中…');
   }
   _play() {
     this.mode = 'game'; this.paused = false;

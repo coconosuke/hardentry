@@ -41,7 +41,7 @@ export function runPve(map, mission, seed, o = {}) {
     t: Math.round(S.t * S.dt), wall: Date.now() - t0,
     sus: sus.length, susArrest: sus.filter(a => a.alive && a.cuffed).length, susDead: sus.filter(a => !a.alive).length,
     civ: civ.length, civSafe: civ.filter(a => a.alive && a.cuffed).length, civDead: civ.filter(a => !a.alive).length,
-    swatDead: swat.filter(a => !a.alive || a.down).length, rooms: (L.visited || []).filter(r => !w.rooms[r].out).length, roomsAll: indoor,
+    swatDead: swat.filter(a => !a.alive || a.down).length, rooms: (L.seen || L.visited || []).filter(r => !w.rooms[r].out && w.rooms[r].cells.length >= 4).length, roomsAll: indoor,
     viol: sc ? sc.viol.length : 0, quiet: Math.round(quietMax), contact: Math.round(firstContact), log: o.log ? S.debugLead : undefined,
   };
 }

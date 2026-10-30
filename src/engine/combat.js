@@ -88,7 +88,7 @@ function stepBullet(S, w, b, dt, ev) {
       continue;
     }
     // 近くを抜けた（制圧）
-    if (a.alive && a.team !== b.team && d2 < 2.2 && a.id !== b.owner) a._whiz = Math.max(a._whiz || 0, 1 - Math.sqrt(d2) / 1.5);
+    if (a.alive && a.team !== b.team && d2 < 2.2 && a.id !== b.owner) { a._whiz = Math.max(a._whiz || 0, 1 - Math.sqrt(d2) / 1.5); a.whizBy = b.owner; a.whizT = S.t; }
     const caps = capsOf(S, a);
     let best = -1, bp = null;
     for (const c of caps) {

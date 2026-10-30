@@ -34,7 +34,8 @@ export function leadThink(S, w, ev) {
   const L = m.lead || (m.lead = { visited: [], seq: -1, t: S.t, searched: [], progT: S.t, nvis: 0, skip: [], sweeps: 0, done: false });
   const rg = roomGraph(w);
   const leader = team.reduce((a, b) => ((a.ai.slot ?? 9) <= (b.ai.slot ?? 9) ? a : b));
-  for (const a of team) { const r = roomOfActor(w, a); if (r >= 0 && !L.visited.includes(r)) L.visited.push(r); }
+  if (!L.seen) L.seen = [];
+  for (const a of team) { const r = roomOfActor(w, a); if (r >= 0 && !L.visited.includes(r)) L.visited.push(r); if (r >= 0 && !L.seen.includes(r)) L.seen.push(r); }
   if (L.visited.length !== L.nvis) { L.nvis = L.visited.length; L.progT = S.t; }
   // 終わり（人の指揮官がいない隊）: 主目的がそろって見回りも済んだら（そろってから90秒でも）任務を終える。
   // そろわないまま全部見回ったら、30秒待って打ち切る（結果は採点どおり）
@@ -88,6 +89,10 @@ export function leadThink(S, w, ev) {
     return;
   }
   const R = w.rooms[target.next];
+  // 同じ部屋への移動が続けて空振り（すぐ終わるのに入れない）したら、その部屋は飛ばす
+  if (!L.moveTry) L.moveTry = {};
+  const tries = L.moveTry[target.next] = (L.moveTry[target.next] || 0) + 1;
+  if (tries > 3) { L.skip.push(target.room); if (target.next !== target.room) L.skip.push(target.next); L.moveTry[target.next] = 0; return; }
   // 部屋の中の歩ける点: 入口から2.5mほど入った、部屋の真ん中寄りの床（外接四角の中心は L字の部屋だと壁の向こうになる）
   const pt = roomPoint(w, R, p.x, p.z) || [R.cx, R.cz];
   issue(S, L, leader, { cmd: 'move', x: pt[0], y: R.L * LH, z: pt[1], yaw: Math.atan2(pt[0] - p.x, pt[1] - p.z) });

@@ -1,4 +1,4 @@
-// みんなで遊ぶときの試合の動かし方（Match に混ぜる）。
+// オンラインの試合の動かし方（Match に混ぜる）。
 //  ホスト: エンジンを動かし、ゲストの入力と動作をエンジンへ渡し、写しを配る。ゲストが切れたら止めて待つ。
 //  ゲスト: エンジンは動かさず、ホストの写しを補間して表示する。自分の移動と銃（反動・弾の見た目）だけは手元で先に動かし、ホストの位置へなめらかに寄せる。
 import { packStatic, packSnap, packEvent, NET_EV } from '../net/snap.js';
@@ -39,7 +39,7 @@ export function netMixin(Match) {
     this._waitT = (this._waitT || 0) + 1 / 60;
     if (!this._waitShown || Math.floor(this._waitT * 2) !== this._waitTick) {
       this._waitShown = true; this._waitTick = Math.floor(this._waitT * 2);
-      this.hud.showBanner(`${w.map(r => r.name).join('・')} の通信が切れています<br><small>つなぎ直しを待っています（${Math.ceil(Math.max(0, 30 - this._waitT))}秒後に待たずに続けます）</small>`, 0, 'warn');
+      this.hud.showBanner(`${w.map(r => r.name).join('・')} 接続切れ<br><small>再接続待ち（${Math.ceil(Math.max(0, 30 - this._waitT))}秒後に続行）</small>`, 0, 'warn');
     }
     if (this._waitT > 30) this.net.sess.skipWaiting();
     return true;

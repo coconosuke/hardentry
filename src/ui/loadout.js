@@ -20,7 +20,7 @@ export class LoadoutEditor {
   }
   tabs() {
     if (this.kind === 'pvp') return [['swat', 'SWAT'], ['sus', '立てこもり犯']];
-    return [['player', 'あなた'], ...OFFICERS.map((of, i) => ['ai' + i, `${of.name}<small>${of.team === 'red' ? '赤' : '青'}・${of.role}</small>`])];
+    return [['player', '自分'], ...OFFICERS.map((of, i) => ['ai' + i, `${of.name}<small>${of.team === 'red' ? '赤' : '青'}・${of.role}</small>`])];
   }
   cur() {
     const L = this.app.loadouts;
