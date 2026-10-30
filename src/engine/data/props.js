@@ -53,5 +53,6 @@ export const PROPS = {
   heater: { name: '給湯器', w: 0.6, d: 0.6, h: 1.5, boxes: [B(0.56, 1.5, 0.56, M.METALFURN)], solid: true, vault: false, foot: [0.6, 0.6] },
   neon: { name: 'ネオンの看板', w: 1.6, d: 0.12, h: 2.6, boxes: [], solid: false },
   stage: { name: 'ステージ', w: 2.0, d: 2.0, h: 0.4, boxes: [B(2.0, 0.4, 2.0, M.FURN)], solid: true, vault: true, foot: [2.0, 2.0], resizable: true },
+  forklift: { name: 'フォークリフト', w: 1.2, d: 2.6, h: 2.2, boxes: [B(1.2, 1.25, 2.0, M.METALFURN, 0.1, 0, -0.3), B(1.0, 2.1, 0.2, M.METAL, 0, 0, 0.75)], solid: true, vault: false, foot: [1.2, 2.6] },
   lamp: { name: '街灯', w: 0.25, d: 0.25, h: 4.5, boxes: [B(0.18, 4.5, 0.18, M.METAL)], solid: true, vault: false, foot: [0.25, 0.25] },
 };

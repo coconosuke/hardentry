@@ -358,6 +358,20 @@ const MODELS = {
     B.box(-w, 0.36, -d, w, 0.4, d, LAYER.rubber, H('#18191c'));
     B.emit = 1.6; B.box(-w, 0.1, d, w, 0.13, d + 0.005, LAYER.plain, H('#9a5cff'), { faces: 16 }); B.emit = 0;
   },
+  // フォークリフト: 黄色い車体・運転席の囲い・前のマストと爪・後ろのおもり
+  forklift(B, G, P, o, s) {
+    const y = H('#d8a42a'), k = C.black, g = C.dgray;
+    B.box(-0.58, 0.18, -1.3, 0.58, 0.9, 0.5, LAYER.paint, y, { aoBottom: 0.7 });
+    B.box(-0.6, 0.18, -1.3, 0.6, 1.05, -0.85, LAYER.metal, mulc(y, 0.85));
+    B.box(-0.45, 0.9, -0.6, 0.45, 1.2, -0.1, LAYER.rubber, k);
+    B.box(-0.3, 1.2, -0.62, 0.3, 1.25, -0.5, LAYER.rubber, k);
+    for (const sx of [-1, 1]) for (const z of [-0.85, 0.35]) B.box(sx * 0.55 - 0.03, 0.9, z - 0.03, sx * 0.55 + 0.03, 2.1, z + 0.03, LAYER.metal, g);
+    B.box(-0.58, 2.08, -0.88, 0.58, 2.14, 0.38, LAYER.metal, g);
+    for (const sx of [-1, 1]) B.box(sx * 0.4 - 0.05, 0.05, 0.62, sx * 0.4 + 0.05, 2.2, 0.72, LAYER.metal, g);
+    B.box(-0.45, 0.25, 0.7, 0.45, 0.4, 0.76, LAYER.metal, k);
+    for (const sx of [-1, 1]) B.box(sx * 0.25 - 0.05, 0.05, 0.72, sx * 0.25 + 0.05, 0.1, 1.3, LAYER.metal, g);
+    for (const sx of [-1, 1]) for (const z of [-0.95, 0.25]) B.tube([sx * 0.52, 0.22, z], [sx * 0.66, 0.22, z], 0.22, 0.22, 10, LAYER.rubber, H('#1a1a1c'), { caps: true });
+  },
   piano(B, G, P, o, s) {
     B.box(-0.75, 0, -0.3, 0.75, 1.25, 0.15, LAYER.wood, C.black);
     B.box(-0.75, 0.68, 0.15, 0.75, 0.75, 0.3, LAYER.wood, C.black);
