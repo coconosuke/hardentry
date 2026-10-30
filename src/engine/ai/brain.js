@@ -4,10 +4,12 @@ import { thinkSwat, takeOrders } from './swat.js';
 import { thinkBot } from './bot.js';
 import { baseInput } from './common.js';
 import { buildNav } from './nav.js';
+import { leadThink } from './lead.js';
 
 export function thinkAll(S, w, dt, ev) {
   const out = {};
   buildNav(w);
+  leadThink(S, w);
   takeOrders(S, w);
   const police = [], civs = [];
   for (const a of S.actors) {

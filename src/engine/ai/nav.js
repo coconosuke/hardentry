@@ -1,5 +1,5 @@
 // 経路: 0.5mのマスの格子で A*。扉・階段・家具をふまえる。滑らかにする（見通しで角を落とす）。
-import { CS, LH, C, isWallish, groundAt } from '../world.js';
+import { CS, LH, C, isWallish, groundAt, leafEnd } from '../world.js';
 import { M } from '../data/materials.js';
 
 // 歩けるマスの印: 0 歩けない、1 床、2 扉、3 階段（その階の坂）、4 開口
@@ -99,6 +99,33 @@ function heapPop(nav) {
   return top;
 }
 
+// 開いた扉の板が通るマス（経路で避ける）。ステップごとに作り直す（状態には入れない）
+const _lc = { S: null, t: -1, set: null };
+export function leafCells(w, S) {
+  if (!S || !S.doors) return null;
+  if (_lc.S === S && _lc.t === S.t) return _lc.set;
+  const set = new Set();
+  for (let i = 0; i < w.doors.length; i++) {
+    const d = w.doors[i], ds = S.doors[i];
+    if (!ds || ds.broken || !d.leaves) continue;
+    d.leaves.forEach((lf, li) => {
+      const ang = ds.ang[li] || 0;
+      if (Math.abs(ang) < 0.25) return;
+      const [ex, ez] = leafEnd(lf, ang);
+      for (let t = 0.2; t <= 1.001; t += 0.1) {
+        const x = lf.hx + (ex - lf.hx) * t, z = lf.hz + (ez - lf.hz) * t;
+        const ci = Math.floor(x / CS), cj = Math.floor(z / CS);
+        if (ci < 0 || cj < 0 || ci >= w.W || cj >= w.D) continue;
+        const k = w.idx(d.L, ci, cj);
+        if (w.doorAt[k] >= 0) continue;
+        set.add(k);
+      }
+    });
+  }
+  _lc.S = S; _lc.t = S.t; _lc.set = set;
+  return set;
+}
+
 // A*。戻り値: マスの番号の列（スタートを含まない）か null。opt: { maxNodes, avoid: Set(k), unlock, breakBar, wedgeOK, costFn }
 export function findPath(w, S, from, to, opt = {}) {
   const nav = buildNav(w);
@@ -138,6 +165,7 @@ export function findPath(w, S, from, to, opt = {}) {
         if (wk === 2 || nav.walk[k] === 2) continue;
       }
       if (wk === 2 && !doorPass(w, S, k2, opt)) continue;
+      if (opt.leaf && opt.leaf.has(k2) && k2 !== to) continue;
       let c = d < 4 ? 1 : 1.414;
       if (wk === 2) c += 1.5;
       if (avoid && avoid.has(k2)) c += 6;

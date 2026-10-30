@@ -268,7 +268,7 @@ class App {
     const side = cfg.side || 0;
     const teams = side === 0 ? [cfg.teams[0], cfg.teams[1]] : [cfg.teams[1], cfg.teams[0]];
     const L = this.loadouts.pvp || {};
-    const lo = { swat: L.swat, sus: L.sus, armor: (side === 0 ? L.swat : L.sus || {}).armor || 'medium' };
+    const lo = { swat: L.swat, sus: L.sus, armor: ((side === 0 ? L.swat : L.sus) || {}).armor || 'medium' };
     const roster = [{ pid: 0, name: this.profile.name, team: side, lo }];
     const rules = { botLevel: cfg.botLevel, wins: cfg.wins, time: (cfg.time || 8) * 60, aimAssist: cfg.aimAssist, ff: cfg.ff };
     return this._start({ mode: cfg.mode, map: cfg.map, teams, roster, rules, seed: this._seed() }, '対戦の準備をしています…');

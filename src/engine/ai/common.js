@@ -1,6 +1,6 @@
 // AIの共通の道具: 見る（明るさ・視野・見通し）、聞く、経路に沿って歩く（扉を開ける）、狙う（反応の遅れ・ぶれ・反動の抑え）
 import { occluded, CS, LH, levelOfY, groundAt } from '../world.js';
-import { findPath, smoothPath, navCell, cellCenter, buildNav } from './nav.js';
+import { findPath, smoothPath, navCell, cellCenter, buildNav, leafCells } from './nav.js';
 import { eyeOf } from '../combat.js';
 import { curW, curWeapon, ammoCount } from '../actor.js';
 import { hrand, rnd } from '../rng.js';
@@ -101,9 +101,11 @@ export function goTo(S, w, a, inp, tx, ty, tz, o = {}) {
   const here = navCell(w, a.x, a.y, a.z);
   let nv = ai.nav;
   const arriveR = o.r ?? 0.45;
+  // 隊員は鍵のかかった扉を蹴って通る（移動・追従・捜索のとき。突入の命令は扉の操作を自分でする）
+  const kick = o.kick ?? (a.kind === 'swat' && !o.noDoors);
   if (Math.hypot(tx - a.x, tz - a.z) < arriveR && Math.abs(levelOfY(ty + 0.3) - levelOfY(a.y + 0.3)) === 0) { ai.nav = null; return 'arrived'; }
   if (!nv || nv.tk !== tk || (S.t - nv.t) * S.dt > 6 || nv.bad) {
-    const p = findPath(w, S, here, tk, { unlock: !!o.unlock, wedgeOK: false, avoid: o.avoid });
+    const p = findPath(w, S, here, tk, { unlock: !!(o.unlock || kick), wedgeOK: false, avoid: o.avoid, leaf: leafCells(w, S) });
     if (!p) { ai.nav = { tk, path: [], i: 0, t: S.t, bad: false, fail: true }; return 'blocked'; }
     const sp = smoothPath(w, here, p);
     nv = ai.nav = { tk, path: sp, i: 0, t: S.t, bad: false, stuck: 0, lx: a.x, lz: a.z };
@@ -134,9 +136,9 @@ export function goTo(S, w, a, inp, tx, ty, tz, o = {}) {
         if (!ai.doorT || (S.t - ai.doorT) * S.dt > 1.2) {
           ai.doorT = S.t;
           if (ds.locked && !ds.lockBroken && o.unlock) pushAct(inp, { a: 'unlockDoor', id: did });
-          pushAct(inp, { a: 'op', k: 'door', id: did, op: 'open' });
+          pushAct(inp, { a: 'op', k: 'door', id: did, op: ds.locked && !ds.lockBroken && kick ? 'kick' : 'open' });
         }
-        if (ds.wedge || ds.bar > 0 || (ds.locked && !ds.lockBroken && !o.unlock)) { nv.bad = true; return 'door'; }
+        if (ds.wedge || ds.bar > 0 || (ds.locked && !ds.lockBroken && !o.unlock && !kick)) { nv.bad = true; return 'door'; }
         return 'door';
       }
     }
@@ -145,8 +147,14 @@ export function goTo(S, w, a, inp, tx, ty, tz, o = {}) {
   const moved = Math.hypot(a.x - nv.lx, a.z - nv.lz);
   if (moved < 0.02) { nv.stuck = (nv.stuck || 0) + S.dt; } else nv.stuck = Math.max(0, (nv.stuck || 0) - S.dt * 2);
   nv.lx = a.x; nv.lz = a.z;
-  if (nv.stuck > 1.2) { nv.bad = true; nv.stuck = 0; }
+  if (nv.stuck > 1.2) { nv.bad = true; nv.stuck = 0; ai.unstick = { until: S.t + Math.round(0.6 / S.dt), dir: ((a.id + S.t) & 1) ? 1 : -1 }; }
   const spd = o.speed ?? 1;
+  // 詰まったら少し横へずれてから進み直す（扉の板・家具の角・人に引っかかったとき）
+  if (ai.unstick && S.t < ai.unstick.until) {
+    const dx = px - a.x, dz = pz - a.z, l = Math.hypot(dx, dz) || 1;
+    steerToward(a, inp, a.x - dz / l * ai.unstick.dir * 2 - dx / l * 0.5, a.z + dx / l * ai.unstick.dir * 2 - dz / l * 0.5, spd, false);
+    return 'moving';
+  }
   steerToward(a, inp, px, pz, spd, o.faceMove !== false && o.look == null);
   return 'moving';
 }

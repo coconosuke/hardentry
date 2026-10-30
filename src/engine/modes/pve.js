@@ -19,7 +19,9 @@ export default {
     const r = S.rng;
     const sp = def.spawn;
     // 隊員: プレイヤー（最大4人）＋AI で合計 team 人
-    const roster = o.roster && o.roster.length ? o.roster : [{ pid: 0, name: 'あなた', lo: LOADOUTS.player }];
+    // allAI: 全員AI（自動テスト・観戦）。AIの指揮（ai/lead.js）が命令を出す
+    const roster = o.allAI ? [] : o.roster && o.roster.length ? o.roster : [{ pid: 0, name: 'あなた', lo: LOADOUTS.player }];
+    if (o.allAI) S.rules.aiLead = true;
     const entry = (sp.swat || [])[o.entry ?? 0] || sp.swat[0];
     const total = Math.max(roster.length, Math.min(4, o.team ?? 4));
     let k = 0;

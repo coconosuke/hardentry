@@ -175,11 +175,17 @@ function doOrder(S, w, a, inp, dt, o, ctx, sk, people) {
       const tx = o.x + (-fz) * off[0] + fx * off[1], tz = o.z + fx * off[0] + fz * off[1];
       const r = goTo(S, w, a, inp, tx, o.y, tz, { speed: 0.8, r: 0.5 });
       inp.low = r === 'moving';
-      if (r === 'arrived' || r === 'blocked') { o.cmd = 'hold'; o.hy = o.yaw; }
+      // 着いた・行けない・近くで詰まった（味方が立っているなど）・時間切れ → その場で待機
+      const dd = Math.hypot(tx - a.x, tz - a.z);
+      if (dd < 1.8 && los(w, a.x, a.y + 1, a.z, tx, (o.y || 0) + 1, tz, S.doors)) o.nearT = (o.nearT || 0) + S.dt;
+      if (r === 'arrived' || r === 'blocked' || (o.nearT || 0) > 1.2 || sec(S, o.phT) > 25) { o.cmd = 'hold'; o.hy = o.yaw; }
       return true;
     }
     case 'hold': case 'cover': {
       inp.mx = inp.mz = 0;
+      // 扉の口（死の漏斗）に立ち止まらない: 近ければ脇へよける
+      const dn = nearDoor(w, a);
+      if (dn) { steerToward(a, inp, dn.x, dn.z, 0.6, false); return true; }
       const want = o.cmd === 'cover' && o.x != null ? yawTo(o.x - a.x, o.z - a.z) : (o.hy ?? a.yaw);
       inp.yaw = turnToward(a.yaw, want + (o.role % 2 ? 0.25 : -0.25) * (o.cmd === 'hold' ? 1 : 0.3), 4 * dt);
       inp.ads = o.cmd === 'cover';
@@ -224,6 +230,23 @@ function doOrder(S, w, a, inp, dt, o, ctx, sk, people) {
   return done();
 }
 
+// 扉の口の近く（1m以内）にいたら、よける先（扉の面に沿って脇、自分のいる側）
+function nearDoor(w, a) {
+  const L = levelOfY(a.y + 0.2);
+  for (const d of w.doors) {
+    if (d.L !== L) continue;
+    const dx = a.x - d.cx, dz = a.z - d.cz;
+    if (Math.abs(dx) > 1.4 || Math.abs(dz) > 1.4) continue;
+    const along = d.axis === 0 ? dx : dz, across = dx * d.nx + dz * d.nz;
+    const half = (d.a1 - d.a0) / 2;
+    if (Math.abs(along) < half + 0.25 && Math.abs(across) < 0.9) {
+      const sgn = along >= 0 ? 1 : -1, side = across >= 0 ? 1 : -1;
+      const tx = d.axis === 0 ? 1 : 0, tz = d.axis === 0 ? 0 : 1;
+      return { x: d.cx + tx * sgn * (half + 0.7) + d.nx * side * 0.7, z: d.cz + tz * sgn * (half + 0.7) + d.nz * side * 0.7 };
+    }
+  }
+  return null;
+}
 // スタック: 扉の手前側の壁ぞいに並ぶ（分割＝左右交互）
 function stackPos(S, w, d, side, role, how) {
   const tx = d.axis === 0 ? 1 : 0, tz = d.axis === 0 ? 0 : 1; // 壁にそった向き
@@ -241,9 +264,13 @@ function stackAt(S, w, a, inp, dt, o, how) {
   const [x, z] = stackPos(S, w, d, side, o.role, how);
   const r = goTo(S, w, a, inp, x, d.L * LH, z, { speed: 0.8, r: 0.3, noDoors: true });
   inp.low = r === 'moving';
-  if (r !== 'moving') {
+  if (r === 'arrived' || (r !== 'moving' && Math.hypot(x - a.x, z - a.z) < 1.2)) {
     inp.yaw = turnToward(a.yaw, yawTo(d.cx - a.x, d.cz - a.z), 5 * dt);
     o.inPos = true;
+  } else if (r === 'blocked') {
+    // 行けない: 少し待ってだめなら、この命令をやめる（指揮する人が別の道を選ぶ）
+    o.blockT = (o.blockT || 0) + S.dt;
+    if (o.blockT > 6) { o.inPos = true; o.cantReach = true; }
   }
   return true;
 }
@@ -277,7 +304,11 @@ function breach(S, w, a, inp, dt, o, ctx, sk) {
     if (isOpen(ds) || ds.broken) { T.stage = o.nade && o.nade !== 'none' ? 'nade' : 'enter'; T.stT = S.t; return true; }
     const fx = d.cx + d.nx * side * 0.6, fz = d.cz + d.nz * side * 0.6;
     const r = goTo(S, w, a, inp, fx, d.L * LH, fz, { speed: 0.6, r: 0.25, noDoors: true });
-    if (r !== 'arrived' && Math.hypot(fx - a.x, fz - a.z) > 0.45) return true;
+    if (r !== 'arrived' && Math.hypot(fx - a.x, fz - a.z) > 0.45) {
+      // 扉の前まで行けない（12秒）: 突入をやめる
+      if (sec(S, T.stT) > 12) { for (const b of team) b.ai.order = null; }
+      return true;
+    }
     inp.yaw = turnToward(a.yaw, yawTo(d.cx - a.x, d.cz - a.z), 6 * dt);
     if (a.act) return true;
     const ops = doorOps(S, w, a, o.door);
@@ -371,13 +402,15 @@ function throwAt(S, w, a, inp, dt, nade, tx, ty, tz, onThrown) {
 function search(S, w, a, inp, dt, o, people) {
   const ai = a.ai;
   if (a.act) { inp.mx = inp.mz = 0; return true; }
+  if (sec(S, o.phT) > 30) { ai.order = null; ai.secId = null; return false; }
+  const bad = ai.noReach || (ai.noReach = {});
   const room0 = o.room ?? (o.room = roomAtPos(w, a.x, a.y, a.z));
   const taken = new Set();
   for (const b of S.actors) if (b !== a && b.kind === 'swat' && b.ai && b.ai.secId != null) taken.add(b.ai.secId);
   // 人
   let best = null, bd = 1e9, op = null, kind = 'person';
   for (const b of S.actors) {
-    if ((b.kind !== 'sus' && b.kind !== 'civ') || taken.has(b.id)) continue;
+    if ((b.kind !== 'sus' && b.kind !== 'civ') || taken.has(b.id) || (bad[b.id] && S.t < bad[b.id])) continue;
     const d = Math.hypot(b.x - a.x, b.z - a.z);
     if (d > 16 || Math.abs(b.y - a.y) > 2) continue;
     if (b.alive && !b.cuffed && (b.comply >= 1 || b.down)) { if (d < bd) { bd = d; best = b; op = 'restrain'; } }
@@ -385,15 +418,21 @@ function search(S, w, a, inp, dt, o, people) {
   }
   // 証拠
   for (const it of S.items) {
-    if (it.gone || (it.kind !== 'weapon' && it.kind !== 'evidence')) continue;
+    if (it.gone || (it.kind !== 'weapon' && it.kind !== 'evidence') || (bad[-it.id] && S.t < bad[-it.id])) continue;
     const d = Math.hypot(it.x - a.x, it.z - a.z);
     if (d > 14 || taken.has(-it.id) || Math.abs(it.y - a.y) > 2) continue;
     if (d + 1 < bd) { bd = d + 1; best = it; op = 'collect'; kind = 'item'; }
   }
   if (!best) { if (sec(S, o.phT) > 3) ai.order = null; return false; }
-  ai.secId = kind === 'item' ? -best.id : best.id;
+  const sid = kind === 'item' ? -best.id : best.id;
+  if (ai.secId !== sid) { ai.secId = sid; ai.secT = S.t; }
   const d = Math.hypot(best.x - a.x, best.z - a.z);
-  if (d > 1.3) { goTo(S, w, a, inp, best.x, best.y, best.z, { speed: 0.7, r: 1.1 }); inp.low = true; return true; }
+  if (d > 1.3) {
+    const r = goTo(S, w, a, inp, best.x, best.y, best.z, { speed: 0.7, r: 1.1 }); inp.low = true;
+    // 届かない相手・物（8秒）はしばらく後回し
+    if (r === 'blocked' || sec(S, ai.secT) > 8) { bad[sid] = S.t + Math.round(30 / S.dt); ai.secId = null; }
+    return true;
+  }
   inp.yaw = turnToward(a.yaw, yawTo(best.x - a.x, best.z - a.z), 6 * dt); inp.pitch = turnToward(a.pitch, -0.7, 3 * dt);
   pushAct(inp, { a: 'op', k: kind, id: best.id, op });
   return true;

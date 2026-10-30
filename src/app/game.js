@@ -59,7 +59,7 @@ export class Match {
     this.startT = performance.now();
     this.intro = o.dump ? 0 : 1.2;
     this.au.stopMusic(2.5);
-    this.au.playMusic(this.S.pvp ? 'pvp' : this.S.mode === 'pve' ? 'op' : 'train', { fade: 3, vol: this.S.pvp ? 0.55 : 0.5 });
+    this.au.playMusic(this.S.pvp ? 'pvp' : this.S.mode === 'pve' ? 'op' : 'menu', { fade: 3, vol: this.S.pvp ? 0.55 : this.S.mode === 'pve' ? 0.6 : 0.35 });
     if (!o.dump && !this.S.pvp && this.S.mode === 'pve') setTimeout(() => this._say(null, 'toc_start', false, 'TOC'), 900);
   }
   destroy() { this.r.clearMap(); this.fx.clear(); this.au.occluder = null; this.au.ambience(false); this.au.stopMusic(1.5); }

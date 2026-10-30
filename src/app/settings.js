@@ -1,6 +1,6 @@
 // 設定の既定値と保存。sv: 設定の形の版（形を変えたら上げて、古い値を直す）
 import { load, save } from './save.js';
-import { LOADOUTS } from '../engine/data/npc.js';
+import { LOADOUTS, PVP_LOADOUTS } from '../engine/data/npc.js';
 
 export const DEFAULTS = {
   sv: 1,
@@ -36,7 +36,8 @@ export function saveProfile(p) { save('profile', p); }
 // 装備（自分とAI隊員4人、対戦の陣営ごと）
 export function loadLoadouts() {
   const L = load('loadouts', null) || {};
-  const def = JSON.parse(JSON.stringify({ player: LOADOUTS.player, ai: [LOADOUTS.red1, LOADOUTS.red2, LOADOUTS.blue1, LOADOUTS.blue2], pvp: null }));
-  return { player: L.player || def.player, ai: Array.isArray(L.ai) && L.ai.length === 4 ? L.ai : def.ai, pvp: L.pvp || def.pvp };
+  const def = JSON.parse(JSON.stringify({ player: LOADOUTS.player, ai: [LOADOUTS.red1, LOADOUTS.red2, LOADOUTS.blue1, LOADOUTS.blue2], pvp: PVP_LOADOUTS }));
+  const pvp = L.pvp && L.pvp.swat && L.pvp.sus ? L.pvp : def.pvp;
+  return { player: L.player || def.player, ai: Array.isArray(L.ai) && L.ai.length === 4 ? L.ai : def.ai, pvp };
 }
 export function saveLoadouts(L) { save('loadouts', L); }
