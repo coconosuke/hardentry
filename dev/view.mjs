@@ -26,7 +26,7 @@ let fp = q.get('fp') === '1';
 if (fp) av.hidden.add(p0.id);
 function frame(opts = {}) {
   if (opts.fp != null) { fp = opts.fp; if (fp) av.hidden.add(p0.id); else av.hidden.delete(p0.id); }
-  if (opts.weapon) { p0.inv.w[0] = makeWeapon(opts.weapon); p0.ws.slot = 0; p0.ws.st = 'ready'; }
+  if (opts.weapon) { p0.inv.w[0] = makeWeapon(typeof opts.weapon === 'string' ? { id: opts.weapon, sight: 'holo', grip: 'vert' } : opts.weapon); p0.ws.slot = 0; p0.ws.st = 'ready'; }
   if (fp) {
     const e = eyeOf(G.S, p0);
     cam.x = e[0]; cam.y = e[1]; cam.z = e[2]; cam.yaw = p0.yaw; cam.pitch = p0.pitch;

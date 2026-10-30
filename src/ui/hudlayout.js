@@ -19,7 +19,7 @@ export const BTN = {
   light: { name: 'ライト', ax: 'r', ay: 't', x: 170, y: 92, s: 36, icon: 'light' },
   nvg: { name: '暗視装置', ax: 'r', ay: 't', x: 126, y: 92, s: 36, icon: 'nvg' },
   low: { name: 'ローレディ', ax: 'r', ay: 't', x: 258, y: 92, s: 36, icon: 'low' },
-  map: { name: '地図', ax: 'l', ay: 't', x: 150, y: 28, s: 36, icon: 'map' },
+  map: { name: '地図', ax: 'l', ay: 't', x: 124, y: 122, s: 32, icon: 'map' },
   pause: { name: 'メニュー', ax: 'r', ay: 't', x: 30, y: 28, s: 38, icon: 'pause' },
   drone: { name: 'ドローン', ax: 'r', ay: 't', x: 82, y: 92, s: 40, icon: 'drone', pvp: true },
   wpn1: { name: '主武器', ax: 'c', ay: 'b', x: -64, y: 22, s: 40, w: 120, icon: 'wpn', group: 'wpn' },
@@ -28,7 +28,7 @@ export const BTN = {
 // 情報の場所（編集でも動かせる）
 export const INFO = {
   minimap: { name: 'ミニマップ', ax: 'l', ay: 't', x: 72, y: 72, s: 120 },
-  squad: { name: '隊員', ax: 'l', ay: 't', x: 72, y: 198, s: 124, w: 124 },
+  squad: { name: '隊員', ax: 'l', ay: 't', x: 206, y: 58, s: 124, w: 124 },
   compass: { name: '方位', ax: 'c', ay: 't', x: 0, y: 16, s: 22, w: 260 },
   obj: { name: '目的', ax: 'c', ay: 't', x: 0, y: 46, s: 30, w: 300 },
   feed: { name: '出来事', ax: 'r', ay: 't', x: 128, y: 150, s: 80, w: 240 },

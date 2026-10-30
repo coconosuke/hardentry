@@ -13,6 +13,23 @@ const EXPORT_DEFAULT_RE = /^export\s+default\s+/m;
 const EXPORT_DECL_RE = /^export\s+(async\s+function\*?|function\*?|const|let|var|class)\s+([A-Za-z_$][\w$]*)/gm;
 const EXPORT_LIST_RE = /^export\s*\{([^}]*)\}\s*;?/gm;
 
+// 宣言の残り（最初の名前の後ろ）から、深さ0のカンマの後の名前を拾う（文の終わり ; か、深さ0の改行まで）
+function extraDeclNames(s, i) {
+  const out = [];
+  let depth = 0, q = null;
+  for (; i < s.length; i++) {
+    const c = s[i];
+    if (q) { if (c === '\\') { i++; continue; } if (c === q) q = null; continue; }
+    if (c === '"' || c === "'" || c === '`') { q = c; continue; }
+    if (c === '/' && s[i + 1] === '/') { while (i < s.length && s[i] !== '\n') i++; i--; continue; }
+    if (c === '(' || c === '[' || c === '{') depth++;
+    else if (c === ')' || c === ']' || c === '}') depth--;
+    else if (depth === 0 && (c === ';' || c === '\n')) break;
+    else if (depth === 0 && c === ',') { const m = /^\s*([A-Za-z_$][\w$]*)\s*=/.exec(s.slice(i + 1, i + 80)); if (m) out.push(m[1]); }
+  }
+  return out;
+}
+
 function modId(file, root) {
   return '__m_' + path.relative(root, file).replace(/\.js$/, '').replace(/[^A-Za-z0-9_]/g, '_');
 }
@@ -46,7 +63,12 @@ export function bundle(entry, { root, defines = {} } = {}) {
     if (/^\s*import\s/m.test(src)) throw new Error('対応外のimport: ' + file);
     const exported = [];
     if (EXPORT_DEFAULT_RE.test(src)) { src = src.replace(EXPORT_DEFAULT_RE, 'const __default = '); exported.push('default: __default'); }
-    src = src.replace(EXPORT_DECL_RE, (m, kind, name) => { exported.push(name); return `${kind} ${name}`; });
+    // export const A = 1, B = 2; のように1つの文で複数の名前を出すときも、全部の名前を拾う
+    src = src.replace(EXPORT_DECL_RE, (m, kind, name, off, whole) => {
+      exported.push(name);
+      if (/^(const|let|var)$/.test(kind)) for (const n of extraDeclNames(whole, off + m.length)) exported.push(n);
+      return `${kind} ${name}`;
+    });
     src = src.replace(EXPORT_LIST_RE, (m, list) => {
       for (const s of list.split(',').map(x => x.trim()).filter(Boolean)) {
         const mm = s.match(/^([A-Za-z_$][\w$]*)(?:\s+as\s+([A-Za-z_$][\w$]*))?$/);

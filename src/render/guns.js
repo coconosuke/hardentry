@@ -5,7 +5,7 @@ import { LAYER } from './textures.js';
 import { WEAPONS } from '../engine/data/weapons.js';
 
 const K = {
-  blk: hex('#1c1d20'), dg: hex('#2c2e32'), mg: hex('#45484d'), steel: hex('#6c7178'), fde: hex('#a08766'), wood: hex('#6b4529'), woodL: hex('#8a5a34'),
+  blk: hex('#24262a'), dg: hex('#33363b'), mg: hex('#4d5157'), steel: hex('#6c7178'), fde: hex('#a08766'), wood: hex('#6b4529'), woodL: hex('#8a5a34'),
   od: hex('#47502f'), grn: hex('#2a2f28'), orange: hex('#d46224'), yel: hex('#d8b62a'), plum: hex('#4a2a22'), smoke: hex('#4a4640'), tan: hex('#b39a72'), brass: hex('#b08a3e'),
 };
 

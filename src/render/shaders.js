@@ -135,7 +135,7 @@ void main(){
 }`;
 
 export const WORLD_FS = `
-uniform highp sampler2DArray uTex; uniform float uEmitK; uniform vec3 uTint; uniform float uGlass;
+uniform highp sampler2DArray uTex; uniform float uEmitK; uniform vec3 uTint; uniform float uGlass; uniform float uVM;
 in vec3 vPos; in vec3 vNrm; in vec2 vUV; flat in float vLayer; in vec3 vCol; in float vAO; flat in float vRoom; flat in float vEmit;
 layout(location=0) out vec4 oCol;
 void main(){
@@ -164,6 +164,18 @@ void main(){
   oCol = vec4(fog(col, vPos, outdoor), 0.22 + 0.5 * fr);
 #else
   if (vEmit > 0.0) col += alb * vEmit * uEmitK * 2.2;
+  // 一人称の銃と腕: 周りの明るさに合わせて、上からの光・つや・ふちを少し足す（黒い銃の形が分かるように）
+  if (uVM > 0.0) {
+    vec3 v = normalize(uCam - vPos);
+    vec3 irr = col / max(alb, vec3(0.02));
+    float E = clamp(dot(irr, vec3(0.3333)), 0.0, 2.5);
+    vec3 kd = normalize(vec3(0.25, 0.9, 0.15));
+    float ndl = max(dot(n, kd), 0.0);
+    vec3 h = normalize(kd + v);
+    float sp = pow(max(dot(n, h), 0.0), 28.0);
+    float rim = pow(1.0 - max(dot(n, v), 0.0), 2.5);
+    col += (alb * (0.45 * ndl + 0.18) + vec3(0.09 * sp) + alb * rim * 0.5) * E * uVM;
+  }
   oCol = vec4(fog(col, vPos, outdoor), 1.0);
 #endif
 }`;

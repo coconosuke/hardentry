@@ -178,9 +178,9 @@ export class Renderer {
     this.lat = lat; this.sky = lat.sky;
     this.bakeMs = performance.now() - t0;
     this._uploadLight(lat);
-    // 壁の印と暗がり
-    this.wmT = tex2D(gl, w.W, w.D * w.NL, { internal: gl.R8, format: gl.RED, data: ctx.wallMask, filter: gl.NEAREST });
+    // 壁の印と暗がり（1バイトの行は幅が4の倍数とは限らないので、並びの区切りを1にしてから送る）
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    this.wmT = tex2D(gl, w.W, w.D * w.NL, { internal: gl.R8, format: gl.RED, data: ctx.wallMask, filter: gl.NEAREST });
     this.aoT = tex2D(gl, ctx.ao.W, ctx.ao.D * w.NL, { internal: gl.R8, format: gl.RED, data: ctx.ao.data, filter: gl.LINEAR });
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
     // 部屋ごとの動く光の届き方
@@ -278,6 +278,7 @@ export class Renderer {
     if (u.uEmitK) gl.uniform1f(u.uEmitK, opts.emitK ?? 1);
     if (u.uTint) gl.uniform3f(u.uTint, 1, 1, 1);
     if (u.uRoomOverride) gl.uniform1f(u.uRoomOverride, -1);
+    if (u.uVM) gl.uniform1f(u.uVM, 0);
     if (u.uModel) gl.uniformMatrix4fv(u.uModel, false, this.ident);
     if (u.uDLn) {
       gl.uniform1i(u.uDLn, this.dlN);

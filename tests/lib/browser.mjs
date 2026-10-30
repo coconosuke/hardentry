@@ -8,9 +8,12 @@ const FONT_CSS = `
 @font-face{font-family:'Noto Sans JP';font-weight:400;src:local('NotoSansCJKjp-Regular');}
 @font-face{font-family:'Noto Sans JP';font-weight:500;src:local('NotoSansCJKjp-Medium');}
 @font-face{font-family:'Noto Sans JP';font-weight:700;src:local('NotoSansCJKjp-Bold');}
-@font-face{font-family:'Shippori Mincho';font-weight:500;src:local('NotoSerifCJKjp-Medium');}
-@font-face{font-family:'Shippori Mincho';font-weight:700;src:local('NotoSerifCJKjp-Bold');}
-@font-face{font-family:'Shippori Mincho';font-weight:800;src:local('NotoSerifCJKjp-Black');}
+@font-face{font-family:'Noto Sans JP';font-weight:900;src:local('NotoSansCJKjp-Black');}
+@font-face{font-family:'Inter';font-weight:400;src:local('Inter Regular'),local('Inter-Regular');}
+@font-face{font-family:'Inter';font-weight:600;src:local('Inter SemiBold'),local('Inter-SemiBold');}
+@font-face{font-family:'Inter';font-weight:700;src:local('Inter Bold'),local('Inter-Bold');}
+@font-face{font-family:'Inter';font-weight:800;src:local('Inter ExtraBold'),local('Inter-ExtraBold');}
+@font-face{font-family:'Inter';font-weight:900;src:local('Inter Black'),local('Inter-Black');}
 `;
 
 export const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../..');

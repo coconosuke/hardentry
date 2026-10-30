@@ -15,29 +15,25 @@ const t0 = Date.now();
 
 const js = bundle(r('src/app/main.js'), { root: r('src') });
 const css = fs.readFileSync(r('src/ui/style.css'), 'utf8');
-const dataSrc = fs.readFileSync(r('src/engine/data.js'), 'utf8');
-const VERSION = /export const VERSION = '([^']+)'/.exec(dataSrc)[1];
-const COMPAT = /export const COMPAT = (\d+)/.exec(dataSrc)[1];
+const verSrc = fs.readFileSync(r('src/engine/data/version.js'), 'utf8');
+const VERSION = /export const VERSION = '([^']+)'/.exec(verSrc)[1];
+const COMPAT = /export const COMPAT = (\d+)/.exec(verSrc)[1];
+const TITLE = 'HARD ENTRY';
 
-// 素材（base64でページに埋め込む）
+// 素材（base64でページに埋め込む）: 声（話す人ごとのm4a＋目次）・BGM
 const assets = {};
 const add = (name, file) => { assets[name] = fs.readFileSync(file).toString('base64'); };
-add('creature.bin', r('src/assets/creature.bin'));
-add('voices/voices.json', r('src/assets/voices/voices.json'));
-for (const f of fs.readdirSync(r('src/assets/voices'))) if (f.endsWith('.m4a')) add('voices/' + f, r('src/assets/voices', f));
-add('music/music.json', r('src/assets/music/music.json'));
-for (const f of fs.readdirSync(r('src/assets/music'))) if (f.endsWith('.m4a')) add('music/' + f, r('src/assets/music', f));
-for (const f of ['scare1.jpg', 'scare2.jpg', 'scare3.jpg', 'face.jpg']) if (fs.existsSync(r('src/assets', f))) add(f, r('src/assets', f));
+const vdir = r('src/assets/voices'), mdir = r('src/assets/music');
+if (fs.existsSync(path.join(vdir, 'index.json'))) { add('voices/index.json', path.join(vdir, 'index.json')); for (const f of fs.readdirSync(vdir)) if (f.endsWith('.m4a')) add('voices/' + f, path.join(vdir, f)); }
+if (fs.existsSync(path.join(mdir, 'music.json'))) { add('music/music.json', path.join(mdir, 'music.json')); for (const f of fs.readdirSync(mdir)) if (f.endsWith('.m4a')) add('music/' + f, path.join(mdir, f)); }
 const assetsJS = 'window.__ASSETS=' + JSON.stringify(assets) + ';';
 
 const hash = crypto.createHash('sha256').update(js).update(css).update(assetsJS).digest('hex').slice(0, 10);
-const FONTS = 'https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Shippori+Mincho:wght@500;700;800&display=swap';
+const FONTS = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700;900&display=swap';
 const STAGE = `<div id="stage">
 <canvas id="gl" aria-label="ゲームの画面"></canvas>
-<canvas id="blood" aria-hidden="true"></canvas>
 <div id="hud"></div>
 <div id="fade"></div>
-<div id="scare"></div>
 <div id="screens"></div>
 <div class="ctxlost" role="status">画面を準備し直しています…</div>
 <div id="fps" hidden></div>
@@ -46,7 +42,7 @@ const safeJS = (s) => s.replace(/<\/script/gi, '<\\/script');
 const BUILD = `window.__BUILD=${JSON.stringify({ version: VERSION, compat: +COMPAT, hash, built: new Date().toISOString() })};`;
 
 // ---- Claude版
-const claudeHead = `<title>ミテル</title>
+const claudeHead = `<title>${TITLE}</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -63,7 +59,6 @@ ${safeJS(js)}
 const claudePage = claudeHead + '\n' + claudeBody + '\n';
 fs.mkdirSync(r('dist/claude'), { recursive: true });
 fs.writeFileSync(r('dist/claude/index.html'), claudePage);
-// 公開時の骨組み（charset・viewport・小さなリセット）で包んだ確認用
 const skeleton = (inner) => `<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style></head><body>${inner}</body></html>`;
 fs.writeFileSync(r('dist/claude/preview.html'), skeleton(claudePage));
 
@@ -79,8 +74,8 @@ const appPage = `<!doctype html>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="ミテル">
-<meta name="theme-color" content="#060807">
+<meta name="apple-mobile-web-app-title" content="${TITLE}">
+<meta name="theme-color" content="#07090c">
 ${icon180 ? `<link rel="apple-touch-icon" href="data:image/png;base64,${icon180}">` : ''}
 <link rel="manifest" href="manifest.webmanifest">
 ${claudeHead}
@@ -95,8 +90,8 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') { navigator.
 `;
 fs.writeFileSync(r('dist/app/index.html'), appPage);
 fs.writeFileSync(r('dist/app/manifest.webmanifest'), JSON.stringify({
-  name: 'ミテル', short_name: 'ミテル', lang: 'ja', start_url: './', scope: './', display: 'standalone', orientation: 'landscape',
-  background_color: '#060807', theme_color: '#060807',
+  name: TITLE, short_name: TITLE, lang: 'ja', start_url: './', scope: './', display: 'standalone', orientation: 'landscape',
+  background_color: '#07090c', theme_color: '#07090c',
   icons: [
     { src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
     { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
@@ -105,17 +100,18 @@ fs.writeFileSync(r('dist/app/manifest.webmanifest'), JSON.stringify({
 }, null, 1));
 // SW: 毎回ネットワークを確かめ（no-cache）、つながらないときだけ保存分を使う。アイコンとマニフェストは横取りしない。
 fs.writeFileSync(r('dist/app/sw.js'), `// ビルド ${hash}
-const CACHE = 'miteru-${hash}';
+const CACHE = 'hardentry-${hash}';
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./'])).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', (e) => {
   const u = new URL(e.request.url);
   if (e.request.method !== 'GET' || u.origin !== location.origin) return;
   if (/\\.(png|webmanifest)$/.test(u.pathname)) return;
+  const page = e.request.mode === 'navigate' || u.pathname.endsWith('/') || u.pathname.endsWith('/index.html');
   e.respondWith(fetch(e.request, { cache: 'no-cache' }).then(res => {
-    if (res && res.ok && res.type === 'basic') { const cp = res.clone(); caches.open(CACHE).then(c => c.put(e.request, cp)); }
+    if (res && res.ok && res.type === 'basic') { const cp = res.clone(); caches.open(CACHE).then(c => c.put(page ? './' : e.request, cp)); }
     return res;
-  }).catch(() => caches.match(e.request).then(m => m || caches.match('./'))));
+  }).catch(() => caches.match(page ? './' : e.request).then(m => m || (page ? caches.match('./') : undefined))));
 });
 `);
 fs.writeFileSync(r('dist/app/.nojekyll'), '');
@@ -123,6 +119,7 @@ fs.writeFileSync(r('dist/app/.nojekyll'), '');
 // ---- ソース一式
 const sb = makeSourceBundle(ROOT);
 fs.writeFileSync(r('dist/source-bundle.txt'), sb.text);
+fs.copyFileSync(r('dist/source-bundle.txt'), r('dist/app/source-bundle.txt'));
 
 const kb = (n) => (n / 1024).toFixed(0) + 'KB';
 console.log(JSON.stringify({ version: VERSION, compat: +COMPAT, hash, ms: Date.now() - t0, claude: kb(claudePage.length), js: kb(js.length), assets: kb(assetsJS.length), app: kb(appPage.length), sourceBundle: kb(sb.text.length), files: sb.count }));

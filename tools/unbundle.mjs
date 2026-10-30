@@ -21,7 +21,7 @@ export function makeSourceBundle(root) {
   for (const d of INCLUDE_DIRS) walk(path.join(root, d), files);
   for (const f of INCLUDE_FILES) if (fs.existsSync(path.join(root, f))) files.push(path.join(root, f));
   files.sort();
-  let text = `ミテル ソース一式（${new Date().toISOString()}）\n復元: node tools/unbundle.mjs source-bundle.txt <出力先>\n（tools/unbundle.mjs がない場合は、下の "${MARK}" の区切りごとにファイルへ書き出す。base64 と書かれたものはデコードする）\n\n`;
+  let text = `HARD ENTRY ソース一式（${new Date().toISOString()}）\n復元: node tools/unbundle.mjs source-bundle.txt <出力先>\n（tools/unbundle.mjs がない場合は、下の "${MARK}" の区切りごとにファイルへ書き出す。base64 と書かれたものはデコードする）\n\n`;
   for (const f of files) {
     const rel = path.relative(root, f).split(path.sep).join('/');
     const ext = path.extname(f).toLowerCase();

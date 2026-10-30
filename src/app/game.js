@@ -52,21 +52,31 @@ export class Match {
     this.prevBul = new Map();
     // AI の隊員の色（服）
     this.vm.setColors(this.av.look(this.p).pal.slice(3, 6), [0.02, 0.02, 0.025]);
-    this.au.setMapAcoustics && this.au.setMapAcoustics(this.def);
+    this.net = o.net || null;
+    // 音: 壁ごしはこもる（視線が通らない）、屋内と屋外で残響、環境音とBGM
+    this.au.occluder = (x, y, z) => { const c = this.cam; if (!c) return 0; const d = Math.hypot(x - c.x, z - c.z); if (d < 1.5) return 0; return los(this.w, c.x, c.y, c.z, x, y, z, this.S.doors) ? 0 : Math.min(1, 0.55 + d / 60); };
     this.fx.onClink = (x, y, z) => this.au.sfx('shell', [x, y, z], { vol: 0.35 });
     this.startT = performance.now();
     this.intro = o.dump ? 0 : 1.2;
-    if (!o.dump && !this.S.pvp) this._say(this.p, 'toc_start', true);
+    this.au.stopMusic(2.5);
+    this.au.playMusic(this.S.pvp ? 'pvp' : this.S.mode === 'pve' ? 'op' : 'train', { fade: 3, vol: this.S.pvp ? 0.55 : 0.5 });
+    if (!o.dump && !this.S.pvp && this.S.mode === 'pve') setTimeout(() => this._say(null, 'toc_start', false, 'TOC'), 900);
   }
-  destroy() { this.r.clearMap(); this.fx.clear(); }
-  rebind() { this.r.setMap(this.w, this.def, this.S); }
+  destroy() { this.r.clearMap(); this.fx.clear(); this.au.occluder = null; this.au.ambience(false); this.au.stopMusic(1.5); }
+  rebind(r) {
+    if (r) { this.r = r; this.av = new ActorView(r); this.fx = new FX(r); this.vm = new ViewModel(r, this.av); this.fx.blood = this.app.settings.blood !== false; this.av.hidden.add(this.p.id); this.vm.setColors(this.av.look(this.p).pal.slice(3, 6), [0.02, 0.02, 0.025]); this.fx.onClink = (x, y, z) => this.au.sfx('shell', [x, y, z], { vol: 0.35 }); }
+    this.r.setMap(this.w, this.def, this.S);
+  }
+  applySettings() { this.fx.blood = this.app.settings.blood !== false; }
+  // 止まっている間の描き直し（画面の大きさが変わったときなど）
+  redraw() { try { this._render(0, { lookDX: 0, lookDY: 0, edges: [] }); } catch (e) { console.warn('redraw', e); } }
 
   // ---- 1こま
-  frame(dt) {
+  frame(dt, fo = {}) {
     if (this.done) return;
     this.time += dt;
     const app = this.app, st = app.settings;
-    const inp = app.input.take();
+    const inp = fo.input === false ? { mx: 0, mz: 0, lookDX: 0, lookDY: 0, gyroX: 0, gyroY: 0, fire: false, sprint: false, hold: new Set(), edges: [] } : app.input.take();
     this._look(inp, dt);
     this._edges(inp);
     // エンジンを進める（1/60秒ずつ。遅れたら最大4回）
@@ -101,11 +111,12 @@ export class Match {
     let k = (inp.mouse ? 0.0022 : 0.0052) * (st.sens || 1);
     if (ads > 0.5) k *= zoom > 2 ? (st.sensScope || 0.45) : (st.sensAds || 0.75);
     if (inp.fire && !inp.mouse) k *= st.sensFire || 1;
-    // エイムアシスト（タッチ）: 敵の近くでは少しゆっくりに
+    // エイムアシスト（タッチ）: 敵の近くでは少しゆっくりに。対戦は部屋の設定（0なし・1弱い・2ふつう）
     let slow = 1;
-    if (!inp.mouse && st.aimAssist !== 'off') {
+    const aa = this.S.pvp ? ['off', 'weak', 'strong'][this.S.rules.aimAssist ?? 1] : st.aimAssist;
+    if (!inp.mouse && aa && aa !== 'off') {
       const near = this._nearTarget(0.06);
-      if (near) slow = st.aimAssist === 'strong' ? 0.55 : 0.72;
+      if (near) slow = aa === 'strong' ? 0.55 : 0.72;
     }
     let dx = inp.lookDX * k * slow, dy = inp.lookDY * k * slow * 0.9;
     // ジャイロ
@@ -534,6 +545,16 @@ export class Match {
     }
     this.cam = cam;
     this.au.listen(cam.x, cam.y, cam.z, cam.yaw, cam.pitch);
+    // 屋内か屋外か（残響と環境音）
+    this._envT = (this._envT || 0) - dt;
+    if (this._envT <= 0) {
+      this._envT = 0.3;
+      const ci = Math.floor(cam.x / CS), cj = Math.floor(cam.z / CS), cL = Math.max(0, Math.min(this.w.NL - 1, Math.floor(cam.y / LH)));
+      const ind = ci >= 0 && cj >= 0 && ci < this.w.W && cj < this.w.D && this.w.indoor[this.w.idx(cL, ci, cj)] ? 1 : 0;
+      this._ind = this._ind == null ? ind : this._ind + (ind - this._ind) * 0.5;
+      this.au.setEnv(this._ind);
+      this.au.ambience(true, this._ind);
+    }
     // 人と効果
     this.av.prepare(S, this.w);
     const fp = !this.dead && p.alive && !(p.down && !S.pvp) && !(drone && drone.alive);
@@ -576,7 +597,7 @@ export class Match {
     const room = roomOf(this.w, cam.x, cam.y - 1, cam.z);
     r.render({
       cam, doors: S.doors, lights, dt,
-      post: { exposure: this.exposure * (nvg ? 1 : 1), nvg, flash, damage: Math.max(this.dmgK * 0.8, lowHp), supp: this.suppK * 0.8, gas, blur: Math.max(this.blurK, gas * 0.5, p.stun > 0 ? 0.4 : 0, flash * 0.6), vig: 0.32 },
+      post: { exposure: this.exposure * (st.bright || 1), nvg, flash, damage: Math.max(this.dmgK * 0.8, lowHp), supp: this.suppK * 0.8, gas, blur: Math.max(this.blurK, gas * 0.5, p.stun > 0 ? 0.4 : 0, flash * 0.6), vig: 0.32 },
       vm: fp ? { fov: 54 * DEG, room } : null, shadows: st.quality !== 'low',
       ambMin: nvg ? 0.02 : 0,
     });

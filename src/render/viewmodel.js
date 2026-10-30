@@ -84,8 +84,9 @@ export class ViewModel {
     const act = a.act ? 1 : 0;
     this.actK = lerp(this.actK || 0, act, 1 - Math.exp(-dt * 8));
     // 位置（カメラ空間: x右 y上 z前）と回転
-    const hip = pistol ? [0.115, -0.135, 0.4] : [0.135, -0.15, 0.27];
-    const adsP = [0, -P.sightY, -P.eyeZ];
+    const hip = pistol ? [0.1, -0.098, 0.37] : [0.118, -0.112, 0.3];
+    // 照準の窓が画面に対して大きすぎないよう、目を少し後ろに（スマホの小さい画面向け）
+    const adsP = [0, -P.sightY, -P.eyeZ + (P.optic && !P.optic.scope ? 0.09 : 0.04)];
     let px = lerp(hip[0], adsP[0], ads), py = lerp(hip[1], adsP[1], ads) - bell(a.ads) * 0.012, pz = lerp(hip[2], adsP[2], ads);
     let yaw = lerp(pistol ? 0.03 : 0.05, 0, ads), pitch = 0, roll = 0;
     // 歩き・呼吸
@@ -215,6 +216,7 @@ export class ViewModel {
     const r = this.r, gl = this.gl, P = r.P.world;
     r._bindLight(P, f);
     gl.uniformMatrix4fv(P.u.uVP, false, r.vmVP);
+    if (P.u.uVM) gl.uniform1f(P.u.uVM, 1);
     if (f.vm && f.vm.room != null) gl.uniform1f(P.u.uRoomOverride, f.vm.room);
     // 銃
     if (this.gm) {
@@ -245,6 +247,7 @@ export class ViewModel {
       gl.drawElements(gl.TRIANGLES, this.armN, gl.UNSIGNED_SHORT, 0);
     }
     gl.uniform1f(P.u.uRoomOverride, -1);
+    if (P.u.uVM) gl.uniform1f(P.u.uVM, 0);
     gl.uniformMatrix4fv(P.u.uModel, false, r.ident);
   }
 }
