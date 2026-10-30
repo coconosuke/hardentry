@@ -27,7 +27,7 @@ export class Match {
   constructor(app, o) {
     this.app = app; this.o = o;
     this.r = app.renderer; this.au = app.audio; this.hud = app.hud;
-    this.G = o.dump ? load(o.dump) : createGame({ map: o.map, mode: o.mode, mission: o.mission, diff: o.diff, entry: o.entry, team: o.team, roster: o.roster, rules: o.rules, seed: o.seed, teams: o.teams, aiLoadouts: o.aiLoadouts });
+    this.G = o.mirror ? { S: o.mirror.S, w: o.mirror.w } : o.dump ? load(o.dump) : createGame({ map: o.map, mode: o.mode, mission: o.mission, diff: o.diff, entry: o.entry, team: o.team, roster: o.roster, rules: o.rules, seed: o.seed, teams: o.teams, aiLoadouts: o.aiLoadouts, start: o.start, house: o.house });
     this.S = this.G.S; this.w = this.G.w;
     this.def = MAPS[this.S.map];
     this.pid = o.pid ?? 0;
@@ -53,6 +53,8 @@ export class Match {
     // AI の隊員の色（服）
     this.vm.setColors(this.av.look(this.p).pal.slice(3, 6), [0.02, 0.02, 0.025]);
     this.net = o.net || null;
+    if (this.net && this.net.role === 'host') this.netInitHost();
+    if (this.net && this.net.role === 'guest') this.netInitGuest(o);
     // 音: 壁ごしはこもる（視線が通らない）、屋内と屋外で残響、環境音とBGM
     this.au.occluder = (x, y, z) => { const c = this.cam; if (!c) return 0; const d = Math.hypot(x - c.x, z - c.z); if (d < 1.5) return 0; return los(this.w, c.x, c.y, c.z, x, y, z, this.S.doors) ? 0 : Math.min(1, 0.55 + d / 60); };
     this.fx.onClink = (x, y, z) => this.au.sfx('shell', [x, y, z], { vol: 0.35 });
@@ -74,6 +76,7 @@ export class Match {
   // ---- 1こま
   frame(dt, fo = {}) {
     if (this.done) return;
+    if (this.net && this.net.role === 'guest') return this.guestFrame(dt, fo);
     this.time += dt;
     const app = this.app, st = app.settings;
     const inp = fo.input === false ? { mx: 0, mz: 0, lookDX: 0, lookDY: 0, gyroX: 0, gyroY: 0, fire: false, sprint: false, hold: new Set(), edges: [] } : app.input.take();
@@ -84,14 +87,20 @@ export class Match {
     const step0 = this.S.dt;
     let n = 0;
     const ev = [];
+    const hostNet = this.net && this.net.role === 'host';
+    const waiting = hostNet && this.netWaiting();
     while (this.acc >= step0 && n < 4) {
       const cmd = this._command(inp);
-      const e = step(this.G, { [this.p.id]: cmd, ...(this.droneId != null ? { [this.droneId]: this._droneCmd(inp) } : {}) });
+      if (waiting) { this.acc -= step0; n++; continue; }
+      const inputs = { [this.p.id]: cmd, ...(this.droneId != null ? { [this.droneId]: this._droneCmd(inp) } : {}) };
+      if (hostNet) this.netInputs(inputs);
+      const e = step(this.G, inputs);
       for (const x of e) ev.push(x);
       this.acc -= step0; n++;
       if (this.S.m && this.S.m.phase === 'end') break;
     }
     if (n === 4) this.acc = 0;
+    if (hostNet) this.netAfterSteps(ev);
     this._events(ev);
     this._render(dt, inp);
     this._hud(dt);
@@ -99,7 +108,7 @@ export class Match {
     const m = this.S.m;
     if (m && (m.phase === 'end' || m.over) && !this.done) {
       this.endT = (this.endT || 0) + dt;
-      if (this.endT > (m.over ? 3.5 : 2.2)) { this.done = true; app.endGame(this.result()); }
+      if (this.endT > (m.over ? 3.5 : 2.2)) { this.done = true; if (hostNet) app.netGameOver(this.result()); else app.endGame(this.result()); }
     }
   }
 
@@ -718,7 +727,7 @@ export class Match {
   result() {
     const S = this.S, m = S.m, p = this.p;
     if (S.pvp) {
-      const rows = S.actors.filter(a => !a.isDrone).map(a => ({ name: a.name, team: a.team, k: a.stats.k, d: a.stats.d, a: a.stats.a, me: a === p, bot: a.pid == null }));
+      const rows = S.actors.filter(a => !a.isDrone).map(a => ({ name: a.name, team: a.team, k: a.stats.k, d: a.stats.d, a: a.stats.a, me: a === p, bot: a.pid == null, pid: a.pid }));
       rows.sort((x, y) => y.k * 2 + y.a - (x.k * 2 + x.a));
       return { pvp: true, mode: m.kind, win: m.winner, myTeam: p.team, score: m.kind === 'tdm' ? m.score : m.wins, rows, map: S.map, time: (S.t - (m.startT || 0)) * S.dt };
     }
@@ -730,6 +739,8 @@ export class Match {
   saveState() { if (this.done) return null; try { return { dump: dump(this.G), cam: { yaw: this.yaw, pitch: this.pitch }, o: this.o }; } catch (e) { return null; } }
 }
 import { endMission } from '../engine/modes/pve.js';
+import { netMixin } from './netgame.js';
+netMixin(Match);
 function import_end(S) { endMission(S, S.m.softDone ? 'done' : 'abort', 'player', []); }
 
 function fmtT(s) { s = Math.max(0, Math.ceil(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; }

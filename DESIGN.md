@@ -143,6 +143,7 @@
 - 2026-10-30: リポジトリ coconosuke/hardentry はユーザーが作成済み（空）。clone は `/home/claude/coconosuke/hardentry`。add_repo は拒否されたが、そのままの git push が通る（git の中継が認証する）。作業中のバックアップは `wip` ブランチ、公開は `main`（GitHub Pages）。
 - 2026-10-30 08:47: 作業環境が消えていた。add_repo（push）が通り、`/home/claude/hardentry` に wip を clone して続行。前作の参照は `/home/claude/ref/miteru`（coconosuke/miteru の source-bundle.txt を unbundle）。**止まっても失わないよう、まとまるごとに wip へ push する。**
 - アーティファクトの capability: artifact, assets, comments, db, downloads, files, mcp, room, sample, self, user。room の presence は約30回/秒・4KiB、emit は数回/秒（合計約40/秒）。
+- 2026-10-30: GitHub のリリースから落とした実行ファイル（sherpa-onnx）を動かすのは許可されなかった（外部のコード）。声は ffmpeg 内蔵の flite で作る。聞き取りの確認は tools/asr.py（numpy＋onnxruntime で Whisper base.en の ONNX を自前で推論。モデルは /home/claude/tts/sherpa-onnx-whisper-base.en、GitHub の asr-models リリースから）。
 
 ## バランス変更の記録（1つずつ戻せるように）
 （まだなし）
@@ -156,4 +157,7 @@
   - つなぎ `src/app/game.js`（1試合: 入力→命令、出来事→音・効果・HUD、カメラ、動く光の届く部屋）。
   - 道具: `tools/mapimg.mjs`（見取り図のPNG）、`dev/view.html`（描画の確認）。
 - 決めたこと（2026-10-30）: PvE の隊は最大4人（プレイヤー込み）。AI隊員の枠 0,1 が赤、2,3 が青。命令の対象は 金（全員）/赤/青。マップは ガソリンスタンド（夜・1階、PvE5作戦とPvP両用）に加え、郊外の家（夕方・2階）、アパート（夜）、オフィス（昼・2階）、ナイトクラブ（夜）、港の倉庫（夕方）、PvP用に 銀行（2階）とモーテル（2階）を作る。
-- 次: main.js（起動・ループ・保存・WebGL喪失）・screens（タイトル〜結果・設定・図鑑）・style.css・audio → build.mjs を HARD ENTRY 用に → 遊べる形でテスト → 残りのマップ → オンライン → 見直し → テスト一式 → 公開。
+- 2026-10-30 午前にできたもの: main.js（起動・ループ・保存・WebGL喪失・続きから）、scenes.js（タイトルの背景）、screens.js（タイトル・作戦の準備・ブリーフィング・装備・対戦の準備・みんなで・ロビー・一時停止・地図・結果・設定・図鑑）、loadout.js、book.js、style.css、settings.js/save.js、audio（synth.js 手続きの効果音187個・audio.js 立体音響/壁ごし/音速の遅れ/屋内外の残響・lines.js 台詞）、声（tools/voices.py: ffmpeg の flite＋rubberband。Whisper で確認、311本・平均97.5%）、BGM（tools/music.py: menu/op/pvp）、AIの指揮（ai/lead.js: 人の指揮官がいないとき RoN の命令を順に出す。自動テストにも使う）、隊員AIの詰まり対策（扉の板を経路で避ける・横にずれる・扉の口に立ち止まらない・鍵は蹴る）。
+- バンドラの不具合を直した: `export const A = 1, B = 2` の2つ目以降の名前が出ていなかった（LH などが undefined になっていた）。
+- 途中経過を公開（10-30 10:0x）: Claude版 https://claude.ai/artifact/VMcwFVDkiTpXgrTDAksgCT （同じファイルパス dist/claude/index.html で上書き）。
+- 次: オンライン（src/net: link/mqtt/code は前作から、session/snap は新しく）→ 一人称の銃の見た目 → 残りのマップ7つ → テスト一式 → バランス測定と見直し → アプリ版（GitHub Pages）→ 最終点検。

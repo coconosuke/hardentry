@@ -193,7 +193,7 @@ class App {
     if (this.game && this.mode === 'pause') this.game.redraw();
   }
   saveProfile() { saveProfile(this.profile); }
-  saveLoadouts() { saveLoadouts(this.loadouts); }
+  saveLoadouts() { saveLoadouts(this.loadouts); if (this.net && this.netLoadoutChanged) this.netLoadoutChanged(); }
   confirmMode() { return this.settings.confirm || 'auto'; }
   editHud(onDone) {
     this.screens.hide();

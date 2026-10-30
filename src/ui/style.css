@@ -27,7 +27,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .screen.on { display: block; animation: scIn .18s ease-out; }
 @keyframes scIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .screen.dim { background: linear-gradient(90deg, rgba(5,7,10,.94) 0%, rgba(5,7,10,.86) 60%, rgba(5,7,10,.78) 100%); }
-.sc-wrap { position: absolute; inset: 0; padding: calc(var(--st) + 8px) var(--sr) calc(var(--sb) + 8px) var(--sl); display: flex; flex-direction: column; gap: 8px; }
+.sc-wrap { position: absolute; inset: 0; padding: calc(var(--st) + 8px) max(var(--sr), 14px) calc(var(--sb) + 8px) max(var(--sl), 14px); display: flex; flex-direction: column; gap: 8px; }
 .sc-head { display: flex; align-items: center; gap: 12px; min-height: 40px; flex: none; }
 .sc-head h2 { margin: 0; font: 800 1.45em/1 var(--f-head); letter-spacing: .04em; white-space: nowrap; }
 .sc-head h2.good { color: var(--ok); } .sc-head h2.bad { color: var(--bad); }
