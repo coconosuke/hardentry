@@ -14,26 +14,32 @@ export function localX(stage, el, cx, cy) {
 
 // 自前スクロール（回した画面でも指の向きどおりに動く）。慣性あり。
 export class Scroller {
-  constructor(stage, el) {
+  // o.x: 横にスクロール（タブの列など）。回した画面でも指の動きは画面の座標で見る
+  constructor(stage, el, o = {}) {
     this.stage = stage; this.el = el;
+    const X = !!o.x;
     el.classList.add('scroller');
+    if (X) el.classList.add('sx');
     let drag = null, v = 0, raf = 0, lastT = 0;
+    const pos = (e) => { const p = stage.toStage(e.clientX, e.clientY); return X ? p[0] : p[1]; };
+    const get = () => (X ? el.scrollLeft : el.scrollTop);
+    const set = (n) => { if (X) el.scrollLeft = n; else el.scrollTop = n; if (X) this.edges(); };
     const stopAnim = () => { if (raf) cancelAnimationFrame(raf); raf = 0; };
     el.addEventListener('pointerdown', (e) => {
       stopAnim();
-      const [, sy] = stage.toStage(e.clientX, e.clientY);
-      drag = { id: e.pointerId, y0: sy, top0: el.scrollTop, on: false, ly: sy };
+      const p = pos(e);
+      drag = { id: e.pointerId, p0: p, s0: get(), on: false, lp: p };
       v = 0; lastT = performance.now();
     });
     el.addEventListener('pointermove', (e) => {
       if (!drag || drag.id !== e.pointerId) return;
-      const [, sy] = stage.toStage(e.clientX, e.clientY);
-      if (!drag.on && Math.abs(sy - drag.y0) > 9) { drag.on = true; tapGuard.drag = true; try { el.setPointerCapture(e.pointerId); } catch (er) { /* なし */ } }
+      const p = pos(e);
+      if (!drag.on && Math.abs(p - drag.p0) > 9) { drag.on = true; tapGuard.drag = true; try { el.setPointerCapture(e.pointerId); } catch (er) { /* なし */ } }
       if (drag.on) {
         const now = performance.now(), dt = Math.max(1, now - lastT);
-        v = v * 0.6 + ((drag.ly - sy) / dt) * 0.4;
-        lastT = now; drag.ly = sy;
-        el.scrollTop = drag.top0 - (sy - drag.y0);
+        v = v * 0.6 + ((drag.lp - p) / dt) * 0.4;
+        lastT = now; drag.lp = p;
+        set(drag.s0 - (p - drag.p0));
         e.preventDefault();
       }
     });
@@ -46,14 +52,30 @@ export class Scroller {
       let vv = v * 16;
       const step = () => {
         vv *= 0.93;
-        el.scrollTop += vv;
+        set(get() + vv);
         if (Math.abs(vv) > 0.4) raf = requestAnimationFrame(step); else raf = 0;
       };
       if (Math.abs(vv) > 1) raf = requestAnimationFrame(step);
     };
     el.addEventListener('pointerup', end);
     el.addEventListener('pointercancel', end);
-    el.addEventListener('wheel', (e) => { el.scrollTop += e.deltaY; e.preventDefault(); }, { passive: false });
+    el.addEventListener('wheel', (e) => { set(get() + (X ? (e.deltaX || e.deltaY) : e.deltaY)); e.preventDefault(); }, { passive: false });
+    if (X) { this.edges(); requestAnimationFrame(() => this.edges()); }
+  }
+  // 横のとき: まだ先がある側をぼかす
+  edges() {
+    const el = this.el;
+    el.classList.toggle('fl', el.scrollLeft > 2);
+    el.classList.toggle('fr', el.scrollLeft < el.scrollWidth - el.clientWidth - 2);
+  }
+  // 子の要素が見えるように横へ寄せる
+  reveal(child) {
+    const el = this.el;
+    if (!child) return;
+    const l = child.offsetLeft - el.offsetLeft, r = l + child.offsetWidth;
+    if (l < el.scrollLeft + 16) el.scrollLeft = Math.max(0, l - 24);
+    else if (r > el.scrollLeft + el.clientWidth - 16) el.scrollLeft = r - el.clientWidth + 24;
+    this.edges();
   }
 }
 

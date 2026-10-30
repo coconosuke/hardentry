@@ -24,8 +24,8 @@ c.room(76, 8, 88, 22, '#', '_');
 c.door(81, 22, 'h'); c.win(78, 8, 'h', 3); c.win(84, 8, 'h', 3);
 
 export default {
-  id: 'training', name: '訓練場', en: 'LSPD TRAINING CENTER', time: 'day', floor: 1,
-  desc: 'ロス・スエニョス市警SWATの訓練施設。射撃場で銃の癖を確かめ、キルハウスで隊員への命令と呼びかけを練習する。',
+  id: 'training', name: '訓練場', en: 'SWAT TRAINING CENTER', time: 'day', floor: 1,
+  desc: '市警SWATの訓練施設。射撃場で銃の癖を確かめ、キルハウスで隊員への命令と呼びかけを練習する。',
   levels: [{ rows: c.rows() }],
   props: [
     // 射撃場: 射台と標的
@@ -37,7 +37,7 @@ export default {
     // キルハウスの家具
     ['table', 40, 14, 0, 0], ['chair', 38.5, 14, 0, 1], ['chair', 41.5, 14, 0, 3], ['sofa', 40, 9, 0, 0], ['bookshelf', 45.6, 18, 0, 3],
     ['bed', 54, 11, 0, 0], ['wardrobe', 49.5, 8, 0, 0], ['desk', 66, 10, 0, 0], ['chair', 66, 11.4, 0, 2], ['cabinet', 69.6, 16, 0, 3],
-    ['crate', 36, 30, 0, 0], ['crate', 37.4, 31.5, 0, 1], ['table', 40, 35, 0, 1], ['boxes', 43.5, 37.5, 0, 0],
+    ['crate', 36, 30, 0, 0], ['crate', 38, 31.5, 0, 1], ['table', 40, 35, 0, 1], ['boxes', 43.5, 37.5, 0, 0],
     ['bedS', 47.5, 36, 0, 0], ['locker', 56.6, 30, 0, 3], ['counter', 64, 36.5, 0, 0], ['fridge', 69.4, 30, 0, 3],
     ['desk', 80, 18, 0, 0], ['chair', 80, 19.3, 0, 2], ['server', 87, 12, 0, 1], ['cabinet', 78, 10, 0, 0],
     // 駐車場

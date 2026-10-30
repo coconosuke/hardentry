@@ -1,5 +1,5 @@
 // 画面: 読み込み・タイトル・作戦の準備（マップ・作戦・難易度・人数・突入口）・ブリーフィング・装備・対戦の準備・
-// みんなで（部屋を作る/入る・ロビー）・一時停止・地図（タブレット）・結果・設定・図鑑とヘルプ
+// みんなで（部屋を作る/入る・ロビー）・一時停止・地図（タブレット）・結果・設定・資料室（手順書と資料）
 import { onTap } from './input.js';
 import { Scroller, slider, chips, confirmTap, textModal, copyText, esc } from './widgets.js';
 import { MAPS, MAP_LIST, PVE_MAPS, PVP_MAPS } from '../engine/maps/index.js';
@@ -32,6 +32,8 @@ export class Screens {
     const b = el.querySelector('[data-back]');
     if (b) onTap(b, () => { this.app.audio.ui('back'); this.back(); });
     el.querySelectorAll('.scroll').forEach(s => new Scroller(this.stage, s));
+    // タブの列は横にスクロール（狭い画面で右のタブが切れないように）
+    el.querySelectorAll('.tabs').forEach(t => { t._sc = new Scroller(this.stage, t, { x: true }); requestAnimationFrame(() => t._sc.reveal(t.querySelector('.tab.on'))); });
     return el;
   }
   show(name) {
@@ -74,7 +76,7 @@ export class Screens {
         <button class="mi" data-a="pvp"><span class="mi-l">対戦</span><span class="mi-d">PvP · 1v1〜4v4</span></button>
         <button class="mi" data-a="train"><span class="mi-l">訓練</span><span class="mi-d">射撃場・キルハウス</span></button>
         <button class="mi" data-a="settings"><span class="mi-l">設定</span></button>
-        <button class="mi" data-a="book"><span class="mi-l">図鑑・遊び方</span></button>
+        <button class="mi" data-a="book"><span class="mi-l">資料室</span><span class="mi-d">手順書・交戦規定・装備ファイル</span></button>
       </nav>
       <div class="t-foot"><span>ヘッドホン推奨</span><span class="ver">互換${COMPAT} · v${VERSION}</span></div>`);
     this._acts(el, {
@@ -335,7 +337,7 @@ export class Screens {
         <button class="mi main" data-a="resume"><span class="mi-l">再開</span></button>
         <button class="mi" data-a="tablet"><span class="mi-l">地図・目的</span></button>
         <button class="mi" data-a="settings"><span class="mi-l">設定</span></button>
-        <button class="mi" data-a="book"><span class="mi-l">図鑑・遊び方</span></button>
+        <button class="mi" data-a="book"><span class="mi-l">資料室</span></button>
         ${pve && (!net || a.net.role === 'host') ? `<button class="mi" data-a="abort"><span class="mi-l">${g.S.m.softDone ? '本部へ戻る（完了）' : '撤収する（作戦を終える）'}</span></button>` : ''}
         <button class="mi danger" data-a="quit"><span class="mi-l">${net ? '部屋を出る' : 'タイトルへ'}</span></button>
       </nav></div>`, 'dim');
@@ -380,7 +382,7 @@ export class Screens {
     if (res.pvp) return this._resultPvp(res);
     const sc = res.score || { parts: [], total: 0, grade: 'F', viol: [], stats: {} };
     const M = MISSIONS[res.mission] || { name: '' };
-    const why = { wiped: '隊が全滅した', hostages: '人質が全員死亡した', bomb: '爆弾が爆発した', player: '' }[res.why] || '';
+    const why = { wiped: '隊が全滅した', hostages: '人質が全員死亡した', bomb: '爆弾が爆発した', player: '', ai: 'AIの隊が任務を終えた' }[res.why] || '';
     const VN = { kill_unjust: '不当な殺傷', civkill: '市民の死亡', civhurt: '市民の負傷', civforce: '市民への実力行使', force: '不当な実力行使', ff: '味方への発砲' };
     const st = sc.stats || {};
     const acc = res.me && res.me.sh ? Math.round(100 * res.me.hi / res.me.sh) : 0;
@@ -496,9 +498,9 @@ export class Screens {
     this.show('settings');
   }
 
-  // ---- 図鑑・遊び方
+  // ---- 資料室（手順書と資料）
   _book(tab = 'play') {
-    const el = this._mk('book', `<div class="sc-wrap"><header class="sc-head">${BACK}<h2>図鑑・遊び方</h2><div class="tabs book-tabs"></div></header><div class="pane rows scroll book-body"></div></div>`, 'dim');
+    const el = this._mk('book', `<div class="sc-wrap"><header class="sc-head">${BACK}<h2>資料室</h2><div class="tabs book-tabs"></div></header><div class="pane rows scroll book-body"></div></div>`, 'dim');
     this.bk = new Book(this.app, el, tab, (t) => { this.args = [t]; });
     this.show('book');
   }

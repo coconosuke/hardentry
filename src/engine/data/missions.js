@@ -1,4 +1,4 @@
-// 作戦の種類と難しさ（図鑑とヘルプもここから作る）
+// 作戦の種類と難しさ（資料室の手順書と資料もここから作る）
 export const MISSIONS = {
   barricade: {
     name: 'バリケード', en: 'BARRICADED SUSPECTS',

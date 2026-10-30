@@ -328,7 +328,8 @@ export function groundAt(w, x, z, y) {
     const s = w.stairAt[k];
     if (s >= 0 && w.stairs[s].L === L) {
       const h = stairHeight(w, w.stairs[s], x, z);
-      if (h <= y + STEP + 0.02 && h > best) best = h;
+      if (h <= y + STEP + 0.02) { if (h > best) best = h; }
+      else if (L * LH <= y + STEP && L * LH > best) best = L * LH; // 坂の下に入りこんだ（押し出されるまで床に立つ）
       continue;
     }
     if (s >= 0 && w.stairs[s].L === L - 1) continue; // 吹き抜け
@@ -342,11 +343,11 @@ export function groundAt(w, x, z, y) {
 
 // 円（半径r、高さ y0..y1）が壁・家具・扉にめり込んでいたら押し出す。戻り値: 押し出した量 [dx, dz, 当たったか]
 export function pushOut(w, x, z, y0, y1, r, doorsState, ignoreProp = -1, out = [0, 0, 0]) {
-  let px = x, pz = z, hit = 0;
+  let px = x, pz = z, hit = 0, pm = 0, pass = 0;
   const i0 = Math.floor((x - r - 0.3) / CS), i1 = Math.floor((x + r + 0.3) / CS);
   const j0 = Math.floor((z - r - 0.3) / CS), j1 = Math.floor((z + r + 0.3) / CS);
   const L0 = Math.max(0, Math.floor(y0 / LH)), L1 = Math.min(w.NL - 1, Math.floor(y1 / LH));
-  for (let pass = 0; pass < 2; pass++) {
+  for (pass = 0; pass < 2; pass++) {
     for (let L = L0; L <= L1; L++) {
       const base = L * LH;
       for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
@@ -354,7 +355,7 @@ export function pushOut(w, x, z, y0, y1, r, doorsState, ignoreProp = -1, out = [
           // 地図の外は壁
           const cx = Math.max(i * CS, Math.min((i + 1) * CS, px)), cz = Math.max(j * CS, Math.min((j + 1) * CS, pz));
           const dx = px - cx, dz = pz - cz, d2 = dx * dx + dz * dz;
-          if (d2 < r * r) { const d = Math.sqrt(d2) || 1e-4; px += dx / d * (r - d) || 0; pz += dz / d * (r - d) || 0; hit = 1; }
+          if (d2 < r * r) { const d = Math.sqrt(d2) || 1e-4; px += dx / d * (r - d) || 0; pz += dz / d * (r - d) || 0; hit = 1; if (pass) pm = Math.max(pm, r - d); }
           continue;
         }
         const k = w.idx(L, i, j);
@@ -363,7 +364,7 @@ export function pushOut(w, x, z, y0, y1, r, doorsState, ignoreProp = -1, out = [
           // 何もないマス（建物の外の空白）も通れない
           const cx = Math.max(i * CS, Math.min((i + 1) * CS, px)), cz = Math.max(j * CS, Math.min((j + 1) * CS, pz));
           const dx = px - cx, dz = pz - cz, d2 = dx * dx + dz * dz;
-          if (d2 < r * r) { const d = Math.sqrt(d2) || 1e-4; px += (dx / d) * (r - d); pz += (dz / d) * (r - d); hit = 1; }
+          if (d2 < r * r) { const d = Math.sqrt(d2) || 1e-4; px += (dx / d) * (r - d); pz += (dz / d) * (r - d); hit = 1; if (pass) pm = Math.max(pm, r - d); }
         }
         if (isWallish(t)) {
           const nb = w.nbox[k], bb = k * NB;
@@ -372,12 +373,30 @@ export function pushOut(w, x, z, y0, y1, r, doorsState, ignoreProp = -1, out = [
             if (!m || m === M.GLASSBROKEN) continue;
             const by0 = base + q * BH, by1 = by0 + BH;
             if (by1 <= y0 || by0 >= y1) continue;
+            // 板の継ぎ目で引っかからないように: 隣のマスへ同じ面で続く板は延ばして考え、
+            // 1マスの箱（T字の腕など）のうち一番深くめり込んだものだけで押す
+            let best = null, bm = 0;
             for (let n = 0; n < nb; n++) {
               const o = k * 8 + n * 4;
-              const r2 = circleBox(px, pz, r, w.boxes[o], w.boxes[o + 1], w.boxes[o + 2], w.boxes[o + 3]);
-              if (r2) { px += r2[0]; pz += r2[1]; hit = 1; }
+              let x0 = w.boxes[o], z0 = w.boxes[o + 1], x1 = w.boxes[o + 2], z1 = w.boxes[o + 3];
+              if (x0 <= i * CS + 1e-6 && solidAt(w, L, i - 1, j, q)) x0 -= r;
+              if (x1 >= (i + 1) * CS - 1e-6 && solidAt(w, L, i + 1, j, q)) x1 += r;
+              if (z0 <= j * CS + 1e-6 && solidAt(w, L, i, j - 1, q)) z0 -= r;
+              if (z1 >= (j + 1) * CS - 1e-6 && solidAt(w, L, i, j + 1, q)) z1 += r;
+              const r2 = circleBox(px, pz, r, x0, z0, x1, z1);
+              if (r2) { const mm = Math.abs(r2[0]) + Math.abs(r2[1]); if (mm > bm) { bm = mm; best = r2; } }
             }
+            if (best) { px += best[0]; pz += best[1]; hit = 1; if (pass) pm = Math.max(pm, bm); }
             break; // 1マスにつき1回押せば十分（同じ箱）
+          }
+        }
+        // 階段: 坂の面が足（y0 = 足+段差）より高い所は壁と同じ。横から乗れず、上の端の下にも入れない
+        const sa = w.stairAt[k];
+        if (sa >= 0 && w.stairs[sa].L === L) {
+          const cx = Math.max(i * CS, Math.min((i + 1) * CS, px)), cz = Math.max(j * CS, Math.min((j + 1) * CS, pz));
+          if (stairHeight(w, w.stairs[sa], cx, cz) > y0 + 0.02) {
+            const r2 = circleBox(px, pz, r, i * CS, j * CS, (i + 1) * CS, (j + 1) * CS);
+            if (r2) { px += r2[0]; pz += r2[1]; hit = 1; if (pass) pm = Math.max(pm, Math.abs(r2[0]) + Math.abs(r2[1])); }
           }
         }
         const pr = w.propNear.get(k);
@@ -388,7 +407,7 @@ export function pushOut(w, x, z, y0, y1, r, doorsState, ignoreProp = -1, out = [
           for (const b of p.boxes) {
             if (b[4] <= y0 || b[1] >= y1) continue;
             const r2 = circleBox(px, pz, r, b[0], b[2], b[3], b[5]);
-            if (r2) { px += r2[0]; pz += r2[1]; hit = 1; }
+            if (r2) { px += r2[0]; pz += r2[1]; hit = 1; if (pass) pm = Math.max(pm, Math.abs(r2[0]) + Math.abs(r2[1])); }
           }
         }
         const dn = doorsState && w.doorNear.get(k);
@@ -402,20 +421,29 @@ export function pushOut(w, x, z, y0, y1, r, doorsState, ignoreProp = -1, out = [
             const lf = d.leaves[li], ang = ds.ang[li];
             const [ex, ez] = leafEnd(lf, ang);
             const r2 = circleSeg(px, pz, r + 0.025, lf.hx, lf.hz, ex, ez);
-            if (r2) { px += r2[0]; pz += r2[1]; hit = 1; }
+            if (r2) { px += r2[0]; pz += r2[1]; hit = 1; if (pass) pm = Math.max(pm, Math.abs(r2[0]) + Math.abs(r2[1])); }
           }
           // バリケード
           if (ds.bar > 0) {
             const bx = barricadeBox(d);
             const r2 = circleBox(px, pz, r, bx[0], bx[1], bx[2], bx[3]);
-            if (r2) { px += r2[0]; pz += r2[1]; hit = 1; }
+            if (r2) { px += r2[0]; pz += r2[1]; hit = 1; if (pass) pm = Math.max(pm, Math.abs(r2[0]) + Math.abs(r2[1])); }
           }
         }
       }
     }
   }
-  out[0] = px - x; out[1] = pz - z; out[2] = hit;
+  out[0] = px - x; out[1] = pz - z; out[2] = hit; out[3] = pm; // out[3]: 2回目の押し出しの最大（0に近ければ収まっている）
   return out;
+}
+
+// そのマスのその高さに、ぶつかる壁のブロックがあるか
+function solidAt(w, L, i, j, q) {
+  if (i < 0 || j < 0 || i >= w.W || j >= w.D) return false;
+  const k = w.idx(L, i, j);
+  if (!isWallish(w.cell[k])) return false;
+  const m = w.blocks[k * NB + q];
+  return !!m && m !== M.GLASSBROKEN;
 }
 
 export function leafEnd(lf, ang) {
@@ -624,15 +652,21 @@ function rayStair(w, st, ox, oy, oz, dx, dy, dz, ta, tb, i, j) {
 // その階でいちばん近い床のマス（湧き位置の補正など）
 export function nearestFloor(w, L, x, z, maxR = 6) {
   const ci = Math.floor(x / CS), cj = Math.floor(z / CS);
-  for (let r = 0; r <= maxR / CS; r++) {
-    for (let j = cj - r; j <= cj + r; j++) for (let i = ci - r; i <= ci + r; i++) {
-      if (Math.max(Math.abs(i - ci), Math.abs(j - cj)) !== r) continue;
-      const t = cellType(w, L, i, j);
-      if (t === C.FLOOR || t === C.OUT) {
-        const k = w.idx(L, i, j);
-        const pr = w.propNear.get(k);
-        if (pr && pr.some(pid => { const p = w.props[pid]; return p.solid && Math.abs(p.x - (i + 0.5) * CS) < p.w / 2 + 0.2 && Math.abs(p.z - (j + 0.5) * CS) < p.d / 2 + 0.2; })) continue;
-        return [(i + 0.5) * CS, (j + 0.5) * CS];
+  // 同じ部屋（床のつながり）を先に探す: 家具をよけるときに壁の向こうへ移さない
+  const k0 = L >= 0 && L < w.NL && inMap(w, ci, cj) ? w.idx(L, ci, cj) : -1;
+  const room = k0 >= 0 ? w.roomAt[k0] : -1;
+  for (let pass = room >= 0 ? 0 : 1; pass < 2; pass++) {
+    for (let r = 0; r <= maxR / CS; r++) {
+      for (let j = cj - r; j <= cj + r; j++) for (let i = ci - r; i <= ci + r; i++) {
+        if (Math.max(Math.abs(i - ci), Math.abs(j - cj)) !== r) continue;
+        const t = cellType(w, L, i, j);
+        if (t === C.FLOOR || t === C.OUT) {
+          const k = w.idx(L, i, j);
+          if (pass === 0 && w.roomAt[k] !== room) continue;
+          const pr = w.propNear.get(k);
+          if (pr && pr.some(pid => { const p = w.props[pid]; return p.solid && Math.abs(p.x - (i + 0.5) * CS) < p.w / 2 + 0.2 && Math.abs(p.z - (j + 0.5) * CS) < p.d / 2 + 0.2; })) continue;
+          return [(i + 0.5) * CS, (j + 0.5) * CS];
+        }
       }
     }
   }

@@ -1,7 +1,7 @@
 // 隊員AI（Ready Or Not の命令を再現）: 追従・移動・待機・援護・スタック・突入（開け方×投げ物）・ミラー・ウェッジ・罠の解除・ピッキング・拘束・投入・捜索して確保
 // 命令がなくても: 交戦規定にしたがって撃つ、呼びかける、投降した人を拘束する、倒れた人を報告する
 import { baseInput, pushAct, visibility, detect, goTo, steerToward, aimAt, trigger, canFight, hasGun, aimingAt, angDiff, yawTo, turnToward, roomAtPos, SKILL } from './common.js';
-import { navCell, cellCenter, nearestWalk, buildNav } from './nav.js';
+import { navCell, cellCenter, nearestWalk, buildNav, snapFloor } from './nav.js';
 import { eyeOf } from '../combat.js';
 import { curW, curWeapon, ammoCount } from '../actor.js';
 import { hrand } from '../rng.js';
@@ -170,15 +170,21 @@ function doOrder(S, w, a, inp, dt, o, ctx, sk, people) {
   if (sec(S, o.phT) > 90) return done();
   switch (o.cmd) {
     case 'move': {
-      const off = o.role === 0 ? [0, 0] : [[0.7, 0], [-0.7, 0], [0, -0.8], [0.7, -0.8]][(o.role - 1) % 4];
-      const fx = Math.sin(o.yaw || 0), fz = Math.cos(o.yaw || 0);
-      const tx = o.x + (-fz) * off[0] + fx * off[1], tz = o.z + fx * off[0] + fz * off[1];
+      if (!o.tgt) {
+        // 自分の位置: 指示の点のまわりに少しずつずらす。家具の中・壁の向こう・扉の口なら、同じ部屋の近くの床へ
+        const off = o.role === 0 ? [0, 0] : [[0.7, 0], [-0.7, 0], [0, -0.8], [0.7, -0.8]][(o.role - 1) % 4];
+        const fx = Math.sin(o.yaw || 0), fz = Math.cos(o.yaw || 0);
+        const tx = o.x + (-fz) * off[0] + fx * off[1], tz = o.z + fx * off[0] + fz * off[1];
+        const kc = navCell(w, o.x, o.y || 0, o.z), room = kc >= 0 ? w.roomAt[kc] : -1;
+        o.tgt = snapFloor(w, tx, o.y || 0, tz, room) || snapFloor(w, o.x, o.y || 0, o.z, room) || [o.x, o.z];
+      }
+      const [tx, tz] = o.tgt;
       const r = goTo(S, w, a, inp, tx, o.y, tz, { speed: 0.8, r: 0.5 });
       inp.low = r === 'moving';
       // 着いた・行けない・近くで詰まった（味方が立っているなど）・時間切れ → その場で待機
       const dd = Math.hypot(tx - a.x, tz - a.z);
       if (dd < 1.8 && los(w, a.x, a.y + 1, a.z, tx, (o.y || 0) + 1, tz, S.doors)) o.nearT = (o.nearT || 0) + S.dt;
-      if (r === 'arrived' || r === 'blocked' || (o.nearT || 0) > 1.2 || sec(S, o.phT) > 25) { o.cmd = 'hold'; o.hy = o.yaw; }
+      if (r === 'arrived' || r === 'blocked' || (o.nearT || 0) > 1.2 || sec(S, o.phT) > 25) { o.cmd = 'hold'; o.hy = o.yaw; o.doneT = S.t; }
       return true;
     }
     case 'hold': case 'cover': {

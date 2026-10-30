@@ -1,4 +1,4 @@
-// 図鑑と遊び方。中身はゲームのデータ（id付き）から作るので、仕様とずれない。
+// 資料室（手順書と資料）。中身はゲームのデータ（id付き）から作るので、仕様とずれない。
 import { onTap } from './input.js';
 import { Scroller, esc } from './widgets.js';
 import { WEAPONS, CAT_NAME } from '../engine/data/weapons.js';
@@ -9,7 +9,7 @@ import { MODE_INFO, PVP_MODES } from '../engine/modes/index.js';
 import { MAPS, MAP_LIST } from '../engine/maps/index.js';
 import { weaponCard } from './loadout.js';
 
-const TABS = [['play', '遊び方'], ['ctrl', '操作'], ['roe', '交戦規定'], ['missions', '作戦'], ['pvp', '対戦'], ['maps', 'マップ'], ['guns', '銃'], ['gear', '装備'], ['people', '人物']];
+const TABS = [['play', '基本手順'], ['ctrl', '操作'], ['roe', '交戦規定'], ['missions', '作戦'], ['pvp', '対戦'], ['maps', 'マップ'], ['guns', '銃'], ['gear', '装備'], ['people', '人物']];
 
 export class Book {
   constructor(app, el, tab, onTab) {
@@ -20,16 +20,17 @@ export class Book {
     const tabs = this.el.querySelector('.book-tabs');
     tabs.innerHTML = TABS.map(([k, n]) => `<button class="tab${k === this.tab ? ' on' : ''}" data-tab="${k}">${n}</button>`).join('');
     tabs.querySelectorAll('[data-tab]').forEach(b => onTap(b, () => { this.tab = b.dataset.tab; this.sub = null; this.onTab(this.tab); this.app.audio.ui('tap'); this.render(); }));
+    if (tabs._sc) requestAnimationFrame(() => tabs._sc.reveal(tabs.querySelector('.tab.on')));
     const body = this.el.querySelector('.book-body');
     body.innerHTML = this[this.tab]();
     body.scrollTop = 0;
     body.querySelectorAll('[data-sub]').forEach(b => onTap(b, () => { this.sub = b.dataset.sub; this.app.audio.ui('tap'); this.render(); }));
   }
   play() {
-    return `<h3>どんなゲーム？</h3><p>SWATの一員として建物に突入し、立てこもった容疑者を逮捕し、市民を救出する。撃つのは最後の手段。終わると点数（S〜F）がつく。</p>
-      <h3>基本の流れ</h3><ol><li>扉の前で止まり、<b>ミラー</b>（調べるを長押し）で向こうをのぞく。罠や人が分かる。</li><li>隊員に<b>命令</b>する（命令ボタンを長押し→「突入」→開け方→投げ物）。ひとりなら自分で開ける。</li><li>人を見たら<b>警告</b>ボタンで呼びかける。従えば手を上げてひざまずく。</li><li>従った人は<b>調べる</b>で拘束する。倒れた人・拘束した人は<b>調べる</b>でTOC（本部）へ報告する。</li><li>落ちた武器や証拠も<b>調べる</b>で回収する。</li><li>主目的がそろったら一時停止から「本部へ戻る」。</li></ol>
-      <h3>体と傷</h3><p>撃たれると出血することがある（体力が少しずつ減り、足が遅くなる）。装備の包帯がなくても、調べるを長押しして自分の止血ができる（50%まで回復）。腕を撃たれると反動が大きくなり、脚を撃たれると遅くなる。</p>
-      <h3>みんなで</h3><p>作戦は2〜4人、対戦は最大4対4。空いた枠はAIが入る。部屋のコード（5文字）か招待リンクで入る。</p>`;
+    return `<h3>任務の概要</h3><p>SWATの一員として建物に突入し、立てこもった容疑者を逮捕し、市民を救出する。撃つのは最後の手段。終わると点数（S〜F）がつく。</p>
+      <h3>突入の基本手順</h3><ol><li>扉の前で止まり、<b>ミラー</b>（調べるを長押し）で向こうをのぞく。罠や人が分かる。</li><li>隊員に<b>命令</b>する（命令ボタンを長押し→「突入」→開け方→投げ物）。ひとりなら自分で開ける。</li><li>人を見たら<b>警告</b>ボタンで呼びかける。従えば手を上げてひざまずく。</li><li>従った人は<b>調べる</b>で拘束する。倒れた人・拘束した人は<b>調べる</b>でTOC（本部）へ報告する。</li><li>落ちた武器や証拠も<b>調べる</b>で回収する。</li><li>主目的がそろったら一時停止から「本部へ戻る」。</li></ol>
+      <h3>負傷と止血</h3><p>撃たれると出血することがある（体力が少しずつ減り、足が遅くなる）。装備の包帯がなくても、調べるを長押しして自分の止血ができる（50%まで回復）。腕を撃たれると反動が大きくなり、脚を撃たれると遅くなる。</p>
+      <h3>複数人での出動</h3><p>作戦は2〜4人、対戦は最大4対4。空いた枠はAIが入る。部屋のコード（5文字）か招待リンクで入る。</p>`;
   }
   ctrl() {
     const rows = [

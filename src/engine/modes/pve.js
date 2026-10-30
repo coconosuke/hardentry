@@ -137,7 +137,7 @@ export default {
       if (e.e === 'report') m.reportsDone++;
       if (e.e === 'bombdone') { if (m.bombs.every(b => b.done)) evs.push({ e: 'allbombs' }); }
       if (e.e === 'kill' || e.e === 'down' || e.e === 'cuffed' || e.e === 'evidence' || e.e === 'bombdone' || e.e === 'report') m.log.push({ t: S.t, e: e.e, id: e.id, by: e.by, kind: e.kind });
-      if (e.e === 'abort' && m.phase === 'play') endMission(S, m.softDone ? 'done' : 'abort', 'player', evs);
+      if (e.e === 'abort' && m.phase === 'play') endMission(S, m.softDone ? 'done' : 'abort', e.why || 'player', evs);
     }
   },
   // ダウン（PvEはなし）

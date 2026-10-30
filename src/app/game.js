@@ -575,6 +575,12 @@ export class Match {
       const L = Math.min(sp * 0.018, 7);
       this.fx.tracer(b.x - b.vx / sp * L, b.y - b.vy / sp * L, b.z - b.vz / sp * L, b.x, b.y, b.z, b.less ? [1.5, 1.5, 1.2] : [9, 5, 2]);
     }
+    // 残っているガスの雲（CS・ペッパー）: ときどき煙を足す
+    this._cloudT = (this._cloudT || 0) + dt;
+    if (this._cloudT > 0.25) {
+      this._cloudT = 0;
+      for (const c of S.clouds || []) { const R = c.r || 1; const a = Math.random() * 6.28, d = Math.random() * R; this.fx.smoke(c.x + Math.cos(a) * d, c.y + 0.3 + Math.random() * 0.8, c.z + Math.sin(a) * d, Math.max(0.6, R * 0.6), c.type === 'pepper' ? [0.9, 0.75, 0.6] : [0.88, 0.88, 0.84], 0.32, 3.5); }
+    }
     this.fx.update(dt);
     // 動く光: 自分と隊員のライト、銃口・爆発
     const lights = [];

@@ -7,6 +7,8 @@ import { poseInput } from '../engine/combat.js';
 import { curWeapon } from '../engine/actor.js';
 import { CS, LH } from '../engine/world.js';
 import { aabbVisible } from './math.js';
+import { MeshBuilder, hex } from './build.js';
+import { LAYER } from './textures.js';
 
 function vaoSkin(gl, v, i) {
   const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
@@ -70,6 +72,18 @@ export class ActorView {
       this.list.push({ a, L, mats, room, gun, x: a.x, y: a.y, z: a.z });
     }
     this.items = S.items.filter(it => !it.gone);
+    this.nades = S.nades || [];
+  }
+  // 飛んでいる投げ物（閃光・スティンガー・CS）
+  nadeMesh(type) {
+    this._nm = this._nm || {};
+    if (this._nm[type]) return this._nm[type];
+    const B = new MeshBuilder();
+    const col = type === 'flash' ? hex('#3a4a3a') : type === 'stinger' ? hex('#3a3a40') : type === 'cs' ? hex('#6a6a48') : hex('#4a4a4a');
+    B.cyl(0, 0, -0.055, 0.055, 0.028, 0.028, 10, LAYER.metal, col, { capB: true });
+    B.cyl(0, 0, 0.055, 0.08, 0.012, 0.012, 6, LAYER.metal, hex('#8a8a80'));
+    B.box(0.006, 0.02, -0.012, 0.012, 0.085, 0.012, LAYER.metal, hex('#9a9a90'));
+    return (this._nm[type] = makeWorldMesh(this.gl, B));
   }
   drawOpaque(f) {
     const r = this.r, gl = this.gl;
@@ -120,6 +134,16 @@ export class ActorView {
       gl.uniformMatrix4fv(W.u.uModel, false, M);
       gl.uniform1f(W.u.uRoomOverride, Math.max(0, roomOf(r.w0, it.x, it.y + 0.3, it.z)));
       drawMesh(gl, gm.body); if (gm.mag) drawMesh(gl, gm.mag);
+    }
+    // 飛んでいる投げ物（回りながら）
+    for (const n of this.nades || []) {
+      const m = this.nadeMesh(n.type); if (!m) continue;
+      const t = (r.time || 0) * 9 + (n.id || 0), c = Math.cos(t), s2 = Math.sin(t), M = this.M;
+      M[0] = c; M[1] = s2; M[2] = 0; M[3] = 0; M[4] = -s2; M[5] = c; M[6] = 0; M[7] = 0; M[8] = 0; M[9] = 0; M[10] = 1; M[11] = 0;
+      M[12] = n.x; M[13] = n.y; M[14] = n.z; M[15] = 1;
+      gl.uniformMatrix4fv(W.u.uModel, false, M);
+      gl.uniform1f(W.u.uRoomOverride, Math.max(0, roomOf(r.w0, n.x, n.y + 0.2, n.z)));
+      drawMesh(gl, m);
     }
     gl.uniform1f(W.u.uRoomOverride, -1);
     gl.uniformMatrix4fv(W.u.uModel, false, r.ident);

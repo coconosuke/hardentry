@@ -51,7 +51,8 @@ export function layoutCheck() {
       const sc = el.closest('.scroller');
       if (sc) {
         const s = rectOf(sc);
-        if (r.x < s.x - 1 || r.x + r.w > s.x + s.w + 1) out.push({ kind: 'スクロール枠の横にはみ出す', el: label(el) });
+        if (!sc.classList.contains('sx') && (r.x < s.x - 1 || r.x + r.w > s.x + s.w + 1)) out.push({ kind: 'スクロール枠の横にはみ出す', el: label(el) });
+        if (sc.classList.contains('sx') && (r.y < s.y - 1 || r.y + r.h > s.y + s.h + 1)) out.push({ kind: '横スクロール枠の縦にはみ出す', el: label(el) });
         continue;
       }
       if (r.x < S.l - 1 || r.y < S.t - 1 || r.x + r.w > W - S.r + 1 || r.y + r.h > H - S.b + 1) {

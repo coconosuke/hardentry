@@ -1,5 +1,5 @@
 // 経路: 0.5mのマスの格子で A*。扉・階段・家具をふまえる。滑らかにする（見通しで角を落とす）。
-import { CS, LH, C, isWallish, groundAt, leafEnd } from '../world.js';
+import { CS, LH, C, STEP, isWallish, groundAt, leafEnd, pushOut } from '../world.js';
 import { M } from '../data/materials.js';
 
 // 歩けるマスの印: 0 歩けない、1 床、2 扉、3 階段（その階の坂）、4 開口
@@ -25,6 +25,21 @@ export function buildNav(w) {
       const i0 = Math.floor((b[0] + 0.12) / CS), i1 = Math.floor((b[3] - 0.12) / CS), j0 = Math.floor((b[2] + 0.12) / CS), j1 = Math.floor((b[5] - 0.12) / CS);
       for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) if (i >= 0 && j >= 0 && i < w.W && j < w.D) walk[w.idx(p.L, i, j)] = 0;
     }
+  }
+  // 狭すぎる所: 家具と家具・階段の横・壁のあいだで、人の幅（直径0.56m）が入らないマスは歩けない。
+  // マスの中心から押し出してみて、マスの中に収まる場所がなければふさがっている
+  const po = [0, 0, 0, 0];
+  for (let L = 0; L < w.NL; L++) for (let j = 0; j < w.D; j++) for (let i = 0; i < w.W; i++) {
+    const k = w.idx(L, i, j);
+    if (walk[k] !== 1) continue;
+    const cx = (i + 0.5) * CS, cz = (j + 0.5) * CS, y0 = L * LH + STEP + 0.03, y1 = L * LH + 1.6;
+    let x = cx, z = cz, ok = false;
+    for (let it = 0; it < 4; it++) {
+      pushOut(w, x, z, y0, y1, 0.28, null, -1, po);
+      if (!po[2] || po[3] < 2e-3) { ok = true; break; }
+      x += po[0]; z += po[1];
+    }
+    if (!ok || Math.abs(x - cx) > 0.3 || Math.abs(z - cz) > 0.3) walk[k] = 0;
   }
   // 壁ぎわ（壁のマスの隣）はそのまま歩ける（板はマスの中央）
   // 階段のつながり: 坂の上の端 → 上の階の床
@@ -164,6 +179,12 @@ export function findPath(w, S, from, to, opt = {}) {
         if (!nav.walk[L * WD + j * W + ni] || !nav.walk[L * WD + nj * W + i]) continue;
         if (wk === 2 || nav.walk[k] === 2) continue;
       }
+      // 階段と床の行き来は、坂の下の端から真っすぐだけ（横や上の端から乗らない。上の端は上の階へのつながりで）
+      if ((wk === 3) !== (nav.walk[k] === 3)) {
+        if (d >= 4) continue;
+        const sk = wk === 3 ? k2 : k, s = w.stairs[w.stairAt[sk]];
+        if (!s || !stairFoot(s, wk === 3 ? i : ni, wk === 3 ? j : nj)) continue;
+      }
       if (wk === 2 && !doorPass(w, S, k2, opt)) continue;
       if (opt.leaf && opt.leaf.has(k2) && k2 !== to) continue;
       let c = d < 4 ? 1 : 1.414;
@@ -190,6 +211,14 @@ export function findPath(w, S, from, to, opt = {}) {
   return out;
 }
 
+// 坂の下の端の手前のマスか（階段への乗り口）
+export function stairFoot(s, i, j) {
+  if (s.dir === 'n') return j === s.j0 + s.jw && i >= s.i0 && i < s.i0 + s.iw;
+  if (s.dir === 's') return j === s.j0 - 1 && i >= s.i0 && i < s.i0 + s.iw;
+  if (s.dir === 'e') return i === s.i0 - 1 && j >= s.j0 && j < s.j0 + s.jw;
+  return i === s.i0 + s.iw && j >= s.j0 && j < s.j0 + s.jw;
+}
+
 export function nearestWalk(w, k, maxR = 6) {
   const nav = buildNav(w);
   const WD = w.W * w.D, L = Math.floor(k / WD), r = k - L * WD, j = Math.floor(r / w.W), i = r - j * w.W;
@@ -200,6 +229,23 @@ export function nearestWalk(w, k, maxR = 6) {
     if (nav.walk[k2] === 1 || nav.walk[k2] === 3) return k2;
   }
   return -1;
+}
+
+// 近くの歩ける床（扉・階段でない）の中心。room >= 0 ならその部屋のマスだけ。見つからなければ null
+export function snapFloor(w, x, y, z, room = -1, maxR = 4) {
+  const k = navCell(w, x, y, z);
+  if (k < 0) return null;
+  const nav = buildNav(w);
+  const WD = w.W * w.D, L = Math.floor(k / WD), r = k - L * WD, j = Math.floor(r / w.W), i = r - j * w.W;
+  let best = null, bd = 1e9;
+  for (let dj = -maxR; dj <= maxR; dj++) for (let di = -maxR; di <= maxR; di++) {
+    const ii = i + di, jj = j + dj; if (ii < 0 || jj < 0 || ii >= w.W || jj >= w.D) continue;
+    const k2 = L * WD + jj * w.W + ii;
+    if (nav.walk[k2] !== 1 || (room >= 0 && w.roomAt[k2] !== room)) continue;
+    const cx = (ii + 0.5) * CS, cz = (jj + 0.5) * CS, d = Math.hypot(cx - x, cz - z);
+    if (d < bd) { bd = d; best = [cx, cz]; }
+  }
+  return best;
 }
 
 // 直線で歩けるか（マスの列を調べる）。扉のマスは真っすぐ通るときだけ

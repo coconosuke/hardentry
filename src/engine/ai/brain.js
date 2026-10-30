@@ -9,7 +9,7 @@ import { leadThink } from './lead.js';
 export function thinkAll(S, w, dt, ev) {
   const out = {};
   buildNav(w);
-  leadThink(S, w);
+  leadThink(S, w, ev);
   takeOrders(S, w);
   const police = [], civs = [];
   for (const a of S.actors) {
