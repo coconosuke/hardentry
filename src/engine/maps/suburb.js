@@ -140,5 +140,5 @@ export default {
     sites: [{ name: 'A 主寝室', x: 27, z: 34, L: 1, r: 3.2 }, { name: 'B 台所', x: 44, z: 31, r: 3.4 }],
     tdm: [[5, 50], [66, 50], [4, 8], [64, 8], [24, 35], [44, 21], [57, 25], [27, 34, 1], [35, 21, 1], [33, 20]],
   },
-  missions: { barricade: {}, hostage: {}, bomb: {}, raid: { susMul: 0.8 }, active: { civMul: 0.8 } },
+  missions: { barricade: {}, hostage: {}, bomb: { time: 720 }, raid: { susMul: 0.8 }, active: { civMul: 0.8 } },
 };

@@ -297,6 +297,48 @@ const MODELS = {
     B.box(-0.33, 0.05, 0.5, 0.33, 1.95, 0.502, LAYER.plain, H('#141518'));
     for (let k = 0; k < 14; k++) { const y = 0.12 + k * 0.13; B.box(-0.3, y, 0.502, 0.3, y + 0.09, 0.51, LAYER.metal, H('#3a3d42')); B.emit = 2.0; B.box(0.2, y + 0.03, 0.51, 0.22, y + 0.05, 0.512, LAYER.plain, (k + s) % 3 ? H('#40ff70') : H('#ffb030'), { faces: 16 }); B.emit = 0; }
   },
+  // 洗濯機・乾燥機: 白い箱、上の前に操作盤、前に丸い扉
+  washer(B, G, P, o, s) {
+    const body = s % 2 ? C.white : H('#d8d8d4');
+    B.box(-0.34, 0.02, -0.34, 0.34, 0.88, 0.34, LAYER.paint, body, { aoBottom: 0.7 });
+    B.box(-0.34, 0.88, -0.34, 0.34, 0.9, 0.34, LAYER.paint, mulc(body, 1.03));
+    B.box(-0.32, 0.74, 0.34, 0.32, 0.86, 0.36, LAYER.plain, H('#c9cbcd'));
+    B.emit = 0.6; B.box(0.12, 0.78, 0.36, 0.24, 0.82, 0.362, LAYER.plain, H('#3fd07a'), { faces: 16 }); B.emit = 0;
+    B.cyl(-0.2, 0.8, 0.86, 0.9, 0.025, 0.025, 8, LAYER.plain, C.dgray);
+    B.tube([0, 0.4, 0.34], [0, 0.4, 0.37], 0.21, 0.21, 16, LAYER.metal, C.lgray, { caps: true });
+    B.tube([0, 0.4, 0.37], [0, 0.4, 0.375], 0.16, 0.16, 16, LAYER.plain, H('#2a3138'), { caps: true });
+    B.box(-0.34, 0.0, -0.34, 0.34, 0.02, 0.34, LAYER.plain, C.dgray);
+  },
+  // 集合郵便受け: 金属の箱に小さな扉が並ぶ
+  mailbox(B, G, P, o, s) {
+    B.box(-0.6, 0, -0.2, 0.6, 1.6, 0.2, LAYER.metal, H('#8c8f91'), { aoBottom: 0.7 });
+    for (let r = 0; r < 6; r++) for (let k = 0; k < 4; k++) {
+      const x0 = -0.56 + k * 0.28, y0 = 0.42 + r * 0.19;
+      B.box(x0, y0, 0.2, x0 + 0.26, y0 + 0.17, 0.212, LAYER.metal, H('#a3a6a8'), { sharp: true });
+      B.box(x0 + 0.2, y0 + 0.07, 0.212, x0 + 0.23, y0 + 0.1, 0.22, LAYER.metal, C.dgray, { sharp: true });
+      B.box(x0 + 0.03, y0 + 0.12, 0.212, x0 + 0.12, y0 + 0.15, 0.214, LAYER.plain, H('#e8e4d4'), { sharp: true });
+    }
+    B.box(-0.56, 0.08, 0.2, 0.56, 0.36, 0.215, LAYER.metal, H('#77797b'));
+  },
+  // 浴槽: 縁と内側の底
+  bathtub(B, G, P, o, s) {
+    const c = C.white, t = 0.07;
+    B.box(-0.375, 0, -0.8, 0.375, 0.42, 0.8, LAYER.paint, mulc(c, 0.96), { aoBottom: 0.7 });
+    B.box(-0.375, 0.42, -0.8, 0.375, 0.55, -0.8 + t, LAYER.paint, c); B.box(-0.375, 0.42, 0.8 - t, 0.375, 0.55, 0.8, LAYER.paint, c);
+    B.box(-0.375, 0.42, -0.8 + t, -0.375 + t, 0.55, 0.8 - t, LAYER.paint, c); B.box(0.375 - t, 0.42, -0.8 + t, 0.375, 0.55, 0.8 - t, LAYER.paint, c);
+    B.box(-0.3, 0.42, -0.72, 0.3, 0.425, 0.72, LAYER.paint, mulc(c, 0.86));
+    B.cyl(0, -0.66, 0.55, 0.62, 0.02, 0.02, 6, LAYER.metal, C.steel); B.tube([0, 0.6, -0.66], [0, 0.6, -0.56], 0.015, 0.012, 6, LAYER.metal, C.steel, { caps: true });
+  },
+  // 給湯器: 円筒のタンク、上に配管、前に操作箱
+  heater(B, G, P, o, s) {
+    B.cyl(0, 0, 0.05, 1.4, 0.27, 0.27, 14, LAYER.paint, H('#d9d4c6'), { capT: true, aoBottom: 0.7 });
+    B.cyl(0, 0, 1.4, 1.45, 0.24, 0.2, 14, LAYER.metal, C.gray, { capT: true });
+    B.cyl(0, 0, 0, 0.05, 0.25, 0.25, 14, LAYER.metal, C.dgray, { capT: true });
+    B.cyl(0.1, 0.05, 1.45, 2.4, 0.03, 0.03, 8, LAYER.metal, H('#b0763a'));
+    B.cyl(-0.1, 0.05, 1.45, 2.4, 0.03, 0.03, 8, LAYER.metal, C.steel);
+    B.box(-0.09, 0.2, 0.25, 0.09, 0.36, 0.3, LAYER.plain, C.dgray);
+    B.emit = 0.8; B.box(-0.02, 0.29, 0.3, 0.02, 0.33, 0.302, LAYER.plain, H('#ff9a30'), { faces: 16 }); B.emit = 0;
+  },
   piano(B, G, P, o, s) {
     B.box(-0.75, 0, -0.3, 0.75, 1.25, 0.15, LAYER.wood, C.black);
     B.box(-0.75, 0.68, 0.15, 0.75, 0.75, 0.3, LAYER.wood, C.black);

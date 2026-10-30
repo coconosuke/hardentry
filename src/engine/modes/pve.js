@@ -67,7 +67,7 @@ export default {
         S.m.bombs.push({ id: i + 1, x: p.x, y: p.y, z: p.z, L, done: false });
         if (i < nSus) { const g = spawnSuspect(S, w, x + (rnd(r) - 0.5) * 3, z + (rnd(r) - 0.5) * 3, L, 'bomber'); g.ai.wantAmbush = true; S.m.sus.push(g.id); }
       }
-      S.m.bombT = M.time; // 秒
+      S.m.bombT = MM.time || M.time; // 秒（広いマップは長め）
     }
     // ほかの容疑者
     while (S.m.sus.length < nSus && susSpots.length) {

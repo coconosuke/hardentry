@@ -105,12 +105,35 @@ export function goTo(S, w, a, inp, tx, ty, tz, o = {}) {
   const kick = o.kick ?? (a.kind === 'swat' && !o.noDoors);
   if (Math.hypot(tx - a.x, tz - a.z) < arriveR && Math.abs(levelOfY(ty + 0.3) - levelOfY(a.y + 0.3)) === 0) { ai.nav = null; return 'arrived'; }
   if (!nv || nv.tk !== tk || (S.t - nv.t) * S.dt > 6 || nv.bad) {
-    const p = findPath(w, S, here, tk, { unlock: !!(o.unlock || kick), wedgeOK: false, avoid: o.avoid, leaf: leafCells(w, S) });
-    if (!p) { ai.nav = { tk, path: [], i: 0, t: S.t, bad: false, fail: true }; return 'blocked'; }
+    const lc = leafCells(w, S);
+    const p = findPath(w, S, here, tk, { unlock: !!(o.unlock || kick), wedgeOK: false, avoid: o.avoid, leaf: lc });
+    if (!p) {
+      // 開いた扉の板が通り道をふさいでいるだけなら、その扉を向こうへ押し開ける（板の陰の袋小路から出る）
+      const p2 = lc && lc.size ? findPath(w, S, here, tk, { unlock: !!(o.unlock || kick), wedgeOK: false, avoid: o.avoid }) : null;
+      if (p2 && !o.noDoors) {
+        let bd = 2.6, best = -1;
+        for (let i = 0; i < w.doors.length; i++) {
+          const d = w.doors[i], ds = S.doors[i];
+          if (!ds || ds.broken || !isOpen(ds) || d.L !== levelOfY(a.y + 0.3)) continue;
+          const dd = Math.hypot(d.cx - a.x, d.cz - a.z);
+          if (dd < bd && p2.slice(0, 12).some(k => w.doorAt[k] === i || lc.has(k))) { bd = dd; best = i; }
+        }
+        if (best < 0) for (let i = 0; i < w.doors.length; i++) { const d = w.doors[i], ds = S.doors[i]; if (!ds || ds.broken || !isOpen(ds) || d.L !== levelOfY(a.y + 0.3)) continue; const dd = Math.hypot(d.cx - a.x, d.cz - a.z); if (dd < bd) { bd = dd; best = i; } }
+        if (best >= 0) {
+          const d = w.doors[best];
+          steerToward(a, inp, d.cx, d.cz, 0);
+          if (!ai.doorT || (S.t - ai.doorT) * S.dt > 1.2) { ai.doorT = S.t; pushAct(inp, { a: 'op', k: 'door', id: best, op: 'close' }); }
+          ai.nav = { tk, path: [], i: 0, t: S.t, bad: false, fail: true, soft: true };
+          return 'door';
+        }
+      }
+      ai.nav = { tk, path: [], i: 0, t: S.t, bad: false, fail: true };
+      return 'blocked';
+    }
     const sp = smoothPath(w, here, p);
     nv = ai.nav = { tk, path: sp, i: 0, t: S.t, bad: false, stuck: 0, lx: a.x, lz: a.z };
   }
-  if (nv.fail) { if ((S.t - nv.t) * S.dt > 1.5) ai.nav = null; return 'blocked'; }
+  if (nv.fail) { if ((S.t - nv.t) * S.dt > (nv.soft ? 0.6 : 1.5)) ai.nav = null; return nv.soft ? 'door' : 'blocked'; }
   // 次の点
   while (nv.i < nv.path.length) {
     const c = cellCenter(w, nv.path[nv.i]);

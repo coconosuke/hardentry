@@ -91,7 +91,13 @@ export function thinkSuspect(S, w, a, dt, ctx) {
   // 人質犯: 警官を見たら（または近くで突入・銃声を聞いたら）、しばらくして人質を撃つ。足音だけでは数え始めない
   if (ai.hostage != null && !ai.execArmed) {
     if (tgt) ai.execArmed = 1;
-    else if (h && (h.k === 'breach' || h.k === 'boom' || (h.k === 'shot' && h.team !== a.team)) && Math.hypot(h.x - a.x, h.z - a.z) < 12) ai.execArmed = 2;
+    else if (h && (h.k === 'breach' || h.k === 'boom' || (h.k === 'shot' && h.team !== a.team))) {
+      // 壁ごし・別の階の音は届く距離が短い（12m → 壁ごし7m、別の階6m）
+      const sameL = Math.abs(h.y - a.y) < 1.6;
+      const open = sameL && los(w, a.x, a.y + 1.5, a.z, h.x, h.y + 1.0, h.z, S.doors);
+      const R = (h.k === 'boom' ? 14 : 12) * (open ? 1 : sameL ? 0.6 : 0.5);
+      if (Math.hypot(h.x - a.x, h.z - a.z) < R) ai.execArmed = 2;
+    }
   }
   if (ai.hostage != null && ai.execArmed) {
     const hs = S.byId[ai.hostage];

@@ -47,5 +47,9 @@ export const PROPS = {
   sandbag: { name: '土のう', w: 1.6, d: 0.6, h: 0.9, boxes: [B(1.6, 0.9, 0.6, M.FABRIC)], solid: true, vault: true, foot: [1.6, 0.6] },
   jersey: { name: 'コンクリート柵', w: 2.0, d: 0.6, h: 0.85, boxes: [B(2.0, 0.85, 0.6, M.CONCRETE)], solid: true, vault: true, foot: [2.0, 0.6] },
   tree: { name: '木', w: 0.5, d: 0.5, h: 5.0, boxes: [B(0.35, 5.0, 0.35, M.FURN)], solid: true, vault: false, foot: [0.5, 0.5] },
+  washer: { name: '洗濯機', w: 0.68, d: 0.68, h: 0.9, boxes: [B(0.68, 0.9, 0.68, M.METALFURN)], solid: true, vault: true, foot: [0.68, 0.68] },
+  mailbox: { name: '集合郵便受け', w: 1.2, d: 0.4, h: 1.6, boxes: [B(1.2, 1.6, 0.4, M.METALFURN)], solid: true, vault: false, foot: [1.2, 0.4] },
+  bathtub: { name: '浴槽', w: 0.75, d: 1.6, h: 0.55, boxes: [B(0.75, 0.55, 1.6, M.CERAMIC)], solid: true, vault: true, foot: [0.75, 1.6] },
+  heater: { name: '給湯器', w: 0.6, d: 0.6, h: 1.5, boxes: [B(0.56, 1.5, 0.56, M.METALFURN)], solid: true, vault: false, foot: [0.6, 0.6] },
   lamp: { name: '街灯', w: 0.25, d: 0.25, h: 4.5, boxes: [B(0.18, 4.5, 0.18, M.METAL)], solid: true, vault: false, foot: [0.25, 0.25] },
 };

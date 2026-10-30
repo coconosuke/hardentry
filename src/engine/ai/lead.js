@@ -57,7 +57,9 @@ export function leadThink(S, w, ev) {
   const loot = S.items.some(it => !it.gone && (it.kind === 'weapon' || it.kind === 'evidence') && near(it, 12));
   if (toSecure || loot) {
     const key = curRoom + ':' + L.visited.length;
-    if (!L.searched.includes(key)) { L.searched.push(key); issue(S, L, leader, { cmd: 'search' }); return; }
+    // 同じ所で何度も捜索しない（届かない物があると繰り返すため）: 新しい部屋に入るまで60秒あける
+    const recent = L.lastSearchT != null && sec(S, L.lastSearchT) < 60 && L.lastSearchN === L.visited.length;
+    if (!L.searched.includes(key) && !recent) { L.searched.push(key); L.lastSearchT = S.t; L.lastSearchN = L.visited.length; issue(S, L, leader, { cmd: 'search' }); return; }
     if (toSecure && sec(S, L.t) < 10) return;
   }
   // 次の部屋を探す（幅優先。屋外は通り道として使う）

@@ -57,7 +57,7 @@ export class Book {
       <h3>非致死の道具</h3><p>ビーンバッグ・ペッパーボール・テーザー・ペッパースプレー・閃光・スティンガー・CSガスは、従わない相手（警告して従わない）か武器を持つ相手に使えば正当。士気を下げて投降させやすくする。</p>`;
   }
   missions() {
-    return MISSION_LIST.map(id => { const M = MISSIONS[id]; return `<h3>${esc(M.name)} <small>${esc(M.en)}</small></h3><p>${esc(M.desc)}</p><p class="note">容疑者 ${M.sus[0]}〜${M.sus[1]}人 · 市民 ${M.civ[0]}〜${M.civ[1]}人${M.hostages ? ` · 人質 ${M.hostages[0]}〜${M.hostages[1]}人` : ''}${M.bombs ? ` · 爆弾 ${M.bombs[0]}〜${M.bombs[1]}個（${Math.floor(M.time / 60)}分）` : ''}</p>`; }).join('') +
+    return MISSION_LIST.map(id => { const M = MISSIONS[id]; return `<h3>${esc(M.name)} <small>${esc(M.en)}</small></h3><p>${esc(M.desc)}</p><p class="note">容疑者 ${M.sus[0]}〜${M.sus[1]}人 · 市民 ${M.civ[0]}〜${M.civ[1]}人${M.hostages ? ` · 人質 ${M.hostages[0]}〜${M.hostages[1]}人` : ''}${M.bombs ? ` · 爆弾 ${M.bombs[0]}〜${M.bombs[1]}個（${bombMin(M)}）` : ''}</p>`; }).join('') +
       `<h3>難易度</h3><dl class="kv">${Object.values(DIFFS).map(d => `<dt>${d.name}</dt><dd>${esc(d.desc)}</dd>`).join('')}</dl>`;
   }
   pvp() {
@@ -88,3 +88,5 @@ export class Book {
       '<h3>市民</h3>' + Object.values(CIVILIANS).map(c => `<h4>${esc(c.name)}</h4><p>${esc(c.desc)}</p>`).join('');
   }
 }
+// 爆弾の制限時間（マップで違う）: 「10〜15分」
+function bombMin(M) { const ts = MAP_LIST.filter(id => MAPS[id].missions && MAPS[id].missions.bomb).map(id => MAPS[id].missions.bomb.time || M.time); if (!ts.length) ts.push(M.time); const a = Math.floor(Math.min(...ts) / 60), b = Math.floor(Math.max(...ts) / 60); return a === b ? `${a}分` : `${a}〜${b}分・マップによる`; }
