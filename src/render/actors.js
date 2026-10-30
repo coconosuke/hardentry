@@ -1,6 +1,6 @@
 // 人・持っている銃・落ちている物を描く（renderer のフックに入れる）
 import { personMeshData, lookFor, boneMatrices, SV } from './people.js';
-import { gunModel } from './guns.js';
+import { gunModel, longModel, shieldModel } from './guns.js';
 import { makeWorldMesh, drawMesh } from './renderer.js';
 import { computePose, NBONE } from '../engine/pose.js';
 import { poseInput } from '../engine/combat.js';
@@ -47,6 +47,18 @@ export class ActorView {
     this.looks.set(a.id, L);
     return L;
   }
+  // 特殊装備（手に持つ物）と盾の形
+  longMesh(kind) {
+    const g = longModel(kind);
+    if (!g) return null;
+    let m = this.guns.get(g.key);
+    if (!m) { m = { body: makeWorldMesh(this.gl, g.body), mag: null, pump: null, g }; this.guns.set(g.key, m); }
+    return m;
+  }
+  shieldMesh() {
+    if (!this._shield) { const g = shieldModel(); this._shield = { body: makeWorldMesh(this.gl, g.body), g }; }
+    return this._shield;
+  }
   gunMesh(wid, att) {
     const g = gunModel(wid, att);
     if (!g) return null;
@@ -69,7 +81,8 @@ export class ActorView {
       let gun = null;
       const wi = curWeapon(a);
       if (res.gun && wi && a.ws.slot < 2 && !wi.hiddenGun) gun = { wi, f: res.gun };
-      this.list.push({ a, L, mats, room, gun, x: a.x, y: a.y, z: a.z });
+      else if (res.gun && a.ws.slot === 3 && a.inv.long && a.inv.long !== 'none') gun = { long: a.inv.long, f: res.gun };
+      this.list.push({ a, L, mats, room, gun, shield: res.shield || null, x: a.x, y: a.y, z: a.z });
     }
     this.items = S.items.filter(it => !it.gone);
     this.nades = S.nades || [];
@@ -107,8 +120,18 @@ export class ActorView {
     gl.uniformMatrix4fv(W.u.uVP, false, r.vp);
     for (const e of this.list) {
       if (e.drone) { this._drone(W, e.a); continue; }
+      if (e.shield) {
+        // 盾（左手）
+        const sm = this.shieldMesh(), q = e.shield, M = this.M;
+        M[0] = q.l[0]; M[1] = q.l[1]; M[2] = q.l[2]; M[3] = 0; M[4] = q.u[0]; M[5] = q.u[1]; M[6] = q.u[2]; M[7] = 0;
+        M[8] = q.f[0]; M[9] = q.f[1]; M[10] = q.f[2]; M[11] = 0; M[12] = q.p[0]; M[13] = q.p[1]; M[14] = q.p[2]; M[15] = 1;
+        gl.uniformMatrix4fv(W.u.uModel, false, M);
+        gl.uniform1f(W.u.uRoomOverride, Math.max(0, e.room));
+        drawMesh(gl, sm.body);
+        r.stats.draws++;
+      }
       if (!e.gun) continue;
-      const gm = this.gunMesh(e.gun.wi.id, e.gun.wi.att);
+      const gm = e.gun.long ? this.longMesh(e.gun.long) : this.gunMesh(e.gun.wi.id, e.gun.wi.att);
       if (!gm) continue;
       const g = e.gun.f, M = this.M;
       M[0] = g.l[0]; M[1] = g.l[1]; M[2] = g.l[2]; M[3] = 0;

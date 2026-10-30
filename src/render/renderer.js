@@ -1,18 +1,35 @@
 // 描画の司令塔: 太陽の影 → 本描画(HDR: 空・世界・扉・人・銃・粒子・ガラス) → 一人称 → 光のにじみ → 仕上げ（トーンマップ・暗視・閃光） → FXAA
 import { createGL, tex2D, fbo, depthTex } from './gl.js';
 import { m4, m4mul, m4persp, m4lookAt, m4invert, frustumPlanes, aabbVisible } from './math.js';
-import { makeTextures, TEX, NLAYER } from './textures.js';
+import { makeTextures, TEX, NLAYER, LAYER } from './textures.js';
 import { COMMON, LIGHT, WORLD_VS, WORLD_FS, SKIN_VS, SKIN_FS, SHADOW_VS, SHADOW_SKIN_VS, SHADOW_FS, FS_VS, SKY_FS, FX_VS, FX_FS, DOWN_FS, UP_FS, COMP_FS, FXAA_FS, COPY_FS, MAX_DL } from './shaders.js';
 import { prepareLevel, buildChunk, doorLeafMesh, barricadeMesh, CHUNK } from './level.js';
-import { WV } from './build.js';
+import { WV, MeshBuilder, hex } from './build.js';
 import { bakeLight } from '../engine/light.js';
 import { CS, LH, CEIL, NB } from '../engine/world.js';
 
-export const QUALITY = {
-  low: { name: '低', budget: 0.36e6, shadow: 0, bloom: 0, msaa: 0, fxaa: true, maxDL: 4 },
-  medium: { name: '中', budget: 0.8e6, shadow: 1024, bloom: 4, msaa: 0, fxaa: true, maxDL: 6 },
-  high: { name: '高', budget: 1.4e6, shadow: 2048, bloom: 5, msaa: 4, fxaa: false, maxDL: 8 },
+// 画質: まとめて選ぶ（低・中・高）か、細かく選ぶ（カスタム）
+export const QUALITY = { low: { name: '低' }, medium: { name: '中' }, high: { name: '高' }, custom: { name: 'カスタム' } };
+export const GFX_PRESET = {
+  low: { detail: 'low', shadow: 'off', bloom: false, aa: 'fxaa', lights: 4, fx: 'low', shells: false },
+  medium: { detail: 'medium', shadow: 'low', bloom: true, aa: 'fxaa', lights: 6, fx: 'normal', shells: true },
+  high: { detail: 'high', shadow: 'high', bloom: true, aa: 'msaa', lights: 8, fx: 'high', shells: true },
 };
+// 設定 → 描画の中身。budget: 描く画素の上限（それより細かい画面は縮めて描く）
+export function gfxOf(settings) { return settings.quality === 'custom' ? { ...GFX_PRESET.medium, ...(settings.gfx || {}) } : GFX_PRESET[settings.quality] || GFX_PRESET.medium; }
+export function qualityOf(g) {
+  g = g || GFX_PRESET.medium;
+  const q = {
+    budget: { low: 0.36e6, medium: 0.8e6, high: 1.4e6, max: 2.2e6 }[g.detail] || 0.8e6,
+    shadow: { off: 0, low: 1024, high: 2048 }[g.shadow] ?? 1024,
+    bloom: g.bloom === false ? 0 : 5,
+    msaa: g.aa === 'msaa' ? 4 : 0,
+    fxaa: g.aa === 'fxaa',
+    maxDL: Math.max(1, Math.min(8, g.lights || 6)),
+  };
+  q.key = [q.budget, q.shadow, q.bloom, q.msaa, q.fxaa ? 1 : 0, q.maxDL].join(':');
+  return q;
+}
 
 // 半精度（RGBA16F の3Dテクスチャ用）
 const _f32 = new Float32Array(1), _u32 = new Uint32Array(_f32.buffer);
@@ -71,8 +88,8 @@ export class Renderer {
     const gl = createGL(canvas, { preserve: !!opts.preserve });
     if (!gl) throw new Error('WebGL2が使えません');
     this.gl = gl;
-    this.qName = QUALITY[opts.quality] ? opts.quality : 'medium';
-    this.q = QUALITY[this.qName];
+    this.q = qualityOf(opts.gfx);
+    this.qName = this.q.key;
     this.vp = m4(); this.view = m4(); this.proj = m4(); this.invVP = m4(); this.shVP = m4(); this.vmVP = m4(); this.ident = m4(); this.tmpM = m4();
     this.planes = new Float32Array(24);
     this.stats = { draws: 0, tris: 0, chunks: 0 };
@@ -115,9 +132,10 @@ export class Renderer {
     this.dlr = null; this.dlrData = null;
     this.vaoEmpty = gl.createVertexArray();
   }
-  setQuality(name) {
-    if (!QUALITY[name] || name === this.qName) return;
-    this.qName = name; this.q = QUALITY[name]; this.w = 0;
+  setQuality(g) {
+    const q = qualityOf(g);
+    if (q.key === this.qName) return;
+    this.qName = q.key; this.q = q; this.w = 0;
   }
 
   // ---- 画面の大きさと描画先
@@ -429,6 +447,15 @@ export class Renderer {
         gl.uniformMatrix4fv(P.u.uModel, false, M);
         drawMesh(gl, dm.leaves[li]); this.stats.draws++;
       }
+      // 扉の罠（中の側）: 枠の横の箱と、扉の下を横切る細い線
+      if (ds.trap && ds.trap.side && !ds.broken) {
+        const tm = this._trapMesh(d);
+        const sd = ds.trap.side;
+        if (d.axis === 0) { if (sd > 0) M.set([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, d.a0, base, d.c, 1]); else M.set([-1, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1, 0, d.a1, base, d.c, 1]); }
+        else { if (sd > 0) M.set([0, 0, -1, 0, 0, 1, 0, 0, 1, 0, 0, 0, d.c, base, d.a1, 1]); else M.set([0, 0, 1, 0, 0, 1, 0, 0, -1, 0, 0, 0, d.c, base, d.a0, 1]); }
+        gl.uniformMatrix4fv(P.u.uModel, false, M);
+        drawMesh(gl, tm); this.stats.draws++;
+      }
       if (ds.bar > 0 && dm.bar) {
         // バリケードは扉の手前（防衛側）に。axis 0: X にそって
         const side = -1;
@@ -440,6 +467,27 @@ export class Renderer {
     }
     gl.uniform1f(P.u.uRoomOverride, -1);
     gl.uniformMatrix4fv(P.u.uModel, false, this.ident);
+  }
+
+  // 罠の形（扉の幅と壁の厚さごと）。ローカル: X=扉にそって 0..幅、Z=罠の側。
+  // 扉のすぐ内側の床に、くるぶしの高さの針金を横に張り、枠の横の床に爆薬の箱（ミラーで扉の下から見える）
+  _trapMesh(d) {
+    const W = d.a1 - d.a0, z0 = (d.th || 0.12) / 2, key = W.toFixed(2) + '|' + z0.toFixed(3);
+    this._traps = this._traps || new Map();
+    let m = this._traps.get(key);
+    if (m) return m;
+    const B = new MeshBuilder();
+    const od = hex('#4b5133'), dk = hex('#202224'), zw = z0 + 0.26;
+    // 爆薬の箱と起爆装置（赤い灯り）
+    B.bbox(W + 0.06, 0.0, zw - 0.08, W + 0.26, 0.13, zw + 0.08, 0.008, LAYER.paint, od);
+    B.bbox(W + 0.09, 0.13, zw - 0.04, W + 0.17, 0.165, zw + 0.03, 0.005, LAYER.rubber, dk);
+    B.bbox(W + 0.19, 0.13, zw - 0.015, W + 0.21, 0.145, zw + 0.005, 0.002, LAYER.plain, hex('#e0402e'));
+    // 張った針金と、反対側の留め具
+    B.tube([-0.05, 0.085, zw], [W + 0.07, 0.085, zw], 0.0022, 0.0022, 5, LAYER.metal, hex('#c3c6ca'), { caps: true });
+    B.bbox(-0.09, 0.0, zw - 0.03, -0.04, 0.1, zw + 0.03, 0.004, LAYER.rubber, dk);
+    m = makeWorldMesh(this.gl, B);
+    this._traps.set(key, m);
+    return m;
   }
 
   _shadowPass(c) {
@@ -530,6 +578,7 @@ export class Renderer {
     gl.uniform1f(C.u.uGas, p.gas || 0);
     gl.uniform1f(C.u.uTime2, this.time);
     gl.uniform1f(C.u.uSat, p.sat ?? 1.08);
+    if (C.u.uPeek) gl.uniform1f(C.u.uPeek, p.peek || 0);
     gl.uniform1f(C.u.uBlur, p.blur || 0);
     gl.uniform2f(C.u.uTexel2, 1 / W, 1 / H);
     gl.drawArrays(gl.TRIANGLES, 0, 3);

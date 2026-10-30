@@ -175,6 +175,7 @@ export const ATTACH = {
     reddot: { name: 'ドットサイト（T-2）', zoom: 1.1, ads: 0.01 },
     holo: { name: 'ホロサイト（EXPS3）', zoom: 1.1, ads: 0.015 },
     lpvo: { name: '等倍〜4倍スコープ', zoom: 3.0, ads: 0.06, scope: true },
+    rmr: { name: 'ピストル用ドットサイト（RMR）', zoom: 1.05, ads: 0.01 },
   },
   muzzle: {
     none: { name: 'なし' },
@@ -195,7 +196,7 @@ export function attachOptions(wid) {
   if (c === 'rifle') return { sight: W.model === 'g36' ? ['reddot', 'holo', 'iron'] : ['iron', 'reddot', 'holo', 'lpvo'], muzzle: ['none', 'supp', 'comp'], grip: ['none', 'vert', 'angled'] };
   if (c === 'smg') return { sight: ['iron', 'reddot', 'holo'], muzzle: W.integral ? ['none'] : ['none', 'supp', 'comp'], grip: W.model === 'mp7' || W.model === 'ump' || W.model === 'mpx' ? ['none', 'vert', 'angled'] : ['none'] };
   if (c === 'shotgun') return { sight: W.model === 'sawedoff' ? ['iron'] : ['iron', 'reddot'], muzzle: ['none'], grip: ['none'] };
-  if (c === 'pistol') return { sight: ['iron'], muzzle: W.revolver ? ['none'] : ['none', 'supp'], grip: ['none'] };
+  if (c === 'pistol') return { sight: W.revolver || W.model === 'makarov' ? ['iron'] : ['iron', 'rmr'], muzzle: W.revolver ? ['none'] : ['none', 'supp'], grip: ['none'] };
   return { sight: ['iron'], muzzle: ['none'], grip: ['none'] };
 }
 export const CAT_NAME = { rifle: '小銃', smg: '短機関銃', shotgun: '散弾銃', pistol: '拳銃', less: '非致死' };

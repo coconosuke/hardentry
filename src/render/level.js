@@ -34,6 +34,17 @@ export function prepareLevel(w, def) {
   ctx.ceilStyle = def.ceiling || 'plaster';
   ctx.carpet = def.carpet ? hex(def.carpet) : COL.carpet;
   ctx.doorCol = def.doorCol ? hex(def.doorCol) : COL.doorWood;
+  // 細部の色: 窓枠・窓台・基礎の帯・扉の額縁・内側の白い木部
+  const homeyMap = !!def.homey;
+  ctx.winFrame = def.winFrame ? hex(def.winFrame) : (homeyMap ? hex('#e9e6df') : COL.glassFrame);
+  ctx.sill = def.sill ? hex(def.sill) : hex('#b9b3a7');
+  ctx.plinth = def.plinth ? hex(def.plinth) : hex('#7d7a74');
+  ctx.doorTrim = def.doorTrim ? hex(def.doorTrim) : COL.trim;
+  ctx.trimIn = hex('#e8e5de');
+  // 住まいの部屋（カーテンをかける）: 木の床・じゅうたんの部屋
+  ctx.homey = w.rooms.map(r => { if (r.out || !homeyMap) return false; const k = r.cells[0]; const fm = w.floorMat[k]; return fm === F.WOOD || fm === F.CARPET; });
+  const CURT = ['#7c8a96', '#a39274', '#8a5f55', '#6f7a63', '#b5ada0', '#4f5f74'].map(hex);
+  ctx.curtain = w.rooms.map((r, i) => CURT[(i * 5 + 1) % CURT.length]);
   // 描画用の壁の箱（交わるマスは重ならないように切る）: rbox[k] = [[x0,z0,x1,z1, axis], ...]
   ctx.rbox = new Array(w.N);
   for (let L = 0; L < w.NL; L++) for (let j = 0; j < w.D; j++) for (let i = 0; i < w.W; i++) {
@@ -340,26 +351,26 @@ function wallCell(ctx, S, B, G, L, i, j, k) {
         if ((i + j) % 4 === 0) B.cyl(cx, cz, base, y1 + 0.05, 0.03, 0.03, 6, LAYER.metal, COL.fence);
       } else {
         B.room = room;
-        const fr = COL.glassFrame, th = 0.035;
-        const bx0 = along ? b[0] : b[0] - 0.01, bx1 = along ? b[2] : b[2] + 0.01, bz0 = along ? b[1] - 0.01 : b[1], bz1 = along ? b[3] + 0.01 : b[3];
-        B.box(bx0, y0 - 0.02, bz0, bx1, y0 + th, bz1, LAYER.paint, fr, { faces: 4 | 16 | 32 | 1 | 2 });
-        B.box(bx0, y1 - th, bz0, bx1, y1 + 0.02, bz1, LAYER.paint, fr, { faces: 8 | 16 | 32 | 1 | 2 });
-        // 窓の真ん中の桟（窓の幅のはしのマスに）
+        const fr = ctx.winFrame, th = 0.045, r = 0.008;
+        const bx0 = along ? b[0] : b[0] - 0.012, bx1 = along ? b[2] : b[2] + 0.012, bz0 = along ? b[1] - 0.012 : b[1], bz1 = along ? b[3] + 0.012 : b[3];
+        B.bbox(bx0, y0 - 0.02, bz0, bx1, y0 + th, bz1, r, LAYER.paint, fr, { faces: 4 | 16 | 32 | 1 | 2 });
+        B.bbox(bx0, y1 - th, bz0, bx1, y1 + 0.02, bz1, r, LAYER.paint, fr, { faces: 8 | 16 | 32 | 1 | 2 });
+        // 窓の両はしの縦の枠（窓の幅のはしのマスに）と、2マスごとの桟
         const ni = along ? i + 1 : i, nj = along ? j : j + 1;
         const nt = ni < w.W && nj < w.D ? w.cell[w.idx(L, ni, nj)] : C.VOID;
-        if (nt !== t) {
-          if (along) B.box(b[2] - 0.03, y0, bz0, b[2], y1, bz1, LAYER.paint, fr);
-          else B.box(bx0, y0, b[3] - 0.03, bx1, y1, b[3], LAYER.paint, fr);
-        }
         const pi = along ? i - 1 : i, pj = along ? j : j - 1;
         const pt = pi >= 0 && pj >= 0 ? w.cell[w.idx(L, pi, pj)] : C.VOID;
-        if (pt !== t) {
-          if (along) B.box(b[0], y0, bz0, b[0] + 0.03, y1, bz1, LAYER.paint, fr);
-          else B.box(bx0, y0, b[1], bx1, y1, b[1] + 0.03, LAYER.paint, fr);
-        }
+        const endN = nt !== t, endP = pt !== t;
+        if (endN) { if (along) B.bbox(b[2] - 0.045, y0, bz0, b[2], y1, bz1, r, LAYER.paint, fr); else B.bbox(bx0, y0, b[3] - 0.045, bx1, y1, b[3], r, LAYER.paint, fr); }
+        if (endP) { if (along) B.bbox(b[0], y0, bz0, b[0] + 0.045, y1, bz1, r, LAYER.paint, fr); else B.bbox(bx0, y0, b[1], bx1, y1, b[1] + 0.045, r, LAYER.paint, fr); }
+        if (!endN && ((along ? i : j) % 2 === 1)) { if (along) B.bbox(b[2] - 0.018, y0, cz - 0.03, b[2] + 0.018, y1, cz + 0.03, 0.005, LAYER.paint, fr); else B.bbox(cx - 0.03, y0, b[3] - 0.018, cx + 0.03, y1, b[3] + 0.018, 0.005, LAYER.paint, fr); }
+        // 窓台: 外は石の台（張り出す）、内は白い板。両はしは少し長く
+        windowSills(ctx, B, L, b, along, cx, cz, y0, y1, endP, endN, i, j);
       }
     }
   }
+  // 壁の面の飾り（腰の帯・コンセント・額）
+  if (t === C.WALL && w.blocks[k * NB]) for (const b of list) wallFaceDetails(ctx, B, L, i, j, k, b);
   // 不透明のブロック: 同じ材質が縦に続く所をまとめて箱にする
   for (const b of list) {
     let q = 0;
@@ -451,10 +462,12 @@ export function roofEdges(ctx, B, i0, j0, i1, j1) {
   for (let j = j0; j < j1; j++) for (let i = i0; i < i1; i++) {
     if (!roofAt(i, j)) continue;
     const x0 = i * CS, x1 = (i + 1) * CS, z0 = j * CS, z1 = (j + 1) * CS, pw = 0.12;
-    if (!roofAt(i + 1, j)) { B.box(x1 - pw, y0, z0, x1, yp, z1, LAYER.concrete, col, { faces: 1 | 2 | 4, uv: 0.5 }); }
-    if (!roofAt(i - 1, j)) { B.box(x0, y0, z0, x0 + pw, yp, z1, LAYER.concrete, col, { faces: 1 | 2 | 4, uv: 0.5 }); }
-    if (!roofAt(i, j + 1)) { B.box(x0, y0, z1 - pw, x1, yp, z1, LAYER.concrete, col, { faces: 16 | 32 | 4, uv: 0.5 }); }
-    if (!roofAt(i, j - 1)) { B.box(x0, y0, z0, x1, yp, z0 + pw, LAYER.concrete, col, { faces: 16 | 32 | 4, uv: 0.5 }); }
+    // 屋根のふちの立ち上がりと、上の笠木（少し広く明るい）
+    const cw = 0.03, ch = 0.05;
+    if (!roofAt(i + 1, j)) { B.box(x1 - pw, y0, z0, x1, yp, z1, LAYER.concrete, col, { faces: 1 | 2, uv: 0.5 }); B.bbox(x1 - pw - cw, yp, z0, x1 + cw, yp + ch, z1, 0.01, LAYER.concrete, cap, { faces: 1 | 2 | 4 | 8, uv: 0.5 }); }
+    if (!roofAt(i - 1, j)) { B.box(x0, y0, z0, x0 + pw, yp, z1, LAYER.concrete, col, { faces: 1 | 2, uv: 0.5 }); B.bbox(x0 - cw, yp, z0, x0 + pw + cw, yp + ch, z1, 0.01, LAYER.concrete, cap, { faces: 1 | 2 | 4 | 8, uv: 0.5 }); }
+    if (!roofAt(i, j + 1)) { B.box(x0, y0, z1 - pw, x1, yp, z1, LAYER.concrete, col, { faces: 16 | 32, uv: 0.5 }); B.bbox(x0, yp, z1 - pw - cw, x1, yp + ch, z1 + cw, 0.01, LAYER.concrete, cap, { faces: 16 | 32 | 4 | 8, uv: 0.5 }); }
+    if (!roofAt(i, j - 1)) { B.box(x0, y0, z0, x1, yp, z0 + pw, LAYER.concrete, col, { faces: 16 | 32, uv: 0.5 }); B.bbox(x0, yp, z0 - cw, x1, yp + ch, z0 + pw + cw, 0.01, LAYER.concrete, cap, { faces: 16 | 32 | 4 | 8, uv: 0.5 }); }
   }
 }
 
@@ -496,21 +509,132 @@ function stairMesh(ctx, B, s) {
 
 // 扉の枠（両面の額縁）
 function doorFrame(ctx, B, d) {
-  const base = d.L * LH, H = 2.08, wv = 0.07, pr = 0.012;
-  const col = COL.trim;
+  const base = d.L * LH, H = 2.08, wv = 0.08, pr = 0.014, r = 0.01;
+  const col = d.mat === M.DOORMETAL ? hex('#8d9399') : ctx.doorTrim;
   B.room = 0;
   const th = d.th / 2 + pr;
   const ii = 0.012; // 開口の内側へ少し出す（壁の端の面と重ならないように）
   if (d.axis === 0) {
     const z0 = d.c - th, z1 = d.c + th;
-    B.box(d.a0 - wv, base, z0, d.a0 + ii, base + H + wv, z1, LAYER.paint, col);
-    B.box(d.a1 - ii, base, z0, d.a1 + wv, base + H + wv, z1, LAYER.paint, col);
-    B.box(d.a0 + ii, base + H, z0, d.a1 - ii, base + H + wv, z1, LAYER.paint, col, { faces: 8 | 16 | 32 });
+    B.bbox(d.a0 - wv, base, z0, d.a0 + ii, base + H + wv, z1, r, LAYER.paint, col, { faces: 1 | 2 | 4 | 16 | 32 });
+    B.bbox(d.a1 - ii, base, z0, d.a1 + wv, base + H + wv, z1, r, LAYER.paint, col, { faces: 1 | 2 | 4 | 16 | 32 });
+    B.bbox(d.a0 + ii, base + H, z0, d.a1 - ii, base + H + wv, z1, r, LAYER.paint, col, { faces: 4 | 8 | 16 | 32 });
   } else {
     const x0 = d.c - th, x1 = d.c + th;
-    B.box(x0, base, d.a0 - wv, x1, base + H + wv, d.a0 + ii, LAYER.paint, col);
-    B.box(x0, base, d.a1 - ii, x1, base + H + wv, d.a1 + wv, LAYER.paint, col);
-    B.box(x0, base + H, d.a0 + ii, x1, base + H + wv, d.a1 - ii, LAYER.paint, col, { faces: 8 | 1 | 2 });
+    B.bbox(x0, base, d.a0 - wv, x1, base + H + wv, d.a0 + ii, r, LAYER.paint, col, { faces: 1 | 2 | 4 | 16 | 32 });
+    B.bbox(x0, base, d.a1 - ii, x1, base + H + wv, d.a1 + wv, r, LAYER.paint, col, { faces: 1 | 2 | 4 | 16 | 32 });
+    B.bbox(x0, base + H, d.a0 + ii, x1, base + H + wv, d.a1 - ii, r, LAYER.paint, col, { faces: 4 | 8 | 1 | 2 });
+  }
+  // 照明のスイッチ（屋内の側、取っ手の側の壁）
+  const w = ctx.w;
+  const sa = d.a1 + wv + 0.09;
+  const ci = d.axis === 0 ? Math.floor(sa / CS) : d.i0, cj = d.axis === 0 ? d.j0 : Math.floor(sa / CS);
+  if (ci >= 0 && cj >= 0 && ci < w.W && cj < w.D && w.cell[w.idx(d.L, ci, cj)] === C.WALL && w.blocks[w.idx(d.L, ci, cj) * NB + 1]) {
+    for (const sg of [1, -1]) {
+      const fx = d.axis === 0 ? sa : d.c + sg * (d.th / 2 + 0.002), fz = d.axis === 0 ? d.c + sg * (d.th / 2 + 0.002) : sa;
+      const sd = faceSide(ctx, d.L, fx, fz, d.axis === 0 ? 0 : sg, d.axis === 0 ? sg : 0);
+      if (sd.side !== 'in') continue;
+      B.room = Math.max(0, sd.room);
+      plate(B, fx, base + 1.15, fz, d.axis === 0 ? 0 : sg, d.axis === 0 ? sg : 0, 0.075, 0.115, true);
+    }
+  }
+}
+
+// 壁に張る小さな板（スイッチ・コンセント）: 面の点 (x,y,z)、外向き (nx,nz)
+function plate(B, x, y, z, nx, nz, wdt, hgt, sw) {
+  const t = 0.01, hw = wdt / 2, hh = hgt / 2;
+  const x0 = nx ? (nx > 0 ? x : x - t) : x - hw, x1 = nx ? (nx > 0 ? x + t : x) : x + hw;
+  const z0 = nz ? (nz > 0 ? z : z - t) : z - hw, z1 = nz ? (nz > 0 ? z + t : z) : z + hw;
+  B.bbox(x0, y - hh, z0, x1, y + hh, z1, 0.003, LAYER.plain, hex('#ecebe6'));
+  const c = hex(sw ? '#d6d4cc' : '#55524c');
+  if (sw) { const k = 0.02, x2 = nx ? x + nx * (t + 0.006) : x, z2 = nz ? z + nz * (t + 0.006) : z; B.box(Math.min(x, x2) - (nx ? 0 : k * 0.6), y - k, Math.min(z, z2) - (nz ? 0 : k * 0.6), Math.max(x, x2) + (nx ? 0 : k * 0.6), y + k, Math.max(z, z2) + (nz ? 0 : k * 0.6), LAYER.plain, c); }
+  else for (const dy of [-0.025, 0.025]) { const k = 0.012, x2 = nx ? x + nx * (t + 0.002) : x, z2 = nz ? z + nz * (t + 0.002) : z; B.box(Math.min(x, x2) - (nx ? 0 : k), y + dy - k * 0.7, Math.min(z, z2) - (nz ? 0 : k), Math.max(x, x2) + (nx ? 0 : k), y + dy + k * 0.7, Math.max(z, z2) + (nz ? 0 : k), LAYER.plain, c); }
+}
+
+// 決まった乱数（マスと番号から）
+function h3(i, j, k) { let h = (i * 374761393 + j * 668265263 + k * 1442695041) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
+
+// 壁の面の飾り: 屋外の1階は腰の帯（基礎）、屋内はコンセント・額・ポスター
+function wallFaceDetails(ctx, B, L, i, j, k, b) {
+  const { w } = ctx;
+  const base = L * LH;
+  const ax = b[4];
+  const faces = ax === 0 ? [[0, -1, b[1]], [0, 1, b[3]]] : [[-1, 0, b[0]], [1, 0, b[2]]];
+  const a0 = ax === 0 ? b[0] : b[1], a1 = ax === 0 ? b[2] : b[3];
+  if (a1 - a0 < 0.2) return;
+  const am = (a0 + a1) / 2;
+  for (const [nx, nz, fp] of faces) {
+    const fx = ax === 0 ? am : fp, fz = ax === 0 ? fp : am;
+    const sd = faceSide(ctx, L, fx, fz, nx, nz);
+    // その面の前のマスが床か（壁のあいだの細い所でない）
+    if (sd.side === 'out') {
+      if (L !== 0 || sd.room < 0 && w.cell[w.idx(L, i, j)] === C.VOID) continue;
+      // 基礎の帯（30cm・2.5cm張り出す）
+      const pr = 0.025, hgt = 0.3;
+      B.room = 0;
+      if (ax === 0) { const z0 = nz > 0 ? fp : fp - pr, z1 = nz > 0 ? fp + pr : fp; B.bbox(a0, base - 0.02, z0, a1, base + hgt, z1, 0.008, LAYER.concrete, ctx.plinth, { faces: 4 | 16 | 32 }); }
+      else { const x0 = nx > 0 ? fp : fp - pr, x1 = nx > 0 ? fp + pr : fp; B.bbox(x0, base - 0.02, a0, x1, base + hgt, a1, 0.008, LAYER.concrete, ctx.plinth, { faces: 1 | 2 | 4 }); }
+      continue;
+    }
+    if (sd.side !== 'in' || sd.room < 0) continue;
+    const room = w.rooms[sd.room];
+    if (!room || room.cells.length < 10) continue;
+    B.room = sd.room;
+    // 前に背の高い家具がないか
+    const px = fx + nx * 0.35, pz = fz + nz * 0.35;
+    const blocked = w.props.some(p => p.L === L && p.h > 1.1 && Math.abs(p.x - px) < p.w / 2 + 0.3 && Math.abs(p.z - pz) < p.d / 2 + 0.3);
+    const hv = h3(i * 2 + (nx + nz > 0 ? 1 : 0), j, L * 7 + 3);
+    // コンセント（9マスに1つくらい、腰より下）
+    if (hv < 0.11 && a1 - a0 > 0.4) plate(B, fx + nx * 0.001, base + 0.3, fz + nz * 0.001, nx, nz, 0.07, 0.11, false);
+    // 額・ポスター（25マスに1つくらい、目の高さ。部屋ごとの色合い）
+    else if (hv > 0.955 && !blocked && a1 - a0 > 0.45 && w.blocks[k * NB + 2]) picture(ctx, B, fx, base + 1.55, fz, nx, nz, hv, sd.room);
+  }
+}
+
+// 額（絵）とポスター
+function picture(ctx, B, x, y, z, nx, nz, hv, room) {
+  const pr = 0.025, hw = 0.26 + (hv * 37 % 1) * 0.12, hh = 0.2 + (hv * 53 % 1) * 0.1;
+  const frame = [hex('#2b2622'), hex('#6b4a2c'), hex('#d9d4c8'), hex('#1d1e20')][Math.floor(hv * 997) % 4];
+  const bx = (a0, a1, y0, y1, d0, d1, col, r = 0.004) => {
+    if (nx) { const x0 = x + nx * d0, x1 = x + nx * d1; B.bbox(Math.min(x0, x1), y0, z + a0, Math.max(x0, x1), y1, z + a1, r, LAYER.plain, col); }
+    else { const z0 = z + nz * d0, z1 = z + nz * d1; B.bbox(x + a0, y0, Math.min(z0, z1), x + a1, y1, Math.max(z0, z1), r, LAYER.plain, col); }
+  };
+  bx(-hw, hw, y - hh, y + hh, 0.001, pr, frame, 0.006);
+  // 絵: 空・地面・ひとつの形（風景）か、色の帯（抽象）
+  const pal = [['#8fb3d1', '#6f8f4e', '#d8c27a'], ['#d9c9a8', '#a9583d', '#3e4a5c'], ['#c7d3d6', '#59707a', '#e0e0d8'], ['#2f3e55', '#c99a4a', '#e8dcc2']][Math.floor(hv * 4091) % 4].map(hex);
+  const m = 0.035, d = pr + 0.002;
+  bx(-hw + m, hw - m, y - hh + m, y + hh - m, pr, d, pal[0], 0.001);
+  bx(-hw + m, hw - m, y - hh + m, y - hh * 0.15, pr, d + 0.001, pal[1], 0.001);
+  const c0 = (hv * 211 % 1 - 0.5) * hw;
+  bx(c0 - hw * 0.25, c0 + hw * 0.25, y - hh * 0.15, y + hh * 0.35, pr, d + 0.002, pal[2], 0.001);
+}
+
+// 窓台
+function windowSills(ctx, B, L, b, along, cx, cz, y0, y1, endP, endN, i, j) {
+  const ex0 = endP ? 0.05 : 0, ex1 = endN ? 0.05 : 0;
+  for (const sg of [1, -1]) {
+    const nx = along ? 0 : sg, nz = along ? sg : 0;
+    const fp = along ? (sg > 0 ? b[3] : b[1]) : (sg > 0 ? b[2] : b[0]);
+    const sd = faceSide(ctx, L, along ? cx : fp, along ? fp : cz, nx, nz);
+    const out = sd.side === 'out';
+    const pr = out ? 0.07 : 0.04, hgt = out ? 0.055 : 0.03;
+    const col = out ? ctx.sill : ctx.trimIn;
+    B.room = out ? 0 : Math.max(0, sd.room);
+    if (along) { const z0 = sg > 0 ? fp : fp - pr, z1 = sg > 0 ? fp + pr : fp; B.bbox(b[0] - ex0, y0 - hgt - 0.02, z0, b[2] + ex1, y0 - 0.02, z1, 0.008, out ? LAYER.concrete : LAYER.paint, col); }
+    else { const x0 = sg > 0 ? fp : fp - pr, x1 = sg > 0 ? fp + pr : fp; B.bbox(x0, y0 - hgt - 0.02, b[1] - ex0, x1, y0 - 0.02, b[3] + ex1, 0.008, out ? LAYER.concrete : LAYER.paint, col); }
+    // カーテン（住まいの部屋の内側、窓のはし）
+    if (!out && sd.room >= 0 && ctx.homey[sd.room] && (endP || endN)) {
+      const cc = ctx.curtain[sd.room];
+      const top = y1 + 0.12, bot = Math.max(L * LH + 0.05, y0 - 0.25);
+      const off = 0.07;
+      for (const [isEnd, a] of [[endP, along ? b[0] : b[1]], [endN, along ? b[2] : b[3]]]) {
+        if (!isEnd) continue;
+        const inward = a === (along ? b[0] : b[1]) ? 1 : -1;
+        const p0 = a - inward * 0.05, p1 = a + inward * 0.2;
+        if (along) { const z0 = sg > 0 ? fp + off - 0.03 : fp - off - 0.03; B.bbox(Math.min(p0, p1), bot, z0, Math.max(p0, p1), top, z0 + 0.06, 0.025, LAYER.fabric, cc); }
+        else { const x0 = sg > 0 ? fp + off - 0.03 : fp - off - 0.03; B.bbox(x0, bot, Math.min(p0, p1), x0 + 0.06, top, Math.max(p0, p1), 0.025, LAYER.fabric, cc); }
+      }
+    }
   }
 }
 

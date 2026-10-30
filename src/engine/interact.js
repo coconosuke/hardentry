@@ -1,24 +1,24 @@
 // 調べる・使う: 見ている物（扉・人・落ちている物・爆弾・壁）と、そのときできる操作。時間のかかる動作の進み。
-import { raycast, CS, LH, levelOfY, NB, isWallish, C } from './world.js';
+import { raycast, los, CS, LH, levelOfY, NB, isWallish, C } from './world.js';
 import { M, MATS } from './data/materials.js';
-import { GEAR, LONG } from './data/equipment.js';
+import { GEAR, LONG, HAND_LONG } from './data/equipment.js';
 import { doorOp, sideOf, isClosed, detonateC2, triggerTrap } from './doors.js';
 import { eyeOf, dropWeapon } from './combat.js';
 import { throwNade, launchNade } from './nades.js';
 import { curW } from './actor.js';
-import { startReload, switchTo } from './weapon.js';
+import { startReload, switchTo, m320Next } from './weapon.js';
 
 const _rc = { out: [], seenProp: new Set(), seenDoor: new Set() };
 export const REACH = 2.3;
 
 // 時間（秒）
 export const ACT_T = {
-  restrain: 1.6, report: 0.6, collect: 1.0, pick: 6.0, lockgun: 2.0, wedge: 1.5, unwedge: 2.0, c2: 2.5, ram: 0.8, breach: 0.7, mirror: 2.4, disarm: 3.0,
+  restrain: 1.6, report: 0.6, collect: 1.0, pick: 6.0, lockgun: 2.0, wedge: 1.5, unwedge: 2.0, c2: 2.5, ram: 0.8, breach: 0.7, mirror: 2.4, mirrorP: 0.8, wand: 0.6, disarm: 3.0,
   bar: 1.5, unbar: 1.6, trap: 3.0, bash: 0.55, bandage: 3.5, plant: 7.0, defuse: 7.0, revive: 4.0, reinforce: 4.5, frame: 4.0, bombdefuse: 6.0, kick: 0.45, wall: 0.3,
 };
 export const OP_NAME = {
   open: '開ける', peek: '少し開ける', close: '閉める', kick: '蹴る', pick: 'ピッキング', lockgun: 'ロックピックガン', wedge: 'ウェッジ', unwedge: 'ウェッジを外す', c2: 'C2を仕掛ける',
-  ram: '破城槌', breach: '散弾で開ける', mirror: 'ミラーで見る', disarm: '罠を外す', bar: 'バリケード', unbar: 'バリケードを外す', trap: '罠を仕掛ける', bash: 'バリケードを壊す',
+  ram: '破城槌', breach: '散弾で開ける', mirror: 'ミラーで見る', wand: 'オプティワンド', disarm: '罠を外す', bar: 'バリケード', unbar: 'バリケードを外す', trap: '罠を仕掛ける', bash: 'バリケードを壊す',
   restrain: '拘束', report: 'TOCに報告', collect: '証拠を回収', revive: '手当て', plant: '解除装置を設置', defuse: '解除装置を外す', pickup: '拾う', reinforce: '補強', frame: '壁用の爆破薬', bombdefuse: '爆弾を解除', det: '起爆',
 };
 
@@ -142,7 +142,8 @@ export function doorOps(S, w, a, did) {
   if (!closed) { ops.push({ op: 'close', t: 0 }); if (Math.abs(ds.ang[0]) < 0.6) ops.push({ op: 'open', t: 0 }); }
   else {
     ops.push({ op: 'open', t: 0 }); ops.push({ op: 'peek', t: 0 });
-    ops.push({ op: 'mirror', t: ACT_T.mirror });
+    ops.push({ op: 'mirror', t: a.pid != null ? ACT_T.mirrorP : ACT_T.mirror });
+    if (a.inv.long === 'wand') ops.push({ op: 'wand', t: ACT_T.wand });
     if (ds.wedge) ops.push({ op: 'unwedge', t: ACT_T.unwedge });
     else if (gearN(a, 'wedge')) ops.push({ op: 'wedge', t: ACT_T.wedge, gear: 'wedge' });
     ops.push({ op: 'kick', t: ACT_T.kick });
@@ -193,7 +194,9 @@ export function doAction(S, w, a, ac, ev) {
   if (a.down || a.cuffed || a.comply) return;
   if (kind === 'cancel') { if (a.act) { ev.push({ e: 'actcancel', id: a.id, k: a.act.k }); a.act = null; } return; }
   if (kind === 'gear') { selectGear(S, a, ac.id, ev); return; }
-  if (kind === 'm320') { if (a.inv.m320) { const order = ['flash', 'stinger', 'cs']; let i = order.indexOf(a.inv.m320.sel); for (let n = 0; n < 3; n++) { i = (i + 1) % 3; if (a.inv.m320[order[i]] > 0) break; } a.inv.m320.sel = order[i]; ev.push({ e: 'm320sel', id: a.id, sel: order[i] }); } return; }
+  if (kind === 'm320') { m320Next(a, ev); return; }
+  if (kind === 'long') { selectLong(S, a, ev); return; }
+  if (kind === 'peekend') { if (a.peek) endPeek(S, w, a, ev, 'user'); return; }
   if (kind === 'dropcarry') { if (a.carry === 'defuser') { a.carry = null; S.items.push({ id: S.nextItem++, kind: 'defuser', x: a.x, y: a.y + 0.02, z: a.z }); ev.push({ e: 'defdrop', id: a.id }); } return; }
   if (a.act) return;
   let ctx = null, op = null;
@@ -228,8 +231,10 @@ function startOp(S, w, a, ctx, op, ev) {
 // 時間のかかる動作の進み
 export function stepActs(S, w, dt, ev) {
   for (const a of S.actors) {
-    // 投げ物を持っているとき: 引き金で投げる
+    // 投げ物を持っているとき: 引き金で投げる。特殊装備を持っているとき: 引き金で使う
     if (a.ws && a.ws.slot === 2 && a.alive && !a.down) gearInHand(S, w, a, dt, ev);
+    if (a.ws && a.ws.slot === 3 && a.alive && !a.down) longInHand(S, w, a, dt, ev);
+    if (a.peek) stepPeek(S, w, a, dt, ev);
     const x = a.act;
     if (!x) continue;
     if (!a.alive || a.down || a.stun > 0.3 || a.flash > 0.5) { a.act = null; ev.push({ e: 'actcancel', id: a.id, k: x.k }); continue; }
@@ -253,6 +258,8 @@ function finishOp(S, w, a, x, ev) {
   if (x.kind === 'door') {
     const did = x.id;
     if (k === 'pick' || k === 'lockgun') { doorOp(S, w, a, did, 'unlock', ev); return; }
+    // 人が操作するミラー・オプティワンド: 扉の下からのぞく視点に切り替える
+    if ((k === 'mirror' && a.pid != null) || k === 'wand') { startPeek(S, w, a, k, ev, did); return; }
     if (k === 'mirror') {
       // 扉の向こうの人と罠を見る
       const d = w.doors[did], side = -sideOf(d, a.x, a.z);
@@ -336,7 +343,7 @@ function selectGear(S, a, id, ev) {
   if (G.kind === 'nade' || G.kind === 'spray') {
     // 手に持つ（slot 2）。引き金で投げる・吹きつける
     a.ws.gear = id;
-    if (a.ws.slot !== 2) { a.ws.prev = a.ws.slot; switchTo(S, a, 2, ev); }
+    if (a.ws.slot !== 2) switchTo(S, a, 2, ev);
     ev.push({ e: 'gearsel', id: a.id, g: id });
     return;
   }
@@ -380,6 +387,123 @@ function spray(S, w, a, ev) {
     S.harms.push({ t: S.t, by: a.id, tgt: b.id, how: 'less', d: 0, part: 'head', kind: b.kind, threat: b.ai ? (S.t - (b.ai.threatT ?? -1e9)) * S.dt < 2 : false, warned: b.ai ? b.ai.warned || 0 : 0, armed: !!(b.inv.w[0] || b.inv.w[1]), comply: b.comply, cuffed: b.cuffed, down: b.down });
     ev.push({ e: 'sprayed', id: b.id, by: a.id });
   }
+}
+
+// ---- 特殊装備
+// 装備の切り替えから選ぶ: 盾は副武器と一緒に構える。ほかは手に持つ（slot 3）。もう一度選ぶと銃に戻す
+function selectLong(S, a, ev) {
+  const L = a.inv.long, ws = a.ws;
+  if (!L || L === 'none' || !LONG[L]) { ev.push({ e: 'deny', id: a.id, why: 'nolong' }); return; }
+  if (L === 'shield') {
+    if (ws.slot === 1 && ws.st !== 'holster') { if (a.inv.w[0]) switchTo(S, a, 0, ev); }
+    else if (a.inv.w[1]) switchTo(S, a, 1, ev);
+    ev.push({ e: 'longsel', id: a.id, k: L, on: ws.next === 1 || (ws.slot === 1 && ws.st !== 'holster') });
+    return;
+  }
+  if (!HAND_LONG[L]) return;
+  if (ws.slot === 3 && ws.st !== 'holster') { switchTo(S, a, ws.prev >= 0 && a.inv.w[ws.prev] ? ws.prev : (a.inv.w[0] ? 0 : 1), ev); return; }
+  if (switchTo(S, a, 3, ev)) ev.push({ e: 'longsel', id: a.id, k: L, on: true });
+}
+
+// 手に持った特殊装備: 引き金で使う
+function longInHand(S, w, a, dt, ev) {
+  const ws = a.ws, inp = a._inp || {}, L = a.inv.long;
+  if (!HAND_LONG[L]) { switchTo(S, a, a.inv.w[0] ? 0 : 1, ev); return; }
+  if (ws.st !== 'ready' && ws.st !== 'long') { ws.longTrig = !!inp.fire; return; }
+  ws.st = 'long';
+  if (ws.lt > 0) {
+    ws.lt -= dt;
+    if (ws.lt <= 0) { ws.lt = 0; ev.push({ e: 'reloaded', id: a.id }); }
+  }
+  const press = !!inp.fire && !ws.longTrig;
+  ws.longTrig = !!inp.fire;
+  if (!press || ws.lt > 0 || a.act || a.peek || a.sprint || a.vault) return;
+  if (L === 'm320') {
+    const m = a.inv.m320;
+    if (!m) return;
+    if (!(m[m.sel] > 0)) m320Next(a, null);
+    if (!(m[m.sel] > 0)) { ev.push({ e: 'dry', id: a.id }); ev.push({ e: 'deny', id: a.id, why: 'noammo' }); return; }
+    m[m.sel]--;
+    launchNade(S, a, m.sel, ev);
+    a.fireK = 1;
+    // 1発ずつ込める（中折れ）。弾が残っていれば自動で込める
+    const left = m.flash + m.stinger + m.cs;
+    if (!(m[m.sel] > 0)) m320Next(a, null);
+    if (left > 0) { ws.lt = LONG.m320.reload || 2.6; ws.rd = ws.lt; ev.push({ e: 'reload', id: a.id, k: 'break', dur: ws.lt, long: 1 }); }
+    return;
+  }
+  if (L === 'wand') {
+    // 扉を見ていれば扉の下から、そうでなければ手を伸ばして角の先を
+    const c = contextOf(S, w, a);
+    if (c && c.k === 'door') { const op = c.ops.find(o => o.op === 'wand'); if (op) { startOp(S, w, a, c, op, ev); return; } }
+    startPeek(S, w, a, 'wand', ev, -1);
+    return;
+  }
+  if (L === 'ram' || L === 'breacher') {
+    const c = contextOf(S, w, a);
+    const want = L === 'ram' ? 'ram' : 'breach';
+    if (c && c.k === 'door') { const op = c.ops.find(o => o.op === want); if (op) { startOp(S, w, a, c, op, ev); return; } }
+    ev.push({ e: 'deny', id: a.id, why: 'needdoor' });
+  }
+}
+
+// ---- のぞく（ミラー・オプティワンド）: 扉の下や角の先にカメラを置く。見回すのは画面の側（体は動かない）
+export const PEEK = { mirror: { fov: 64, max: 1.25, time: 15 }, wand: { fov: 78, max: 1.6, time: 25 } };
+function startPeek(S, w, a, k, ev, did) {
+  let x, y, z, yaw0;
+  if (did >= 0) {
+    const d = w.doors[did], side = -sideOf(d, a.x, a.z);
+    // 扉の下から少し差し込む（振り返ると扉の枠と罠が見える）
+    const off = (d.th || 0.12) / 2 + 0.16;
+    x = d.cx + d.nx * side * off; z = d.cz + d.nz * side * off; y = d.L * LH + 0.06;
+    yaw0 = Math.atan2(d.nx * side, d.nz * side);
+  } else {
+    // 目の高さから少し下、前へ最大 0.6m（壁の手前で止める）
+    const e = eyeOf(S, a), fx = Math.sin(a.yaw), fz = Math.cos(a.yaw);
+    const y0 = e[1] - 0.12;
+    const hits = raycast(w, e[0], y0, e[2], fx, 0, fz, 0.75, S.doors, _rc);
+    let L = 0.6;
+    for (const h of hits) { if (h.mat === M.GLASSBROKEN) continue; L = Math.max(0.05, Math.min(L, h.t0 - 0.12)); break; }
+    x = e[0] + fx * L; y = y0; z = e[2] + fz * L; yaw0 = a.yaw;
+  }
+  const P = PEEK[k];
+  a.peek = { k, x, y, z, yaw0, door: did, t: 0, max: P.max, fov: P.fov, ax: a.x, az: a.z, spotT: 0, seen: [] };
+  peekSpot(S, w, a);
+  ev.push({ e: 'peek', id: a.id, k, x, y, z, yaw0, door: did, max: P.max, fov: P.fov, trap: did >= 0 && !!S.doors[did].trap, locked: did >= 0 && !!(S.doors[did].locked && !S.doors[did].lockBroken) });
+}
+// カメラから見える人（見回せる範囲・10m以内）。見えた人は気づかれやすくなる
+function peekSpot(S, w, a) {
+  const P = a.peek;
+  const seen = [];
+  for (const b of S.actors) {
+    if (b === a || !b.alive || b.isDrone) continue;
+    const dx = b.x - P.x, dz = b.z - P.z, d = Math.hypot(dx, dz);
+    if (d > 10 || Math.abs(b.y - (P.y - 0.06)) > 2.2) continue;
+    let da = Math.atan2(dx, dz) - P.yaw0; da = Math.atan2(Math.sin(da), Math.cos(da));
+    if (Math.abs(da) > P.max + 0.6) continue;
+    if (!los(w, P.x, P.y, P.z, b.x, b.y + 0.9, b.z, S.doors) && !los(w, P.x, P.y, P.z, b.x, b.y + 0.25, b.z, S.doors)) continue;
+    seen.push(b.id);
+    if (b.ai) b.ai.mirroredT = S.t;
+    b.spot = Math.max(b.spot || 0, 6);
+  }
+  P.seen = seen;
+  if (P.door >= 0) { const ds = S.doors[P.door]; if (ds.trap) ds.trapSeen = true; }
+}
+function stepPeek(S, w, a, dt, ev) {
+  const P = a.peek;
+  P.t += dt;
+  const moved = Math.hypot(a.x - P.ax, a.z - P.az) > 0.35;
+  const hurtNow = !a.alive || a.down || a.stun > 0.3 || a.flash > 0.5 || a.flinch > 0.6;
+  const dropped = P.k === 'wand' && P.door < 0 && a.ws.slot !== 3;
+  if (moved || hurtNow || dropped || a.act || P.t > PEEK[P.k].time) { endPeek(S, w, a, ev, moved ? 'move' : hurtNow ? 'hurt' : 'time'); return; }
+  P.spotT -= dt;
+  if (P.spotT <= 0) { P.spotT = 0.4; peekSpot(S, w, a); }
+}
+function endPeek(S, w, a, ev, why) {
+  const P = a.peek;
+  if (!P) return;
+  a.peek = null;
+  ev.push({ e: 'peekend', id: a.id, k: P.k, why, n: P.seen.length });
 }
 
 // 仕掛けたC2・壁の爆破薬を起爆

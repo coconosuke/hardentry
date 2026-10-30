@@ -5,21 +5,18 @@ import { LAYER } from './textures.js';
 import { WEAPONS } from '../engine/data/weapons.js';
 
 const K = {
-  blk: hex('#24262a'), dg: hex('#33363b'), mg: hex('#4d5157'), steel: hex('#6c7178'), fde: hex('#a08766'), wood: hex('#6b4529'), woodL: hex('#8a5a34'),
+  blk: hex('#2d2f34'), dg: hex('#3b3e44'), mg: hex('#565a61'), steel: hex('#6c7178'), fde: hex('#a08766'), wood: hex('#6b4529'), woodL: hex('#8a5a34'),
   od: hex('#47502f'), grn: hex('#2a2f28'), orange: hex('#d46224'), yel: hex('#d8b62a'), plum: hex('#4a2a22'), smoke: hex('#4a4640'), tan: hex('#b39a72'), brass: hex('#b08a3e'),
 };
 
-// 向きのある箱（中心 c、軸 u v w、半分の長さ）
+// 面取りの幅: 部品の一番細い所の2割（0.6〜4mm）。小さな部品ほど細かく、縁に光が乗る
+const bev = (a, b, c) => Math.max(0.0006, Math.min(0.004, Math.min(a, b, c) * 0.2));
+// 向きのある箱（中心 c、軸 u v w、半分の長さ）。面取りつき
 function obox(B, c, u, v, w, hu, hv, hw, layer, col) {
-  const P = (a, b, d) => [c[0] + u[0] * a + v[0] * b + w[0] * d, c[1] + u[1] * a + v[1] * b + w[1] * d, c[2] + u[2] * a + v[2] * b + w[2] * d];
-  const f = (p0, p1, p2, p3, n) => B.quad(p0, p1, p2, p3, n, [0, 0, 1, 0, 1, 1, 0, 1], layer, col);
-  const neg = (a) => [-a[0], -a[1], -a[2]];
-  f(P(hu, -hv, hw), P(hu, -hv, -hw), P(hu, hv, -hw), P(hu, hv, hw), u);
-  f(P(-hu, -hv, -hw), P(-hu, -hv, hw), P(-hu, hv, hw), P(-hu, hv, -hw), neg(u));
-  f(P(-hu, hv, hw), P(hu, hv, hw), P(hu, hv, -hw), P(-hu, hv, -hw), v);
-  f(P(-hu, -hv, -hw), P(hu, -hv, -hw), P(hu, -hv, hw), P(-hu, -hv, hw), neg(v));
-  f(P(-hu, -hv, hw), P(hu, -hv, hw), P(hu, hv, hw), P(-hu, hv, hw), w);
-  f(P(hu, -hv, -hw), P(-hu, -hv, -hw), P(-hu, hv, -hw), P(hu, hv, -hw), neg(w));
+  const prev = B.xf;
+  B.xf = [u[0], u[1], u[2], v[0], v[1], v[2], w[0], w[1], w[2], c[0], c[1], c[2]];
+  B.bbox(-hu, -hv, -hw, hu, hv, hw, bev(hu * 2, hv * 2, hw * 2), layer, col);
+  B.xf = prev;
 }
 // 傾いた握り: 上の点 (y0,z0) から下の点 (y1,z1) へ、厚さ x、前後 d
 function grip(B, y0, z0, y1, z1, hx, hd, col, layer = LAYER.rubber) {
@@ -29,7 +26,7 @@ function grip(B, y0, z0, y1, z1, hx, hd, col, layer = LAYER.rubber) {
   const u = [1, 0, 0], w = cross(u, v);
   obox(B, c, u, v, w, hx, L, hd, layer, col);
 }
-const bx = (B, x0, y0, z0, x1, y1, z1, col, layer = LAYER.paint) => B.box(Math.min(x0, x1), Math.min(y0, y1), Math.min(z0, z1), Math.max(x0, x1), Math.max(y0, y1), Math.max(z0, z1), layer, col);
+const bx = (B, x0, y0, z0, x1, y1, z1, col, layer = LAYER.paint) => { const a = Math.min(x0, x1), b = Math.min(y0, y1), c = Math.min(z0, z1), d = Math.max(x0, x1), e = Math.max(y0, y1), g = Math.max(z0, z1); B.bbox(a, b, c, d, e, g, bev(d - a, e - b, g - c), layer, col); };
 const sbx = (B, hx, y0, z0, y1, z1, col, layer) => bx(B, -hx, y0, z0, hx, y1, z1, col, layer);
 const tz = (B, z0, z1, r, y, col, seg = 8, r1, x = 0) => B.tube([x, y, z0], [x, y, z1], r, r1 ?? r, seg, LAYER.metal, col, { caps: true });
 // 照門（のぞき穴の輪）: 照準の線 y を中心に、まわりの枠だけ
@@ -391,6 +388,15 @@ const MODELS = {
   },
 };
 
+// ピストル用ドットサイト（スライドの後ろの上）
+function addPistolDot(B, P) {
+  const top = P.sightY - 0.005, z = -0.045;
+  sbx(B, 0.011, top, z - 0.022, top + 0.006, z + 0.02, K.blk);
+  for (const sx of [1, -1]) bx(B, sx * 0.0125, top + 0.004, z - 0.02, sx * 0.0095, top + 0.024, z + 0.016, K.blk);
+  sbx(B, 0.0125, top + 0.02, z - 0.02, top + 0.025, z + 0.016, K.blk);
+  sbx(B, 0.0095, top + 0.004, z + 0.012, top + 0.007, z + 0.016, K.dg);
+  P.sightY = top + 0.015; P.optic = { kind: 'reddot', z, r: 0.008, y: top + 0.015 };
+}
 // アタッチメント
 function addSight(B, P, kind) {
   const ry = P.railY ?? 0.052, z0 = P.railZ ? P.railZ[0] : -0.05, z1 = P.railZ ? P.railZ[1] : 0.05;
@@ -450,6 +456,119 @@ function addLight(B, P) {
 
 // 1丁の見た目を作る（キャッシュ）。wi: 持っている銃 {id, att}
 const cache = new Map();
+// ---- 特殊装備（手に持つ物）と防弾盾。座標は銃と同じ（X=左、Y=上、Z=前）
+const LONG_MODELS = {
+  // M320A1（単体・伸縮ストック付き）。40mmの太い銃身、横に開く薬室、前の握り
+  m320(B, P) {
+    tz(B, 0.02, 0.27, 0.024, 0, K.blk, 12);
+    tz(B, 0.245, 0.27, 0.026, 0, K.dg, 12);
+    B.tube([0, 0, 0.268], [0, 0, 0.2705], 0.019, 0.019, 12, LAYER.metal, hex('#0c0c0d'), { caps: true });
+    bx(B, -0.032, -0.036, -0.095, 0.032, 0.03, 0.05, K.dg, LAYER.paint);
+    bx(B, -0.011, 0.03, -0.085, 0.011, 0.041, 0.04, K.blk, LAYER.metal);
+    for (let z = -0.075; z < 0.035; z += 0.016) bx(B, -0.012, 0.041, z, 0.012, 0.045, z + 0.008, K.blk, LAYER.metal);
+    peep(B, 0.062, -0.07, K.blk, 0.045);
+    bx(B, -0.007, 0.024, 0.19, 0.007, 0.04, 0.215, K.blk); post(B, 0.062, 0.205, K.blk, 0.04);
+    grip(B, -0.03, -0.055, -0.13, -0.085, 0.016, 0.023, K.blk);
+    bx(B, -0.005, -0.068, -0.045, 0.005, -0.062, 0.025, K.blk); bx(B, -0.005, -0.068, 0.019, 0.005, -0.034, 0.025, K.blk);
+    bx(B, -0.026, -0.05, 0.06, 0.026, -0.02, 0.2, K.dg, LAYER.rubber);
+    sbx(B, 0.014, -0.125, 0.115, -0.05, 0.15, K.blk, LAYER.rubber);
+    tz(B, -0.3, -0.09, 0.007, -0.004, K.mg, 6); tz(B, -0.3, -0.09, 0.007, -0.042, K.mg, 6);
+    bx(B, -0.022, -0.072, -0.325, 0.022, 0.022, -0.295, K.blk, LAYER.rubber);
+    P.sightY = 0.062; P.eyeZ = -0.24; P.muzzle = 0.27; P.railZ = null; P.rail2 = null; P.foreY = -0.05; P.breakAction = true;
+    P.gripR = [0, -0.095, -0.075]; P.gripL = [0, -0.1, 0.133]; P.magWell = [0, 0.0, 0.0];
+  },
+  // オプティワンド: 握りと画面、伸びる棒、先で曲がるカメラ
+  wand(B, P) {
+    B.tube([0, -0.03, -0.09], [0, -0.03, 0.05], 0.017, 0.016, 10, LAYER.rubber, K.dg, { caps: true });
+    for (let z = -0.08; z < 0.04; z += 0.025) B.tube([0, -0.03, z], [0, -0.03, z + 0.008], 0.0178, 0.0178, 10, LAYER.rubber, K.blk);
+    bx(B, -0.012, -0.015, -0.03, 0.012, 0.03, 0.0, K.blk);
+    // 画面（使う人の側を向く）
+    B.xf = [1, 0, 0, 0, 0.94, -0.34, 0, 0.34, 0.94, 0, 0.075, -0.03];
+    B.bbox(-0.058, -0.042, -0.012, 0.058, 0.042, 0.012, 0.004, LAYER.rubber, K.blk);
+    B.bbox(-0.05, -0.034, -0.0135, 0.05, 0.034, -0.0115, 0.001, LAYER.plain, hex('#2a4a5c'));
+    B.xf = null;
+    B.tube([0, -0.03, 0.05], [0, -0.03, 0.22], 0.0075, 0.007, 8, LAYER.metal, K.steel, { caps: true });
+    B.tube([0, -0.03, 0.22], [0, -0.03, 0.38], 0.0065, 0.006, 8, LAYER.metal, K.steel, { caps: true });
+    B.tube([0, -0.03, 0.38], [0, -0.03, 0.52], 0.0055, 0.005, 8, LAYER.metal, K.mg, { caps: true });
+    B.tube([0, -0.03, 0.52], [0, -0.05, 0.555], 0.006, 0.006, 8, LAYER.rubber, K.blk, { caps: true });
+    B.tube([0, -0.05, 0.555], [0, -0.062, 0.575], 0.009, 0.009, 10, LAYER.metal, K.dg, { caps: true });
+    B.tube([0, -0.0625, 0.5755], [0, -0.0635, 0.577], 0.006, 0.006, 10, LAYER.plain, hex('#9fd6ff'), { caps: true });
+    P.sightY = 0.09; P.eyeZ = -0.34; P.muzzle = 0.57; P.railZ = null; P.rail2 = null; P.pistol = true; P.foreY = -0.03;
+    P.gripR = [0, -0.035, -0.05]; P.gripL = [0.03, -0.03, 0.13]; P.magWell = [0, -0.03, 0.0];
+  },
+  // 破城槌: 太い鋼の筒、上に2つの取っ手、前に打つ面
+  ram(B, P) {
+    B.tube([0, 0, -0.3], [0, 0, 0.34], 0.056, 0.056, 14, LAYER.metal, hex('#2f3136'), { caps: true });
+    bx(B, -0.066, -0.066, 0.34, 0.066, 0.066, 0.372, K.steel, LAYER.metal);
+    bx(B, -0.05, -0.05, -0.325, 0.05, 0.05, -0.3, K.dg, LAYER.metal);
+    for (const z0 of [-0.25, 0.07]) {
+      tz(B, z0, z0 + 0.14, 0.012, 0.135, K.blk, 8);
+      B.tube([0, 0.05, z0 + 0.005], [0, 0.135, z0 + 0.005], 0.011, 0.011, 8, LAYER.metal, K.dg, { caps: true });
+      B.tube([0, 0.05, z0 + 0.135], [0, 0.135, z0 + 0.135], 0.011, 0.011, 8, LAYER.metal, K.dg, { caps: true });
+      for (let z = z0 + 0.02; z < z0 + 0.13; z += 0.02) B.tube([0, 0.135, z], [0, 0.135, z + 0.01], 0.0135, 0.0135, 8, LAYER.rubber, K.blk);
+    }
+    bx(B, -0.0575, -0.012, -0.1, -0.055, 0.012, 0.25, hex('#c9a227'), LAYER.paint);
+    bx(B, 0.055, -0.012, -0.1, 0.0575, 0.012, 0.25, hex('#c9a227'), LAYER.paint);
+    P.sightY = 0.2; P.eyeZ = -0.45; P.muzzle = 0.37; P.railZ = null; P.rail2 = null; P.heavy = true;
+    P.gripR = [0, 0.135, -0.18]; P.gripL = [0, 0.135, 0.14]; P.magWell = [0, 0, 0];
+  },
+  // ブリーチング用の散弾銃: 短い銃身、ピストルグリップ、銃口の歯（スタンドオフ）
+  breacher(B, P) {
+    bx(B, -0.022, -0.032, -0.11, 0.022, 0.022, 0.08, K.blk, LAYER.metal);
+    tz(B, 0.08, 0.42, 0.0105, 0.006, K.dg, 10);
+    tz(B, 0.06, 0.36, 0.011, -0.019, K.blk, 10);
+    bx(B, -0.025, -0.042, 0.13, 0.025, 0.002, 0.28, K.blk, LAYER.rubber);
+    for (let z = 0.145; z < 0.27; z += 0.02) bx(B, -0.0255, -0.035, z, 0.0255, -0.005, z + 0.008, K.dg, LAYER.rubber);
+    B.tube([0, 0.006, 0.415], [0, 0.006, 0.46], 0.018, 0.018, 12, LAYER.metal, K.mg, { caps: true });
+    for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2; const x = Math.cos(a) * 0.015, y = 0.006 + Math.sin(a) * 0.015; bx(B, x - 0.004, y - 0.004, 0.46, x + 0.004, y + 0.004, 0.476, K.steel, LAYER.metal); }
+    grip(B, -0.02, -0.09, -0.125, -0.135, 0.016, 0.023, K.blk);
+    bx(B, -0.004, -0.05, -0.07, 0.004, -0.046, -0.02, K.blk); bx(B, -0.004, -0.05, -0.02, 0.004, -0.03, -0.016, K.blk);
+    bx(B, -0.002, 0.016, 0.395, 0.002, 0.03, 0.405, K.brass, LAYER.metal);
+    P.sightY = 0.03; P.eyeZ = -0.32; P.muzzle = 0.476; P.railZ = null; P.rail2 = null; P.foreY = -0.04;
+    P.gripR = [0, -0.088, -0.105]; P.gripL = [0, -0.032, 0.2]; P.magWell = [0, -0.03, 0.05]; P.tube = true;
+  },
+};
+export function longModel(kind) {
+  const fn = LONG_MODELS[kind];
+  if (!fn) return null;
+  const key = 'long|' + kind;
+  let g = cache.get(key);
+  if (g) return g;
+  const B = new MeshBuilder(), P = { sightY: 0.06, eyeZ: -0.25, muzzle: 0.3 };
+  fn(B, P);
+  g = { key, wid: null, long: kind, body: B, mag: null, pump: null, pts: P, len: P.muzzle };
+  cache.set(key, g);
+  return g;
+}
+// 防弾盾（中心が原点、前が +Z）。上にのぞき窓（穴）、前に白い帯、後ろに握り
+export function shieldModel() {
+  const key = 'shield';
+  let g = cache.get(key);
+  if (g) return g;
+  const B = new MeshBuilder();
+  const hw = 0.28, hh = 0.46, t = 0.012, c = hex('#33363b'), rim = hex('#1d1e21');
+  const wx = 0.12, wy0 = 0.24, wy1 = 0.335;
+  B.bbox(-hw, wy1, -t, hw, hh, t, 0.006, LAYER.paint, c);
+  B.bbox(-hw, -hh, -t, hw, wy0, t, 0.006, LAYER.paint, c);
+  B.bbox(wx, wy0, -t, hw, wy1, t, 0.004, LAYER.paint, c);
+  B.bbox(-hw, wy0, -t, -wx, wy1, t, 0.004, LAYER.paint, c);
+  // のぞき窓の枠と、縁のゴム
+  B.bbox(-wx - 0.008, wy0 - 0.008, t - 0.002, wx + 0.008, wy0, t + 0.004, 0.002, LAYER.rubber, rim);
+  B.bbox(-wx - 0.008, wy1, t - 0.002, wx + 0.008, wy1 + 0.008, t + 0.004, 0.002, LAYER.rubber, rim);
+  B.bbox(-hw - 0.006, -hh - 0.006, -t - 0.004, hw + 0.006, -hh + 0.012, t + 0.004, 0.004, LAYER.rubber, rim);
+  B.bbox(-hw - 0.006, hh - 0.012, -t - 0.004, hw + 0.006, hh + 0.006, t + 0.004, 0.004, LAYER.rubber, rim);
+  B.bbox(-hw - 0.006, -hh, -t - 0.004, -hw + 0.012, hh, t + 0.004, 0.004, LAYER.rubber, rim);
+  B.bbox(hw - 0.012, -hh, -t - 0.004, hw + 0.006, hh, t + 0.004, 0.004, LAYER.rubber, rim);
+  // 前の白い帯（POLICE の表示の場所）と、ブロック状の文字
+  B.bbox(-0.2, 0.06, t, 0.2, 0.135, t + 0.002, 0.001, LAYER.paint, hex('#e6e6e2'));
+  for (let k = 0; k < 6; k++) { const x0 = -0.165 + k * 0.058; B.bbox(x0, 0.075, t + 0.002, x0 + 0.04, 0.12, t + 0.003, 0.0005, LAYER.paint, hex('#1b1c20')); }
+  // 後ろの握りと腕の帯
+  B.bbox(-0.02, -0.06, -t - 0.045, 0.02, 0.06, -t, 0.006, LAYER.rubber, rim);
+  B.bbox(-0.09, -0.2, -t - 0.02, 0.09, -0.16, -t, 0.004, LAYER.nylon, hex('#26282b'));
+  g = { key, body: B, pts: { hw, hh } };
+  cache.set(key, g);
+  return g;
+}
 export function gunModel(wid, att = {}) {
   const W = WEAPONS[wid];
   if (!W) return null;
@@ -459,7 +578,8 @@ export function gunModel(wid, att = {}) {
   const B = new MeshBuilder(), P = { sightY: 0.06, eyeZ: -0.25, muzzle: 0.3 };
   const fn = MODELS[W.model] || MODELS.ar15;
   fn(B, P, { mdl: W.mdl || {}, fde: W.mdl && W.mdl.fde });
-  if (att.sight && att.sight !== 'iron' && (P.railZ || P.pistol === undefined)) addSight(B, P, att.sight);
+  if (att.sight === 'rmr' && P.pistol) addPistolDot(B, P);
+  else if (att.sight && att.sight !== 'iron' && att.sight !== 'rmr' && (P.railZ || P.pistol === undefined)) addSight(B, P, att.sight);
   if (att.muzzle && att.muzzle !== 'none' && !W.integral) addMuzzle(B, P, att.muzzle, W.cat);
   if (att.grip) addGrip(B, P, att.grip);
   if (att.light) addLight(B, P);

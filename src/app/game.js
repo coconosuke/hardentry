@@ -17,6 +17,8 @@ import { ViewModel } from '../render/viewmodel.js';
 import { gunModel } from '../render/guns.js';
 import { roomGraph } from '../engine/ai/nav.js';
 import { LINES } from '../audio/lines.js';
+import { vfovOf } from './settings.js';
+import { gfxOf } from '../render/renderer.js';
 
 const DEG = Math.PI / 180;
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
@@ -35,6 +37,7 @@ export class Match {
     this.r.setMap(this.w, this.def, this.S);
     this.av = new ActorView(this.r); this.fx = new FX(this.r); this.vm = new ViewModel(this.r, this.av);
     this.fx.blood = app.settings.blood !== false;
+    { const g = gfxOf(app.settings); this.fx.amount = { low: 0.5, normal: 1, high: 1.5 }[g.fx] || 1; this.fx.shells = g.shells !== false; }
     this.av.hidden.add(this.p.id);
     this.hud.setPlan(this.w, this.def);
     this.hud.setMode({ pve: !this.S.pvp, pvp: this.S.pvp, drone: false });
@@ -50,6 +53,7 @@ export class Match {
     this.mmZoom = 1;
     this.droneId = null;
     this.prevBul = new Map();
+    this.pkYaw = 0; this.pkPitch = 0; this.pkEnd = false;
     // AI の隊員の色（服）
     this.vm.setColors(this.av.look(this.p).pal.slice(3, 6), [0.02, 0.02, 0.025]);
     this.net = o.net || null;
@@ -66,7 +70,7 @@ export class Match {
   }
   destroy() { this.r.clearMap(); this.fx.clear(); this.au.occluder = null; this.au.ambience(false); this.au.stopMusic(1.5); }
   rebind(r) {
-    if (r) { this.r = r; this.av = new ActorView(r); this.fx = new FX(r); this.vm = new ViewModel(r, this.av); this.fx.blood = this.app.settings.blood !== false; this.av.hidden.add(this.p.id); this.vm.setColors(this.av.look(this.p).pal.slice(3, 6), [0.02, 0.02, 0.025]); this.fx.onClink = (x, y, z) => this.au.sfx('shell', [x, y, z], { vol: 0.35 }); }
+    if (r) { this.r = r; this.av = new ActorView(r); this.fx = new FX(r); this.vm = new ViewModel(r, this.av); this.fx.blood = this.app.settings.blood !== false; { const g = gfxOf(this.app.settings); this.fx.amount = { low: 0.5, normal: 1, high: 1.5 }[g.fx] || 1; this.fx.shells = g.shells !== false; } this.av.hidden.add(this.p.id); this.vm.setColors(this.av.look(this.p).pal.slice(3, 6), [0.02, 0.02, 0.025]); this.fx.onClink = (x, y, z) => this.au.sfx('shell', [x, y, z], { vol: 0.35 }); }
     this.r.setMap(this.w, this.def, this.S);
   }
   applySettings() { this.fx.blood = this.app.settings.blood !== false; }
@@ -132,6 +136,8 @@ export class Match {
     const gy = st.gyro || 'off';
     if (gy === 'always' || (gy === 'ads' && ads > 0.5)) { const g = (st.gyroSens || 1) * DEG * (ads > 0.5 ? 0.7 : 1); dx -= inp.gyroX * g * (st.gyroInvX ? -1 : 1); dy -= inp.gyroY * g * (st.gyroInvY ? -1 : 1); }
     if (this.droneId != null) { const d = this.S.byId[this.droneId]; if (d && d.alive) { this.dyaw = (this.dyaw ?? d.yaw) - dx; this.dpitch = clamp((this.dpitch ?? 0) - dy * (st.invertY ? -1 : 1), -0.6, 0.6); return; } }
+    // のぞいている（ミラー・オプティワンド）: 見回すのはカメラだけ。体は動かない
+    if (p.peek) { const mx = p.peek.max || 1; this.pkYaw = clamp(this.pkYaw - dx * 0.8, -mx, mx); this.pkPitch = clamp(this.pkPitch - dy * 0.8 * (st.invertY ? -1 : 1), -0.55, 0.7); return; }
     this.yaw -= dx;
     this.pitch = clamp(this.pitch - dy * (st.invertY ? -1 : 1), -1.4, 1.4);
     if (!p.alive || p.down && !this.S.pvp) return;
@@ -179,7 +185,9 @@ export class Match {
           break;
         }
         case 'shout': if (k === 'tap' || k === 'long' || (k === 'down' && e.key)) { if (!e.key || k === 'down') this.acts.push({ a: 'shout', line: this._shoutLine() }); } break;
+        case 'peekx': if (k === 'tap' || k === 'down') this._peekQuit(); break;
         case 'use':
+          if (p.peek) { if (k === 'tap' || (k === 'down' && e.key)) this._peekQuit(); break; }
           if (k === 'tap' || (k === 'down' && e.key)) { if (!e.key || k === 'down') this._useDefault(); }
           else if (k === 'long') this._useMenu(e);
           break;
@@ -217,9 +225,14 @@ export class Match {
       act: this.acts.length ? this.acts.splice(0) : null, power: 0.75,
     };
     if (this.droneId != null) { cmd.mx = 0; cmd.mz = 0; cmd.fire = false; }
+    // のぞいている間: 撃つ・動くとやめる
+    if (p.peek) { if (cmd.fire || Math.hypot(cmd.mx, cmd.mz) > 0.3) this._peekQuit(); cmd.fire = false; cmd.ads = false; }
     // しゃがみの状態を体に合わせる（伏せられないなど）
     return cmd;
   }
+
+  // のぞくのをやめる（1回だけ送る）
+  _peekQuit() { if (this.pkEnd || !this.p.peek) return; this.pkEnd = true; this.acts.push({ a: 'peekend' }); }
 
   // ---- 調べる（その時できること）
   _useDefault() {
@@ -352,7 +365,11 @@ export class Match {
   _gearMenu(e) {
     const p = this.p;
     const items = p.inv.gear.filter(g => g.n > 0).map(g => ({ label: GEAR[g.id].name.replace(/（.*）/, ''), sub: '×' + g.n, go: () => { this.gearSel = g.id; if (GEAR[g.id].kind === 'nade' || GEAR[g.id].kind === 'spray' || GEAR[g.id].kind === 'heal') this.acts.push({ a: 'gear', id: g.id }); } }));
-    if (p.inv.long && p.inv.long !== 'none' && LONG[p.inv.long]) items.push({ label: LONG[p.inv.long].name.replace(/（.*）/, ''), sub: '長い装備', disabled: true });
+    if (p.inv.long && p.inv.long !== 'none' && LONG[p.inv.long]) {
+      const L = p.inv.long, on = L === 'shield' ? p.ws.slot === 1 : p.ws.slot === 3;
+      const sub = L === 'm320' && p.inv.m320 ? '弾 ' + (p.inv.m320.flash + p.inv.m320.stinger + p.inv.m320.cs) : on ? '銃に戻す' : '構える';
+      items.push({ label: LONG[L].name.replace(/（.*）/, '').replace(' グレネードランチャー', ''), sub, go: () => this.acts.push({ a: 'long' }) });
+    }
     if (!items.length) return;
     this.app.input.openRadial('gear', items, e.pid, e.x, e.y);
     this.app.input.radial.title = '装備';
@@ -436,7 +453,7 @@ export class Match {
           if (e.k === 'locked' && e.id !== me && S.byId[e.id] && S.byId[e.id].kind === 'swat') this._say(S.byId[e.id], 'swat_locked');
           break;
         }
-        case 'deny': if (e.id === me) { const why = { locked: '鍵がかかっている', wedged: 'ウェッジで開かない', barred: 'バリケード', nogear: '残数なし', nodet: '起爆対象なし', open: '開いている', broken: '破損' }[e.why]; if (why) hud.showBanner(why, 1400); au.ui('deny'); } break;
+        case 'deny': if (e.id === me) { const why = { locked: '鍵がかかっている', wedged: 'ウェッジで開かない', barred: 'バリケード', nogear: '残数なし', nodet: '起爆対象なし', open: '開いている', broken: '破損', needdoor: '閉じた扉を見て使う', nolong: '特殊装備なし', noammo: '弾がない' }[e.why]; if (why) hud.showBanner(why, 1400); au.ui('deny'); } break;
         case 'nade': { if (e.type === 'cs') { for (let i = 0; i < 8; i++) fx.smoke(e.x, e.y + 0.4, e.z, 1.2, [0.85, 0.85, 0.8], 0.5, 6); au.sfx('gasPop', [e.x, e.y, e.z]); } else { fx.explosion(e.x, e.y, e.z, 3, e.type === 'flash' ? 'flash' : 'stinger'); au.sfx(e.type === 'flash' ? 'flashbang' : 'stinger', [e.x, e.y, e.z]); } const d = Math.hypot(e.x - this.cam.x, e.z - this.cam.z); this.shake = Math.max(this.shake, Math.max(0, 1 - d / 10) * 0.6); break; }
         case 'boom': case 'c2': { fx.explosion(e.x, e.y, e.z, e.r || 3, e.kind || 'c2'); au.sfx('explosion', [e.x, e.y, e.z], { vol: 1.2 }); const d = Math.hypot(e.x - this.cam.x, e.z - this.cam.z); this.shake = Math.max(this.shake, Math.max(0, 1 - d / 18)); break; }
         case 'flashed': if (e.id === me) { this.flashW = Math.max(this.flashW, Math.min(1, 0.4 + e.k * 1.2)); au.deafen(2 + 4 * e.k); } break;
@@ -482,6 +499,14 @@ export class Match {
         case 'fall': if (e.id === me) au.sfx('land', null); break;
         case 'throw': { const a = S.byId[e.id]; au.sfx('throw', a === p ? null : [a.x, a.y + 1.5, a.z], { vol: 0.6 }); break; }
         case 'bounce': if (e.v > 2) au.sfx('nadeBounce', [e.x, e.y, e.z], { vol: Math.min(1, e.v / 8) }); break;
+        case 'launch': { const a = S.byId[e.id]; if (!a) break; au.sfx('launch', a === p ? null : [a.x, a.y + 1.4, a.z], { vol: 0.9 }); if (a === p) { this.shake = Math.max(this.shake, 0.3); if (this.vm.on) { const mz = this.vm.out.muzzle, f = this.vm.out.fwd; fx.smoke(mz[0] + f[0] * 0.1, mz[1], mz[2] + f[2] * 0.1, 0.25, [0.75, 0.74, 0.7], 0.25, 1.2); } } break; }
+        case 'shieldhit': { const mine = e.id === me; au.sfx('plateHit', mine ? null : [e.x, e.y, e.z], { vol: mine ? 0.85 : 0.55 }); if (mine) { this.shake = Math.min(1, this.shake + (e.less ? 0.08 : 0.22)); const src = S.byId[e.by]; if (src) hud.damageFrom(Math.atan2(src.x - p.x, src.z - p.z)); } if (e.by === me) au.ui('hitArmor'); break; }
+        case 'peek': if (e.id === me) { this.pkYaw = 0; this.pkPitch = e.door >= 0 ? 0.08 : 0; this.pkEnd = false; this.adsOn = false; au.sfx('mirror', null, { vol: 0.35 }); } break;
+        case 'peekend': if (e.id === me) this.pkEnd = false; break;
+        case 'longsel': if (e.id === me) au.sfx('draw', null, { vol: 0.5 }); break;
+        case 'm320sel': if (e.id === me) { au.sfx('fmode', null, { vol: 0.5 }); hud.showBanner(`${ROUND_NAME[e.sel] || e.sel} ×${e.n ?? 0}`, 900); } break;
+        case 'gearsel': if (e.id === me) au.sfx('draw', null, { vol: 0.3 }); break;
+        case 'gearhint': if (e.id === me) hud.showBanner(`${GEAR[e.g] ? GEAR[e.g].name.replace(/（.*）/, '') : ''}<br><small>扉や壁を見て「調べる」を長押し</small>`, 2200); break;
       }
     }
     if (this._rebuild && this._rebuild.size) { this.r.rebuildCells([...this._rebuild], S); this._rebuild.clear(); }
@@ -523,11 +548,16 @@ export class Match {
     if (drone && drone.alive) {
       cam = { x: drone.x, y: drone.y + 0.14, z: drone.z, yaw: drone.yaw, pitch: drone.pitch, roll: 0, fov: 70 * DEG };
       this.av.hidden.delete(p.id);
+    } else if (p.peek && p.alive && !(p.down && !S.pvp)) {
+      // ミラー・オプティワンドの視点（扉の下・角の先）
+      const pk = p.peek;
+      cam = { x: pk.x, y: pk.y, z: pk.z, yaw: pk.yaw0 + this.pkYaw, pitch: this.pkPitch, roll: 0, fov: (pk.fov || 70) * DEG };
+      if (!this.av.hidden.has(p.id)) this.av.hidden.add(p.id);
     } else if (p.alive && !(p.down && !S.pvp)) {
       const e = eyeOf(S, p);
       const W = curW(p), wi = curWeapon(p);
       const zoom = wi ? attMods(wi).zoom : 1;
-      const fov0 = (st.fov || 52) * DEG;
+      const fov0 = vfovOf(st.hfov);
       const z = 1 + (zoom - 1) * p.ads;
       // 被弾のぶれ（エイムパンチ）と揺れ
       this.shake = Math.max(0, this.shake - dt * 1.8);
@@ -553,7 +583,8 @@ export class Match {
       this.av.hidden.delete(p.id);
     }
     this.cam = cam;
-    this.au.listen(cam.x, cam.y, cam.z, cam.yaw, cam.pitch);
+    // 音は体の位置で聞く（のぞいているときも）
+    if (p.peek && p.alive) { const e = eyeOf(S, p); this.au.listen(e[0], e[1], e[2], p.yaw, p.pitch); } else this.au.listen(cam.x, cam.y, cam.z, cam.yaw, cam.pitch);
     // 屋内か屋外か（残響と環境音）
     this._envT = (this._envT || 0) - dt;
     if (this._envT <= 0) {
@@ -566,7 +597,7 @@ export class Match {
     }
     // 人と効果
     this.av.prepare(S, this.w);
-    const fp = !this.dead && p.alive && !(p.down && !S.pvp) && !(drone && drone.alive);
+    const fp = !this.dead && p.alive && !(p.down && !S.pvp) && !(drone && drone.alive) && !p.peek;
     if (fp) this.vm.update(p, cam, dt); else this.vm.on = false;
     // 曳光弾
     for (const b of S.bullets) {
@@ -587,7 +618,7 @@ export class Match {
     const roomsFor = (x, y, z, R) => this._lightRooms(x, y, z, R);
     if (fp && this.vm.out.light) { const o = this.vm.out.light, f = this.vm.out.fwd; lights.push({ x: o[0] + f[0] * 0.05, y: o[1], z: o[2] + f[2] * 0.05, r: 22, col: [5.5, 5.2, 4.6], spot: { dx: f[0], dy: f[1], dz: f[2], cos: Math.cos(0.42) }, rooms: roomsFor(o[0], o[1], o[2], 22) }); }
     for (const e2 of this.av.list) {
-      if (e2.drone || !e2.gun || !e2.gun.wi.lightOn || lights.length >= 6) continue;
+      if (e2.drone || !e2.gun || !e2.gun.wi || !e2.gun.wi.lightOn || lights.length >= 6) continue;
       const g = e2.gun.f, gm = gunModel(e2.gun.wi.id, e2.gun.wi.att);
       const lp = gm && gm.pts.lightPt ? gm.pts.lightPt : [0, 0, 0.3];
       const x = g.p[0] + g.l[0] * lp[0] + g.u[0] * lp[1] + g.f[0] * lp[2], y = g.p[1] + g.l[1] * lp[0] + g.u[1] * lp[1] + g.f[1] * lp[2], z = g.p[2] + g.l[2] * lp[0] + g.u[2] * lp[1] + g.f[2] * lp[2];
@@ -598,8 +629,10 @@ export class Match {
     lights.sort((a, b) => (a.spot ? 0 : 1) - (b.spot ? 0 : 1));
     // 明るさに目が慣れる（屋内と屋外）
     const sky = r.sky;
-    const tgtE = (sky ? sky.exposure : 1) * (this._localDark(cam) ? 1.25 : 1);
-    this.exposure += (tgtE - this.exposure) * (1 - Math.exp(-dt * 1.5));
+    // 目の慣れ（自動露出）: まわりの明るさに合わせて、暗い部屋では明るく、外では抑える（ゆっくり追う）
+    const lb = this._localBright(cam);
+    const tgtE = (sky ? sky.exposure : 1) * (lb == null ? 1 : Math.max(0.8, Math.min(1.9, Math.pow(0.45 / (lb + 0.05), 0.45))));
+    this.exposure += (tgtE - this.exposure) * (1 - Math.exp(-dt * (tgtE > this.exposure ? 1.2 : 2.2)));
     this.flashW = Math.max(0, this.flashW - dt * 0.35);
     this.dmgK = Math.max(0, this.dmgK - dt * 1.2);
     this.suppK = Math.max(0, this.suppK - dt * 0.8);
@@ -612,11 +645,24 @@ export class Match {
     const room = roomOf(this.w, cam.x, cam.y - 1, cam.z);
     r.render({
       cam, doors: S.doors, lights, dt,
-      post: { exposure: this.exposure * (st.bright || 1), nvg, flash, damage: Math.max(this.dmgK * 0.8, lowHp), supp: this.suppK * 0.8, gas, blur: Math.max(this.blurK, gas * 0.5, p.stun > 0 ? 0.4 : 0, flash * 0.6), vig: 0.32 },
-      vm: fp ? { fov: 54 * DEG, room } : null, shadows: st.quality !== 'low',
+      post: { exposure: this.exposure * (st.bright || 1), nvg: nvg && !p.peek, flash, damage: Math.max(this.dmgK * 0.8, lowHp), supp: this.suppK * 0.8, gas, blur: Math.max(this.blurK, gas * 0.5, p.stun > 0 ? 0.4 : 0, flash * 0.6), vig: p.peek ? 0.15 : (st.vignette === false ? 0.08 : 0.32), sat: st.sat ?? 1.08, peek: p.peek ? (p.peek.k === 'mirror' ? 2 : 1) : 0 },
+      vm: fp ? { fov: (st.vmFov || 54) * DEG, room } : null, shadows: st.shadows !== 'off' && st.quality !== 'low',
       ambMin: nvg ? 0.02 : 0,
     });
     if (this.intro > 0) { this.intro -= dt; this.app.fade(Math.max(0, this.intro / 1.2)); if (this.intro <= 0) this.app.fade(0); }
+  }
+  // カメラのまわり（5×5マス、床のマスだけ）の焼いた明るさの平均
+  _localBright(cam) {
+    const w = this.w, b = w._bright; if (!b) return null;
+    const ci = Math.floor(cam.x / CS), cj = Math.floor(cam.z / CS), L = Math.max(0, Math.min(w.NL - 1, Math.floor((cam.y - 0.3) / LH)));
+    let s = 0, n = 0;
+    for (let dj = -2; dj <= 2; dj++) for (let di = -2; di <= 2; di++) {
+      const i = ci + di, j = cj + dj; if (i < 0 || j < 0 || i >= w.W || j >= w.D) continue;
+      const k = w.idx(L, i, j), t = w.cell[k];
+      if (t !== 1 && t !== 2 && t !== 10) continue; // 床・屋外・階段
+      s += b[k]; n++;
+    }
+    return n ? s / n : null;
   }
   _localDark(cam) {
     const b = this.w._bright; if (!b) return false;
@@ -672,7 +718,15 @@ export class Match {
     if (c) prompt = `${ctxName(c, S)}: ${OP_NAME[c.def.op] || c.def.op}` + (c.ops.length > 1 ? '（長押し: メニュー）' : '');
     if (p.act) { v.prog = Math.min(1, p.act.t / p.act.dur); v.progLabel = OP_NAME[p.act.k] || ''; prompt = ''; }
     if (this.droneId != null) prompt = 'ドローン ― 射撃: マーク／乗り越え: ジャンプ／ドローン: 戻る';
+    // 手に持った特殊装備の使い方
+    if (!p.act && p.ws.slot === 3 && !p.peek && p.ws.st !== 'holster') {
+      const L = p.inv.long, door = c && c.k === 'door';
+      if (L === 'ram' || L === 'breacher') prompt = door && c.ops.some(o => o.op === (L === 'ram' ? 'ram' : 'breach')) ? `射撃: ${L === 'ram' ? '破城槌で開ける' : '散弾で開ける'}` : '閉じた扉を見て、射撃で使う';
+      else if (L === 'wand') prompt = door && c.ops.some(o => o.op === 'wand') ? '射撃: 扉の下をのぞく' : '射撃: 角の先をのぞく';
+    }
     v.prompt = prompt;
+    // のぞいている間
+    hud.setPeek(p.peek && p.alive ? p.peek.k : null);
     // 目的
     const ob = this._objectives();
     v.objKey = ob.key; v.objHTML = ob.html;
@@ -761,6 +815,7 @@ export function cmdName(c, stage) {
   return ({ move: '移動', hold: '待機', cover: '援護', fallin: '集合', stack: 'スタック', breach: stage === 'clear' ? '確保' : stage === 'enter' ? '突入中' : stage === 'nade' ? '投げ物' : stage === 'open' ? '開ける' : '突入', mirror: 'ミラー', wedge: 'ウェッジ', unwedge: 'ウェッジを外す', disarm: '罠の解除', pick: 'ピッキング', restrain: '拘束', deploy: '投入', search: '捜索して確保' })[c] || c;
 }
 function whyName(w) { return ({ elim: '全滅', time: '時間切れ', defuse: '解除装置が作動', disable: '解除装置を外した' })[w] || ''; }
+const ROUND_NAME = { flash: '閃光弾', stinger: 'スティンガー弾', cs: 'CSガス弾' };
 function mirrorHTML(e, S) {
   if (!e.seen.length && !e.trap) return '<b>ミラー</b>扉の向こうに人は見えない' + (e.locked ? '・鍵がかかっている' : '');
   const k = (s) => s.kind === 'sus' ? (s.armed ? '武装した容疑者' : '容疑者') : s.kind === 'civ' ? '市民' : '隊員';

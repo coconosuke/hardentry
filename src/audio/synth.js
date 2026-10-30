@@ -98,6 +98,8 @@ function gunSupp(sr, seed, kind) {
 }
 // ビーンバッグ（弱い装薬の散弾）・ペッパーボール（圧縮空気）・テーザー
 function beanShot(sr, seed) { const r = rng(seed), out = buf(sr, 0.35); mixInto(out, blast(sr, r, 0.1, 3800, 0.012), 0, 1); mixInto(out, thump(sr, r, 120, 50, 0.18, 1), 0, 1); mixInto(out, clack(sr, r, 1800, 0.05, 0.3), S(sr, 0.03), 1); return fadeEdges(normalize(sat(out, 1.3), 0.85), sr); }
+// M320（40mm）: 低い「ポン」と、筒の響き
+function launchShot(sr, seed) { const r = rng(seed), out = buf(sr, 0.6); mixInto(out, blast(sr, r, 0.12, 2400, 0.02), 0, 0.8); mixInto(out, thump(sr, r, 85, 38, 0.32, 1.4), 0, 1); const n = S(sr, 0.4); const t = noise(n, r); bp(t, 420, 2.5, sr); mulEnv(t, expEnv(n, sr, 0.004, 0.12)); mixInto(out, t, S(sr, 0.01), 0.5); mixInto(out, clack(sr, r, 1500, 0.06, 0.4), S(sr, 0.04), 1); return fadeEdges(normalize(sat(out, 1.4), 0.9), sr); }
 function airShot(sr, seed) { const r = rng(seed), out = buf(sr, 0.22); const n = S(sr, 0.09); const p = noise(n, r); bp(p, 1800, 0.7, sr); mulEnv(p, expEnv(n, sr, 0.0008, 0.02)); mixInto(out, p, 0, 1); mixInto(out, thump(sr, r, 220, 120, 0.05, 0.4), 0, 1); mixInto(out, clack(sr, r, 2800, 0.04, 0.4), S(sr, 0.03), 1); return fadeEdges(normalize(out, 0.7), sr); }
 function taserShot(sr, seed) {
   const r = rng(seed), out = buf(sr, 1.4);
@@ -222,7 +224,7 @@ export const SFX = {
   ...Object.fromEntries(Object.keys(GUNS).map(k => [k, [(sr, i) => gunNear(sr, 1000 + i * 17 + k.length * 3 + k.charCodeAt(1), k), 3]])),
   far_r: [(sr, i) => gunFar(sr, 77 + i, 'r'), 2], far_p: [(sr, i) => gunFar(sr, 91 + i, 'p'), 2], far_s: [(sr, i) => gunFar(sr, 99 + i, 's'), 2],
   sup_r: [(sr, i) => gunSupp(sr, 120 + i, 'r'), 3], sup_p: [(sr, i) => gunSupp(sr, 140 + i, 'p'), 3],
-  bean: [(sr, i) => beanShot(sr, 160 + i), 2], air: [(sr, i) => airShot(sr, 170 + i), 2], taser: [(sr, i) => taserShot(sr, 180 + i), 1],
+  bean: [(sr, i) => beanShot(sr, 160 + i), 2], launch: [(sr, i) => launchShot(sr, 165 + i), 1], air: [(sr, i) => airShot(sr, 170 + i), 2], taser: [(sr, i) => taserShot(sr, 180 + i), 1],
   // 足音
   step_hard: [(sr, i) => step(sr, 200 + i, 'hard'), 4], step_tile: [(sr, i) => step(sr, 210 + i, 'tile'), 4], step_wood: [(sr, i) => step(sr, 220 + i, 'wood'), 4],
   step_soft: [(sr, i) => step(sr, 230 + i, 'soft'), 4], step_grass: [(sr, i) => step(sr, 240 + i, 'grass'), 4], step_dirt: [(sr, i) => step(sr, 250 + i, 'dirt'), 4], step_metal: [(sr, i) => step(sr, 260 + i, 'metal'), 4],

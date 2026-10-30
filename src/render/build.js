@@ -50,6 +50,61 @@ export class MeshBuilder {
     if (f & 16) this.quad([x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1], [0, 0, 1], [x0 * s + ox, y0 * s + oy, x1 * s + ox, y0 * s + oy, x1 * s + ox, y1 * s + oy, x0 * s + ox, y1 * s + oy], layer, c(4), ab);
     if (f & 32) this.quad([x1, y0, z0], [x0, y0, z0], [x0, y1, z0], [x1, y1, z0], [0, 0, -1], [-x1 * s + ox, y0 * s + oy, -x0 * s + ox, y0 * s + oy, -x0 * s + ox, y1 * s + oy, -x1 * s + ox, y1 * s + oy], layer, c(5), ab);
   }
+  // 角を落とした箱（面取り）。r = 面取りの幅。ローポリでも縁に光が乗って形が締まる（BattleBit の家具や銃のように）
+  // o: box と同じ（faces・uv・cols・aoBottom・aoTop）。faces で省いた面の縁と角は、両側とも省いたときだけ消す
+  bbox(x0, y0, z0, x1, y1, z1, r, layer, col, o = {}) {
+    const dx = x1 - x0, dy = y1 - y0, dz = z1 - z0;
+    r = Math.min(r, dx * 0.45, dy * 0.45, dz * 0.45);
+    if (!(r > 1e-4)) return this.box(x0, y0, z0, x1, y1, z1, layer, col, o);
+    const f = o.faces ?? 63, s = o.uv ?? 1, cols = o.cols || null;
+    const ao0 = o.aoBottom ?? 1, ao1 = o.aoTop ?? 1;
+    const aoY = (y) => ao0 + (ao1 - ao0) * ((y - y0) / dy);
+    const lo = [x0, y0, z0], hi = [x1, y1, z1], ilo = [x0 + r, y0 + r, z0 + r], ihi = [x1 - r, y1 - r, z1 - r];
+    // 面 a の、角 sg（各軸の±）の点
+    const P = (a, sg) => [0, 1, 2].map(k => k === a ? (sg[k] > 0 ? hi[k] : lo[k]) : (sg[k] > 0 ? ihi[k] : ilo[k]));
+    const bitOf = (a, sgn) => (a === 0 ? (sgn > 0 ? 1 : 2) : a === 1 ? (sgn > 0 ? 4 : 8) : (sgn > 0 ? 16 : 32));
+    const faceCol = (a, sgn) => (cols && cols[a * 2 + (sgn > 0 ? 0 : 1)]) || col; // box と同じ並び: 0:+x 1:-x 2:+y 3:-y 4:+z 5:-z
+    const uvOf = (p, n) => {
+      const ax = Math.abs(n[0]), ay = Math.abs(n[1]), az = Math.abs(n[2]);
+      if (ay >= ax && ay >= az) return [p[0] * s, p[2] * s];
+      if (ax >= az) return [(n[0] > 0 ? -p[2] : p[2]) * s, p[1] * s];
+      return [(n[2] > 0 ? p[0] : -p[0]) * s, p[1] * s];
+    };
+    const poly = (pts, n, c) => {
+      // 法線の側から見て反時計回りにそろえる
+      const e1 = [pts[1][0] - pts[0][0], pts[1][1] - pts[0][1], pts[1][2] - pts[0][2]], e2 = [pts[2][0] - pts[0][0], pts[2][1] - pts[0][1], pts[2][2] - pts[0][2]];
+      const cr = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]];
+      if (cr[0] * n[0] + cr[1] * n[1] + cr[2] * n[2] < 0) pts = pts.slice().reverse();
+      const b = this.n;
+      for (const p of pts) { const uv = uvOf(p, n); this.vert(p, n, uv[0], uv[1], layer, c, aoY(p[1])); }
+      if (pts.length === 4) this.i.push(b, b + 1, b + 2, b, b + 2, b + 3); else this.i.push(b, b + 1, b + 2);
+    };
+    // 6つの面（内側の四角）
+    for (let a = 0; a < 3; a++) for (const sg of [1, -1]) {
+      if (!(f & bitOf(a, sg))) continue;
+      const u = (a + 1) % 3, v = (a + 2) % 3;
+      const pts = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([su, sv]) => { const g = [0, 0, 0]; g[a] = sg; g[u] = su; g[v] = sv; return P(a, g); });
+      const n = [0, 0, 0]; n[a] = sg;
+      poly(pts, n, faceCol(a, sg));
+    }
+    // 12の縁（2つの面のあいだの斜めの帯）
+    for (let a = 0; a < 3; a++) for (let b = a + 1; b < 3; b++) for (const sa of [1, -1]) for (const sb of [1, -1]) {
+      if (!(f & bitOf(a, sa)) && !(f & bitOf(b, sb))) continue;
+      const c = 3 - a - b;
+      const pts = [];
+      for (const sc of [-1, 1]) { const g = [0, 0, 0]; g[a] = sa; g[b] = sb; g[c] = sc; pts.push(P(a, g)); }
+      for (const sc of [1, -1]) { const g = [0, 0, 0]; g[a] = sa; g[b] = sb; g[c] = sc; pts.push(P(b, g)); }
+      const n = [0, 0, 0]; n[a] = sa * 0.7071; n[b] = sb * 0.7071;
+      poly(pts, n, mixc(faceCol(a, sa), faceCol(b, sb), 0.5));
+    }
+    // 8つの角（3つの面の角を結ぶ三角）
+    for (const sx of [1, -1]) for (const sy of [1, -1]) for (const sz of [1, -1]) {
+      if (!(f & bitOf(0, sx)) && !(f & bitOf(1, sy)) && !(f & bitOf(2, sz))) continue;
+      const g = [sx, sy, sz];
+      const n = [sx * 0.5774, sy * 0.5774, sz * 0.5774];
+      poly([P(0, g), P(1, g), P(2, g)], n, faceCol(1, sy));
+    }
+  }
   // 中心と大きさの箱
   cbox(cx, cy, cz, sx, sy, sz, layer, col, o) { this.box(cx - sx / 2, cy - sy / 2, cz - sz / 2, cx + sx / 2, cy + sy / 2, cz + sz / 2, layer, col, o); }
   // 円柱（Y軸、y0..y1）。seg角形

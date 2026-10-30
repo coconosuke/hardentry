@@ -202,7 +202,7 @@ export function computePose(p, out) {
   // ---- 腕
   const ua = D.uarm * s, fa = D.farm * s;
   let wristL, wristR, handDirL = v3(0, -1, 0), handDirR = v3(0, -1, 0), elbowHintL = v3(0.6, -1, -0.2), elbowHintR = v3(-0.6, -1, -0.2);
-  let gun = null;
+  let gun = null, shield = null;
   // 狙いの向き（ローカル）
   const aimDir = norm(v3(0, Math.sin(pitch), Math.cos(pitch)));
   if (H) {
@@ -226,7 +226,12 @@ export function computePose(p, out) {
     const fk = clamp(p.fire || 0, 0, 1);
     gp = madd(gp, gf, -0.025 * fk * s);
     gf = norm(madd(gf, gUp, 0.08 * fk));
-    if (state === 'shield') { gp = madd(madd(shR, chestFwd, 0.42 * s), chestLeft, -0.12 * s); }
+    if (state === 'shield') {
+      // 盾: 左手で胸の前に。拳銃は盾の右の縁。ADSでは盾を少し下げて、拳銃を盾の上の角から
+      const hipS = madd(madd(shR, chestFwd, 0.42 * s), chestLeft, -0.12 * s);
+      gp = lerp3(hipS, madd(adsP, chestLeft, -0.05 * s), ads);
+      shield = { p: madd(madd(madd(shL, chestFwd, 0.47 * s), chestLeft, -0.14 * s), chestUp, (-0.27 - 0.12 * ads) * s), f: chestFwd, u: chestUp, l: chestLeft };
+    }
     const gl = norm(cross(gUp, gf)); // 銃の左
     gun = { p: gp, f: gf, u: gUp, l: gl };
     const toW = (o) => add(add(add(gp, mul(gl, o[0] * s)), mul(gUp, o[1] * s)), mul(gf, o[2] * s));
@@ -237,7 +242,7 @@ export function computePose(p, out) {
       wristL = lerp3(toW([0.02, -0.12, 0.1]), madd(madd(N, chestUp, -0.42 * s), chestLeft, 0.12 * s), k);
       handDirL = v3(0, -1, 0.3);
     } else if (state === 'shield') {
-      wristL = madd(madd(shL, chestFwd, 0.4 * s), chestUp, -0.12 * s); handDirL = norm(v3(-0.3, 0.9, 0.2));
+      wristL = madd(madd(madd(shL, chestFwd, 0.41 * s), chestUp, (-0.2 - 0.12 * clamp(p.ads || 0, 0, 1)) * s), chestLeft, -0.06 * s); handDirL = norm(v3(-0.3, 0.9, 0.2));
     } else { wristL = toW(H.l); handDirL = norm(add(gf, mul(gl, -0.4))); }
     elbowHintL = norm(v3(0.8, -1, -0.2)); elbowHintR = norm(v3(-1.0, -0.8, -0.4));
   } else {
@@ -336,7 +341,8 @@ export function computePose(p, out) {
   if (down) { const o = 4 * 12; eyeW = [L[o] + L[o + 6] * 0.1, L[o + 1] + L[o + 7] * 0.1, L[o + 2] + L[o + 8] * 0.1]; }
   let gunW = null;
   if (gun && !down) gunW = { p: tw(gun.p), f: tr(gun.f), u: tr(gun.u), l: tr(gun.l) };
-  return { eye: eyeW, gun: gunW, s, extra };
+  const shieldW = shield && !down ? { p: tw(shield.p), f: tr(shield.f), u: tr(shield.u), l: tr(shield.l) } : null;
+  return { eye: eyeW, gun: gunW, shield: shieldW, s, extra };
 }
 export const POSE_LEN = new Float32Array(NBONE);
 function lerpN(a, b, t) { return a + (b - a) * t; }

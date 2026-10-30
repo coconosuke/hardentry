@@ -3,7 +3,7 @@
 import { raycast, CS, levelOfY } from './world.js';
 import { MATS, M, BODY_PEN } from './data/materials.js';
 import { WEAPONS, AMMO } from './data/weapons.js';
-import { PLATE, HELMET } from './data/equipment.js';
+import { PLATE, HELMET, SHIELD } from './data/equipment.js';
 import { computePose, hitCapsules, rayCapsule, POSE_LEN, NBONE } from './pose.js';
 import { holdOf, poseState } from './actor.js';
 import { hrand } from './rng.js';
@@ -29,6 +29,7 @@ export function capsOf(S, a) {
   const r = computePose(poseInput(a, _pi), _bones);
   a._caps = hitCapsules(_bones, POSE_LEN, r.s, a._caps || []);
   a._eye = r.eye;
+  a._shieldF = r.shield || null;
   a._capT = S.t;
   return a._caps;
 }
@@ -96,11 +97,28 @@ function stepBullet(S, w, b, dt, ev) {
       if (t >= 0 && (best < 0 || t < best)) { best = t; bp = c; }
     }
     if (best >= 0) hits.push({ t0: best, t1: best + 0.25, kind: 'actor', a, part: bp.part, cap: bp });
+    // 防弾盾（前から当たったときだけ）
+    if (a._shieldF && a.alive) { const t = rayShield(b.x, b.y, b.z, dx, dy, dz, segL, a._shieldF); if (t >= 0) hits.push({ t0: t, t1: t + 0.03, kind: 'shield', a }); }
   }
   hits.sort((p, q) => p.t0 - q.t0);
   for (const h of hits) {
     if (h.t0 > segL) break;
     const hx = b.x + dx * h.t0, hy = b.y + dy * h.t0, hz = b.z + dz * h.t0;
+    if (h.kind === 'shield') {
+      const a = h.a, sf = a._shieldF;
+      const am = AMMO[b.cal] && AMMO[b.cal][b.am];
+      if (!b.less && am && am.apen > SHIELD.prot) {
+        // 抜ける（7.62×51mmの徹甲弾）
+        ev.push({ e: 'imp', x: hx, y: hy, z: hz, nx: sf.f[0], ny: sf.f[1], nz: sf.f[2], m: M.METAL, k: 'shield', pen: true, o: b.owner, w: b.wid });
+        b.pen -= 450; b.k = Math.max(0.05, b.pen / b.pen0);
+        if (b.pen <= 0) return false;
+        continue;
+      }
+      ev.push({ e: 'imp', x: hx, y: hy, z: hz, nx: sf.f[0], ny: sf.f[1], nz: sf.f[2], m: M.METAL, k: 'shield', pen: false, o: b.owner, w: b.wid });
+      ev.push({ e: 'shieldhit', id: a.id, by: b.owner, x: hx, y: hy, z: hz, less: b.less ? 1 : 0 });
+      a.flinch = Math.max(a.flinch || 0, b.less ? 0.08 : 0.2);
+      return false;
+    }
     if (h.kind === 'actor') {
       const a = h.a;
       if (a.alive || a.dead) {
@@ -140,6 +158,17 @@ function stepBullet(S, w, b, dt, ev) {
   return true;
 }
 
+// 盾の板（中心 p、前 f、上 u、左 l）と線の交わり。前から当たったときだけ
+function rayShield(ox, oy, oz, dx, dy, dz, maxT, sf) {
+  const n = sf.f, den = dx * n[0] + dy * n[1] + dz * n[2];
+  if (den > -1e-4) return -1;
+  const t = ((sf.p[0] - ox) * n[0] + (sf.p[1] - oy) * n[1] + (sf.p[2] - oz) * n[2]) / den;
+  if (t < 0 || t > maxT) return -1;
+  const px = ox + dx * t - sf.p[0], py = oy + dy * t - sf.p[1], pz = oz + dz * t - sf.p[2];
+  if (Math.abs(px * sf.l[0] + py * sf.l[1] + pz * sf.l[2]) > SHIELD.hw) return -1;
+  if (Math.abs(px * sf.u[0] + py * sf.u[1] + pz * sf.u[2]) > SHIELD.hh) return -1;
+  return t;
+}
 function raySphere(ox, oy, oz, dx, dy, dz, maxT, cx, cy, cz, r) {
   const lx = ox - cx, ly = oy - cy, lz = oz - cz;
   const bq = lx * dx + ly * dy + lz * dz, cq = lx * lx + ly * ly + lz * lz - r * r;

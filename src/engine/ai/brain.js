@@ -44,6 +44,8 @@ export function collectNoise(S, ev) {
       case 'door': if (e.loud) { const a = S.byId[e.id]; H.push({ x: a ? a.x : 0, y: a ? a.y : 0, z: a ? a.z : 0, k: e.k === 'kickopen' || e.k === 'ram' || e.k === 'breach' ? 'breach' : 'door', loud: e.loud, id: e.id, team: a ? a.team : -1 }); } break;
       case 'nade': H.push({ x: e.x, y: e.y, z: e.z, k: 'boom', loud: 2.0, id: e.by, team: -1 }); break;
       case 'boom': case 'c2': H.push({ x: e.x, y: e.y, z: e.z, k: 'boom', loud: 2.5, id: e.by ?? -1, team: -1 }); break;
+      case 'launch': { const a = S.byId[e.id]; if (a) H.push({ x: a.x, y: a.y + 1.4, z: a.z, k: 'shot', loud: 0.9, id: e.id, team: a.team }); break; }
+      case 'shieldhit': H.push({ x: e.x, y: e.y, z: e.z, k: 'shot', loud: 0.5, id: e.id, team: S.byId[e.id] ? S.byId[e.id].team : -1 }); break;
       case 'glass': break;
       case 'shout': H.push({ x: e.x, y: e.y - 1.6, z: e.z, k: 'shout', loud: 0.8, id: e.id, team: S.byId[e.id] ? S.byId[e.id].team : -1 }); break;
     }

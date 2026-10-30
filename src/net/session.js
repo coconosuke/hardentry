@@ -11,7 +11,7 @@ const isNum = (v) => typeof v === 'number' && isFinite(v);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 
 // 受け取った装備を検める（知らないidは捨てる）
-function cleanWeapon(w) { if (!w || typeof w !== 'object' || !WEAPONS[w.id]) return null; const o = { id: w.id }; for (const k of ['sight', 'muzzle', 'grip', 'ammo']) if (typeof w[k] === 'string' && w[k].length < 12) o[k] = w[k]; return o; }
+function cleanWeapon(w) { if (!w || typeof w !== 'object' || !WEAPONS[w.id]) return null; const o = { id: w.id }; for (const k of ['sight', 'muzzle', 'grip', 'ammo']) if (typeof w[k] === 'string' && w[k].length < 12) o[k] = w[k]; if (typeof w.light === 'boolean') o.light = w.light; return o; }
 export function cleanLoadout(lo) {
   if (!lo || typeof lo !== 'object') return null;
   const o = { primary: cleanWeapon(lo.primary), secondary: cleanWeapon(lo.secondary) };

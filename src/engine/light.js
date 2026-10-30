@@ -11,7 +11,7 @@ const DIRS = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1
 export const SKIES = {
   day: { sky: [0.52, 0.66, 0.9], ground: [0.28, 0.26, 0.22], sun: [2.6, 2.4, 2.05], sunDir: norm([0.45, 0.78, 0.38]), fog: [0.66, 0.74, 0.84], fogD: 0.006, amb: 0.03, exposure: 1.0, zenith: [0.22, 0.42, 0.85], horizon: [0.72, 0.8, 0.9], night: 0 },
   dusk: { sky: [0.48, 0.4, 0.42], ground: [0.2, 0.15, 0.12], sun: [2.2, 1.25, 0.6], sunDir: norm([-0.7, 0.22, 0.45]), fog: [0.62, 0.48, 0.42], fogD: 0.008, amb: 0.02, exposure: 1.15, zenith: [0.2, 0.25, 0.48], horizon: [0.95, 0.6, 0.42], night: 0 },
-  night: { sky: [0.035, 0.045, 0.075], ground: [0.01, 0.01, 0.012], sun: [0.08, 0.1, 0.16], sunDir: norm([0.3, 0.8, -0.4]), fog: [0.04, 0.05, 0.07], fogD: 0.012, amb: 0.004, exposure: 1.6, zenith: [0.005, 0.008, 0.02], horizon: [0.03, 0.04, 0.06], night: 1 },
+  night: { sky: [0.035, 0.045, 0.075], ground: [0.01, 0.01, 0.012], sun: [0.08, 0.1, 0.16], sunDir: norm([0.3, 0.8, -0.4]), fog: [0.04, 0.05, 0.07], fogD: 0.012, amb: 0.004, exposure: 1.25, zenith: [0.005, 0.008, 0.02], horizon: [0.03, 0.04, 0.06], night: 1 },
 };
 function norm(v) { const l = Math.hypot(...v); return v.map(x => x / l); }
 

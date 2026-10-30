@@ -39,12 +39,16 @@ export const GEAR = {
 // 長い戦術装備（背中に1つ）
 export const LONG = {
   none: { name: 'なし' },
-  shield: { name: '防弾盾', desc: '前からの弾を止める。拳銃しか使えず、腰だめで撃つ。遅くなる。', move: 0.82 },
-  ram: { name: '破城槌', desc: '鍵のかかった扉も1回で開ける。すぐ後ろの人を怯ませる。使う人は向こう側にさらされる。', move: 0.95 },
-  breacher: { name: 'ブリーチングショットガン', desc: '扉の錠を撃って開ける。離れて使えば扉の罠も無効にできる。', move: 0.97 },
-  wand: { name: 'オプティワンド', desc: '曲がるカメラ。扉の下や角の先をのぞいて、人と罠を見つける。', move: 1.0 },
-  m320: { name: 'M320（閃光・スティンガー・ガス弾）', desc: '投げ物を遠くへ撃ち込む。当たった所で作動する。', move: 0.96, rounds: { flash: 3, stinger: 3, cs: 2 } },
+  shield: { name: '防弾盾', desc: '前からの弾を止める（7.62mmの徹甲弾は抜ける）。構えている間は拳銃だけ。足が遅くなる。', how: '副武器に持ち替えると構える', move: 0.82 },
+  ram: { name: '破城槌', desc: '鍵のかかった扉も1回で開ける。すぐ後ろの人を怯ませる。使う人は向こう側にさらされる。', how: '装備の切り替えで構え、扉を見て射撃', move: 0.95, draw: 0.8 },
+  breacher: { name: 'ブリーチングショットガン', desc: '扉の錠を撃って開ける。離れて使えば扉の罠も無効にできる。', how: '装備の切り替えで構え、扉を見て射撃', move: 0.97, draw: 0.6 },
+  wand: { name: 'オプティワンド', desc: '曲がるカメラ。扉の下や角の先をのぞいて、人と罠を見つける。', how: '装備の切り替えで構え、射撃でのぞく（扉を見ていれば扉の下から）', move: 1.0, draw: 0.45 },
+  m320: { name: 'M320 グレネードランチャー', desc: '閃光弾・スティンガー弾・CSガス弾を遠くへ撃ち込む。当たった所で作動する。', how: '装備の切り替えで構え、射撃で撃つ。射撃モードで弾を替える', move: 0.96, draw: 0.7, reload: 2.6, rounds: { flash: 3, stinger: 3, cs: 2 } },
 };
+// 手に持って使う特殊装備（4番目の持ち物）。盾は副武器と一緒に構える
+export const HAND_LONG = { m320: 1, wand: 1, ram: 1, breacher: 1 };
+// 防弾盾: 板の大きさ（m）と防護（防護4: 7.62×51mmの徹甲弾以外を止める）
+export const SHIELD = { hw: 0.28, hh: 0.46, prot: 4 };
 // いつも持っている物
 export const ALWAYS = ['cuffs', 'multitool', 'mirror', 'chem', 'lockpick'];
 export const ALWAYS_NAME = { cuffs: '結束バンド（手錠）', multitool: 'マルチツール', mirror: 'ミラーガン', chem: 'ケミライト', lockpick: 'ピッキングの道具' };

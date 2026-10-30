@@ -1,5 +1,5 @@
 // 人（隊員・容疑者・市民・ボット・プレイヤー）。状態は関数を含まないデータだけ。
-import { WEAPONS } from './data/weapons.js';
+import { WEAPONS, attachOptions } from './data/weapons.js';
 import { PLATE, HELMET, GEAR, LONG } from './data/equipment.js';
 
 export const KIND = { SWAT: 'swat', SUS: 'sus', CIV: 'civ', BOT: 'bot' };
@@ -9,7 +9,10 @@ export function makeWeapon(o) {
   if (!o || !o.id || !WEAPONS[o.id]) return null;
   const W = WEAPONS[o.id];
   const am = o.ammo && W.ammo.includes(o.ammo) ? o.ammo : W.ammo[0];
-  const w = { id: o.id, att: { sight: o.sight || 'iron', muzzle: W.integral ? W.integral : (o.muzzle || 'none'), grip: o.grip || 'none', light: o.light !== false }, am, mode: 0, lightOn: false };
+  // 付けられないアタッチメントは外す（通信で来た装備も同じ）
+  const ao = attachOptions(o.id);
+  const okA = (k, v, d) => (v && ao[k] && ao[k].includes(v) ? v : d);
+  const w = { id: o.id, att: { sight: okA('sight', o.sight, 'iron'), muzzle: W.integral ? W.integral : okA('muzzle', o.muzzle, 'none'), grip: okA('grip', o.grip, 'none'), light: o.light !== false }, am, mode: 0, lightOn: false };
   if (W.tube || W.breakAction) { w.mag = W.mag; w.ch = W.chamber ? 1 : 0; w.res = W.spare; w.mags = null; }
   else { w.mag = W.mag; w.ch = W.chamber ? 1 : 0; w.mags = []; for (let i = 0; i < (o.spare ?? W.spare); i++) w.mags.push(W.mag); w.res = 0; }
   return w;
@@ -62,6 +65,8 @@ export function curW(a) { const w = curWeapon(a); return w ? WEAPONS[w.id] : nul
 export function holdOf(a) {
   if (a.cuffed || a.comply || a.down || a.dead) return 'none';
   if (a.ws.slot === 2) return 'none';
+  // 特殊装備: オプティワンドは片手、ほかは両手で
+  if (a.ws.slot === 3) return a.inv.long === 'wand' ? 'pistol' : 'rifle';
   const W = curW(a);
   if (!W) return 'none';
   return W.cat === 'pistol' || (W.cat === 'less' && W.model === 'taser') ? 'pistol' : W.cat === 'shotgun' ? 'shotgun' : W.cat === 'smg' ? 'smg' : 'rifle';

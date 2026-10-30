@@ -28,7 +28,7 @@ export class ViewModel {
     this.on = false;
     this.sway = [0, 0]; this.swayV = [0, 0]; this.lastYaw = null; this.lastPitch = null;
     this.t = 0; this.drawK = 1; this.kick = 0; this.shotN = 0;
-    this.M = new Float32Array(16); this.Mm = new Float32Array(16);
+    this.M = new Float32Array(16); this.Mm = new Float32Array(16); this.Ms = new Float32Array(16); this.shieldOn = false;
     this.armVB = null; this.armN = 0;
     this.sleeve = hex('#232c3b'); this.glove = hex('#1c1d20');
     this.nadeMeshes = {};
@@ -71,7 +71,10 @@ export class ViewModel {
     }
     this.lastYaw = cam.yaw; this.lastPitch = cam.pitch;
     for (let i = 0; i < 2; i++) { this.sway[i] += this.swayV[i]; this.swayV[i] = 0; this.sway[i] *= Math.exp(-dt * 9); this.sway[i] = clamp(this.sway[i], -0.12, 0.12); }
-    const gm = wi ? this.av.gunMesh(wi.id, wi.att) : null;
+    // 手に持った特殊装備（slot 3）か銃
+    const L3 = ws.slot === 3 && a.inv.long && a.inv.long !== 'none' ? a.inv.long : null;
+    const gm = L3 ? this.av.longMesh(L3) : wi ? this.av.gunMesh(wi.id, wi.att) : null;
+    const shieldUp = a.inv.long === 'shield' && ws.slot === 1 && !a.vault && ws.st !== 'holster';
     const P = gm ? gm.g.pts : { sightY: 0.05, eyeZ: -0.3, muzzle: 0.3, gripR: [0, -0.08, -0.05], gripL: [0, -0.04, 0.2] };
     const pistol = !!P.pistol;
     // 状態の重み
@@ -81,14 +84,19 @@ export class ViewModel {
     if (ws.st === 'holster') draw = 1 - clamp(ws.t / 0.22, 0, 1);
     else if (ws.st === 'draw') draw = clamp(ws.t / Math.max(0.2, W ? W.draw : 0.3), 0, 1);
     this.drawK = lerp(this.drawK, draw, 1 - Math.exp(-dt * 25));
-    const act = a.act ? 1 : 0;
+    // 特殊装備そのものを使う動作（破城槌・散弾・ワンド）は銃を下げない
+    const ownAct = !!(a.act && L3 && ((L3 === 'ram' && a.act.k === 'ram') || (L3 === 'breacher' && a.act.k === 'breach') || (L3 === 'wand' && a.act.k === 'wand')));
+    const act = a.act && !ownAct ? 1 : 0;
     this.actK = lerp(this.actK || 0, act, 1 - Math.exp(-dt * 8));
     // 位置（カメラ空間: x右 y上 z前）と回転
-    const hip = pistol ? [0.1, -0.098, 0.37] : [0.118, -0.112, 0.3];
+    // 腰だめ: 画面の右下に収まり、銃口が画面の中央の少し下へ向く（スマホの小さい画面で大きすぎないよう、少し遠く・低く）
+    const hip = P.heavy ? [0.05, -0.25, 0.5] : L3 === 'wand' ? [0.09, -0.2, 0.4] : pistol ? [0.105, -0.112, 0.4] : [0.128, -0.128, 0.36];
     // 照準の窓が画面に対して大きすぎないよう、目を少し後ろに（スマホの小さい画面向け）
-    const adsP = [0, -P.sightY, -P.eyeZ + (P.optic && !P.optic.scope ? 0.09 : 0.04)];
+    const adsP = [0, -P.sightY, -P.eyeZ + (P.optic && !P.optic.scope ? (pistol ? 0.03 : 0.09) : 0.04)];
     let px = lerp(hip[0], adsP[0], ads), py = lerp(hip[1], adsP[1], ads) - bell(a.ads) * 0.012, pz = lerp(hip[2], adsP[2], ads);
     let yaw = lerp(pistol ? 0.03 : 0.05, 0, ads), pitch = 0, roll = 0;
+    // 破城槌は体の前で斜めに抱える
+    if (P.heavy) { yaw = 0.5; pitch = -0.1; roll = 0.22; }
     // 歩き・呼吸
     const amp = clamp(a.spd / 2.4, 0, 1.6) * (1 - 0.82 * ads) * (a.ground ? 1 : 0.3);
     const ph = a.phase || 0;
@@ -105,11 +113,19 @@ export class ViewModel {
     const fk = clamp(a.fireK || 0, 0, 1);
     if ((a.stats.sh || 0) !== this.shotN) { this.shotN = a.stats.sh || 0; this.rollSign = (this.shotN % 2 ? 1 : -1); }
     const kick = W ? W.rc.kick : 1;
-    pz -= 0.022 * fk * kick * (1 - 0.45 * ads); pitch += (pistol ? 0.09 : 0.028) * fk * kick; roll += 0.018 * fk * (this.rollSign || 1);
+    pz -= 0.022 * fk * kick * (1 - 0.45 * ads); pitch += (pistol ? 0.09 : L3 === 'm320' ? 0.16 : 0.028) * fk * kick; roll += 0.018 * fk * (this.rollSign || 1);
+    // 破城槌を振る・散弾で撃つ
+    if (ownAct) {
+      const t = clamp(a.act.t / Math.max(0.05, a.act.dur), 0, 1);
+      if (L3 === 'ram') { pz += t < 0.55 ? -0.12 * sm(t / 0.55) : -0.12 + 0.36 * sm((t - 0.55) / 0.3); py += 0.05 * bell(t); }
+      else if (L3 === 'breacher') { pitch -= 0.25 * sm(t / 0.3); py -= 0.06 * sm(t / 0.3); if (t > 0.85) { pitch += 0.2 * bell((t - 0.85) / 0.15); pz -= 0.04 * bell((t - 0.85) / 0.15); } }
+      else if (L3 === 'wand') { pitch -= 0.6 * sm(t); py -= 0.1 * sm(t); }
+    }
     // リロード
     let magOff = 0, magHide = false, pumpOff = 0, lhand = null, rel = -1;
-    if (ws.st === 'reload' && ws.rd > 0) {
-      rel = 1 - ws.t / ws.rd;
+    const longRl = ws.slot === 3 && ws.lt > 0 && ws.rd > 0;
+    if ((ws.st === 'reload' || longRl) && ws.rd > 0) {
+      rel = 1 - (longRl ? ws.lt : ws.t) / ws.rd;
       const b = bell(rel);
       roll -= 0.5 * b; pitch += 0.12 * b; px -= 0.025 * b; py += 0.02 * b; pz -= 0.02 * b;
       if (P.revolver || P.breakAction) { roll -= 0.4 * b; }
@@ -146,6 +162,21 @@ export class ViewModel {
     this.out.muzzle = toW([0, 0, P.muzzle]); this.out.fwd = gF; this.out.right = gR; this.out.up = gU;
     this.out.eject = toW([-0.02, 0.025, 0.02]);
     this.out.light = P.lightPt && wi && wi.lightOn ? toW(P.lightPt) : null;
+    // 盾: 画面の左下。ADSでは下げて、拳銃の照準の邪魔にならないように
+    this.shieldOn = shieldUp;
+    let shieldHand = null;
+    if (shieldUp) {
+      const sx = lerp(-0.3, -0.35, ads) + Math.sin(ph) * 0.006 * amp - this.sway[0] * 0.03, sy = lerp(-0.4, -0.53, ads) - Math.abs(Math.cos(ph)) * 0.01 * amp - 0.3 * this.drawK - 0.2 * this.actK - this.sway[1] * 0.02, sz = lerp(0.56, 0.54, ads);
+      const sc = camP(sx, sy, sz);
+      // 少し右へ向けて、体の前を覆う
+      const yawS = 0.12, cs = Math.cos(yawS), sn = Math.sin(yawS);
+      const f2 = [F[0] * cs - R[0] * sn, F[1] * cs - R[1] * sn, F[2] * cs - R[2] * sn];
+      const l2 = [-(R[0] * cs + F[0] * sn), -(R[1] * cs + F[1] * sn), -(R[2] * cs + F[2] * sn)];
+      const S2 = this.Ms;
+      S2[0] = l2[0]; S2[1] = l2[1]; S2[2] = l2[2]; S2[3] = 0; S2[4] = U[0]; S2[5] = U[1]; S2[6] = U[2]; S2[7] = 0;
+      S2[8] = f2[0]; S2[9] = f2[1]; S2[10] = f2[2]; S2[11] = 0; S2[12] = sc[0]; S2[13] = sc[1]; S2[14] = sc[2]; S2[15] = 1;
+      shieldHand = camP(sx + 0.01, sy - 0.02, sz - 0.07);
+    }
     // 腕: 肩（カメラ空間）→ 手
     const shR = camP(0.17, -0.25, -0.08), shL = camP(-0.17, -0.24, -0.05);
     let hR, hL;
@@ -175,6 +206,7 @@ export class ViewModel {
       }
       if (pumpOff) hL = [hL[0] + gF[0] * pumpOff, hL[1] + gF[1] * pumpOff, hL[2] + gF[2] * pumpOff];
       if (this.sprK > 0.5 && pistol) hL = camP(-0.15, -0.35, 0.2);
+      if (shieldHand) hL = shieldHand;
     }
     this._arms(shR, hR, shL, hL, gF, gU, R, U);
   }
@@ -185,16 +217,30 @@ export class ViewModel {
     const poleR = [R[0] * 0.6 + down[0], R[1] * 0.6 + down[1], R[2] * 0.6 + down[2]];
     const poleL = [-R[0] * 0.6 + down[0], -R[1] * 0.6 + down[1], -R[2] * 0.6 + down[2]];
     const eR = ik2(shR, hR, 0.3, 0.29, poleR), eL = ik2(shL, hL, 0.3, 0.29, poleL);
+    const gloveD = [this.glove[0] * 0.75, this.glove[1] * 0.75, this.glove[2] * 0.75];
+    const sleeveD = [this.sleeve[0] * 0.8, this.sleeve[1] * 0.8, this.sleeve[2] * 0.8];
+    // 手の向きの箱（中心 c、軸 r u f、半分の長さ）
+    const hbox = (c, r, u, f, hx, hy, hz, col, rad) => { B.xf = [r[0], r[1], r[2], u[0], u[1], u[2], f[0], f[1], f[2], c[0], c[1], c[2]]; B.bbox(-hx, -hy, -hz, hx, hy, hz, rad, LAYER.rubber, col); B.xf = null; };
+    let side = 1;
     for (const [sh, el, hd] of [[shR, eR, hR], [shL, eL, hL]]) {
-      B.tube(sh, el, 0.05, 0.045, 8, LAYER.cloth, this.sleeve);
-      // 手首の少し手前までが袖、先は手袋
-      const wr = lerpV(el, hd, 0.86);
-      B.tube(el, wr, 0.045, 0.036, 8, LAYER.cloth, this.sleeve, { caps: true });
-      B.tube(wr, hd, 0.031, 0.03, 7, LAYER.rubber, this.glove);
-      // こぶし
-      const dir = norm3([hd[0] - el[0], hd[1] - el[1], hd[2] - el[2]]);
-      const tip = [hd[0] + dir[0] * 0.07 - gU[0] * 0.02, hd[1] + dir[1] * 0.07 - gU[1] * 0.02, hd[2] + dir[2] * 0.07 - gU[2] * 0.02];
-      B.tube(hd, tip, 0.036, 0.03, 6, LAYER.rubber, this.glove, { caps: true });
+      B.tube(sh, el, 0.052, 0.046, 9, LAYER.cloth, this.sleeve);
+      // 肘のしわ（少し太い輪）
+      B.tube(lerpV(sh, el, 0.9), lerpV(el, hd, 0.06), 0.05, 0.049, 9, LAYER.cloth, sleeveD);
+      // 手首の少し手前までが袖、先は手袋（袖口は濃い色）
+      const wr = lerpV(el, hd, 0.84);
+      B.tube(el, wr, 0.046, 0.038, 9, LAYER.cloth, this.sleeve);
+      B.tube(lerpV(el, hd, 0.8), wr, 0.041, 0.04, 9, LAYER.cloth, sleeveD, { caps: true });
+      B.tube(wr, hd, 0.032, 0.03, 8, LAYER.rubber, this.glove);
+      // 手: 手のひら（平たい箱）・握った指（下へ巻く）・親指（銃の横へ）。手袋の縫い目の濃い帯
+      const f = norm3([hd[0] - el[0], hd[1] - el[1], hd[2] - el[2]]);
+      let r = norm3([gU[1] * f[2] - gU[2] * f[1], gU[2] * f[0] - gU[0] * f[2], gU[0] * f[1] - gU[1] * f[0]]);
+      const u = norm3([f[1] * r[2] - f[2] * r[1], f[2] * r[0] - f[0] * r[2], f[0] * r[1] - f[1] * r[0]]);
+      const at = (a, b, c) => [hd[0] + f[0] * a + u[0] * b + r[0] * c, hd[1] + f[1] * a + u[1] * b + r[1] * c, hd[2] + f[2] * a + u[2] * b + r[2] * c];
+      hbox(at(0.035, 0, 0), r, u, f, 0.04, 0.022, 0.042, this.glove, 0.012);
+      hbox(at(0.07, -0.022, 0), r, u, f, 0.038, 0.026, 0.02, gloveD, 0.011);
+      hbox(at(0.008, 0.004, 0), r, u, f, 0.037, 0.024, 0.008, gloveD, 0.006);
+      B.tube(at(0.02, 0.01, -0.034 * side), at(0.07, 0.006, -0.03 * side), 0.012, 0.01, 6, LAYER.rubber, this.glove, { caps: true });
+      side = -1;
     }
     const { v, i } = B.arrays();
     const gl = this.gl;
@@ -239,6 +285,12 @@ export class ViewModel {
     } else if (this.nade) {
       gl.uniformMatrix4fv(P.u.uModel, false, this.Mm);
       drawMesh(gl, this.nadeMesh(this.nade));
+    }
+    // 盾
+    if (this.shieldOn) {
+      const sm = this.av.shieldMesh();
+      gl.uniformMatrix4fv(P.u.uModel, false, this.Ms);
+      drawMesh(gl, sm.body);
     }
     // 腕
     if (this.armN) {

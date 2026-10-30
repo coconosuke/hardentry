@@ -1,5 +1,6 @@
 // 銃の動き: 撃つ・弾倉（1本ずつ残弾）・通常/速いリロード・1発ずつ込める・ポンプ・持ち替え・反動（BattleBit式）・散らばり
 import { WEAPONS, AMMO, ATTACH } from './data/weapons.js';
+import { LONG, HAND_LONG } from './data/equipment.js';
 import { curWeapon, curW } from './actor.js';
 import { spawnBullet } from './combat.js';
 import { hrand } from './rng.js';
@@ -55,7 +56,7 @@ export function stepWeapon(S, w, a, inp, dt, ev) {
   a.throwT = Math.max(0, a.throwT - dt * 1.8);
   // ADS とローレディ
   const busy = ws.st === 'draw' || ws.st === 'holster' || a.sprint || a.vault || (a.act && a.act.noAds);
-  a.adsOn = !!inp.ads && !busy && ws.slot >= 0 && ws.slot < 2 && !a.down;
+  a.adsOn = !!inp.ads && !busy && ws.slot >= 0 && (ws.slot < 2 || (ws.slot === 3 && a.inv.long === 'm320')) && !a.down && !a.peek;
   a.lowOn = !!inp.low && !a.adsOn;
   const adsT = W ? W.ads + attMods(wi).ads : 0.25;
   a.ads = Math.max(0, Math.min(1, a.ads + (a.adsOn ? dt / adsT : -dt / (adsT * 0.8))));
@@ -67,6 +68,7 @@ export function stepWeapon(S, w, a, inp, dt, ev) {
   for (const ac of (inp.act || [])) {
     if (ac.a === 'reload') startReload(S, a, !!ac.fast, ev);
     else if (ac.a === 'switch') switchTo(S, a, ac.slot, ev);
+    else if (ac.a === 'mode' && ws.slot === 3) m320Next(a, ev);
     else if (ac.a === 'mode' && W && wi && W.modes.length > 1 && ws.st === 'ready') { wi.mode = (wi.mode + 1) % W.modes.length; ev.push({ e: 'fmode', id: a.id, m: W.modes[wi.mode] }); }
     else if (ac.a === 'light' && wi && wi.att.light) { wi.lightOn = !wi.lightOn; a.light = wi.lightOn; ev.push({ e: 'lightsw', id: a.id, on: wi.lightOn }); }
   }
@@ -82,7 +84,7 @@ function finishState(S, a, ev) {
   const ws = a.ws, wi = curWeapon(a), W = curW(a);
   const st = ws.st;
   if (st === 'draw') { ws.st = 'ready'; ws.t = 0; }
-  else if (st === 'holster') { ws.slot = ws.next; ws.next = -1; ws.st = 'draw'; const W2 = curW(a); ws.t = W2 ? W2.draw : 0.3; if (ev) ev.push({ e: 'draw', id: a.id, slot: ws.slot }); }
+  else if (st === 'holster') { ws.slot = ws.next; ws.next = -1; ws.st = 'draw'; const W2 = curW(a); ws.t = W2 ? W2.draw : ws.slot === 3 ? (LONG[a.inv.long] && LONG[a.inv.long].draw) || 0.6 : 0.3; if (ev) ev.push({ e: 'draw', id: a.id, slot: ws.slot }); }
   else if (st === 'reload' && wi && W) {
     // 弾倉を替える
     if (ws.rk === 'rev') { const need = W.mag - wi.mag; const take = Math.min(need, wi.res); wi.mag += take; wi.res -= take; }
@@ -143,10 +145,22 @@ export function switchTo(S, a, slot, ev) {
   const ws = a.ws;
   if (slot === ws.slot && ws.st !== 'holster') return false;
   if (slot >= 0 && slot < 2 && !a.inv.w[slot]) return false;
-  if (a.inv.long === 'shield' && slot === 0) { /* 盾は拳銃だけ */ }
+  if (slot === 3 && !HAND_LONG[a.inv.long]) return false;
+  // 持ち替える前の物（特殊装備・投げ物から戻るとき）
+  if (ws.slot >= 0 && ws.slot < 2) ws.prev = ws.slot;
   ws.next = slot; ws.st = 'holster'; ws.t = 0.22; ws.rk = null;
   if (ev) ev.push({ e: 'holster', id: a.id });
   return true;
+}
+
+// M320 の弾を替える（残っている次の種類へ）
+export function m320Next(a, ev) {
+  const m = a.inv.m320; if (!m) return;
+  const order = ['flash', 'stinger', 'cs'];
+  let i = order.indexOf(m.sel);
+  for (let n = 0; n < 3; n++) { i = (i + 1) % 3; if (m[order[i]] > 0) break; }
+  m.sel = order[i];
+  if (ev) ev.push({ e: 'm320sel', id: a.id, sel: m.sel, n: m[m.sel] });
 }
 
 function tryFire(S, w, a, W, wi, inp, ev) {

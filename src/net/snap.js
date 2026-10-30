@@ -8,7 +8,7 @@ const r2 = (v) => Math.round(v * 100);
 const r3 = (v) => Math.round(v * 1000);
 const isNum = (v) => typeof v === 'number' && isFinite(v);
 // 送る出来事（見た目・音・HUDに要るもの）
-export const NET_EV = new Set(['shot', 'imp', 'blood', 'hit', 'whiz', 'kill', 'down', 'cuffed', 'report', 'evidence', 'bombdone', 'soft', 'glass', 'block', 'reinf', 'door', 'deny', 'nade', 'boom', 'c2', 'flashed', 'stung', 'tase', 'spray', 'reload', 'reloaded', 'shell', 'pumped', 'dry', 'draw', 'fmode', 'lightsw', 'step', 'shout', 'cmd', 'mirror', 'act', 'trap', 'trapset', 'barset', 'c2set', 'barhit', 'barbreak', 'plant', 'disable', 'defpick', 'defdrop', 'spotted', 'drone', 'dronedead', 'phase', 'round', 'roundstart', 'swap', 'respawn', 'matchend', 'end', 'revive', 'bandaged', 'fall', 'throw', 'bounce', 'allbombs', 'trapoff']);
+export const NET_EV = new Set(['shot', 'imp', 'blood', 'hit', 'whiz', 'kill', 'down', 'cuffed', 'report', 'evidence', 'bombdone', 'soft', 'glass', 'block', 'reinf', 'door', 'deny', 'nade', 'boom', 'c2', 'flashed', 'stung', 'tase', 'spray', 'reload', 'reloaded', 'shell', 'pumped', 'dry', 'draw', 'fmode', 'lightsw', 'step', 'shout', 'cmd', 'mirror', 'act', 'trap', 'trapset', 'barset', 'c2set', 'barhit', 'barbreak', 'plant', 'disable', 'defpick', 'defdrop', 'spotted', 'drone', 'dronedead', 'phase', 'round', 'roundstart', 'swap', 'respawn', 'matchend', 'end', 'revive', 'bandaged', 'fall', 'throw', 'bounce', 'allbombs', 'trapoff', 'peek', 'peekend', 'launch', 'shieldhit', 'longsel', 'm320sel', 'gearhint', 'gearsel']);
 // 出来事の数を丸める（小数2けた）
 export function packEvent(e) {
   const o = {};
@@ -42,7 +42,7 @@ export function packSnap(S, w, events, mePids, withBlocks) {
     const rel = a.ws.st === 'reload' && a.ws.rd ? Math.round((1 - a.ws.t / a.ws.rd) * 100) : -1;
     A.push([a.id, r2(a.x), r2(a.y), r2(a.z), r3(a.yaw), r3(a.pitch + (a.ws.rp || 0) * Math.PI / 180), r2(a.st), r2(a.lean), r2(a.mvx || 0), r2(a.mvz || 0), r2(a.phase || 0), r2(a.ads || 0), r2(a.low || 0), f, r2(a.stateT || 0), r2(a.fallYaw || 0), rel, r2(a.fireK || 0), r2(a.throwT || 0), a.ws.slot, Math.round(100 * a.hp / (a.maxHp || 100)), r2(a.spd || 0), SIDE.indexOf(a.pvpSide || ''), a.spotTeam ?? -1, a._lookV || 0]);
   }
-  const D = S.doors.map(d => { let fl = 0; if (d.locked) fl |= 1; if (d.lockBroken) fl |= 2; if (d.broken) fl |= 4; if (d.wedge) fl |= 8; if (d.bar > 0) fl |= 16; if (d.c2) fl |= 32; if (d.trapSeen) fl |= 64; if (d.trap && d.trap.armed) fl |= 128; return [d.ang.map(r2), fl, d.bar > 0 ? Math.round(d.bar) : 0]; });
+  const D = S.doors.map(d => { let fl = 0; if (d.locked) fl |= 1; if (d.lockBroken) fl |= 2; if (d.broken) fl |= 4; if (d.wedge) fl |= 8; if (d.bar > 0) fl |= 16; if (d.c2) fl |= 32; if (d.trapSeen) fl |= 64; if (d.trap && d.trap.armed) fl |= 128; return [d.ang.map(r2), fl, d.bar > 0 ? Math.round(d.bar) : 0, d.trap && d.trap.side ? d.trap.side : 0]; });
   const I = S.items.filter(it => !it.gone).map(it => [it.id, it.kind, r2(it.x), r2(it.y), r2(it.z), r2(it.yaw || 0), it.kind === 'weapon' ? attKey(it.w || { id: it.wid, att: {} }) : it.kind === 'evidence' ? it.ek : 0]);
   const N = S.nades.map(n => [r2(n.x), r2(n.y), r2(n.z), n.type]);
   const C = S.clouds.map(c => [r2(c.x), r2(c.y), r2(c.z), r2(c.r), c.type]);
@@ -69,6 +69,8 @@ function meBlock(a) {
     ws: [a.ws.slot, a.ws.st, r2(a.ws.t || 0), r2(a.ws.rd || 0), a.ws.next ?? -1, a.ws.gear || null],
     w: a.inv.w.map(w => w ? [w.id, w.mags ? w.mags.slice() : null, w.mag, w.ch, w.res, w.mode, w.lightOn ? 1 : 0, w.am] : null),
     g: a.inv.gear.map(g => [g.id, g.n]), act: a.act ? [a.act.k, r2(a.act.t), r2(a.act.dur)] : null,
+    m3: a.inv.m320 ? [a.inv.m320.sel, a.inv.m320.flash, a.inv.m320.stinger, a.inv.m320.cs] : null, lt: r2(a.ws.lt || 0),
+    pk: a.peek ? [a.peek.k, r2(a.peek.x), r2(a.peek.y), r2(a.peek.z), r3(a.peek.yaw0), r2(a.peek.max), a.peek.door, a.peek.fov] : null,
     st: a.stance, db: a.dbno ? Math.round(a.dbno * 10) / 10 : 0, sp: a.spawnProt > 0 ? 1 : 0, s: [a.stats.k, a.stats.d, a.stats.a, a.stats.sh, a.stats.hi], dr: a.dronesLeft ?? null,
   };
 }
@@ -155,11 +157,11 @@ export class Mirror {
     // 扉・物・投げ物・目的（最新）
     const D = last.D || [];
     for (let i = 0; i < D.length && i < S.doors.length; i++) {
-      const ds = S.doors[i], [ang, fl, bar] = D[i];
+      const ds = S.doors[i], [ang, fl, bar, tside] = D[i];
       const target = ang.map(v => v / 100);
       // 開閉は少しなめらかに
       ds.ang = ds.ang.map((v, j) => v + ((target[j] ?? 0) - v) * 0.35);
-      ds.tgt = target; ds.locked = !!(fl & 1); ds.lockBroken = !!(fl & 2); ds.broken = !!(fl & 4); ds.wedge = fl & 8 ? 1 : 0; ds.bar = fl & 16 ? (bar || 1) : 0; ds.c2 = fl & 32 ? {} : null; ds.trapSeen = !!(fl & 64); ds.trap = fl & 128 ? { armed: true } : null;
+      ds.tgt = target; ds.locked = !!(fl & 1); ds.lockBroken = !!(fl & 2); ds.broken = !!(fl & 4); ds.wedge = fl & 8 ? 1 : 0; ds.bar = fl & 16 ? (bar || 1) : 0; ds.c2 = fl & 32 ? {} : null; ds.trapSeen = !!(fl & 64); ds.trap = fl & 128 ? { armed: true, side: tside || 0 } : null;
     }
     S.items = (last.I || []).map(([id, kind, x, y, z, yaw, ex]) => kind === 'weapon' ? { id, kind, x: x / 100, y: y / 100, z: z / 100, yaw: yaw / 100, wid: ex && ex[0], w: ex && WEAPONS[ex[0]] ? makeWeapon({ id: ex[0], sight: ex[1], muzzle: ex[2], grip: ex[3], light: !!ex[4] }) : null } : { id, kind, x: x / 100, y: y / 100, z: z / 100, yaw: yaw / 100, ek: ex, ev: kind === 'evidence' });
     S.nades = (last.N || []).map(([x, y, z, type]) => ({ x: x / 100, y: y / 100, z: z / 100, type }));
@@ -195,6 +197,9 @@ export class Mirror {
     a.act = P.act ? { k: P.act[0], t: P.act[1] / 100, dur: P.act[2] / 100 } : null;
     a.dbno = P.db; a.spawnProt = P.sp; a.stats.k = P.s[0]; a.stats.d = P.s[1]; a.stats.a = P.s[2]; a.stats.sh = P.s[3]; a.stats.hi = P.s[4];
     if (P.dr != null) a.dronesLeft = P.dr;
+    if (P.m3) a.inv.m320 = { sel: P.m3[0], flash: P.m3[1], stinger: P.m3[2], cs: P.m3[3] };
+    a.ws.lt = (P.lt || 0) / 100; if (a.ws.lt > 0 && !(a.ws.rd > 0)) a.ws.rd = 2.6;
+    a.peek = P.pk ? { k: P.pk[0], x: P.pk[1] / 100, y: P.pk[2] / 100, z: P.pk[3] / 100, yaw0: P.pk[4] / 1000, max: P.pk[5] / 100, door: P.pk[6], fov: P.pk[7] } : null;
     return P.ws;
   }
 }

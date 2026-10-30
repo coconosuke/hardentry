@@ -4,7 +4,7 @@ import { onTap } from './input.js';
 import { C, CS, LH, isWallish } from '../engine/world.js';
 import { M } from '../engine/data/materials.js';
 import { WEAPONS } from '../engine/data/weapons.js';
-import { GEAR } from '../engine/data/equipment.js';
+import { GEAR, LONG } from '../engine/data/equipment.js';
 import { ammoCount } from '../engine/actor.js';
 
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
@@ -50,6 +50,8 @@ export class Hud {
     this.prompt = el('div', 'hud-prompt'); r.appendChild(this.prompt);
     this.banner = el('div', 'hud-banner'); r.appendChild(this.banner);
     this.mirror = el('div', 'hud-mirror'); r.appendChild(this.mirror);
+    // のぞいている間（ミラー・オプティワンド）
+    this.peekEl = el('div', 'hud-peek', '<div class="pk-hint">スワイプで見回す・動くと戻る</div><div class="pk-x" data-btn="peekx" role="button">戻る</div>'); r.appendChild(this.peekEl);
     this.stickEl = el('div', 'hud-stick', '<div class="knob"></div><div class="spr">ダッシュ</div>'); r.appendChild(this.stickEl);
     this.radialEl = el('div', 'hud-radial'); r.appendChild(this.radialEl);
     // ボタン
@@ -199,11 +201,24 @@ export class Hud {
       const wi = v.wi, W = wi ? WEAPONS[wi.id] : null;
       let akey = '';
       if (p.ws.slot === 2 && v.gearId) { const g = p.inv.gear.find(x => x.id === v.gearId); akey = 'g|' + v.gearId + '|' + (g ? g.n : 0); }
+      else if (p.ws.slot === 3 && p.inv.long) { const m = p.inv.m320; akey = 'L|' + p.inv.long + '|' + (m ? [m.sel, m.flash, m.stinger, m.cs].join(',') : '') + '|' + (p.ws.lt > 0 ? 1 : 0); }
       else if (wi && W) { const [m, r] = ammoCount(wi); akey = wi.id + '|' + m + '|' + r + '|' + wi.mode + '|' + (wi.mags ? wi.mags.join(',') : '') + '|' + p.ws.st; }
       if (this.cache.ammo !== akey) {
         this.cache.ammo = akey;
         const am = this.info.ammo;
-        if (akey.startsWith('g|')) {
+        if (akey.startsWith('L|')) {
+          const L = p.inv.long, m = p.inv.m320;
+          const RN = { flash: '閃光弾', stinger: 'スティンガー弾', cs: 'CSガス弾' };
+          if (L === 'm320' && m) {
+            am.querySelector('.mode').textContent = (RN[m.sel] || '') + (p.ws.lt > 0 ? '・装填中' : '');
+            am.querySelector('.cnt').innerHTML = `<b class="${m[m.sel] ? '' : 'empty'}">${m[m.sel] || 0}</b><span>/${m.flash + m.stinger + m.cs}</span>`;
+            am.querySelector('.mags').innerHTML = ['flash', 'stinger', 'cs'].map(k => `<em class="${k === m.sel ? 'on' : ''}">${RN[k].slice(0, 2)}${m[k]}</em>`).join('');
+          } else {
+            am.querySelector('.mode').textContent = '';
+            am.querySelector('.cnt').innerHTML = `<b class="lname">${LONG[L] ? LONG[L].name : ''}</b>`;
+            am.querySelector('.mags').innerHTML = '';
+          }
+        } else if (akey.startsWith('g|')) {
           const g = p.inv.gear.find(x => x.id === v.gearId);
           am.querySelector('.mode').textContent = GEAR[v.gearId] ? GEAR[v.gearId].name : '';
           am.querySelector('.cnt').innerHTML = `<b>${g ? g.n : 0}</b><span>個</span>`;
@@ -233,8 +248,9 @@ export class Hud {
       this._flag('light', !!(wi && wi.lightOn)); this._flag('low', v.lowOn); this._flag('nvg', !!v.nvgOn);
       this.btn.nvg.classList.toggle('dis', !v.hasNvg);
       this.btn.light.classList.toggle('dis', !(wi && wi.att && wi.att.light));
-      this.btn.fmode.querySelector('.lb').textContent = W ? (W.modes[wi.mode] === 'auto' ? 'AUTO' : 'SEMI') : '';
-      this.btn.fmode.classList.toggle('dis', !(W && W.modes.length > 1));
+      const m320 = p.ws.slot === 3 && p.inv.long === 'm320';
+      this.btn.fmode.querySelector('.lb').textContent = m320 ? '弾種' : W ? (W.modes[wi.mode] === 'auto' ? 'AUTO' : 'SEMI') : '';
+      this.btn.fmode.classList.toggle('dis', !m320 && !(W && W.modes.length > 1));
       const gtxt = v.gearSel ? (GEAR[v.gearSel] ? GEAR[v.gearSel].name.replace(/（.*）/, '') : '') : '';
       const gn = v.gearSel ? (p.inv.gear.find(x => x.id === v.gearSel) || { n: 0 }).n : 0;
       const gk = gtxt + gn;
@@ -278,6 +294,14 @@ export class Hud {
       this.cache.dmg = dk;
       this.dmg.innerHTML = this.dmgArcs.map(a => { const rel = a.ang - (v.yaw || 0); const op = 1 - (now - a.t) / 1200; return `<i style="transform:translate(-50%,-50%) rotate(${-rel}rad) translateY(-70px);opacity:${op}"></i>`; }).join('');
     }
+  }
+  // のぞいている間の表示（カメラの映像だけ。戻るボタンと短い案内）。k: 'mirror' | 'wand' | null
+  setPeek(k) {
+    const key = k || '';
+    if (this.cache.peek === key) return;
+    this.cache.peek = key;
+    this.peekEl.classList.toggle('on', !!k);
+    this.root.classList.toggle('peeking', !!k);
   }
   _flag(id, on) { const e = this.btn[id]; if (e && (e._on !== !!on)) { e._on = !!on; e.classList.toggle('on', !!on); } }
 

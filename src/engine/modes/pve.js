@@ -98,7 +98,8 @@ export default {
     for (let i = 0; i < w.doors.length; i++) {
       const d = w.doors[i], ds = S.doors[i];
       if (d.opt.locked == null && !d.opt.outer && rnd(r) < (M.lockChance ?? 0.25)) ds.locked = true;
-      if (d.opt.trap || (!d.opt.outer && rnd(r) < (M.trapChance ?? 0) * D.trapMul)) { ds.trap = { armed: true, team: 1 }; }
+      // 罠は入口から遠い側（中の側）に仕掛けてある
+      if (d.opt.trap || (!d.opt.outer && rnd(r) < (M.trapChance ?? 0) * D.trapMul)) { const toEntry = (entry.x * CS - d.cx) * d.nx + (entry.z * CS - d.cz) * d.nz; ds.trap = { armed: true, team: 1, side: toEntry > 0 ? -1 : 1 }; }
     }
     S.rules.ff = true;
   },

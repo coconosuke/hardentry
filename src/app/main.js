@@ -4,7 +4,7 @@ import { Input, tapHooks } from '../ui/input.js';
 import { Hud } from '../ui/hud.js';
 import { Screens } from '../ui/screens.js';
 import { AudioSys } from '../audio/audio.js';
-import { Renderer, QUALITY } from '../render/renderer.js';
+import { Renderer, QUALITY, gfxOf } from '../render/renderer.js';
 import { loadSettings, saveSettings, loadProfile, saveProfile, loadLoadouts, saveLoadouts } from './settings.js';
 import { load, save, remove, purgeOld, exportCode, importCode, parseCode, loadRun } from './save.js';
 import { getAsset } from './assets.js';
@@ -74,7 +74,7 @@ class App {
     this.screens.loading('準備中…', 0.05);
     await nextFrame();
     try {
-      this.renderer = new Renderer(this.canvas, { quality: this.settings.quality });
+      this.renderer = new Renderer(this.canvas, { gfx: gfxOf(this.settings) });
     } catch (e) {
       this.screens.error('この端末は3D表示に対応していません。WebGL2対応のブラウザ（iPhoneはiOS 15以降のSafari）で開いてください。', String(e.message || e));
       return;
@@ -134,7 +134,7 @@ class App {
       this.lossTimes = [];
     }
     try {
-      this.renderer = new Renderer(this.canvas, { quality: this.settings.quality });
+      this.renderer = new Renderer(this.canvas, { gfx: gfxOf(this.settings) });
       this._resize();
       if (this.game) this.game.rebind(this.renderer);
       if (this.titleScene) this.titleScene.entered = false;
@@ -180,8 +180,9 @@ class App {
   // ---- 設定
   applySettings(persist = true) {
     const S = this.settings;
-    const key = [S.quality, S.scale, S.fps, S.autoRes].join(':');
-    if (key !== this._gfxKey) { this._gfxKey = key; this._dynReset(); this.renderer.setQuality(S.quality); this._resize(); }
+    const key = [S.quality, JSON.stringify(gfxOf(S)), S.scale, S.fps, S.autoRes].join(':');
+    if (key !== this._gfxKey) { this._gfxKey = key; this._dynReset(); this.renderer.setQuality(gfxOf(S)); this._resize(); }
+    if (this.game && this.game.fx) { this.game.fx.amount = { low: 0.5, normal: 1, high: 1.5 }[gfxOf(S).fx] || 1; this.game.fx.shells = gfxOf(S).shells !== false; }
     this.input.setSettings(S);
     this.hud.setSettings(S);
     this.stageEl.style.setProperty('--cross', S.crossColor || '#fff');

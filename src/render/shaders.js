@@ -143,8 +143,11 @@ void main(){
   if (!gl_FrontFacing) n = -n;
   vec3 alb = texture(uTex, vec3(vUV, vLayer)).rgb * vCol * uTint;
   float yl = vPos.y - floor((vPos.y + 0.05) / uMapD.w) * uMapD.w;
-  // 巾木（塗装の内壁の足元）
-  if (abs(vLayer - 3.0) < 0.5 && abs(n.y) < 0.5 && yl < 0.09 && yl > -0.01) alb = vec3(0.78, 0.76, 0.72) * (0.9 + 0.1 * smoothstep(0.08, 0.09, yl));
+  // 巾木（塗装の内壁の足元）と回り縁（天井ぎわの細い帯）
+  if (abs(vLayer - 3.0) < 0.5 && abs(n.y) < 0.5) {
+    if (yl < 0.1 && yl > -0.01) alb = vec3(0.8, 0.78, 0.74) * (0.86 + 0.14 * smoothstep(0.085, 0.1, yl));
+    else if (yl > 2.745 && yl < 2.81) alb = mix(alb, vec3(0.86, 0.85, 0.82), 0.85) * (0.92 + 0.08 * smoothstep(2.745, 2.76, yl));
+  }
   float outdoor;
   vec3 col = shade(vPos, n, alb, vRoom, vAO, outdoor);
 #ifdef GLASS
@@ -166,15 +169,17 @@ void main(){
   if (vEmit > 0.0) col += alb * vEmit * uEmitK * 2.2;
   // 一人称の銃と腕: 周りの明るさに合わせて、上からの光・つや・ふちを少し足す（黒い銃の形が分かるように）
   if (uVM > 0.0) {
+    // 周りが暗くても形が読めるよう、明るさの下限（0.45）を持つ「撮影用の光」: 上からの主光・左の補助光・つや・ふち
     vec3 v = normalize(uCam - vPos);
     vec3 irr = col / max(alb, vec3(0.02));
-    float E = clamp(dot(irr, vec3(0.3333)), 0.0, 2.5);
+    float E = clamp(dot(irr, vec3(0.3333)), 0.45, 2.5);
     vec3 kd = normalize(vec3(0.25, 0.9, 0.15));
-    float ndl = max(dot(n, kd), 0.0);
+    vec3 kf = normalize(vec3(-0.8, 0.3, -0.2));
+    float ndl = max(dot(n, kd), 0.0), ndf = max(dot(n, kf), 0.0);
     vec3 h = normalize(kd + v);
-    float sp = pow(max(dot(n, h), 0.0), 28.0);
+    float sp = pow(max(dot(n, h), 0.0), 36.0);
     float rim = pow(1.0 - max(dot(n, v), 0.0), 2.5);
-    col += (alb * (0.45 * ndl + 0.18) + vec3(0.09 * sp) + alb * rim * 0.5) * E * uVM;
+    col += (alb * (0.5 * ndl + 0.16 * ndf + 0.2) + vec3(0.11 * sp) + alb * rim * 0.45) * E * uVM;
   }
   oCol = vec4(fog(col, vPos, outdoor), 1.0);
 #endif
@@ -298,18 +303,21 @@ void main(){
 }`;
 export const COMP_FS = `
 uniform sampler2D uSrc; uniform sampler2D uBloom; uniform float uBloomK; uniform float uExposure; uniform float uVig;
-uniform float uNVG; uniform float uFlashW; uniform float uDamage; uniform float uSupp; uniform float uGas; uniform float uTime2; uniform float uSat; uniform float uBlur; uniform vec2 uTexel2;
+uniform float uNVG; uniform float uFlashW; uniform float uDamage; uniform float uSupp; uniform float uGas; uniform float uTime2; uniform float uSat; uniform float uBlur; uniform vec2 uTexel2; uniform float uPeek;
 in vec2 vUV; layout(location=0) out vec4 oCol;
 vec3 aces(vec3 x){ return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0); }
 void main(){
-  vec3 c = texture(uSrc, vUV).rgb;
+  // オプティワンド: 小さなカメラの広角のゆがみ
+  vec2 uv = vUV;
+  if (uPeek > 0.5 && uPeek < 1.5) { vec2 d = uv - 0.5; uv = 0.5 + d * (0.9 + 0.32 * dot(d, d)); }
+  vec3 c = texture(uSrc, uv).rgb;
   if (uBlur > 0.0) {
     vec3 b = vec3(0.0); float t = uBlur * 3.0;
-    b += texture(uSrc, vUV + uTexel2 * vec2(t, 0.0)).rgb; b += texture(uSrc, vUV - uTexel2 * vec2(t, 0.0)).rgb;
-    b += texture(uSrc, vUV + uTexel2 * vec2(0.0, t)).rgb; b += texture(uSrc, vUV - uTexel2 * vec2(0.0, t)).rgb;
+    b += texture(uSrc, uv + uTexel2 * vec2(t, 0.0)).rgb; b += texture(uSrc, uv - uTexel2 * vec2(t, 0.0)).rgb;
+    b += texture(uSrc, uv + uTexel2 * vec2(0.0, t)).rgb; b += texture(uSrc, uv - uTexel2 * vec2(0.0, t)).rgb;
     c = mix(c, b * 0.25, clamp(uBlur, 0.0, 1.0));
   }
-  if (uBloomK > 0.0) c += texture(uBloom, vUV).rgb * uBloomK;
+  if (uBloomK > 0.0) c += texture(uBloom, uv).rgb * uBloomK;
   c *= uExposure;
   vec2 q = vUV - 0.5;
   float r2 = dot(q * vec2(1.6, 1.0), q * vec2(1.6, 1.0));
@@ -327,6 +335,24 @@ void main(){
   m = mix(vec3(lum), m, uSat);
   m = pow(m, vec3(1.0 / 2.2));
   m *= 1.0 - uVig * smoothstep(0.15, 0.75, r2);
+  if (uPeek > 1.5) {
+    // ミラー: 丸い鏡の中だけ見える。縁は金属の輪、外は暗い
+    vec2 qa = q * vec2(uTexel2.y / uTexel2.x, 1.0);
+    float rr = length(qa);
+    m *= 1.0 - 0.3 * smoothstep(0.28, 0.44, rr);
+    float rim = smoothstep(0.43, 0.437, rr) * (1.0 - smoothstep(0.452, 0.462, rr));
+    m = mix(m, vec3(0.02), smoothstep(0.437, 0.441, rr));
+    m += vec3(0.42, 0.44, 0.47) * rim * (0.6 + 0.4 * qa.y / max(rr, 0.001));
+  } else if (uPeek > 0.5) {
+    // オプティワンド: 色の薄い小さな画面。ざらつきと走査線、四隅が暗い
+    float l = dot(m, vec3(0.299, 0.587, 0.114));
+    m = mix(vec3(l), m, 0.3) * vec3(0.93, 1.0, 1.05);
+    float n = hash12(floor(vUV * vec2(420.0, 240.0)) + floor(uTime2 * 24.0)) - 0.5;
+    m += n * 0.07;
+    m *= 0.93 + 0.07 * sin(vUV.y * 760.0);
+    vec2 e2 = abs(q) * 2.0;
+    m *= 1.0 - 0.85 * smoothstep(0.82, 1.0, max(e2.x * 0.96, e2.y));
+  }
   // 制圧（弾がかすめた）: ふちが暗くなり色が抜ける
   if (uSupp > 0.0) { float e = smoothstep(0.05, 0.6, r2) * uSupp; m = mix(m, vec3(dot(m, vec3(0.33))) * 0.55, e * 0.8); }
   if (uDamage > 0.0) { float e = smoothstep(0.1, 0.7, r2) * uDamage; m = mix(m, vec3(0.45, 0.02, 0.01), e * 0.7); }

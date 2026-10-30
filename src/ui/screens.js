@@ -11,7 +11,7 @@ import { buildPlan } from './hud.js';
 import { CS } from '../engine/world.js';
 import { LoadoutEditor } from './loadout.js';
 import { Book } from './book.js';
-import { QUALITY } from '../render/renderer.js';
+import { QUALITY, GFX_PRESET, gfxOf } from '../render/renderer.js';
 
 export function fmtTime(t) { t = Math.max(0, Math.floor(t)); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); }
 const BACK = `<button class="back" data-back aria-label="戻る"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>戻る</span></button>`;
@@ -28,12 +28,17 @@ export class Screens {
   _mk(name, html, cls = '') {
     let el = this.el[name];
     if (!el) { el = document.createElement('div'); el.className = 'screen ' + name + ' ' + cls; this.root.appendChild(el); this.el[name] = el; }
+    // 同じ画面を描き直すとき（選んだだけ）はスクロールの位置を保つ
+    const keep = this.cur === name && !this._noKeep; this._noKeep = false;
+    const old = keep ? [...el.querySelectorAll('.scroll')].map(q => [q.scrollTop, q.scrollLeft]) : null;
     el.innerHTML = html;
     const b = el.querySelector('[data-back]');
     if (b) onTap(b, () => { this.app.audio.ui('back'); this.back(); });
     el.querySelectorAll('.scroll').forEach(s => new Scroller(this.stage, s));
     // タブの列は横にスクロール（狭い画面で右のタブが切れないように）
     el.querySelectorAll('.tabs').forEach(t => { t._sc = new Scroller(this.stage, t, { x: true }); requestAnimationFrame(() => t._sc.reveal(t.querySelector('.tab.on'))); });
+    this._restoreScroll = null;
+    if (old) { const restore = () => el.querySelectorAll('.scroll').forEach((q, i) => { if (old[i]) { q.scrollTop = old[i][0]; q.scrollLeft = old[i][1]; } }); restore(); requestAnimationFrame(restore); this._restoreScroll = restore; }
     return el;
   }
   show(name) {
@@ -419,7 +424,7 @@ export class Screens {
     const a = this.app, S = a.settings;
     const TABS = [['ctrl', '操作'], ['sens', '感度'], ['hud', 'HUD'], ['gfx', '画質'], ['snd', '音'], ['etc', 'その他']];
     const el = this._mk('settings', `<div class="sc-wrap"><header class="sc-head">${BACK}<h2>設定</h2><div class="tabs">${TABS.map(([k, n]) => `<button class="tab${k === tab ? ' on' : ''}" data-tab="${k}">${n}</button>`).join('')}</div></header><div class="pane rows scroll set-body"></div></div>`, 'dim');
-    el.querySelectorAll('[data-tab]').forEach(b => onTap(b, () => { this.app.audio.ui('tap'); this.args = [b.dataset.tab]; this._settings(b.dataset.tab); }));
+    el.querySelectorAll('[data-tab]').forEach(b => onTap(b, () => { this.app.audio.ui('tap'); this.args = [b.dataset.tab]; this._noKeep = true; this._settings(b.dataset.tab); }));
     const body = el.querySelector('.set-body');
     const save = () => a.applySettings();
     const R = [];
@@ -465,12 +470,26 @@ export class Screens {
       row('字幕の濃さ', '後ろの帯', 'subBg'); sl('subBg', 0, 0.9, 0.05, pct);
       row('ヒットマーカー', '', 'hitMarker'); ch('hitMarker', [[true, '表示'], [false, '非表示']]);
     } else if (tab === 'gfx') {
-      row('画質', '影・ブルーム・アンチエイリアス', 'quality'); ch('quality', Object.keys(QUALITY).map(k => [k, QUALITY[k].name]));
-      row('フレームレート上限', '', 'fps'); ch('fps', [[30, '30'], [60, '60']]);
-      row('解像度', '', 'scale'); sl('scale', 0.5, 1, 0.05, pct);
+      // まとめて選ぶ（低・中・高）と、細かい設定（変えるとカスタム）
+      const G = gfxOf(S);
+      row('画質', 'まとめて選ぶ。下の項目を変えるとカスタム', 'quality');
+      binds.push(() => chips(body.querySelector('[data-k="quality"]'), Object.keys(QUALITY).map(k => [k, QUALITY[k].name]), S.quality, (v) => { S.quality = v; if (v !== 'custom') S.gfx = { ...GFX_PRESET[v] }; else S.gfx = { ...G }; save(); this._settings('gfx'); }));
+      const gc = (k, label, sub, list) => { row(label, sub, 'g_' + k); binds.push(() => chips(body.querySelector(`[data-k="g_${k}"]`), list, G[k], (v) => { S.gfx = { ...gfxOf(S), [k]: v }; if (S.quality !== 'custom') { S.quality = 'custom'; save(); this._settings('gfx'); return; } save(); })); };
+      gc('detail', '描画の細かさ', '画面の細かさの上限。高いほど重い', [['low', '低'], ['medium', '中'], ['high', '高'], ['max', '最高']]);
+      row('解像度', '描画の細かさに対する割合', 'scale'); sl('scale', 0.5, 1, 0.05, pct);
       row('解像度の自動調整', '重いときに下げる', 'autoRes'); ch('autoRes', [[true, 'オン'], [false, 'オフ']]);
-      row('視野角', '', 'fov'); sl('fov', 45, 75, 1, (v) => v + '°');
+      row('フレームレート上限', '', 'fps'); ch('fps', [[30, '30'], [60, '60']]);
+      gc('shadow', '影', '日の光の影（夜のマップでは出ない）', [['off', 'なし'], ['low', '低'], ['high', '高']]);
+      gc('bloom', '光のにじみ', '明るい所がにじむ（ブルーム）', [[false, 'オフ'], [true, 'オン']]);
+      gc('aa', 'アンチエイリアス', '輪郭のギザギザを減らす', [['off', 'なし'], ['fxaa', 'FXAA'], ['msaa', 'MSAA 4x']]);
+      gc('lights', '動く光の数', 'ライト・銃口の炎・爆発の光', [[2, '2'], [4, '4'], [6, '6'], [8, '8']]);
+      gc('fx', 'エフェクトの量', '粉じん・火花・煙', [['low', '少なめ'], ['normal', '標準'], ['high', '多め']]);
+      gc('shells', '薬莢', '飛び出す薬莢', [[true, '表示'], [false, '非表示']]);
+      row('視野角', '横の角度（16:9の画面で）。横長の画面ではもっと広く見える', 'hfov'); sl('hfov', 70, 110, 1, (v) => v + '°');
+      row('武器の視野角', '手と銃の見え方。小さいほど大きく見える', 'vmFov'); sl('vmFov', 45, 70, 1, (v) => v + '°');
       row('明るさ', '', 'bright'); sl('bright', 0.6, 1.6, 0.05, pct);
+      row('色の鮮やかさ', '', 'sat'); sl('sat', 0.6, 1.5, 0.02, pct);
+      row('周辺減光', '画面のふちを暗く', 'vignette'); ch('vignette', [[true, 'オン'], [false, 'オフ']]);
       row('流血表現', '', 'blood'); ch('blood', [[true, 'オン'], [false, 'オフ']]);
       row('画面の揺れ', '', 'shake'); ch('shake', [[true, '標準'], [false, '弱']]);
       row('FPS表示', '', 'showFps'); ch('showFps', [[false, 'オフ'], [true, 'オン']]);
@@ -490,6 +509,7 @@ export class Screens {
     }
     body.innerHTML = R.join('');
     for (const f of binds) f();
+    if (this._restoreScroll) this._restoreScroll();
     this._acts(body, {
       gyroPerm: async () => { const ok = await a.input.requestGyro(); this.flash(ok ? 'ジャイロ有効' : '許可されませんでした'); },
       editHud: () => a.editHud(() => this._settings('hud')),

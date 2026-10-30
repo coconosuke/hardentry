@@ -31,6 +31,7 @@ export class FX {
     this.tracers = [];
     this.flashes = []; // 一瞬の光（銃口・爆発）: 動く光の一覧へ
     this.blood = true;
+    this.amount = 1; this.shells = true; // エフェクトの量（設定）・薬莢
     this.seed = 1;
     r.hooks.transparent.push((rr, f) => this.draw(f));
   }
@@ -39,7 +40,11 @@ export class FX {
   clear() { this.p.length = 0; this.decN = 0; this.decHead = 0; this.decDirty = true; this.tracers.length = 0; this.flashes.length = 0; }
 
   // 粒子1つ: {x,y,z, vx,vy,vz, life, t, s0, s1, c:[r,g,b,a], add, sh, g(重力), lit, drag, bounce}
-  add(o) { if (this.p.length >= MAXP) this.p.shift(); o.t = 0; this.p.push(o); return o; }
+  add(o) {
+    // 量を減らす設定: 光る物（銃口の炎・火花）以外を間引く
+    if (this.amount < 1 && !o.add && this.rnd() > this.amount) return o;
+    if (this.p.length >= MAXP) this.p.shift(); o.t = 0; this.p.push(o); return o;
+  }
 
   // ---- 発生
   impact(x, y, z, nx, ny, nz, mat) {
@@ -55,7 +60,7 @@ export class FX {
       for (let i = 0; i < 8; i++) this.add({ x, y, z, vx: this.rs(1.5) - nx, vy: this.rnd() * 1.5, vz: this.rs(1.5) - nz, life: 0.8, s0: 0.02, s1: 0.015, c: [0.7, 0.85, 0.9, 0.8], sh: SH.square, g: 9.8, lit: true, bounce: true });
     } else {
       // 粉じんのけむり＋かけら
-      const n = k === 'wood' ? 5 : 4;
+      const n = Math.round((k === 'wood' ? 5 : 4) * Math.max(1, this.amount));
       for (let i = 0; i < n; i++) this.add({ x, y, z, vx: nx * (1.5 + this.rnd() * 2) + this.rs(1.2), vy: ny * 2 + this.rnd() * 1.6, vz: nz * (1.5 + this.rnd() * 2) + this.rs(1.2), life: 0.5 + this.rnd() * 0.4, s0: 0.012 + this.rnd() * 0.012, s1: 0.01, c: [col[0] * 0.8, col[1] * 0.8, col[2] * 0.8, 1], sh: SH.square, g: 9.8, lit: true, bounce: true });
       for (let i = 0; i < 2; i++) this.add({ x: x + nx * 0.03, y: y + ny * 0.03, z: z + nz * 0.03, vx: nx * (0.4 + this.rnd() * 0.4) + this.rs(0.2), vy: 0.15 + this.rnd() * 0.2, vz: nz * (0.4 + this.rnd() * 0.4) + this.rs(0.2), life: 0.9 + this.rnd() * 0.5, s0: 0.06, s1: 0.32, c: [col[0], col[1], col[2], 0.42], sh: SH.soft, g: -0.05, lit: true, drag: 1.6 });
     }
@@ -78,6 +83,7 @@ export class FX {
     this.flashes.push({ x: x + dx * 0.2, y: y + dy * 0.2, z: z + dz * 0.2, r: 5.5, col: [6.0, 3.6, 1.6], t: 0.05 });
   }
   shell(x, y, z, vx, vy, vz, big) {
+    if (!this.shells) return;
     this.add({ x, y, z, vx, vy, vz, life: 1.6, s0: big ? 0.016 : 0.011, s1: big ? 0.016 : 0.011, c: [0.75, 0.55, 0.22, 1], sh: SH.square, g: 9.8, lit: true, bounce: true, shell: true });
   }
   tracer(x0, y0, z0, x1, y1, z1, col) { this.tracers.push({ x0, y0, z0, x1, y1, z1, col: col || [9, 5, 2], t: 0 }); }

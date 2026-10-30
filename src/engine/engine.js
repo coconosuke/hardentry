@@ -129,7 +129,7 @@ export function dump(G) {
   const { S, w } = G;
   const blocks = [];
   for (const k of Object.keys(S.bdiff)) { const b = +k * 4; blocks.push([+k, w.blocks[b], w.blocks[b + 1], w.blocks[b + 2], w.blocks[b + 3], w.bhp[b], w.bhp[b + 1], w.bhp[b + 2], w.bhp[b + 3]]); }
-  const o = JSON.parse(JSON.stringify(S, (k, v) => (k === 'byId' || k === '_caps' || k === '_eye' || k === '_capT' || k === '_inp' || k === '_whiz' ? undefined : v)));
+  const o = JSON.parse(JSON.stringify(S, (k, v) => (k === 'byId' || k === '_caps' || k === '_eye' || k === '_capT' || k === '_inp' || k === '_whiz' || k === '_shieldF' ? undefined : v)));
   o.blocksDiff = blocks;
   return o;
 }

@@ -97,7 +97,7 @@ export function doorOp(S, w, a, did, op, ev, opt = {}) {
   if (op === 'c2') { ds.c2 = { owner: a.id, side, t: S.t }; ev.push({ e: 'c2set', d: did, id: a.id }); return { ok: true }; }
   if (op === 'bar') { if (!isClosed(ds) && !ds.broken) { for (let li = 0; li < d.leaves.length; li++) { ds.tgt[li] = 0; ds.ang[li] = 0; } } ds.bar = 60; ev.push({ e: 'barset', d: did, id: a.id }); return { ok: true }; }
   if (op === 'unbar') { ds.bar = 0; ev.push({ e: 'barbreak', d: did, id: a.id, pry: 1 }); return { ok: true }; }
-  if (op === 'trap') { ds.trap = { armed: true, team: a.team, by: a.id }; ev.push({ e: 'trapset', d: did, id: a.id }); return { ok: true }; }
+  if (op === 'trap') { ds.trap = { armed: true, team: a.team, by: a.id, side: sideOf(d, a.x, a.z) }; ev.push({ e: 'trapset', d: did, id: a.id }); return { ok: true }; }
   return { ok: false, why: 'op' };
 }
 

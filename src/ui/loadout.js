@@ -31,32 +31,52 @@ export class LoadoutEditor {
   save() { this.app.saveLoadouts(); }
   slots() {
     const lo = this.cur(), P = lo.primary || {}, W = WEAPONS[P.id];
-    const ao = W ? attachOptions(P.id) : {};
+    const S2 = lo.secondary || {}, W2 = WEAPONS[S2.id];
+    const ao = W ? attachOptions(P.id) : {}, ao2 = W2 ? attachOptions(S2.id) : {};
     const g = (i) => { const x = (lo.gear || [])[i]; return x ? `${GEAR[x[0]] ? GEAR[x[0]].name.replace(/（.*）/, '') : x[0]} ×${x[1]}` : 'なし'; };
-    const list = [
-      ['primary', '主武器', W ? W.name : 'なし'],
-      ...(ao.sight && ao.sight.length > 1 ? [['sight', '照準', ATTACH.sight[P.sight || 'iron'].name]] : []),
-      ...(ao.muzzle && ao.muzzle.length > 1 ? [['muzzle', '銃口', ATTACH.muzzle[P.muzzle || 'none'].name]] : []),
-      ...(ao.grip && ao.grip.length > 1 ? [['grip', 'グリップ', ATTACH.grip[P.grip || 'none'].name]] : []),
-      ...(W && W.ammo.length > 1 ? [['ammo', '弾', AMMO_NAME[P.ammo || W.ammo[0]]]] : []),
-      ['secondary', '副武器', lo.secondary && WEAPONS[lo.secondary.id] ? WEAPONS[lo.secondary.id].name : 'なし'],
-    ];
-    if (this.kind === 'pve') list.push(['long', '長い装備', LONG[lo.long || 'none'].name]);
-    list.push(['g0', '装備1', g(0)], ['g1', '装備2', g(1)], ['g2', '装備3', g(2)]);
-    if (this.kind === 'pvp') list.push(['armor', '防具', PVP_ARMOR[lo.armor || 'medium'].name]);
-    else list.push(['vest', '防弾ベスト', VEST[lo.vest || 'none'].name], ['plate', '板の材質', PLATE[lo.plate || 'ceramic'].name], ['helmet', 'ヘルメット', HELMET[lo.helmet || 'none'].name], ['head', '頭', HEADWEAR[lo.head || 'none'].name]);
+    const has = (o, k) => o[k] && o[k].length > 1;
+    // 主武器と副武器: それぞれ照準器・マズル・グリップ・弾薬・ライト（付けられる物だけ）
+    const list = [['primary', '主武器', W ? W.name : 'なし', 'h']];
+    if (W) {
+      if (has(ao, 'sight')) list.push(['sight', '照準器', ATTACH.sight[P.sight || 'iron'].name]);
+      if (has(ao, 'muzzle')) list.push(['muzzle', 'マズル', ATTACH.muzzle[P.muzzle || 'none'].name]);
+      if (has(ao, 'grip')) list.push(['grip', 'グリップ', ATTACH.grip[P.grip || 'none'].name]);
+      if (W.ammo.length > 1) list.push(['ammo', '弾薬', AMMO_NAME[P.ammo || W.ammo[0]]]);
+      if (hasLight(P.id)) list.push(['light', 'ライト', P.light === false ? 'なし' : 'あり']);
+    }
+    list.push(['secondary', '副武器', W2 ? W2.name : 'なし', 'h']);
+    if (W2) {
+      if (has(ao2, 'sight')) list.push(['sight2', '照準器', ATTACH.sight[S2.sight || 'iron'].name]);
+      if (has(ao2, 'muzzle')) list.push(['muzzle2', 'マズル', ATTACH.muzzle[S2.muzzle || 'none'].name]);
+      if (W2.ammo.length > 1) list.push(['ammo2', '弾薬', AMMO_NAME[S2.ammo || W2.ammo[0]]]);
+      if (hasLight(S2.id)) list.push(['light2', 'ライト', S2.light === false ? 'なし' : 'あり']);
+    }
+    if (this.kind === 'pve') list.push(['long', '特殊装備', LONG[lo.long || 'none'].name, 'h']);
+    list.push(['g0', '携行品 1', g(0), this.kind === 'pve' ? '' : 'h'], ['g1', '携行品 2', g(1)], ['g2', '携行品 3', g(2)]);
+    if (this.kind === 'pvp') list.push(['armor', '防護', PVP_ARMOR[lo.armor || 'medium'].name, 'h']);
+    else list.push(['vest', '防弾ベスト', VEST[lo.vest || 'none'].name, 'h'], ['plate', '防弾プレート', PLATE[lo.plate || 'ceramic'].name], ['helmet', 'ヘルメット', HELMET[lo.helmet || 'none'].name], ['head', '頭部装備', HEADWEAR[lo.head || 'none'].name]);
     return list;
   }
   options(slot) {
     const lo = this.cur(), side = this.side();
     const P = lo.primary || {}, W = WEAPONS[P.id];
+    const S2 = lo.secondary || {}, W2 = WEAPONS[S2.id];
     const allowedP = this.kind === 'pvp' ? PVP_ALLOWED[side].primary : Object.keys(WEAPONS).filter(id => { const x = WEAPONS[id]; return (x.side === 'swat' || x.side === 'both') && x.cat !== 'pistol' && id !== 'taser'; });
     const allowedS = this.kind === 'pvp' ? PVP_ALLOWED[side].secondary : Object.keys(WEAPONS).filter(id => { const x = WEAPONS[id]; return (x.side === 'swat' || x.side === 'both') && (x.cat === 'pistol' || id === 'taser'); });
+    const att = (spec, k, def) => (attachOptions(spec.id)[k] || []).map(v => ({ v, label: ATTACH[k][v].name, sub: attSub(k, v), on: (spec[k] || def) === v }));
+    const onoff = (spec) => [{ v: 'on', label: 'あり', sub: 'ライトのボタンで点ける。暗い所で見やすいが、相手からも見つかりやすい。', on: spec.light !== false }, { v: 'off', label: 'なし', on: spec.light === false }];
     switch (slot) {
       case 'primary': return allowedP.map(id => ({ v: id, label: WEAPONS[id].name, sub: CAT_NAME[WEAPONS[id].cat] + ' · ' + (CAL[WEAPONS[id].cal] ? CAL[WEAPONS[id].cal].name : ''), on: P.id === id }));
-      case 'secondary': return allowedS.map(id => ({ v: id, label: WEAPONS[id].name, sub: CAT_NAME[WEAPONS[id].cat], on: lo.secondary && lo.secondary.id === id }));
-      case 'sight': case 'muzzle': case 'grip': return (attachOptions(P.id)[slot] || []).map(k => ({ v: k, label: ATTACH[slot][k].name, on: (P[slot] || (slot === 'sight' ? 'iron' : 'none')) === k }));
+      case 'secondary': return allowedS.map(id => ({ v: id, label: WEAPONS[id].name, sub: CAT_NAME[WEAPONS[id].cat], on: S2.id === id }));
+      case 'sight': return att(P, 'sight', 'iron');
+      case 'muzzle': return att(P, 'muzzle', 'none');
+      case 'grip': return att(P, 'grip', 'none');
+      case 'sight2': return att(S2, 'sight', 'iron');
+      case 'muzzle2': return att(S2, 'muzzle', 'none');
       case 'ammo': return (W ? W.ammo : []).map(k => ({ v: k, label: AMMO_NAME[k] || k, on: (P.ammo || W.ammo[0]) === k, sub: ammoSub(W, k) }));
+      case 'ammo2': return (W2 ? W2.ammo : []).map(k => ({ v: k, label: AMMO_NAME[k] || k, on: (S2.ammo || W2.ammo[0]) === k, sub: ammoSub(W2, k) }));
+      case 'light': return onoff(P);
+      case 'light2': return onoff(S2);
       case 'long': return Object.keys(LONG).map(k => ({ v: k, label: LONG[k].name, sub: LONG[k].desc || '', on: (lo.long || 'none') === k }));
       case 'g0': case 'g1': case 'g2': {
         const pool = this.kind === 'pvp' ? PVP_ALLOWED[side].gear : PVE_GEAR;
@@ -64,47 +84,85 @@ export class LoadoutEditor {
         return [{ v: 'none', label: 'なし', on: !cur }].concat(pool.map(k => ({ v: k, label: GEAR[k].name, sub: GEAR[k].desc, on: cur && cur[0] === k })));
       }
       case 'armor': return Object.keys(PVP_ARMOR).map(k => ({ v: k, label: PVP_ARMOR[k].name, on: (lo.armor || 'medium') === k }));
-      case 'vest': return Object.keys(VEST).map(k => ({ v: k, label: VEST[k].name, on: (lo.vest || 'none') === k }));
-      case 'plate': return Object.keys(PLATE).map(k => ({ v: k, label: PLATE[k].name, on: (lo.plate || 'ceramic') === k }));
-      case 'helmet': return Object.keys(HELMET).map(k => ({ v: k, label: HELMET[k].name, on: (lo.helmet || 'none') === k }));
-      case 'head': return Object.keys(HEADWEAR).map(k => ({ v: k, label: HEADWEAR[k].name, on: (lo.head || 'none') === k }));
+      case 'vest': return Object.keys(VEST).map(k => ({ v: k, label: VEST[k].name, sub: VEST[k].desc || '', on: (lo.vest || 'none') === k }));
+      case 'plate': return Object.keys(PLATE).map(k => ({ v: k, label: PLATE[k].name, sub: PLATE[k].desc || '', on: (lo.plate || 'ceramic') === k }));
+      case 'helmet': return Object.keys(HELMET).map(k => ({ v: k, label: HELMET[k].name, sub: HELMET[k].desc || '', on: (lo.helmet || 'none') === k }));
+      case 'head': return Object.keys(HEADWEAR).map(k => ({ v: k, label: HEADWEAR[k].name, sub: HEADWEAR[k].desc || '', on: (lo.head || 'none') === k }));
     }
     return [];
   }
   pick(slot, v) {
     const lo = this.cur();
     lo.primary = lo.primary || {};
+    const keepAtt = (keep, id) => { const ao = attachOptions(id), o = { id }; for (const k of ['sight', 'muzzle', 'grip']) if (keep[k] && ao[k] && ao[k].includes(keep[k])) o[k] = keep[k]; else if (ao[k] && ao[k].length) o[k] = ao[k][0]; if (keep.light === false) o.light = false; o.ammo = WEAPONS[id].ammo[0]; return o; };
     switch (slot) {
-      case 'primary': { const keep = lo.primary; lo.primary = { id: v }; const ao = attachOptions(v); for (const k of ['sight', 'muzzle', 'grip']) if (keep[k] && ao[k] && ao[k].includes(keep[k])) lo.primary[k] = keep[k]; else if (ao[k] && ao[k].length) lo.primary[k] = k === 'sight' ? (ao.sight.includes('holo') ? 'holo' : ao.sight[0]) : 'none'; lo.primary.ammo = WEAPONS[v].ammo[0]; break; }
-      case 'secondary': lo.secondary = { id: v, ammo: WEAPONS[v].ammo[0] }; break;
+      case 'primary': lo.primary = keepAtt(lo.primary || {}, v); break;
+      case 'secondary': lo.secondary = keepAtt(lo.secondary || {}, v); break;
       case 'sight': case 'muzzle': case 'grip': case 'ammo': lo.primary[slot] = v; break;
+      case 'sight2': case 'muzzle2': case 'ammo2': lo.secondary = lo.secondary || {}; lo.secondary[slot.slice(0, -1)] = v; break;
+      case 'light': lo.primary.light = v === 'on'; break;
+      case 'light2': lo.secondary = lo.secondary || {}; lo.secondary.light = v === 'on'; break;
       case 'long': lo.long = v; break;
       case 'g0': case 'g1': case 'g2': { const i = +slot[1]; lo.gear = (lo.gear || []).slice(0, 3); while (lo.gear.length < 3) lo.gear.push(null); lo.gear[i] = v === 'none' ? null : [v, PERSLOT[v] || 1]; lo.gear = lo.gear.filter(Boolean); break; }
       case 'armor': lo.armor = v; break;
       case 'vest': case 'plate': case 'helmet': case 'head': lo[slot] = v; break;
     }
     this.save();
-    this.render();
+    this.render({ keep: true });
   }
-  render() {
+  // keep: スクロールの位置を保つ（選んだだけ）。枠を変えたときは候補の列だけ上へ
+  render(o = {}) {
     const T = this.tabs(), slots = this.slots();
     if (!slots.some(s => s[0] === this.slot)) this.slot = 'primary';
+    const old = {};
+    for (const c of ['lo-slots', 'lo-opts', 'lo-info']) { const e = this.host.querySelector('.' + c); if (e) old[c] = e.scrollTop; }
+    const tabRow = this.host.querySelector('.lo-tabs'); const oldTab = tabRow ? tabRow.scrollLeft : 0;
     const opts = this.options(this.slot);
     const lo = this.cur();
-    const info = this.slot === 'primary' || this.slot === 'sight' || this.slot === 'muzzle' || this.slot === 'grip' || this.slot === 'ammo' ? weaponCard(lo.primary, this.kind) : this.slot === 'secondary' ? weaponCard(lo.secondary, this.kind) : '';
-    this.host.innerHTML = `<div class="lo-tabs">${T.map(([k, n], i) => `<button class="tab${i === this.tab ? ' on' : ''}" data-t="${i}">${n}</button>`).join('')}</div>
+    const weaponSlot = ['primary', 'sight', 'muzzle', 'grip', 'ammo', 'light'].includes(this.slot);
+    const secSlot = ['secondary', 'sight2', 'muzzle2', 'ammo2', 'light2'].includes(this.slot);
+    const info = weaponSlot ? weaponCard(lo.primary, this.kind) : secSlot ? weaponCard(lo.secondary, this.kind) : this.slot === 'long' ? longCard(lo.long || 'none') : '';
+    this.host.innerHTML = `<div class="lo-tabs tabs">${T.map(([k, n], i) => `<button class="tab${i === this.tab ? ' on' : ''}" data-t="${i}">${n}</button>`).join('')}</div>
       <div class="lo">
-        <div class="lo-slots scroll">${slots.map(([k, n, v]) => `<button class="slot${k === this.slot ? ' on' : ''}" data-s="${k}"><small>${n}</small><b>${esc(v)}</b></button>`).join('')}</div>
+        <div class="lo-slots scroll">${slots.map(([k, n, v, hd]) => `<button class="slot${k === this.slot ? ' on' : ''}${hd ? ' head' : ' sub'}" data-s="${k}"><small>${n}</small><b>${esc(v)}</b></button>`).join('')}</div>
         <div class="lo-opts scroll">${opts.map(o => `<button class="opt${o.on ? ' on' : ''}" data-v="${esc(o.v)}"><b>${esc(o.label)}</b>${o.sub ? `<small>${esc(o.sub)}</small>` : ''}</button>`).join('')}</div>
         <div class="lo-info scroll">${info}</div>
       </div>`;
-    this.host.querySelectorAll('.scroll').forEach(s => new Scroller(this.app.stage, s));
-    this.host.querySelectorAll('[data-t]').forEach(b => onTap(b, () => { this.tab = +b.dataset.t; this.app.audio.ui('tap'); this.render(); }));
-    this.host.querySelectorAll('[data-s]').forEach(b => onTap(b, () => { this.slot = b.dataset.s; this.app.audio.ui('tap'); this.render(); }));
+    this.host.querySelectorAll('.scroll').forEach(sc => new Scroller(this.app.stage, sc));
+    const tr = this.host.querySelector('.lo-tabs'); const tsc = new Scroller(this.app.stage, tr, { x: true });
+    // 位置を戻す
+    const sl = this.host.querySelector('.lo-slots'), op = this.host.querySelector('.lo-opts'), inf = this.host.querySelector('.lo-info');
+    if (old['lo-slots'] != null && o.keepSlots !== false) sl.scrollTop = old['lo-slots'];
+    if (o.keep) { if (old['lo-opts'] != null) op.scrollTop = old['lo-opts']; if (old['lo-info'] != null) inf.scrollTop = old['lo-info']; }
+    tr.scrollLeft = oldTab; tsc.edges();
+    if (!o.keep && !old['lo-opts']) { const on = op.querySelector('.opt.on'); if (on && on.offsetTop > op.clientHeight - 40) op.scrollTop = on.offsetTop - op.clientHeight / 2; }
+    this.host.querySelectorAll('[data-t]').forEach(b => onTap(b, () => { this.tab = +b.dataset.t; this.app.audio.ui('tap'); this.render({ keepSlots: true }); }));
+    this.host.querySelectorAll('[data-s]').forEach(b => onTap(b, () => { this.slot = b.dataset.s; this.app.audio.ui('tap'); this.render({}); }));
     this.host.querySelectorAll('[data-v]').forEach(b => onTap(b, () => { this.app.audio.ui('tap'); this.pick(this.slot, b.dataset.v); }));
   }
 }
+// ライトを付けられる銃か（拳銃はレールがあるものだけ）
+function hasLight(id) { const W = WEAPONS[id]; if (!W) return false; if (W.cat !== 'pistol') return W.cat !== 'less'; return !['makarov', 'python', 'm1911'].includes(W.model) || !!(W.mdl && W.mdl.rail); }
+function attSub(k, v) {
+  const A = ATTACH[k] && ATTACH[k][v]; if (!A) return '';
+  const t = [];
+  if (A.zoom && A.zoom > 1.01) t.push(`倍率${A.zoom.toFixed(1)}`);
+  if (A.ads) t.push(`構える時間${A.ads > 0 ? '+' : ''}${Math.round(A.ads * 1000)}ms`);
+  if (A.rcv && A.rcv !== 1) t.push(`縦の反動${Math.round((A.rcv - 1) * 100)}%`);
+  if (A.rch && A.rch !== 1) t.push(`横の反動${Math.round((A.rch - 1) * 100)}%`);
+  if (A.rcfirst && A.rcfirst !== 1) t.push(`初弾の跳ね${Math.round((A.rcfirst - 1) * 100)}%`);
+  if (A.noise && A.noise !== 1) t.push(A.noise < 1 ? '銃声が小さい' : '銃声が大きい');
+  if (A.flash != null && A.flash < 0.5) t.push('発射炎が見えにくい');
+  return t.join(' · ');
+}
 function ammoSub(W, k) { const A = AMMO[W.cal] && AMMO[W.cal][k]; if (!A) return ''; return `胴${Math.round(A.dmg)}${A.pellets ? '×' + A.pellets : ''} · 手足×${A.limb} · 壁の貫通${A.pen} · 防具の貫通${A.apen}`; }
+// 特殊装備の説明と使い方
+function longCard(k) {
+  const L = LONG[k];
+  if (!L || k === 'none') return '<p class="desc">特殊装備は1つだけ持てる。盾・破城槌・ブリーチング用の散弾銃・オプティワンド・M320 から選ぶ。</p>';
+  const rounds = L.rounds ? Object.entries(L.rounds).map(([r, n]) => `${{ flash: '閃光弾', stinger: 'スティンガー弾', cs: 'CSガス弾' }[r] || r} ${n}発`).join('・') : '';
+  return `<h3>${esc(L.name)}</h3><p class="desc">${esc(L.desc || '')}</p>${L.how ? `<p class="how"><b>使い方</b>${esc(L.how)}</p>` : ''}${rounds ? `<p class="note">弾: ${rounds}</p>` : ''}<p class="note">移動の速さ ${Math.round((L.move || 1) * 100)}%</p>`;
+}
 // 銃の説明と数値（棒グラフ）
 export function weaponCard(spec, kind) {
   const W = spec && WEAPONS[spec.id];
