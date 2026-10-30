@@ -101,7 +101,8 @@ export function doorOp(S, w, a, did, op, ev, opt = {}) {
   return { ok: false, why: 'op' };
 }
 
-function trapTrips(S, ds, a) { return !ds.trap.team || ds.trap.team !== a.team || !S.pvp; }
+// 罠が作動する人: 対戦は相手の陣営だけ。作戦は警官だけ（容疑者と市民は罠の場所を知っていて避ける）
+function trapTrips(S, ds, a) { if (!ds.trap.team) return true; if (S.pvp) return ds.trap.team !== a.team; return a.kind === 'swat'; }
 
 export function triggerTrap(S, w, did, a, ev) {
   const d = w.doors[did], ds = S.doors[did];
