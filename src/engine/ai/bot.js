@@ -176,6 +176,7 @@ function holdNear(S, w, a, inp, dt, x, y, z, R) {
     }
     ai.hold = c ? [c[0], c[1], c[2]] : [x, y, z];
     // 見る向き: 部屋の入口（扉）の1つ
+    const p = ps.length ? ps[Math.floor(hrand(a.id, 5, 230) * ps.length)] : null;
     ai.watch = p ? [p.x, y + 1.3, p.z] : null;
   }
   const r = goTo(S, w, a, inp, ai.hold[0], ai.hold[1], ai.hold[2], { r: 0.5, unlock: true });
