@@ -59,7 +59,12 @@ export function netMixin(Match) {
     this._look(inp, dt);
     this._edges(inp);
     // 写しを受け取る
-    if (sess.static && sess.static !== this._st) { this._st = sess.static; mir.applyStatic(sess.static); this.p = S.actors.find(a => a.pid === this.pid) || this.p; this.av.hidden.clear(); this.av.hidden.add(this.p.id); this.av.looks && this.av.looks.clear(); }
+    if (sess.static && sess.static !== this._st) {
+      const first = !this._st;
+      this._st = sess.static; mir.applyStatic(sess.static); this.p = S.actors.find(a => a.pid === this.pid) || this.p; this.av.hidden.clear(); this.av.hidden.add(this.p.id); this.av.looks && this.av.looks.clear();
+      // 最初の写し: 出現した向き（建物の方）を向く
+      if (first || this._yawSet !== this.p.id) { this._yawSet = this.p.id; this.yaw = this.p.yaw || 0; this.pitch = 0; }
+    }
     let lastP = null, lastRow = null;
     for (const s of sess.takeSnaps()) { mir.push(s.g, s.at); if (s.g.P && s.g.P[this.pid]) lastP = s.g.P[this.pid]; lastRow = s.g; }
     mir.apply(sess.renderT(), this.p.id);

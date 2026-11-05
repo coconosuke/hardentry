@@ -14,8 +14,22 @@ function pickWeighted(r, list) {
   for (const [v, wt] of list) { x -= wt; if (x <= 0) return v; }
   return list[0][0];
 }
+// 人と重ならない所（出現の位置が家具や車で詰められて、隣の人と重なるとき）
+function apartFrom(S, w, p, L, gap = 0.8) {
+  const near = (x, z) => S.actors.some(b => !b.isDrone && Math.abs(b.y - p.y) < 1.5 && Math.hypot(b.x - x, b.z - z) < gap);
+  if (!near(p.x, p.z)) return p;
+  for (let r = 1; r <= 8; r++) for (let dj = -r; dj <= r; dj++) for (let di = -r; di <= r; di++) {
+    if (Math.max(Math.abs(di), Math.abs(dj)) !== r) continue;
+    const x = p.x + di * CS, z = p.z + dj * CS;
+    const q = nearestFloor(w, L, x, z, 0.3);
+    if (!q || Math.hypot(q[0] - x, q[1] - z) > 0.05 || near(q[0], q[1])) continue;
+    return { x: q[0], z: q[1], y: groundAt(w, q[0], q[1], L * LH + 0.4) };
+  }
+  return p;
+}
 export function spawnSwat(S, w, o) {
-  const p = o.cell ? cellPos(w, o.x, o.z, o.L || 0) : { x: o.x, z: o.z, y: o.y ?? 0 };
+  let p = o.cell ? cellPos(w, o.x, o.z, o.L || 0) : { x: o.x, z: o.z, y: o.y ?? 0 };
+  if (o.cell) p = apartFrom(S, w, p, o.L || 0);
   const a = createActor(S, { kind: 'swat', team: o.team ?? 0, pid: o.pid ?? null, name: o.name, x: p.x, y: p.y, z: p.z, yaw: o.yaw || 0, hp: o.pid != null ? 100 : (S.pvp ? 100 : 150), lo: o.lo || LOADOUTS.red1, h: o.h || 1.8 });
   a.role = o.role || 'swat';
   a.squad = o.squad || null;

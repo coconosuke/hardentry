@@ -30,6 +30,8 @@ export function onRepeat(el, fn) {
 }
 
 const LONG = 420; // 長押し（ms）
+// 出来事の時刻（performance.now と同じ基準）。古いブラウザで 0 や Date 基準なら今の時刻
+const evT = (e) => { const t = e && e.timeStamp; const n = performance.now(); return t > 0 && t <= n + 50 && t > n - 60000 ? t : n; };
 
 export class Input {
   constructor(stage, area, audio) {
@@ -75,7 +77,8 @@ export class Input {
       const el = this._btnOf(e);
       if (el) {
         const b = el.dataset.btn;
-        const p = { kind: 'btn', btn: b, el, x: sx, y: sy, x0: sx, y0: sy, t0: performance.now(), moved: 0, long: false };
+        // 時刻は出来事の起きた時（重いこまで処理が遅れても、短く押したのを長押しにしない）
+        const p = { kind: 'btn', btn: b, el, x: sx, y: sy, x0: sx, y0: sy, t0: evT(e), moved: 0, long: false };
         this.ptr.set(e.pointerId, p);
         this.hold.add(b); el.classList.add('down');
         this.edges.push({ b, k: 'down', sub: el.dataset.sub || null });
@@ -132,7 +135,7 @@ export class Input {
         this._radialPick(false);
         return;
       }
-      const dur = performance.now() - p.t0;
+      const dur = evT(e) - p.t0;
       const k = cancel ? 'cancel' : p.long ? 'longup' : (dur < LONG && p.moved < 22 ? 'tap' : 'up');
       this.edges.push({ b: p.btn, k, sub: p.el.dataset.sub || null, dur });
       if (this.onBtn) this.onBtn(p.btn, k, p);

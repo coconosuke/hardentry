@@ -276,6 +276,7 @@ try {
     const s1 = await page.evaluate(() => window.__app.game.p.stats.sh);
     rec('操作', '射撃ボタンを押している間、撃てる', s1 > s0, `撃った数 ${s0} → ${s1}`);
     await tapAt(await btn('reload'), 22);
+    await page.waitForFunction(() => { const s = window.__app.game.p.ws.st; return s === 'reload' || s === 'shell'; }, null, { timeout: 15000 }).catch(() => {});
     const rl = await page.evaluate(() => window.__app.game.p.ws.st);
     rec('操作', 'リロードのボタンで弾倉を替え始める', rl === 'reload' || rl === 'shell', `状態 ${rl}`);
     await page.waitForFunction(() => window.__app.game.p.ws.st === 'ready', null, { timeout: 90000 }).catch(() => {});
@@ -546,6 +547,8 @@ if (!NONET) {
         await H.page.waitForFunction(() => { const g = window.__app.game; return g && !(g.S.m && (g.S.m.phase === 'pre' || g.S.m.phase === 'prep')); }, null, { timeout: 120000 }).catch(() => {});
         await G.page.waitForTimeout(1000);
         const before = await H.page.evaluate(() => { const g = window.__app.game; const b = g.S.actors.find(a => a.pid === 1); return b ? { x: b.x, z: b.z, sh: b.stats.sh } : null; });
+        // 前が開けている向きへ（出現した所の前が塀や壁のこともある）
+        await G.page.evaluate(() => { const g = window.__app.game, w = g.w, p = g.p; let best = 0, bd = -1; for (let k = 0; k < 16; k++) { const yw = k * Math.PI / 8; let d = 0; for (let s = 0.3; s <= 3; s += 0.25) { const x = p.x + Math.sin(yw) * s, z = p.z + Math.cos(yw) * s, i = Math.floor(x / 0.5), j = Math.floor(z / 0.5); if (i < 0 || j < 0 || i >= w.W || j >= w.D) break; const k2 = w.idx(0, i, j), t = w.cell[k2]; if (t !== 1 && t !== 2) break; if ((w.propNear.get(k2) || []).some(pid => { const q = w.props[pid]; return q && q.solid && q.alive !== false && q.boxes.some(b => b[4] > 0.3 && x > b[0] - 0.35 && x < b[3] + 0.35 && z > b[2] - 0.35 && z < b[5] + 0.35); })) break; d = s; } if (d > bd) { bd = d; best = yw; } } g.yaw = best; });
         await G.page.keyboard.down('KeyW'); await G.page.waitForTimeout(5000); await G.page.keyboard.up('KeyW');
         await G.page.evaluate(async () => { const a = window.__app; a.input.hold.add('fire'); await new Promise(r => setTimeout(r, 1200)); a.input.hold.delete('fire'); });
         await new Promise(r => setTimeout(r, 4000));
