@@ -281,10 +281,12 @@ try {
     rec('操作', 'リロードのボタンで弾倉を替え始める', rl === 'reload' || rl === 'shell', `状態 ${rl}`);
     await page.waitForFunction(() => window.__app.game.p.ws.st === 'ready', null, { timeout: 90000 }).catch(() => {});
     await tapAt(await btn('ads'), 23);
+    await page.waitForFunction(() => !!window.__app.game.adsOn, null, { timeout: 10000 }).catch(() => {});
     const on1 = await page.evaluate(() => !!window.__app.game.adsOn);
     await page.waitForFunction(() => window.__app.game.p.ads > 0.9, null, { timeout: 45000 }).catch(() => {});
     const ads1 = await page.evaluate(() => window.__app.game.p.ads);
     await tapAt(await btn('ads'), 24);
+    await page.waitForFunction(() => !window.__app.game.adsOn, null, { timeout: 10000 }).catch(() => {});
     const on2 = await page.evaluate(() => !!window.__app.game.adsOn);
     await page.waitForFunction(() => window.__app.game.p.ads < 0.1, null, { timeout: 45000 }).catch(() => {});
     const ads2 = await page.evaluate(() => window.__app.game.p.ads);

@@ -167,7 +167,7 @@ table.score td small { color: var(--sub); font-size: max(11px, .7em); }
 .pvp-score .t0 { color: var(--ally); } .pvp-score .t1 { color: var(--enemy); } .pvp-score span { color: var(--dim); font-size: .6em; }
 table.board { width: 100%; border-collapse: collapse; }
 table.board th, table.board td { padding: 5px 8px; text-align: right; font-variant-numeric: tabular-nums; }
-table.board thead th { color: var(--sub); font-size: .8em; font-weight: 600; }
+table.board thead th { color: var(--sub); font-size: max(11px, .8em); font-weight: 600; }
 table.board tbody th { text-align: left; font-weight: 700; }
 table.board tr.ally th { color: var(--ally); } table.board tr.enemy th { color: var(--enemy); }
 table.board tr.me { background: rgba(74,168,255,.12); }

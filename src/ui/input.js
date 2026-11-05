@@ -78,7 +78,7 @@ export class Input {
       if (el) {
         const b = el.dataset.btn;
         // 時刻は出来事の起きた時（重いこまで処理が遅れても、短く押したのを長押しにしない）
-        const p = { kind: 'btn', btn: b, el, x: sx, y: sy, x0: sx, y0: sy, t0: evT(e), moved: 0, long: false };
+        const p = { kind: 'btn', btn: b, el, x: sx, y: sy, x0: sx, y0: sy, t0: evT(e), tp: performance.now(), moved: 0, long: false };
         this.ptr.set(e.pointerId, p);
         this.hold.add(b); el.classList.add('down');
         this.edges.push({ b, k: 'down', sub: el.dataset.sub || null });
@@ -136,6 +136,8 @@ export class Input {
         return;
       }
       const dur = evT(e) - p.t0;
+      // 押している間に長押しを判定できなかった（こまが遅れ続けた）けれど長く押していた: 離した時に長押しとして扱う
+      if (!cancel && !p.long && dur >= LONG && p.moved <= 22) { p.long = true; this.edges.push({ b: p.btn, k: 'long', pid: e.pointerId, x: p.x0, y: p.y0, sub: p.el.dataset.sub || null }); }
       const k = cancel ? 'cancel' : p.long ? 'longup' : (dur < LONG && p.moved < 22 ? 'tap' : 'up');
       this.edges.push({ b: p.btn, k, sub: p.el.dataset.sub || null, dur });
       if (this.onBtn) this.onBtn(p.btn, k, p);
@@ -249,11 +251,15 @@ export class Input {
     };
     this.lookDX = 0; this.lookDY = 0; this.gyro.x = 0; this.gyro.y = 0;
     this.edges.length = 0;
-    // 長押しの判定（押している最中）
+    // 長押しの判定（押している最中）。こまが大きく遅れたとき（0.25秒より長い）は次のこまで判定する
+    // （遅れている間に指を離した出来事が待っているかもしれない。離していれば短押し）
     const now = performance.now();
+    const hitch = this._lastTake != null && now - this._lastTake > 250;
+    this._lastTake = now;
     for (const [pid, p] of this.ptr) {
-      if (p.kind !== 'btn' || p.long || p.moved > 22) continue;
-      if (now - p.t0 >= LONG) { p.long = true; out.edges.push({ b: p.btn, k: 'long', pid, x: p.x0, y: p.y0, sub: p.el.dataset.sub || null }); }
+      if (p.kind !== 'btn' || p.long || p.moved > 22 || hitch) continue;
+      // 長押しは「押したのを受け取ってから」の時間で（受け取りが遅れたぶんで長押しにしない）
+      if (now - (p.tp ?? p.t0) >= LONG) { p.long = true; out.edges.push({ b: p.btn, k: 'long', pid, x: p.x0, y: p.y0, sub: p.el.dataset.sub || null }); }
     }
     return out;
   }
