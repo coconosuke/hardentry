@@ -164,16 +164,7 @@ function holdNear(S, w, a, inp, dt, x, y, z, R) {
     const room = roomAtPos(w, x, y, z);
     const rg = roomGraph(w);
     const ps = room >= 0 ? (rg.adj[room] || []).filter(p => p.type === 'door' || p.type === 'open') : [];
-    // 守る位置: 部屋の入口から離れた奥（入ってくる相手を待ち構える）。いくつか試して一番よい所
-    let c = null, bs = -1e9;
-    for (let t = 0; t < 8 && room >= 0; t++) {
-      const q = randomCellInRoom(S, w, room, a.id * 3 + 1 + t * 17);
-      if (!q) continue;
-      const dDoor = ps.length ? Math.min(...ps.map(p => Math.hypot(p.x - q[0], p.z - q[2]))) : 3;
-      const mate = S.actors.some(b => b !== a && b.team === a.team && b.ai && b.ai.hold && Math.hypot(b.ai.hold[0] - q[0], b.ai.hold[2] - q[2]) < 1.5);
-      const sc = Math.min(dDoor, 5) - 0.4 * Math.hypot(q[0] - x, q[2] - z) - (mate ? 3 : 0);
-      if (sc > bs) { bs = sc; c = q; }
-    }
+    const c = room >= 0 ? randomCellInRoom(S, w, room, a.id * 3 + 1) : null;
     ai.hold = c ? [c[0], c[1], c[2]] : [x, y, z];
     // 見る向き: 部屋の入口（扉）の1つ
     const p = ps.length ? ps[Math.floor(hrand(a.id, 5, 230) * ps.length)] : null;

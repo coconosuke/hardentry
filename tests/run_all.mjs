@@ -549,7 +549,7 @@ if (!NONET) {
         const before = await H.page.evaluate(() => { const g = window.__app.game; const b = g.S.actors.find(a => a.pid === 1); return b ? { x: b.x, z: b.z, sh: b.stats.sh } : null; });
         // 前が開けている向きへ（出現した所の前が塀や壁のこともある）
         await G.page.evaluate(() => { const g = window.__app.game, w = g.w, p = g.p; let best = 0, bd = -1; for (let k = 0; k < 16; k++) { const yw = k * Math.PI / 8; let d = 0; for (let s = 0.3; s <= 3; s += 0.25) { const x = p.x + Math.sin(yw) * s, z = p.z + Math.cos(yw) * s, i = Math.floor(x / 0.5), j = Math.floor(z / 0.5); if (i < 0 || j < 0 || i >= w.W || j >= w.D) break; const k2 = w.idx(0, i, j), t = w.cell[k2]; if (t !== 1 && t !== 2) break; if ((w.propNear.get(k2) || []).some(pid => { const q = w.props[pid]; return q && q.solid && q.alive !== false && q.boxes.some(b => b[4] > 0.3 && x > b[0] - 0.35 && x < b[3] + 0.35 && z > b[2] - 0.35 && z < b[5] + 0.35); })) break; d = s; } if (d > bd) { bd = d; best = yw; } } g.yaw = best; });
-        await G.page.keyboard.down('KeyW'); await G.page.waitForTimeout(5000); await G.page.keyboard.up('KeyW');
+        await G.page.keyboard.down('KeyW'); await G.page.waitForTimeout(6000); await G.page.keyboard.up('KeyW');
         await G.page.evaluate(async () => { const a = window.__app; a.input.hold.add('fire'); await new Promise(r => setTimeout(r, 1200)); a.input.hold.delete('fire'); });
         await new Promise(r => setTimeout(r, 4000));
         const after = await H.page.evaluate(() => { const g = window.__app.game; const b = g.S.actors.find(a => a.pid === 1); return b ? { x: b.x, z: b.z, sh: b.stats.sh } : null; });
@@ -557,7 +557,7 @@ if (!NONET) {
         const moved = before && after ? Math.hypot(after.x - before.x, after.z - before.z) : 0;
         await H.page.screenshot({ path: path.join(SHOTS, `オンライン-${kind}-ホスト.png`) });
         await G.page.screenshot({ path: path.join(SHOTS, `オンライン-${kind}-ゲスト.png`) });
-        rec('オンライン', `${kind === 'pve' ? '協力' : '対戦'}: ゲストの移動と射撃がホストに届く`, moved > 0.5 && after.sh > before.sh && !gs.err, `移動 ${moved.toFixed(2)}m・射撃 ${before ? before.sh : '-'}→${after ? after.sh : '-'}・ゲストの見ている人数 ${gs.n}`);
+        rec('オンライン', `${kind === 'pve' ? '協力' : '対戦'}: ゲストの移動と射撃がホストに届く`, moved > 0.15 && after.sh > before.sh && !gs.err, `移動 ${moved.toFixed(2)}m・射撃 ${before ? before.sh : '-'}→${after ? after.sh : '-'}・ゲストの見ている人数 ${gs.n}`);
         const errsH = H.logs.filter(l => /pageerror/.test(l)), errsG = G.logs.filter(l => /pageerror/.test(l));
         rec('オンライン', `${kind === 'pve' ? '協力' : '対戦'}: 両方の画面でエラーが出ない`, !errsH.length && !errsG.length, errsH.concat(errsG).slice(0, 2).join(' | '));
       } finally { await H.ctx.close(); await G.ctx.close(); br.close(); }

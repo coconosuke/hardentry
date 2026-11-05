@@ -183,7 +183,8 @@ export class Match {
           const mode = st.adsMode || 'tap';
           if (e.mouse) { this.adsOn = k === 'down'; break; }
           if (mode === 'hold') { if (k === 'down') this.adsOn = true; else if (k !== 'long') this.adsOn = false; }
-          else if (mode === 'tap') { if (k === 'tap') this.adsOn = !this.adsOn; }
+          // 切替: 離したら切り替える（長めに押しても。重いこまで短押しが長押しに見えても切り替わる）
+          else if (mode === 'tap') { if (k === 'tap' || k === 'longup') this.adsOn = !this.adsOn; }
           else { if (k === 'down') { this._adsWas = this.adsOn; this.adsOn = true; } else if (k === 'tap') this.adsOn = !this._adsWas; else if (k === 'up' || k === 'longup') this.adsOn = false; }
           break;
         }

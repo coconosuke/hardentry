@@ -108,7 +108,8 @@ export function layoutCheck() {
   for (const root of roots) {
     const els = [...root.querySelectorAll('*')].filter(shown);
     for (const el of els) {
-      if (el.closest('svg') || el.closest('.scroller')) continue;
+      // 方位の帯は流れる目盛りを端で切って見せる作り
+      if (el.closest('svg') || el.closest('.scroller') || el.closest('.hud-compass')) continue;
       const hasText = [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
       if (!hasText) continue;
       const r = el.getBoundingClientRect();
