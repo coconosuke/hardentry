@@ -248,13 +248,15 @@ export function applyBulletHit(S, w, a, b, part, hx, hy, hz, dx, dy, dz, dist, e
 
 function applyPvE(S, w, a, b, shooter, W, part, hx, hy, hz, dx, dy, dz, dist, ev) {
   const am = AMMO[b.cal][b.am];
+  // 交戦規定の判定は、撃たれる前の状態で（この弾で倒れたことを「倒れている人を撃った」にしない）
+  const pre = { down: a.down || !a.alive, dead: !a.alive, cuffed: a.cuffed, comply: a.comply, armed: !!(a.inv.w[0] || a.inv.w[1]) };
   const rnd = (k) => hrand(a.id, S.t, k + (b.owner << 4));
   // 非致死
   if (am.less) {
     const L = am.less;
     if (L.tase) {
       const range = W.range || 7.6;
-      if (dist <= range) { a.tased = L.tase; a.stun = Math.max(a.stun, L.tase); ev.push({ e: 'tase', id: a.id, by: b.owner }); harm(S, a, shooter, 'less', 0, part, ev); }
+      if (dist <= range) { a.tased = L.tase; a.stun = Math.max(a.stun, L.tase); ev.push({ e: 'tase', id: a.id, by: b.owner }); harm(S, a, shooter, 'less', 0, part, ev, pre); }
       return;
     }
     let st = L.stun;
@@ -265,7 +267,7 @@ function applyPvE(S, w, a, b, shooter, W, part, hx, hy, hz, dx, dy, dz, dist, ev
     let d = am.dmg * (part === 'head' ? (dist < 3 ? 6 : 2.5) : 1);
     if (d > 0) hurt(S, w, a, d, part, shooter, b, dx, dz, ev, 'less');
     ev.push({ e: 'hit', id: a.id, by: b.owner, part, d, less: 1, x: hx, y: hy, z: hz });
-    harm(S, a, shooter, 'less', d, part, ev);
+    harm(S, a, shooter, 'less', d, part, ev, pre);
     return;
   }
   let d = am.dmg * b.k;
@@ -312,7 +314,7 @@ function applyPvE(S, w, a, b, shooter, W, part, hx, hy, hz, dx, dy, dz, dist, ev
   a.flinch = Math.max(a.flinch, Math.min(1, 1 - Math.exp(-d / 30)));
   ev.push({ e: 'hit', id: a.id, by: b.owner, part, d, blocked, x: hx, y: hy, z: hz });
   if (d > 0) hurt(S, w, a, d, part, shooter, b, dx, dz, ev, 'bullet');
-  harm(S, a, shooter, 'gun', d, part, ev);
+  harm(S, a, shooter, 'gun', d, part, ev, pre);
 }
 
 // 体力を減らし、倒れる・死ぬを決める
@@ -419,9 +421,11 @@ export function pvpDamage(S, a, d, shooter, part, dx, dz, ev, kind) {
 }
 
 // 交戦規定の記録（モードが採点に使う）
-function harm(S, a, shooter, how, d, part, ev) {
-  if (!shooter || S.pvp) return;
+function harm(S, a, shooter, how, d, part, ev, pre = null) {
+  // 死んだ体に当たった弾（同じ瞬間の散弾・連射の残り）は数えない
+  if (!shooter || S.pvp || (pre && pre.dead)) return;
   if (shooter.kind === 'swat' && (a.kind === 'sus' || a.kind === 'civ' || a.kind === 'swat')) {
-    S.harms.push({ t: S.t, by: shooter.id, tgt: a.id, how, d, part, kind: a.kind, threat: a.ai ? (S.t - (a.ai.threatT ?? -1e9)) * S.dt < 2.0 : false, warned: a.ai ? a.ai.warned || 0 : 0, armed: !!(a.inv.w[0] || a.inv.w[1]), comply: a.comply, cuffed: a.cuffed, down: a.down || !a.alive });
+    const st = pre || { down: a.down || !a.alive, cuffed: a.cuffed, comply: a.comply, armed: !!(a.inv.w[0] || a.inv.w[1]) };
+    S.harms.push({ t: S.t, by: shooter.id, tgt: a.id, how, d, part, kind: a.kind, threat: a.ai ? (S.t - (a.ai.threatT ?? -1e9)) * S.dt < 2.0 : false, warned: a.ai ? a.ai.warned || 0 : 0, armed: st.armed, comply: st.comply, cuffed: st.cuffed, down: st.down });
   }
 }
