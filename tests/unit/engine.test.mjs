@@ -169,3 +169,100 @@ test('engine: ミラー（人）は扉の向こうにカメラを置き、動く
   ok(ended && ended.why === 'move', '動くと終わる');
   eq(p.peek, null);
 });
+
+// ---- 調べる・使う: 手が届く所でだけ（離れている・間に家具があるとできない）
+import { reachOK, doAction } from '../../src/engine/interact.js';
+import { addProp } from '../../src/engine/world.js';
+function mkPve() {
+  const G = createGame({ map: 'suburb', mode: 'pve', mission: 'barricade', diff: 'normal', team: 2, allAI: true, seed: 3 });
+  const S = G.S, a = S.actors.find(b => b.kind === 'swat'), b = S.actors.find(x => x.kind === 'sus');
+  for (const x of S.actors) x.ai = null;
+  return { G, S, w: G.w, a, b };
+}
+// 何もない所（前庭の芝生の真ん中）に2人を置く
+function openSpot(S, w, a, b) {
+  a.x = 4.75; a.z = 25.75; a.y = 0; a.yaw = 0; a.pitch = -0.5; a.act = null;
+  Object.assign(b, { x: a.x, z: a.z + 0.9, y: 0, yaw: 0, comply: 2, cuffed: false, down: false, alive: true, stateT: 5 });
+  for (const o of S.actors) if (o !== a && o !== b) { o.x = 2; o.z = 2; }
+}
+test('interact: 拘束は手の届く1.0m以内でだけ。離れていると「届かない」で始まらない', () => {
+  const { S, w, a, b } = mkPve();
+  openSpot(S, w, a, b);
+  ok(reachOK(S, w, a, 'person', b.id, 'restrain'), '0.9m: 届く');
+  b.z = a.z + 1.3;
+  ok(!reachOK(S, w, a, 'person', b.id, 'restrain'), '1.3m: 届かない');
+  const ev = [];
+  doAction(S, w, a, { a: 'op', k: 'person', id: b.id, op: 'restrain' }, ev);
+  ok(!a.act && ev.some(e => e.e === 'deny' && e.why === 'far'), '始まらず「届かない」');
+});
+test('interact: 拘束は寄って背中から（相手は背を向けてひざをつき、手首を背中へ回される）。約2.8秒', () => {
+  const { G, S, w, a, b } = mkPve();
+  openSpot(S, w, a, b);
+  b.comply = 1; b.yaw = Math.PI; // 手を上げてこちらを向いている
+  const ev = [];
+  doAction(S, w, a, { a: 'op', k: 'person', id: b.id, op: 'restrain' }, ev);
+  ok(a.act && a.act.k === 'restrain' && a.act.pose === 'cuff', '拘束が始まる（手を伸ばす動き）');
+  ok(b.comply === 2 && b.cuffBy === a.id, '相手はひざをつき、押さえられる');
+  const inp = () => ({ [a.id]: { mx: 0, mz: 0, yaw: Math.atan2(b.x - a.x, b.z - a.z), pitch: -0.6, stance: 0, lean: 0 } });
+  let t = 0, done = null;
+  while (t < 4 && !done) { const e2 = step(G, inp()); t += S.dt; done = e2.find(e => e.e === 'cuffed'); if (t > 1.0 && t < 1.05) { ok(Math.abs(Math.atan2(Math.sin(b.yaw - Math.atan2(b.x - a.x, b.z - a.z)), Math.cos(b.yaw - Math.atan2(b.x - a.x, b.z - a.z)))) < 0.3, '相手は背中を向けた'); near(Math.hypot(b.x - a.x, b.z - a.z), 0.76, 0.12, '背中のすぐ後ろへ寄った'); ok(b.cuffK > 0.3 && b.cuffK < 0.45, '手首を背中へ回している ' + b.cuffK); } }
+  ok(done && b.cuffed, '拘束できた');
+  near(t, 2.8, 0.15, 'かかった時間');
+  ok(b.cuffBy == null && !b.cuffK, '押さえは解ける');
+});
+test('interact: 拘束は途中で離れる・目をそらすと中断', () => {
+  const { G, S, w, a, b } = mkPve();
+  openSpot(S, w, a, b);
+  doAction(S, w, a, { a: 'op', k: 'person', id: b.id, op: 'restrain' }, []);
+  a.pid = 0; // 入力で向きを変える
+  for (let i = 0; i < 40; i++) step(G, { [a.id]: { mx: 0, mz: 0, yaw: Math.atan2(b.x - a.x, b.z - a.z), pitch: -0.6, stance: 0, lean: 0 } });
+  ok(a.act, '続いている');
+  let c = null;
+  for (let i = 0; i < 30 && !c; i++) { const ev = step(G, { [a.id]: { mx: 0, mz: 0, yaw: Math.atan2(b.x - a.x, b.z - a.z) + Math.PI, pitch: 0, stance: 0, lean: 0 } }); c = ev.find(e => e.e === 'actcancel'); }
+  ok(c && !a.act && !b.cuffed && b.cuffBy == null, '後ろを向くと中断し、相手は押さえから外れる');
+});
+test('interact: 間に動かない家具（カウンター・テーブルの下のすき間）や人があると、近くても拘束できない', () => {
+  const { S, w, a, b } = mkPve();
+  openSpot(S, w, a, b);
+  ok(reachOK(S, w, a, 'person', b.id, 'restrain'), '家具なし: 届く');
+  const n0 = w.props.length;
+  addProp(w, ['counter', a.x / 0.5, (a.z + 0.45) / 0.5, 0, 0, { w: 2.0, d: 0.3 }]);
+  ok(!reachOK(S, w, a, 'person', b.id, 'restrain'), 'カウンター越し: 届かない');
+  w.props[n0].alive = false;
+  addProp(w, ['table', a.x / 0.5, (a.z + 0.45) / 0.5, 0, 0, { w: 1.4, d: 0.4 }]);
+  ok(!reachOK(S, w, a, 'person', b.id, 'restrain'), 'テーブル越し（天板の下のすき間）: 届かない');
+  w.props[n0 + 1].alive = false;
+  ok(reachOK(S, w, a, 'person', b.id, 'restrain'), '家具をどけると届く');
+  const c = S.actors.find(o => o !== a && o !== b);
+  Object.assign(c, { x: a.x, z: a.z + 0.45, y: 0, alive: true, down: false });
+  ok(!reachOK(S, w, a, 'person', b.id, 'restrain'), '間に人がいる: 届かない');
+});
+test('interact: 扉はノブに手が届く所（約1m）で開けられ、手を伸ばしてから開く。離れていると届かない', () => {
+  const { G, S, w, a } = mkPve();
+  const d = w.doors.find(q => q.L === 0 && !S.doors[q.id].locked && !q.double && S.doors[q.id].open < 0.05);
+  const lf = d.leaves[0], kx = lf.hx + lf.dx * (lf.len - 0.12), kz = lf.hz + lf.dz * (lf.len - 0.12);
+  const put = (dist, sg = 1) => { a.x = kx + d.nx * dist * sg; a.z = kz + d.nz * dist * sg; a.y = 0; a.act = null; };
+  put(0.75); ok(reachOK(S, w, a, 'door', d.id, 'open'), 'ノブの前0.75m: 届く');
+  put(1.6); ok(!reachOK(S, w, a, 'door', d.id, 'open'), '1.6m: 届かない');
+  put(0.75, -1); ok(reachOK(S, w, a, 'door', d.id, 'open'), '反対側からも0.75mなら届く');
+  put(0.7);
+  for (const o of S.actors) if (o !== a) { o.x = 2; o.z = 2; }
+  doAction(S, w, a, { a: 'op', k: 'door', id: d.id, op: 'open' }, []);
+  ok(a.act && a.act.pose === 'knob', 'ノブへ手を伸ばす');
+  ok(S.doors[d.id].tgt.every(v => v === 0), 'まだ開かない');
+  for (let i = 0; i < 30; i++) step(G, {});
+  ok(!a.act && S.doors[d.id].tgt.some(v => Math.abs(v) > 0.3), '手が届いてから開き始める');
+});
+test('interact: 落ちている物は1m以内で拾える。テーブル越しは届かず、テーブルの上の物はそばからなら届く', () => {
+  const { S, w, a } = mkPve();
+  a.x = 4.75; a.z = 25.75; a.y = 0;
+  const it = { id: 9001, kind: 'evidence', x: a.x, y: 0.02, z: a.z + 0.8 };
+  S.items.push(it);
+  ok(reachOK(S, w, a, 'item', it.id, 'collect'), '足もと0.8m: 届く');
+  it.z = a.z + 1.4; ok(!reachOK(S, w, a, 'item', it.id, 'collect'), '1.4m: 届かない');
+  it.z = a.z + 0.9;
+  addProp(w, ['table', a.x / 0.5, (a.z + 0.45) / 0.5, 0, 0, { w: 1.4, d: 0.4 }]);
+  ok(!reachOK(S, w, a, 'item', it.id, 'collect'), 'テーブルの向こうの床: 届かない');
+  it.z = a.z + 0.45; it.y = 0.76;
+  ok(reachOK(S, w, a, 'item', it.id, 'collect'), 'テーブルの上: そばからなら届く');
+});

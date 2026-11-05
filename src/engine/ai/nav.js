@@ -127,8 +127,9 @@ export function leafCells(w, S) {
       const ang = ds.ang[li] || 0;
       if (Math.abs(ang) < 0.25) return;
       const [ex, ez] = leafEnd(lf, ang);
+      const lx = ex - lf.hx, lz = ez - lf.hz;
       for (let t = 0.2; t <= 1.001; t += 0.1) {
-        const x = lf.hx + (ex - lf.hx) * t, z = lf.hz + (ez - lf.hz) * t;
+        const x = lf.hx + lx * t, z = lf.hz + lz * t;
         const ci = Math.floor(x / CS), cj = Math.floor(z / CS);
         if (ci < 0 || cj < 0 || ci >= w.W || cj >= w.D) continue;
         const k = w.idx(d.L, ci, cj);

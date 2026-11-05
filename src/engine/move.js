@@ -1,5 +1,6 @@
 // 移動: RoN の速さ（歩き2.4・ゆっくり0.96・しゃがみ1.2）、しゃがみ・伏せ・リーン・乗り越え・階段・PvPのダッシュ
 import { groundAt, pushOut, raycast, STEP, CS, LH, levelOfY, cellType, C } from './world.js';
+import { KNEEL_ACT } from './data/acts.js';
 import { curW, bodyHeight } from './actor.js';
 import { PLATE, LONG } from './data/equipment.js';
 import { FLOORS } from './data/materials.js';
@@ -49,6 +50,9 @@ export function moveActor(S, w, a, inp, dt, ev) {
   if (a.dead) { settle(S, w, a, dt); a.stateT += dt; return; }
   // 姿勢
   let want = inp.stance | 0;
+  // ひざをついて行う動作（拘束・ピッキング・解除・拾うなど）の間はしゃがむ
+  if (a.act && KNEEL_ACT.has(a.act.k) && want < 1) want = 1;
+  if (a.peek && want < 1) want = 1;
   if (a.down || a.cuffed || a.comply === 2) want = 0;
   if (a.sprint && want) a.sprint = false;
   const rate = (a.st < 1 && want <= 1) || (a.st <= 1 && want === 0) ? 4.0 : 1.25;
@@ -111,8 +115,12 @@ export function moveActor(S, w, a, inp, dt, ev) {
     }
   }
   // 実際に動いた分で速さを直す（壁に沿って滑る）
-  const mvx = (a.x - ox) / dt, mvz = (a.z - oz) / dt;
-  a.vx = a.vx * 0.3 + mvx * 0.7; a.vz = a.vz * 0.3 + mvz * 0.7;
+  // 押し出された分で速くはならない（重なりを直した分が勢いにならないように）
+  const mvx = (a.x - ox) / dt, mvz = (a.z - oz) / dt, sp0 = Math.hypot(a.vx, a.vz);
+  let nvx = a.vx * 0.3 + mvx * 0.7, nvz = a.vz * 0.3 + mvz * 0.7;
+  const sp1 = Math.hypot(nvx, nvz);
+  if (sp1 > sp0 && sp1 > 1e-6) { nvx *= sp0 / sp1; nvz *= sp0 / sp1; }
+  a.vx = nvx; a.vz = nvz;
   // 足元
   const g = groundAt(w, a.x, a.z, a.y);
   if (g < -50) { a.y -= 9.8 * dt; if (a.y < -20) { a.y = 0; } }

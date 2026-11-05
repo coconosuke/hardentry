@@ -64,14 +64,15 @@ export function runPvp(map, mode, seed, o = {}) {
         const t = S.t * S.dt; gaps.push(t - lastKill); gapMax = Math.max(gapMax, t - lastKill); lastKill = t;
       }
       if (e.e === 'plant') plants++;
-      if (e.e === 'round') { const t = S.t * S.dt; rounds.push({ win: e.win, why: e.why, len: Math.round(t - roundStart) }); roundStart = t; lastKill = t; }
+      if (e.e === 'round') { const t = S.t * S.dt; rounds.push({ win: e.win, why: e.why, len: Math.round(t - roundStart), att: m.att, swat: m.swapped ? 1 : 0 }); roundStart = t; lastKill = t; }
+      if (e.e === 'defuse' || e.e === 'disabled') defuses++;
       if (e.e === 'phase' && e.p === 'action') roundStart = S.t * S.dt;
     }
   }
   const avgGap = gaps.length ? gaps.reduce((a, b) => a + b, 0) / gaps.length : 0;
   return {
     map, mode, seed, size: o.size || '4v4', winner: m.over ? m.winner : 'timeout', wins: m.wins ? m.wins.slice() : null, score: m.score ? m.score.slice() : null,
-    t: Math.round(S.t * S.dt), wall: Date.now() - t0, kills, deaths, rounds, plants, avgGap: Math.round(avgGap * 10) / 10, gapMax: Math.round(gapMax),
+    t: Math.round(S.t * S.dt), wall: Date.now() - t0, kills, deaths, rounds, plants, defuses, avgGap: Math.round(avgGap * 10) / 10, gapMax: Math.round(gapMax),
     timeRounds: rounds.filter(r => r.why === 'time').length,
   };
 }

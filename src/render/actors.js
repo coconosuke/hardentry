@@ -82,7 +82,10 @@ export class ActorView {
       const wi = curWeapon(a);
       if (res.gun && wi && a.ws.slot < 2 && !wi.hiddenGun) gun = { wi, f: res.gun };
       else if (res.gun && a.ws.slot === 3 && a.inv.long && a.inv.long !== 'none') gun = { long: a.inv.long, f: res.gun };
-      this.list.push({ a, L, mats, room, gun, shield: res.shield || null, x: a.x, y: a.y, z: a.z });
+      // 結束バンド（拘束された人・締めている最中）: 両手首の位置
+      let zip = null;
+      if (a.cuffed || (a.cuffK || 0) > 0.8) { const b = this.bones, l = 7 * 12, q = 10 * 12; zip = [b[l], b[l + 1], b[l + 2], b[q], b[q + 1], b[q + 2]]; }
+      this.list.push({ a, L, mats, room, gun, shield: res.shield || null, x: a.x, y: a.y, z: a.z, zip });
     }
     this.items = S.items.filter(it => !it.gone);
     this.nades = S.nades || [];
@@ -143,6 +146,18 @@ export class ActorView {
       drawMesh(gl, gm.body); if (gm.mag && e.a.ws.st !== 'reload') drawMesh(gl, gm.mag); if (gm.pump) drawMesh(gl, gm.pump);
       r.stats.draws++;
     }
+    // 結束バンド: 手首から手首へ（白い帯と、手首ごとの輪）
+    for (const e of this.list) {
+      if (!e.zip) continue;
+      const z = e.zip, mx = (z[0] + z[3]) / 2, my = (z[1] + z[4]) / 2, mz = (z[2] + z[5]) / 2;
+      let ax = z[3] - z[0], ay = z[4] - z[1], az = z[5] - z[2]; const al = Math.hypot(ax, ay, az) || 1; ax /= al; ay /= al; az /= al;
+      let ux = -ay * 0, uy = 1, uz = 0; const d = ux * ax + uy * ay + uz * az; ux -= ax * d; uy -= ay * d; uz -= az * d; const ul = Math.hypot(ux, uy, uz) || 1; ux /= ul; uy /= ul; uz /= ul;
+      const fx = ay * uz - az * uy, fy = az * ux - ax * uz, fz = ax * uy - ay * ux, M = this.M, sc = Math.min(1.6, al / 0.1);
+      M[0] = ax * sc; M[1] = ay * sc; M[2] = az * sc; M[3] = 0; M[4] = ux; M[5] = uy; M[6] = uz; M[7] = 0; M[8] = fx; M[9] = fy; M[10] = fz; M[11] = 0; M[12] = mx; M[13] = my; M[14] = mz; M[15] = 1;
+      gl.uniformMatrix4fv(W.u.uModel, false, M);
+      gl.uniform1f(W.u.uRoomOverride, Math.max(0, e.room));
+      drawMesh(gl, this.zipMesh());
+    }
     // 落ちている物
     for (const it of this.items) {
       if (it.kind !== 'weapon' || !it.w) continue;
@@ -172,6 +187,18 @@ export class ActorView {
     gl.uniformMatrix4fv(W.u.uModel, false, r.ident);
   }
   _drone(W, a) { /* PvP のドローン（あとで） */ }
+  // 結束バンドの形（X: 手首から手首へ 0.1m を ±0.05、輪は手首のまわり）
+  zipMesh() {
+    if (this._zip) return this._zip;
+    const B = new MeshBuilder(), Wc = hex('#e9e7df');
+    for (const sx of [-0.05, 0.05]) for (let q = 0; q < 8; q++) {
+      const a0 = q / 8 * Math.PI * 2, a1 = (q + 1) / 8 * Math.PI * 2, r = 0.042;
+      B.tube([sx, Math.cos(a0) * r, Math.sin(a0) * r], [sx, Math.cos(a1) * r, Math.sin(a1) * r], 0.006, 0.006, 4, LAYER.plain, Wc);
+    }
+    B.tube([-0.05, 0.04, 0], [0.05, 0.04, 0], 0.007, 0.007, 4, LAYER.plain, Wc);
+    B.box(-0.012, 0.035, -0.01, 0.012, 0.06, 0.01, LAYER.plain, hex('#d6d4ca'));
+    return (this._zip = makeWorldMesh(this.gl, B));
+  }
   drawShadow(pl) {
     const r = this.r, gl = this.gl;
     const P = r.P.shadowSkin;

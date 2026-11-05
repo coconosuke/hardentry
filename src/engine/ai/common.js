@@ -1,5 +1,6 @@
 // AIの共通の道具: 見る（明るさ・視野・見通し）、聞く、経路に沿って歩く（扉を開ける）、狙う（反応の遅れ・ぶれ・反動の抑え）
-import { occluded, CS, LH, levelOfY, groundAt } from '../world.js';
+import { occluded, CS, LH, levelOfY, groundAt, leafEnd } from '../world.js';
+import { reachOK } from '../interact.js';
 import { findPath, smoothPath, navCell, cellCenter, buildNav, leafCells } from './nav.js';
 import { eyeOf } from '../combat.js';
 import { curW, curWeapon, ammoCount } from '../actor.js';
@@ -110,28 +111,33 @@ export function goTo(S, w, a, inp, tx, ty, tz, o = {}) {
     if (!p) {
       // 開いた扉の板が通り道をふさいでいるだけなら、その扉を向こうへ押し開ける（板の陰の袋小路から出る）
       const p2 = lc && lc.size ? findPath(w, S, here, tk, { unlock: !!(o.unlock || kick), wedgeOK: false, breakBar: !!o.breakBar, avoid: o.avoid }) : null;
-      if (p2 && !o.noDoors) {
+      // 扉を使わない移動（突入のスタックなど）でも、ほかの扉の板はどける（突入する扉 o.keep には触れない）
+      if (p2 && (!o.noDoors || o.keep != null)) {
         let bd = 2.6, best = -1;
         for (let i = 0; i < w.doors.length; i++) {
           const d = w.doors[i], ds = S.doors[i];
-          if (!ds || ds.broken || !isOpen(ds) || d.L !== levelOfY(a.y + 0.3)) continue;
+          if (i === o.keep || !ds || ds.broken || !(isOpen(ds) || ds.ang.some(v => Math.abs(v) > 0.05)) || d.L !== levelOfY(a.y + 0.3)) continue;
           const dd = Math.hypot(d.cx - a.x, d.cz - a.z);
           if (dd < bd && p2.slice(0, 12).some(k => w.doorAt[k] === i || lc.has(k))) { bd = dd; best = i; }
         }
-        if (best < 0) for (let i = 0; i < w.doors.length; i++) { const d = w.doors[i], ds = S.doors[i]; if (!ds || ds.broken || !isOpen(ds) || d.L !== levelOfY(a.y + 0.3)) continue; const dd = Math.hypot(d.cx - a.x, d.cz - a.z); if (dd < bd) { bd = dd; best = i; } }
+        if (best < 0) for (let i = 0; i < w.doors.length; i++) { const d = w.doors[i], ds = S.doors[i]; if (i === o.keep || !ds || ds.broken || !(isOpen(ds) || ds.ang.some(v => Math.abs(v) > 0.05)) || d.L !== levelOfY(a.y + 0.3)) continue; const dd = Math.hypot(d.cx - a.x, d.cz - a.z); if (dd < bd) { bd = dd; best = i; } }
         if (best >= 0) {
           const d = w.doors[best];
-          steerToward(a, inp, d.cx, d.cz, 0);
-          if (!ai.doorT || (S.t - ai.doorT) * S.dt > 1.2) { ai.doorT = S.t; pushAct(inp, { a: 'op', k: 'door', id: best, op: 'close' }); }
+          // 板に手が届けば閉める。届かなければ（板が向こう側）扉の口まで寄ってから
+          const can = reachOK(S, w, a, 'door', best, 'close');
+          steerToward(a, inp, d.cx, d.cz, can || Math.hypot(d.cx - a.x, d.cz - a.z) < 0.35 ? 0 : 0.5);
+          if (can && (!ai.doorT || (S.t - ai.doorT) * S.dt > 1.2)) { ai.doorT = S.t; pushAct(inp, { a: 'op', k: 'door', id: best, op: 'close' }); }
           ai.nav = { tk, path: [], i: 0, t: S.t, bad: false, fail: true, soft: true };
           return 'door';
         }
       }
-      ai.nav = { tk, path: [], i: 0, t: S.t, bad: false, fail: true };
-      return 'blocked';
+      // 板のある扉はまだ遠い: 板を気にしない道で近くまで行く（近づいて道を作り直したとき、上で板をどける）
+      if (p2 && (!o.noDoors || o.keep != null)) nv = ai.nav = { tk, path: smoothPath(w, here, p2), i: 0, t: S.t - Math.round(3 / S.dt), bad: false, stuck: 0, lx: a.x, lz: a.z };
+      else { ai.nav = { tk, path: [], i: 0, t: S.t, bad: false, fail: true }; return 'blocked'; }
+    } else {
+      const sp = smoothPath(w, here, p);
+      nv = ai.nav = { tk, path: sp, i: 0, t: S.t, bad: false, stuck: 0, lx: a.x, lz: a.z };
     }
-    const sp = smoothPath(w, here, p);
-    nv = ai.nav = { tk, path: sp, i: 0, t: S.t, bad: false, stuck: 0, lx: a.x, lz: a.z };
   }
   if (nv.fail) { if ((S.t - nv.t) * S.dt > (nv.soft ? 0.6 : 1.5)) ai.nav = null; return nv.soft ? 'door' : 'blocked'; }
   // 次の点
@@ -176,6 +182,16 @@ export function goTo(S, w, a, inp, tx, ty, tz, o = {}) {
   if (moved < 0.02) { nv.stuck = (nv.stuck || 0) + S.dt; } else nv.stuck = Math.max(0, (nv.stuck || 0) - S.dt * 2);
   nv.lx = a.x; nv.lz = a.z;
   if (nv.stuck > 1.2) { nv.bad = true; nv.stuck = 0; ai.unstick = { until: S.t + Math.round(0.6 / S.dt), dir: ((a.id + S.t) & 1) ? 1 : -1 }; }
+  // 進まない（行ったり来たりして、いまの経路の点に近づけない）: 開いた扉の板にはばまれていれば閉める
+  const dNode = Math.hypot(px - a.x, pz - a.z);
+  if (nv.ni !== nv.i) { nv.ni = nv.i; nv.bestD = dNode; nv.bestT = S.t; }
+  else if (dNode < nv.bestD - 0.15) { nv.bestD = dNode; nv.bestT = S.t; }
+  if ((S.t - nv.bestT) * S.dt > 2.5) {
+    nv.bestT = S.t; nv.bestD = dNode;
+    const lf = o.noDoors ? -1 : nearLeaf(w, S, a, 1.0);
+    if (lf >= 0 && reachOK(S, w, a, 'door', lf, 'close')) pushAct(inp, { a: 'op', k: 'door', id: lf, op: 'close' });
+    else { nv.bad = true; ai.unstick = { until: S.t + Math.round(0.8 / S.dt), dir: ((a.id + S.t) & 1) ? 1 : -1 }; }
+  }
   const spd = o.speed ?? 1;
   // 詰まったら少し横へずれてから進み直す（扉の板・家具の角・人に引っかかったとき）
   if (ai.unstick && S.t < ai.unstick.until) {
@@ -185,6 +201,23 @@ export function goTo(S, w, a, inp, tx, ty, tz, o = {}) {
   }
   steerToward(a, inp, px, pz, spd, o.faceMove !== false && o.look == null);
   return 'moving';
+}
+// いちばん近い開いた扉の板（lim 以内）
+function nearLeaf(w, S, a, lim) {
+  let best = -1, bd = lim;
+  const L = levelOfY(a.y + 0.3);
+  for (let i = 0; i < w.doors.length; i++) {
+    const d = w.doors[i], ds = S.doors[i];
+    if (!ds || ds.broken || d.L !== L || Math.abs(d.cx - a.x) > 3 || Math.abs(d.cz - a.z) > 3) continue;
+    d.leaves.forEach((lf, li) => {
+      if (Math.abs(ds.ang[li] || 0) < 0.25) return;
+      const [ex, ez] = leafEnd(lf, ds.ang[li]), vx = ex - lf.hx, vz = ez - lf.hz, vv = vx * vx + vz * vz || 1;
+      const t = Math.max(0, Math.min(1, ((a.x - lf.hx) * vx + (a.z - lf.hz) * vz) / vv));
+      const dd = Math.hypot(a.x - (lf.hx + vx * t), a.z - (lf.hz + vz * t));
+      if (dd < bd) { bd = dd; best = i; }
+    });
+  }
+  return best;
 }
 // 世界の向きの移動を、体の向き（yaw）に対する mx/mz にする
 export function steerToward(a, inp, x, z, spd = 1, face = false) {

@@ -1,19 +1,20 @@
 // 調べる・使う: 見ている物（扉・人・落ちている物・爆弾・壁）と、そのときできる操作。時間のかかる動作の進み。
-import { raycast, los, CS, LH, levelOfY, NB, isWallish, C } from './world.js';
+import { raycast, los, CS, LH, levelOfY, NB, isWallish, C, leafEnd, pushOut } from './world.js';
 import { M, MATS } from './data/materials.js';
 import { GEAR, LONG, HAND_LONG } from './data/equipment.js';
 import { doorOp, sideOf, isClosed, detonateC2, triggerTrap } from './doors.js';
-import { eyeOf, dropWeapon } from './combat.js';
+import { eyeOf, dropWeapon, capsOf, wristsOf } from './combat.js';
 import { throwNade, launchNade } from './nades.js';
 import { curW } from './actor.js';
 import { startReload, switchTo, m320Next } from './weapon.js';
+import { ACT_POSE, REACH_D, STAND_D, ALIGN_T } from './data/acts.js';
 
 const _rc = { out: [], seenProp: new Set(), seenDoor: new Set() };
 export const REACH = 2.3;
 
 // 時間（秒）
 export const ACT_T = {
-  restrain: 1.6, report: 0.6, collect: 1.0, pick: 6.0, lockgun: 2.0, wedge: 1.5, unwedge: 2.0, c2: 2.5, ram: 0.8, breach: 0.7, mirror: 2.4, mirrorP: 0.8, wand: 0.6, disarm: 3.0,
+  restrain: 2.8, report: 0.6, collect: 1.2, pick: 6.0, lockgun: 2.0, wedge: 1.5, unwedge: 2.0, c2: 2.5, ram: 0.8, breach: 0.7, mirror: 2.4, mirrorP: 0.8, wand: 0.6, disarm: 3.0,
   bar: 1.5, unbar: 1.6, trap: 3.0, bash: 0.55, bandage: 3.5, plant: 7.0, defuse: 7.0, revive: 4.0, reinforce: 4.5, frame: 4.0, bombdefuse: 6.0, kick: 0.45, wall: 0.3,
 };
 export const OP_NAME = {
@@ -21,6 +22,295 @@ export const OP_NAME = {
   ram: '破城槌', breach: '散弾で開ける', mirror: 'ミラーで見る', wand: 'オプティワンド', disarm: '罠を外す', bar: 'バリケード', unbar: 'バリケードを外す', trap: '罠を仕掛ける', bash: 'バリケードを壊す',
   restrain: '拘束', report: 'TOCに報告', collect: '証拠を回収', revive: '手当て', plant: '解除装置を設置', defuse: '解除装置を外す', pickup: '拾う', reinforce: '補強', frame: '壁用の爆破薬', bombdefuse: '爆弾を解除', det: '起爆',
 };
+
+// ---- 手が届くか: 距離と、間に家具・壁・扉・人がないか（オブジェクト越し・離れた所からはできない）
+const _rr = { out: [], seenProp: new Set(), seenDoor: new Set() };
+// 手の線（腕の高さ）: 途中に壁・閉じた扉・バリケード・動かない家具があれば届かない（椅子など低くて動かせる物は越えられる）
+function reachLine(S, w, x0, y0, z0, x1, y1, z1, skipDoor = -1, skipProp = -1) {
+  const dx = x1 - x0, dy = y1 - y0, dz = z1 - z0, L = Math.hypot(dx, dy, dz);
+  if (L < 0.05) return true;
+  const hits = raycast(w, x0, y0, z0, dx / L, dy / L, dz / L, L, S.doors, _rr);
+  for (const h of hits) {
+    if (h.t0 >= L - 0.04) break;
+    if (h.kind === 'prop') { const pr = w.props[h.id]; if (!pr || !pr.solid || h.id === skipProp) continue; return false; }
+    if ((h.kind === 'door' || h.kind === 'bar') && h.id === skipDoor) continue;
+    if (h.kind === 'block' && h.mat === M.GLASSBROKEN) continue;
+    return false;
+  }
+  return true;
+}
+// 上から見た線分と四角（x0,z0〜x1,z1）が交わるか
+function segRect(ax, az, bx, bz, x0, z0, x1, z1) {
+  if (x1 <= x0 || z1 <= z0) return false;
+  let t0 = 0, t1 = 1;
+  const dx = bx - ax, dz = bz - az;
+  const clip = (p, q) => { if (Math.abs(p) < 1e-9) return q >= 0; const r = q / p; if (p < 0) { if (r > t1) return false; if (r > t0) t0 = r; } else { if (r < t0) return false; if (r < t1) t1 = r; } return true; };
+  return clip(-dx, ax - x0) && clip(dx, x1 - ax) && clip(-dz, az - z0) && clip(dz, z1 - az) && t0 <= t1;
+}
+function distSeg(px, pz, ax, az, bx, bz) {
+  const dx = bx - ax, dz = bz - az, l2 = dx * dx + dz * dz || 1e-9;
+  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / l2));
+  return Math.hypot(px - ax - dx * t, pz - az - dz * t);
+}
+const _bcSeen = new Set();
+// 体と体（手を当てる所）の間: 腰の高さまでの家具の箱（テーブルは天板の下のすき間も含めて、上から見た広さ全部）と、ほかの人の体
+export function bodyClear(S, w, a, tx, tz, L, o = {}) {
+  const x0 = a.x, z0 = a.z;
+  if (Math.hypot(tx - x0, tz - z0) < 0.06) return true;
+  const base = L * LH;
+  const i0 = Math.max(0, Math.floor((Math.min(x0, tx) - 1.0) / CS)), i1 = Math.min(w.W - 1, Math.floor((Math.max(x0, tx) + 1.0) / CS));
+  const j0 = Math.max(0, Math.floor((Math.min(z0, tz) - 1.0) / CS)), j1 = Math.min(w.D - 1, Math.floor((Math.max(z0, tz) + 1.0) / CS));
+  _bcSeen.clear();
+  for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+    const near = w.propNear.get(w.idx(L, i, j));
+    if (!near) continue;
+    for (const pid of near) {
+      if (_bcSeen.has(pid)) continue;
+      _bcSeen.add(pid);
+      const p = w.props[pid];
+      if (!p || p.alive === false || !p.solid || pid === o.skipProp || p.L !== L) continue;
+      for (const b of p.boxes) {
+        if (b[4] - base < 0.28 || b[1] - base > 1.45) continue;
+        if (segRect(x0, z0, tx, tz, b[0] + 0.025, b[2] + 0.025, b[3] - 0.025, b[5] - 0.025)) return false;
+      }
+    }
+  }
+  for (const b of S.actors) {
+    if (b === a || b.id === o.skipId || b.isDrone || !b.alive || b.down) continue;
+    if (Math.abs(b.y - a.y) > 1.2) continue;
+    if (distSeg(b.x, b.z, x0, z0, tx, tz) < 0.22) return false;
+  }
+  return true;
+}
+// 落ちている物が載っている家具（その家具は越えて手を伸ばせる）
+function supportProp(w, it) {
+  const L = levelOfY(it.y + 0.1);
+  const near = w.propNear.get(w.idx(L, Math.floor(it.x / CS), Math.floor(it.z / CS)));
+  if (!near) return -1;
+  for (const pid of near) {
+    const p = w.props[pid]; if (!p || p.alive === false || !p.solid) continue;
+    for (const b of p.boxes) if (it.x >= b[0] - 0.05 && it.x <= b[3] + 0.05 && it.z >= b[2] - 0.05 && it.z <= b[5] + 0.05 && Math.abs(it.y - b[4]) < 0.12) return pid;
+  }
+  return -1;
+}
+// 人の手を当てる所: 立っている・ひざをついている人は体の中心、倒れた人は胸
+export function personPoint(S, b) {
+  if (b.down || b.dead) {
+    const caps = capsOf(S, b); const c = caps.find(q => q.part === 'chest');
+    if (c) return [(c.a[0] + c.b[0]) / 2, (c.a[1] + c.b[1]) / 2, (c.a[2] + c.b[2]) / 2];
+    return [b.x, b.y + 0.25, b.z];
+  }
+  return [b.x, b.y + 0.9, b.z];
+}
+// 扉の手を当てる所（自分の側の面から少し手前）: ノブ・錠（ピッキング・C2・蹴り）・扉の下（ウェッジ・ミラー・罠）
+export function doorPoint(w, d, side, op) {
+  let hx = d.cx, hz = d.cz;
+  if (!d.double) { const lf = d.leaves[0]; hx = lf.hx + lf.dx * (lf.len - 0.12); hz = lf.hz + lf.dz * (lf.len - 0.12); }
+  const low = op === 'wedge' || op === 'unwedge' || op === 'mirror' || op === 'disarm' || op === 'trap' || op === 'wand';
+  const mid = op === 'bar' || op === 'unbar' || op === 'bash';
+  const hy = d.L * LH + (low ? 0.1 : op === 'kick' || op === 'bash' ? 0.55 : op === 'c2' ? 1.05 : op === 'bar' || op === 'unbar' ? 1.0 : 0.98);
+  const bx = low || mid ? d.cx : op === 'kick' ? (d.cx + hx) / 2 : hx, bz = low || mid ? d.cz : op === 'kick' ? (d.cz + hz) / 2 : hz;
+  return [bx + d.nx * side * 0.14, hy, bz + d.nz * side * 0.14];
+}
+// ノブを回したあと扉を押す・引く手の当て所: 自分に近い葉の面（自分の側）、自由端から 0.22m。
+// 押し開けるときは胸の高さ（手のひらで押す）、閉めるときは腰の高さ（端を持って引く・押す）
+export function pushPoint(S, w, a, did, op) {
+  const d = w.doors[did], ds = S.doors[did];
+  if (!d || !ds || ds.broken) return null;
+  let best = null, bd = 1e9;
+  for (let li = 0; li < d.leaves.length; li++) {
+    const lf = d.leaves[li], [ex, ez] = leafEnd(lf, ds.ang[li]);
+    const f = Math.max(0.3, (lf.len - 0.22) / lf.len);
+    const px = lf.hx + (ex - lf.hx) * f, pz = lf.hz + (ez - lf.hz) * f;
+    const dd = Math.hypot(px - a.x, pz - a.z);
+    if (dd < bd) { bd = dd; best = [px, pz]; }
+  }
+  if (!best) return null;
+  const dx = a.x - best[0], dz = a.z - best[1], l = Math.hypot(dx, dz) || 1;
+  return [best[0] + dx / l * 0.05, d.L * LH + (op === 'close' ? 1.05 : 1.38), best[1] + dz / l * 0.05];
+}
+// 扉の開口（線分）からの距離
+function doorDist(d, x, z) {
+  const along = d.axis === 0 ? x : z, across = (d.axis === 0 ? z : x) - d.c;
+  const ex = Math.max(0, d.a0 - along, along - d.a1);
+  return Math.hypot(across, ex);
+}
+// 動作 op が、いまの位置から目標に届くか。slack: 動作の最中は少しゆるめる（寄りながら行うため）
+// 届かない理由（直前の reachOK）: 'dist' 離れている、'block' 間に物・人・壁がある
+export let REACH_WHY = 'dist';
+export function reachOK(S, w, a, k, id, op, slack = 0) {
+  const lim = (REACH_D[op] ?? 1.0) + slack;
+  REACH_WHY = 'dist';
+  if (lim >= 90) return true;
+  const L = levelOfY(a.y + 0.2);
+  if (k === 'person') {
+    const b = S.byId[id]; if (!b) return false;
+    if (Math.abs(b.y - a.y) > 0.7) return false;
+    const low = b.down || b.dead;
+    if (op === 'report') {
+      if (Math.hypot(b.x - a.x, b.z - a.z) > lim) return false;
+      const e = eyeOf(S, a); return reachLine(S, w, e[0], e[1], e[2], b.x, b.y + (low ? 0.3 : b.cuffed || b.comply === 2 ? 0.8 : 1.1), b.z);
+    }
+    const tp = personPoint(S, b);
+    if (Math.hypot(tp[0] - a.x, tp[2] - a.z) > lim) return false;
+    REACH_WHY = 'block';
+    if (!bodyClear(S, w, a, tp[0], tp[2], L, { skipId: b.id })) return false;
+    return reachLine(S, w, a.x, a.y + 1.0, a.z, tp[0], tp[1], tp[2]) && reachLine(S, w, a.x, a.y + 0.5, a.z, tp[0], b.y + (low ? 0.2 : 0.45), tp[2]);
+  }
+  if (k === 'item') {
+    const it = S.items.find(x => x.id === id); if (!it || it.gone) return false;
+    if (Math.hypot(it.x - a.x, it.z - a.z) > lim || it.y - a.y > 1.45 || a.y - it.y > 0.35) return false;
+    const sp = supportProp(w, it);
+    REACH_WHY = 'block';
+    if (!bodyClear(S, w, a, it.x, it.z, L, { skipProp: sp })) return false;
+    return reachLine(S, w, a.x, a.y + 1.1, a.z, it.x, it.y + 0.08, it.z, -1, sp);
+  }
+  if (k === 'door') {
+    const d = w.doors[id], ds = S.doors[id]; if (!d || Math.abs(a.y - d.L * LH) > 0.8) return false;
+    // 開いている扉（閉める・押し開ける）は、板のいちばん近い所に手が届けばよい
+    if (ds && !ds.broken && (op === 'close' || op === 'open') && d.leaves.some((lf, li) => Math.abs(ds.ang[li] || 0) > 0.2)) {
+      let best = 1e9, bx = 0, bz = 0;
+      d.leaves.forEach((lf, li) => {
+        const [ex, ez] = leafEnd(lf, ds.ang[li] || 0), vx = ex - lf.hx, vz = ez - lf.hz, vv = vx * vx + vz * vz || 1;
+        const t = Math.max(0.15, Math.min(1, ((a.x - lf.hx) * vx + (a.z - lf.hz) * vz) / vv));
+        const qx = lf.hx + vx * t, qz = lf.hz + vz * t, dd = Math.hypot(a.x - qx, a.z - qz);
+        if (dd < best) { best = dd; bx = qx; bz = qz; }
+      });
+      if (best > lim) return false;
+      REACH_WHY = 'block';
+      if (!bodyClear(S, w, a, bx, bz, d.L)) return false;
+      return reachLine(S, w, a.x, a.y + 1.0, a.z, bx, d.L * LH + 1.0, bz, id);
+    }
+    const side = sideOf(d, a.x, a.z) || 1;
+    // 開口の中（扉の線の上）に立っていたら、横からは操作できない
+    const across = (a.x - d.cx) * d.nx + (a.z - d.cz) * d.nz;
+    if (Math.abs(across) < 0.1) return false;
+    const P = doorPoint(w, d, side, op);
+    if (Math.hypot(P[0] - a.x, P[2] - a.z) > lim && doorDist(d, a.x, a.z) > lim) return false;
+    if (Math.hypot(P[0] - a.x, P[2] - a.z) > lim + 0.35) return false;
+    REACH_WHY = 'block';
+    if (!bodyClear(S, w, a, P[0], P[2], d.L)) return false;
+    return reachLine(S, w, a.x, a.y + 1.0, a.z, P[0], Math.max(P[1], d.L * LH + 0.5), P[2], id);
+  }
+  if (k === 'bomb') {
+    const b = S.m.bombs && S.m.bombs.find(q => q.id === id); if (!b) return false;
+    if (Math.hypot(b.x - a.x, b.z - a.z) > lim || Math.abs(b.y - a.y) > 1.2) return false;
+    REACH_WHY = 'block';
+    if (!bodyClear(S, w, a, b.x, b.z, L, { skipProp: supportProp(w, b) })) return false;
+    return reachLine(S, w, a.x, a.y + 0.9, a.z, b.x, b.y + 0.15, b.z, -1, supportProp(w, b));
+  }
+  if (k === 'site') {
+    if (op !== 'defuse') return true;
+    const q = S.m.defuser; if (!q) return false;
+    if (Math.hypot(q.x - a.x, q.z - a.z) > lim || Math.abs(q.y - a.y) > 1.2) return false;
+    REACH_WHY = 'block';
+    if (!bodyClear(S, w, a, q.x, q.z, L)) return false;
+    return reachLine(S, w, a.x, a.y + 0.9, a.z, q.x, q.y + 0.15, q.z);
+  }
+  if (k === 'wall') {
+    const i = id % w.W, j = Math.floor(id / w.W) % w.D;
+    const cx = (i + 0.5) * CS, cz = (j + 0.5) * CS;
+    // 壁の面（マスの中央の板の手前）までの距離
+    const dd = Math.max(Math.abs(cx - a.x), Math.abs(cz - a.z)) - 0.15;
+    if (dd > lim) return false;
+    REACH_WHY = 'block';
+    const fx = Math.abs(cx - a.x) > Math.abs(cz - a.z) ? cx - Math.sign(cx - a.x) * 0.2 : a.x, fz = Math.abs(cx - a.x) > Math.abs(cz - a.z) ? a.z : cz - Math.sign(cz - a.z) * 0.2;
+    return bodyClear(S, w, a, fx, fz, L);
+  }
+  return true;
+}
+// AI: 目標（人・物）に手が届く立ち位置。近い順に、歩ける床のマスから届くかを試す（家具の向こうなら回り込む）
+export function approachPoint(S, w, a, k, id, op, nav) {
+  const t = k === 'person' ? S.byId[id] : k === 'item' ? S.items.find(x => x.id === id) : null;
+  if (!t) return null;
+  const tp = k === 'person' ? personPoint(S, t) : [t.x, t.y, t.z];
+  const L = levelOfY(t.y + 0.3), lim = REACH_D[op] ?? 1.0, R = Math.ceil(lim / CS) + 1;
+  const ci = Math.floor(tp[0] / CS), cj = Math.floor(tp[2] / CS);
+  const sx = a.x, sz = a.z, sy = a.y;
+  const cand = [];
+  for (let j = cj - R; j <= cj + R; j++) for (let i = ci - R; i <= ci + R; i++) {
+    if (i < 0 || j < 0 || i >= w.W || j >= w.D) continue;
+    const kk = w.idx(L, i, j);
+    if (nav && nav.walk[kk] !== 1) continue;
+    const x = (i + 0.5) * CS, z = (j + 0.5) * CS, dt = Math.hypot(x - tp[0], z - tp[2]);
+    if (dt < 0.45 || dt > lim - 0.08) continue;
+    cand.push([Math.hypot(x - sx, z - sz) + dt * 0.5, x, z]);
+  }
+  cand.sort((p, q) => p[0] - q[0]);
+  let found = null;
+  for (const [, x, z] of cand.slice(0, 24)) {
+    a.x = x; a.z = z; a.y = L * LH;
+    const okR = reachOK(S, w, a, k, id, op);
+    a.x = sx; a.z = sz; a.y = sy;
+    if (okR) { found = [x, z]; break; }
+  }
+  a.x = sx; a.z = sz; a.y = sy;
+  return found;
+}
+// 届かない操作に印をつけ、既定の操作は届くものから
+function markReach(S, w, a, ctx) {
+  for (const o of ctx.ops) { o.far = !reachOK(S, w, a, ctx.k, ctx.id, o.op); o.why = o.far ? REACH_WHY : null; }
+  ctx.def = ctx.ops.find(o => !o.far) || ctx.ops[0];
+  ctx.far = ctx.ops.every(o => o.far);
+  return ctx;
+}
+// 動作の手の行き先（世界の点）: 体の動きに使う
+function actTarget(S, w, a, k, id, op) {
+  if (k === 'person') {
+    const b = S.byId[id]; if (!b) return null;
+    if (op === 'report') return null;
+    if (b.down || b.dead) return personPoint(S, b);
+    // 手首（背中側の腰）。拘束では毎ステップ、相手の手首を追う
+    return wristsOf(S, b);
+  }
+  if (k === 'item') { const it = S.items.find(x => x.id === id); return it ? [it.x, it.y + 0.05, it.z] : null; }
+  if (k === 'door') {
+    const d = w.doors[id]; if (!d) return null;
+    return doorPoint(w, d, sideOf(d, a.x, a.z) || 1, op);
+  }
+  if (k === 'bomb') { const b = S.m.bombs && S.m.bombs.find(q => q.id === id); return b ? [b.x, b.y + 0.15, b.z] : null; }
+  if (k === 'site') {
+    if (op === 'defuse' && S.m.defuser) return [S.m.defuser.x, S.m.defuser.y + 0.1, S.m.defuser.z];
+    return [a.x + Math.sin(a.yaw) * 0.5, a.y + 0.05, a.z + Math.cos(a.yaw) * 0.5];
+  }
+  if (k === 'wall') { const i = id % w.W, j = Math.floor(id / w.W) % w.D; const cx = (i + 0.5) * CS, cz = (j + 0.5) * CS; const ax = Math.abs(cx - a.x) > Math.abs(cz - a.z); return [ax ? cx - Math.sign(cx - a.x) * 0.16 : a.x, a.y + 1.15, ax ? a.z : cz - Math.sign(cz - a.z) * 0.16]; }
+  return null;
+}
+// 動作の立ち位置: 目標の手前（目標から自分への向き、扉は自分の側の正面）。歩ける所で、今の所から体ごと移れるときだけ
+function standPoint(S, w, a, k, id, op, tgt) {
+  const sd = STAND_D[op];
+  if (sd == null || !tgt) return null;
+  const L = levelOfY(a.y + 0.2);
+  let bx, bz, nx, nz;
+  if (k === 'door') {
+    const d = w.doors[id]; if (!d) return null;
+    const side = sideOf(d, a.x, a.z) || 1;
+    nx = d.nx * side; nz = d.nz * side; bx = tgt[0] - nx * 0.14; bz = tgt[2] - nz * 0.14;
+  } else if (k === 'wall') {
+    bx = tgt[0]; bz = tgt[2]; const dx = a.x - bx, dz = a.z - bz, dd = Math.hypot(dx, dz) || 1; nx = dx / dd; nz = dz / dd;
+    if (Math.abs(nx) > Math.abs(nz)) { nx = Math.sign(nx); nz = 0; } else { nz = Math.sign(nz); nx = 0; }
+  } else {
+    const c = k === 'person' ? personPoint(S, S.byId[id]) : tgt;
+    bx = c[0]; bz = c[2];
+    const dx = a.x - bx, dz = a.z - bz, dd = Math.hypot(dx, dz);
+    if (dd < 0.05) return null;
+    nx = dx / dd; nz = dz / dd;
+  }
+  const sx = bx + nx * sd, sz = bz + nz * sd;
+  const mv = Math.hypot(sx - a.x, sz - a.z);
+  if (mv < 0.04) return null;
+  if (mv > (op === 'kick' || op === 'bash' ? 0.4 : 0.85)) return null;
+  // 立てる床か（壁・家具に重ならない）
+  const i = Math.floor(sx / CS), j = Math.floor(sz / CS);
+  if (i < 0 || j < 0 || i >= w.W || j >= w.D) return null;
+  const t = w.cell[w.idx(L, i, j)];
+  if (t !== C.FLOOR && t !== C.OUT && t !== C.OPEN && t !== C.DOOR) return null;
+  const po = pushOut(w, sx, sz, a.y + 0.4, a.y + 1.5, 0.25, S.doors, -1, _po);
+  if (po[2] && Math.hypot(po[0], po[1]) > 0.06) return null;
+  if (!bodyClear(S, w, a, sx, sz, L, { skipId: k === 'person' ? id : -1 })) return null;
+  return [sx, sz];
+}
+const _po = [0, 0, 0];
 
 // 見ている物を調べる
 export function contextOf(S, w, a) {
@@ -51,7 +341,7 @@ export function contextOf(S, w, a) {
   }
   if (person) {
     const ops = personOps(S, a, person);
-    if (ops.length) return { k: 'person', id: person.id, ops, def: ops[0], dist: pd };
+    if (ops.length) return markReach(S, w, a, { k: 'person', id: person.id, ops, def: ops[0], dist: pd });
   }
   // 落ちている物
   let item = null, idist = 1e9;
@@ -66,7 +356,7 @@ export function contextOf(S, w, a) {
   }
   if (item) {
     const ops = itemOps(S, a, item);
-    if (ops.length) return { k: 'item', id: item.id, ops, def: ops[0] };
+    if (ops.length) return markReach(S, w, a, { k: 'item', id: item.id, ops, def: ops[0] });
   }
   // 扉（当たった、または近くの扉）
   let did = doorHit ? doorHit.id : -1;
@@ -83,23 +373,23 @@ export function contextOf(S, w, a) {
   }
   if (did >= 0) {
     const ops = doorOps(S, w, a, did);
-    if (ops.length) return { k: 'door', id: did, ops, def: ops[0] };
+    if (ops.length) return markReach(S, w, a, { k: 'door', id: did, ops, def: ops[0] });
   }
   // 対戦: 爆弾の場所・壁・窓
   if (S.pvp && S.m && S.m.sites) {
     const so = siteOps(S, w, a, eye, dx, dz);
-    if (so) return so;
+    if (so) return markReach(S, w, a, so);
   }
   if (S.pvp && wallHit && wallHit.kind === 'block' && wallHit.t0 < 1.6) {
     const ops = wallOps(S, w, a, wallHit);
-    if (ops.length) return { k: 'wall', id: wallHit.k, ops, def: ops[0], q: wallHit.q };
+    if (ops.length) return markReach(S, w, a, { k: 'wall', id: wallHit.k, ops, def: ops[0], q: wallHit.q });
   }
   // 作戦: 爆弾（爆弾脅迫）
   if (!S.pvp && S.m && S.m.bombs) {
     for (const b of S.m.bombs) {
       if (b.done) continue;
       const dist = Math.hypot(b.x - a.x, b.z - a.z);
-      if (dist < 1.6 && Math.abs(b.y - a.y) < 1.5) return { k: 'bomb', id: b.id, ops: [{ op: 'bombdefuse', t: ACT_T.bombdefuse }], def: { op: 'bombdefuse', t: ACT_T.bombdefuse } };
+      if (dist < 2.2 && Math.abs(b.y - a.y) < 1.5) return markReach(S, w, a, { k: 'bomb', id: b.id, ops: [{ op: 'bombdefuse', t: ACT_T.bombdefuse }], def: null });
     }
   }
   return null;
@@ -161,7 +451,7 @@ function siteOps(S, w, a, eye, dx, dz) {
   const m = S.m;
   if (m.defuser && m.defuser.planted && a.team === m.def) {
     const p = m.defuser;
-    if (Math.hypot(p.x - a.x, p.z - a.z) < 1.5 && Math.abs(p.y - a.y) < 1.5) return { k: 'site', id: -1, ops: [{ op: 'defuse', t: ACT_T.defuse }], def: { op: 'defuse', t: ACT_T.defuse } };
+    if (Math.hypot(p.x - a.x, p.z - a.z) < 2.2 && Math.abs(p.y - a.y) < 1.5) return { k: 'site', id: -1, ops: [{ op: 'defuse', t: ACT_T.defuse }], def: { op: 'defuse', t: ACT_T.defuse } };
   }
   if (a.carry === 'defuser' && m.phase === 'action' && !(m.defuser && m.defuser.planted)) {
     for (const s of m.sites) {
@@ -192,7 +482,7 @@ export function doAction(S, w, a, ac, ev) {
   if (kind === 'reload') return; // 銃の側で処理
   if (kind === 'unlockDoor') { if (a.kind === 'sus' || a.kind === 'civ') doorOp(S, w, a, ac.id, 'unlock', ev); return; }
   if (a.down || a.cuffed || a.comply) return;
-  if (kind === 'cancel') { if (a.act) { ev.push({ e: 'actcancel', id: a.id, k: a.act.k }); a.act = null; } return; }
+  if (kind === 'cancel') { if (a.act) { ev.push({ e: 'actcancel', id: a.id, k: a.act.k }); endCuff(S, a.act); a.act = null; } return; }
   if (kind === 'gear') { selectGear(S, a, ac.id, ev); return; }
   if (kind === 'm320') { m320Next(a, ev); return; }
   if (kind === 'long') { selectLong(S, a, ev); return; }
@@ -211,6 +501,7 @@ export function doAction(S, w, a, ac, ev) {
       else if (a.pid == null && ac.k === 'site') { const eye = eyeOf(S, a); ctx = siteOps(S, w, a, eye, 0, 0); }
       else if (a.pid == null && ac.k === 'wall') { const kk = ac.id; ctx = { k: 'wall', id: kk, q: ac.q || 1, ops: wallOps(S, w, a, { k: kk, q: ac.q || 1 }) }; }
       if (!ctx) return;
+      markReach(S, w, a, ctx);
     }
     op = ctx.ops.find(o => o.op === ac.op);
     if (!op) return;
@@ -218,15 +509,38 @@ export function doAction(S, w, a, ac, ev) {
   startOp(S, w, a, ctx, op, ev);
 }
 
+// 扉のノブに手を伸ばす時間（開ける・閉める・少し開ける）
+const KNOB_T = 0.24;
 function startOp(S, w, a, ctx, op, ev) {
   const id = ctx.id;
   if (op.op === 'det') { detonateMine(S, w, a, ev); return; }
-  if (op.op === 'pickup') { const it = S.items.find(x => x.id === id); if (it && !it.gone) { it.gone = true; a.carry = 'defuser'; ev.push({ e: 'defpick', id: a.id }); } return; }
-  if (ctx.k === 'door' && (op.t || 0) === 0) { const r = doorOp(S, w, a, id, op.op, ev); if (!r.ok && r.why) ev.push({ e: 'deny', id: a.id, why: r.why, d: id }); return; }
+  // 手が届かない（離れている・間に物がある）
+  if (op.far ?? !reachOK(S, w, a, ctx.k, id, op.op)) { ev.push({ e: 'deny', id: a.id, why: (op.why || REACH_WHY) === 'block' ? 'blocked' : 'far', op: op.op, k: ctx.k }); return; }
+  if (op.op === 'pickup') { const it = S.items.find(x => x.id === id); if (it && !it.gone) { it.gone = true; a.carry = 'defuser'; a.gest = { k: 'grab', t: 0, dur: 0.7, tgt: [it.x, it.y + 0.05, it.z] }; ev.push({ e: 'defpick', id: a.id }); } return; }
+  const tgt = actTarget(S, w, a, ctx.k, id, op.op);
+  // 扉を開ける・閉める: 左手をノブへ伸ばしてから（銃は右手のまま、歩きながらでもよい）
+  if (ctx.k === 'door' && (op.t || 0) === 0) {
+    a.act = { k: op.op, t: 0, dur: KNOB_T, kind: 'door', id, still: false, noAds: false, x: a.x, z: a.z, gear: null, pose: 'knob', tgt, quick: true };
+    return;
+  }
   const dur = (op.t || 0.5) * (a.inj.arm && op.op !== 'report' ? 1.2 : 1);
-  a.act = { k: op.op, t: 0, dur, kind: ctx.k, id, still: op.op !== 'report' && op.op !== 'bash', noAds: true, x: a.x, z: a.z, gear: op.gear || null };
+  const still = op.op !== 'report' && op.op !== 'bash';
+  a.act = { k: op.op, t: 0, dur, kind: ctx.k, id, still, noAds: true, x: a.x, z: a.z, gear: op.gear || null, pose: ACT_POSE[op.op] || null, tgt, chk: 0 };
+  // 立ち位置へ寄る（はじめの少しの間）
+  if (still) { const sp = standPoint(S, w, a, ctx.k, id, op.op, tgt); if (sp) { a.act.stand = sp; a.act.alignT = ALIGN_T[op.op] ?? ALIGN_T.def; } }
+  // 拘束: 手を上げて立っている人は、ひざをつかせ、背中を向けさせる（その間は動かない）
+  if (op.op === 'restrain') {
+    const b = S.byId[id];
+    if (b && b.alive) {
+      if (!b.down && b.comply === 1) { b.comply = 2; b.stateT = 0; }
+      b.cuffBy = a.id;
+      b.cuffYaw = !b.down && !b.dead ? Math.atan2(b.x - a.x, b.z - a.z) : null;
+      b.cuffK = 0;
+    }
+  }
   ev.push({ e: 'act', id: a.id, k: op.op, dur, tgt: id, kind: ctx.k });
 }
+function endCuff(S, x) { if (x.k !== 'restrain') return; const b = S.byId[x.id]; if (b) { b.cuffK = 0; if (b.cuffBy != null) { b.cuffBy = null; b.cuffYaw = null; } } }
 
 // 時間のかかる動作の進み
 export function stepActs(S, w, dt, ev) {
@@ -235,20 +549,63 @@ export function stepActs(S, w, dt, ev) {
     if (a.ws && a.ws.slot === 2 && a.alive && !a.down) gearInHand(S, w, a, dt, ev);
     if (a.ws && a.ws.slot === 3 && a.alive && !a.down) longInHand(S, w, a, dt, ev);
     if (a.peek) stepPeek(S, w, a, dt, ev);
+    if (a.gest) {
+      a.gest.t += dt;
+      // 押している間（前の 6 割）は、手は動いていく扉の面について行く
+      if (a.gest.did != null && a.gest.t < a.gest.dur * 0.6) { const pp = pushPoint(S, w, a, a.gest.did, a.gest.op); if (pp) a.gest.tgt = pp; }
+      if (a.gest.t >= a.gest.dur) a.gest = null;
+    }
     const x = a.act;
     if (!x) continue;
-    if (!a.alive || a.down || a.stun > 0.3 || a.flash > 0.5) { a.act = null; ev.push({ e: 'actcancel', id: a.id, k: x.k }); continue; }
+    const cancel = (why) => { a.act = null; endCuff(S, x); ev.push({ e: 'actcancel', id: a.id, k: x.k, why }); };
+    if (!a.alive || a.down || a.stun > 0.3 || a.flash > 0.5) { cancel('state'); continue; }
+    // ノブに手を伸ばす（短い）: 届かなくなったらやめる。終わりに扉を動かし、手で押す・引く
+    if (x.quick) {
+      x.t += dt;
+      if (x.t < x.dur) continue;
+      a.act = null;
+      if (!reachOK(S, w, a, 'door', x.id, x.k, 0.2)) { ev.push({ e: 'deny', id: a.id, why: 'far', op: x.k, k: 'door' }); continue; }
+      const r = doorOp(S, w, a, x.id, x.k, ev);
+      if (!r.ok && r.why) ev.push({ e: 'deny', id: a.id, why: r.why, d: x.id });
+      else a.gest = { k: 'push', t: 0, dur: x.k === 'peek' ? 0.3 : 0.4, tgt: pushPoint(S, w, a, x.id, x.k) || actTarget(S, w, a, 'door', x.id, x.k), did: x.id, op: x.k };
+      continue;
+    }
+    // 立ち位置へ寄る（体ごと少し動き、目標を向く）
+    if (x.stand && x.t < x.alignT) {
+      const dx = x.stand[0] - a.x, dz = x.stand[1] - a.z, d = Math.hypot(dx, dz);
+      if (d > 0.01) { const st = Math.min(d, 2.0 * dt); a.x += dx / d * st; a.z += dz / d * st; }
+      x.x = a.x; x.z = a.z;
+    }
     // 動いたら中断（AIは止まって行う）
-    if (x.still && Math.hypot(a.x - x.x, a.z - x.z) > 0.5) { a.act = null; ev.push({ e: 'actcancel', id: a.id, k: x.k }); continue; }
+    if (x.still && Math.hypot(a.x - x.x, a.z - x.z) > 0.5) { cancel('moved'); continue; }
+    // 拘束: 手は相手の手首を追う。目は相手の腰の後ろ（手首を回してくる所）
+    if (x.k === 'restrain') {
+      const b = S.byId[x.id];
+      if (b) {
+        x.tgt = actTarget(S, w, a, 'person', b.id, 'restrain');
+        if (b.down || b.dead) x.look = x.tgt;
+        else { const dx = a.x - b.x, dz = a.z - b.z, d = Math.hypot(dx, dz) || 1; x.look = [b.x + dx / d * 0.14, b.y + (b.comply === 2 || b.cuffed ? 0.72 : 0.95), b.z + dz / d * 0.14]; }
+      }
+    }
+    // 目標から目をそらした（手元が見えない）。拘束は手元を見ていること
+    if (x.tgt && x.kind !== 'self') {
+      const tx = x.tgt[0] - a.x, tz = x.tgt[2] - a.z;
+      const lim = x.k === 'restrain' ? 1.25 : 1.75;
+      if (Math.hypot(tx, tz) > 0.3 && x.t > (x.alignT || 0)) { let da = Math.atan2(tx, tz) - a.yaw; da = Math.atan2(Math.sin(da), Math.cos(da)); if (Math.abs(da) > lim) { cancel('look'); continue; } }
+    }
+    // ときどき（0.1秒ごと）、まだ手が届くか（離れた・間に物や人が入った）
+    if ((x.chk = (x.chk || 0) + 1) % 6 === 0 && x.kind !== 'self' && x.k !== 'report' && !reachOK(S, w, a, x.kind, x.id, x.k, 0.25)) { cancel('reach:' + REACH_WHY); continue; }
     // 相手が離れた・状態が変わった
     if (x.kind === 'person') {
       const b = S.byId[x.id];
-      if (!b || Math.hypot(b.x - a.x, b.z - a.z) > 2.8) { a.act = null; ev.push({ e: 'actcancel', id: a.id, k: x.k }); continue; }
-      if (x.k === 'restrain' && (b.cuffed || (!b.comply && !b.down && b.tased <= 0 && b.stun <= 0 && b.flash <= 0.2))) { a.act = null; ev.push({ e: 'actcancel', id: a.id, k: x.k }); continue; }
+      if (!b) { cancel('gone'); continue; }
+      if (x.k === 'restrain' && (b.cuffed || !b.alive || (!b.comply && !b.down && b.tased <= 0 && b.stun <= 0 && b.flash <= 0.2))) { cancel('tgt'); continue; }
+      if (x.k === 'restrain') { b.cuffK = Math.min(1, x.t / x.dur); b.cuffBy = a.id; }
     }
     x.t += dt;
     if (x.t < x.dur) continue;
     a.act = null;
+    endCuff(S, x);
     finishOp(S, w, a, x, ev);
   }
 }
@@ -339,7 +696,7 @@ function selectGear(S, a, id, ev) {
   if (!G) return;
   const g = a.inv.gear.find(x => x.id === id);
   if (!g || g.n <= 0) { ev.push({ e: 'deny', id: a.id, why: 'nogear' }); return; }
-  if (G.kind === 'heal') { if (a.act) return; if (g.n > 0) { g.n--; a.act = { k: 'bandage', t: 0, dur: ACT_T.bandage, kind: 'self', id: a.id, still: false, noAds: true, x: a.x, z: a.z }; ev.push({ e: 'act', id: a.id, k: 'bandage', dur: ACT_T.bandage }); } return; }
+  if (G.kind === 'heal') { if (a.act) return; if (g.n > 0) { g.n--; a.act = { k: 'bandage', t: 0, dur: ACT_T.bandage, kind: 'self', id: a.id, still: false, noAds: true, x: a.x, z: a.z, pose: 'bandage', tgt: null }; ev.push({ e: 'act', id: a.id, k: 'bandage', dur: ACT_T.bandage }); } return; }
   if (G.kind === 'nade' || G.kind === 'spray') {
     // 手に持つ（slot 2）。引き金で投げる・吹きつける
     a.ws.gear = id;

@@ -96,8 +96,21 @@ export function computePose(p, out) {
   const T = p.stateT || 0;
   const pitch = clamp(p.pitch || 0, -1.4, 1.4);
   const lean = clamp(p.lean || 0, -1, 1);
-  const hold = state === 'normal' || state === 'shield' ? (p.hold || 'none') : 'none';
+  // 動作（拘束・作業・拾う・取りつけ・包帯・無線・蹴る）。両手を使う動作では銃を胸の前に吊る
+  const act = state === 'normal' || state === 'shield' ? (p.act || null) : null;
+  const actT = clamp(p.actT || 0, 0, 1);
+  const aP = p.actP || null;
+  const free = act === 'cuff' || act === 'kneel' || act === 'grab' || act === 'place' || act === 'bandage' || act === 'peek';
+  const hold0 = state === 'normal' || state === 'shield' ? (p.hold || 'none') : 'none';
+  const hold = free ? 'none' : hold0;
   const H = HOLD[hold] || null;
+  // 動作の始めに手を伸ばし、終わりに戻す（拘束: 寄ってひざをつき、0.2で相手の手を取り、0.9で離す）
+  const reachK = act === 'cuff' ? sm((actT - 0.04) / 0.16) * (1 - sm((actT - 0.9) / 0.1)) : act === 'knob' ? sm(actT / 0.8) : act ? sm(actT / 0.16) * (1 - sm((actT - 0.93) / 0.07)) : 0;
+  // ひざをつく（片ひざ）: 作業・のぞく・拘束（相手が低い）
+  const kneelW = (act === 'kneel' || act === 'peek' || (act === 'cuff' && aP && aP[1] < 0.85 * s)) ? sm(actT / 0.12) : 0;
+  // 蹴り: 0〜0.4 ひざを上げる、0.4〜0.6 伸ばす、0.6〜1 戻す
+  const kickUp = act === 'kick' ? sm(actT / 0.35) * (1 - sm((actT - 0.62) / 0.3)) : 0;
+  const kickExt = act === 'kick' ? Math.sin(Math.PI * clamp((actT - 0.3) / 0.38, 0, 1)) : 0;
   // ---- 下半身
   const spd = Math.hypot(p.moveX || 0, p.moveZ || 0);
   const ph = p.phase || 0;
@@ -111,6 +124,17 @@ export function computePose(p, out) {
   const down = state === 'down' || state === 'dead';
   if (kneel) { const k = sm(T / 0.8); pelvisY = lerpN(pelvisY, 0.62 * s, k); torsoBend = lerpN(torsoBend, -0.05, k); }
   if (state === 'cower' || state === 'stun') { const k = sm(T / 0.5); pelvisY = lerpN(pelvisY, 0.55 * s, k); torsoBend = lerpN(torsoBend, 0.75, k); }
+  if (kneelW > 0 && crouch > 0.5) {
+    // 片ひざ: 腰を下げ、手元（低いほど深く）へ体を傾ける
+    pelvisY = lerpN(pelvisY, 0.5 * s, kneelW);
+    const low = aP ? clamp((0.9 * s - aP[1]) / (0.8 * s), 0, 1) : 0.3;
+    // 拘束は背すじを立てたまま（相手の背中に顔が近づきすぎない）
+    // 作業: 手元が低いほど深く前へ（錠の高さならほぼ立てたまま）
+    if (act === 'cuff') torsoBend = lerpN(torsoBend, 0.24, kneelW); else torsoBend = lerpN(torsoBend, 0.12 + 0.42 * low, kneelW);
+  }
+  if (act === 'grab') torsoBend += 0.45 * Math.sin(Math.PI * clamp((actT - 0.05) / 0.8, 0, 1));
+  if (act === 'place') torsoBend += 0.08 * reachK;
+  if (act === 'kick') torsoBend -= 0.16 * kickExt;
   // ローカルでの関節
   const fwd = v3(0, 0, 1), up = v3(0, 1, 0), left = v3(1, 0, 0);
   let P = v3(0, pelvisY, 0);
@@ -187,12 +211,21 @@ export function computePose(p, out) {
     const k = sm(crouch);
     ankL = lerp3(stL, cL, k); ankR = lerp3(stR, cR, k);
     if (spd < 0.1) ankR[1] = lerpN(ankR[1], footY + 0.12 * s, k);
+    // 片ひざ: 右ひざを床に、すねを後ろへ
+    if (kneelW > 0) { ankR = lerp3(ankR, v3(-D.hipW * s * 1.15, footY * 0.8, -0.44 * s), kneelW); ankL = lerp3(ankL, v3(D.hipW * s * 1.15, footY, 0.4 * s), kneelW); kneeHintR = norm(lerp3(kneeHintR, v3(0, -0.9, 0.4), kneelW)); }
   } else {
     ankL = add(v3(D.hipW * s, footY, 0.03 * s), gait(0));
     ankR = add(v3(-D.hipW * s, footY, -0.03 * s), gait(Math.PI));
     if (spd < 0.1 && hold !== 'none') { ankL[2] += 0.1 * s; ankR[2] -= 0.08 * s; ankR[0] -= 0.03 * s; }
   }
   if (state === 'cower' || state === 'stun') { const k = sm(T / 0.5); ankL = lerp3(ankL, v3(D.hipW * s * 1.4, footY, 0.12 * s), k); ankR = lerp3(ankR, v3(-D.hipW * s * 1.4, footY, 0.0), k); }
+  // 蹴り: 右ひざを上げてから、かかとで扉（腰より下）を前へ押し出す
+  if (kickUp > 0) {
+    const chamber = v3(-D.hipW * s, 0.42 * s, 0.12 * s), ext = v3(-D.hipW * s * 0.8, 0.5 * s, 0.78 * s);
+    ankR = lerp3(ankR, lerp3(chamber, ext, kickExt), kickUp);
+    kneeHintR = norm(lerp3(kneeHintR, v3(0, 0.6, 1), kickUp));
+    ankL = madd(ankL, v3(0, 0, 1), -0.08 * s * kickUp);
+  }
   const kneeL = ik2(hipL, ankL, legL, legS, kneeHintL);
   const kneeR = ik2(hipR, ankR, legL, legS, kneeHintR);
   // つま先
@@ -245,6 +278,77 @@ export function computePose(p, out) {
       wristL = madd(madd(madd(shL, chestFwd, 0.41 * s), chestUp, (-0.2 - 0.12 * clamp(p.ads || 0, 0, 1)) * s), chestLeft, -0.06 * s); handDirL = norm(v3(-0.3, 0.9, 0.2));
     } else { wristL = toW(H.l); handDirL = norm(add(gf, mul(gl, -0.4))); }
     elbowHintL = norm(v3(0.8, -1, -0.2)); elbowHintR = norm(v3(-1.0, -0.8, -0.4));
+    // 無線（TOCへ報告）: 左手を肩の無線へ
+    if (act === 'radio') {
+      const rp = madd(madd(madd(shL, chestUp, -0.04 * s), chestFwd, 0.07 * s), chestLeft, -0.05 * s);
+      wristL = lerp3(wristL, rp, reachK); handDirL = norm(lerp3(handDirL, v3(-0.4, 0.8, 0.2), reachK)); elbowHintL = norm(lerp3(elbowHintL, v3(1, -0.2, 0.2), reachK));
+    }
+    // 扉: 左手をノブへ伸ばす（銃は右手のまま）
+    if (act === 'knob' && aP) {
+      let tgt = v3(aP[0], aP[1], aP[2]);
+      const off = sub(tgt, shL), dl = len(off), maxR = (ua + fa) * 0.97;
+      if (dl > maxR) tgt = madd(shL, off, maxR / dl);
+      wristL = lerp3(wristL, tgt, reachK); handDirL = norm(lerp3(handDirL, norm(off), reachK)); elbowHintL = norm(lerp3(elbowHintL, v3(1, -0.6, 0), reachK));
+    }
+    // 扉を開ける・閉める: 左手をノブへ伸ばして戻す（銃は右手）
+    if ((p.gest === 'push' || p.gest === 'grab') && p.gestP) {
+      const g = Math.sin(Math.PI * clamp(p.gestT || 0, 0, 1));
+      let tgt = v3(p.gestP[0], p.gestP[1], p.gestP[2]);
+      const off = sub(tgt, shL), dl = len(off), maxR = (ua + fa) * 0.95;
+      if (dl > maxR) tgt = madd(shL, off, maxR / dl);
+      wristL = lerp3(wristL, tgt, g); handDirL = norm(lerp3(handDirL, norm(off), g));
+    }
+  } else if (free) {
+    // ---- 両手で行う動作
+    let T0 = aP ? v3(aP[0], aP[1], aP[2]) : madd(madd(P, chestFwd, 0.45 * s), chestUp, 0.25 * s);
+    // 届く所まで（肩から腕の長さ）
+    const midSh = lerp3(shL, shR, 0.5), off0 = sub(T0, midSh), d0 = len(off0), maxR = (ua + fa) * 0.92;
+    if (d0 > maxR) T0 = madd(midSh, off0, maxR / d0);
+    const dirT = norm(v3(T0[0], 0, Math.abs(T0[2]) < 0.05 ? 0.3 : T0[2]));
+    const sideT = v3(dirT[2], 0, -dirT[0]); // 目標に向かって左
+    const restL = madd(madd(shL, chestUp, -0.46 * s), chestFwd, 0.12 * s), restR = madd(madd(shR, chestUp, -0.46 * s), chestFwd, 0.12 * s);
+    const wig = (f, o) => Math.sin(actT * f + o) * 0.016 * s;
+    let tL = T0, tR = T0;
+    handDirL = handDirR = norm(add(dirT, v3(0, -0.35, 0)));
+    if (act === 'cuff') {
+      // 相手の手首を両手で取る（左手で押さえ、右手で結束バンドを回す）→ 締める（両手を引く）→ 離す
+      const tie = clamp((actT - 0.62) / 0.2, 0, 1), loop = Math.sin(Math.PI * tie);
+      const pull = Math.sin(Math.PI * clamp((actT - 0.82) / 0.1, 0, 1)) * 0.08 * s;
+      const ang = tie * Math.PI * 2;
+      tL = madd(madd(T0, sideT, 0.06 * s + pull), v3(0, 1, 0), 0.015 * s + wig(9, 0));
+      tR = madd(madd(madd(T0, sideT, -0.05 * s - pull + Math.cos(ang) * 0.05 * s * loop), v3(0, 1, 0), Math.sin(ang) * 0.06 * s * loop - 0.01 * s), dirT, -0.04 * s * loop);
+      handDirL = norm(add(dirT, add(mul(sideT, -0.5), v3(0, -0.4, 0)))); handDirR = norm(add(dirT, mul(sideT, 0.6)));
+    } else if (act === 'kneel' || act === 'peek') {
+      // 手元で細かく動かす（ピッキング・解除・手当て…）
+      tL = madd(madd(T0, sideT, 0.07 * s), dirT, wig(23, 0)); tR = madd(madd(T0, sideT, -0.05 * s), v3(0, 1, 0), wig(31, 2));
+    } else if (act === 'grab') {
+      // 右手で拾って胸へ。左手はひざ
+      const up1 = sm((actT - 0.5) / 0.4);
+      tR = lerp3(T0, madd(madd(N, chestUp, -0.24 * s), chestFwd, 0.28 * s), up1);
+      tL = madd(madd(madd(P, chestFwd, 0.3 * s), pelLeft, 0.14 * s), chestUp, 0.08 * s);
+      handDirR = norm(lerp3(v3(0, -1, 0.3), v3(0, 0.3, 1), up1));
+    } else if (act === 'place') {
+      // 両手で取りつけ、最後に押さえる
+      const push = actT > 0.72 ? Math.sin(Math.PI * clamp((actT - 0.72) / 0.22, 0, 1)) * 0.05 * s : 0;
+      tL = madd(madd(T0, sideT, 0.13 * s), dirT, push - 0.04 * s); tR = madd(madd(T0, sideT, -0.13 * s), dirT, push - 0.04 * s);
+      handDirL = handDirR = dirT;
+    } else if (act === 'bandage') {
+      // 左の前腕を胸の前に出し、右手で巻く
+      const c = madd(madd(N, chestUp, -0.24 * s), chestFwd, 0.3 * s), ang = actT * Math.PI * 8;
+      tL = madd(c, chestLeft, 0.07 * s);
+      tR = madd(madd(madd(c, chestLeft, 0.02 * s), chestUp, Math.sin(ang) * 0.06 * s), chestFwd, Math.cos(ang) * 0.05 * s);
+      handDirL = norm(v3(-1, 0, 0.3)); handDirR = norm(v3(0.3, -0.5, 1));
+    }
+    const rk = act === 'bandage' || act === 'peek' ? Math.max(reachK, act === 'peek' ? 1 : 0) : reachK;
+    wristL = lerp3(restL, tL, rk); wristR = lerp3(restR, tR, rk);
+    elbowHintL = v3(1, -0.7, -0.3); elbowHintR = v3(-1, -0.7, -0.3);
+    // 長い銃は胸の前に吊る（拳銃はホルスターへ）
+    if (hold0 !== 'none' && hold0 !== 'pistol') {
+      const gp = madd(madd(madd(N, chestUp, -0.36 * s), chestFwd, 0.17 * s), chestLeft, 0.03 * s);
+      const gf = norm(add(mul(chestUp, -0.85), add(mul(chestLeft, 0.35), mul(chestFwd, 0.22))));
+      const gu = norm(sub(chestFwd, mul(gf, dot(chestFwd, gf))));
+      gun = { p: gp, f: gf, u: gu, l: norm(cross(gu, gf)) };
+    }
   } else {
     // 素手の状態
     if (state === 'hands') {
@@ -254,10 +358,19 @@ export function computePose(p, out) {
       wristL = lerp3(relL, hiL, k); wristR = lerp3(relR, hiR, k);
       handDirL = handDirR = v3(0, 1, 0); elbowHintL = v3(1, -0.2, -0.3); elbowHintR = v3(-1, -0.2, -0.3);
     } else if (state === 'kneel') {
-      // 手を頭の後ろに
+      // 手を頭の後ろに。拘束されている間は、背中へ回される
       wristL = madd(madd(Hc, chestLeft, 0.09 * s), chestFwd, -0.1 * s); wristR = madd(madd(Hc, chestLeft, -0.09 * s), chestFwd, -0.1 * s);
       wristL[1] += 0.06 * s; wristR[1] += 0.06 * s;
       handDirL = v3(-1, 0.2, 0); handDirR = v3(1, 0.2, 0); elbowHintL = v3(1, 0.3, 0.6); elbowHintR = v3(-1, 0.3, 0.6);
+      // 拘束されている最中: 0.2〜0.5 で手を頭の後ろから背中へ回される（警官の手が取って下ろす）
+      const ck = sm(((p.cuffT || 0) - 0.18) / 0.32);
+      if (ck > 0) {
+        const bL = madd(madd(P, chestFwd, -0.18 * s), chestLeft, 0.04 * s), bR = madd(madd(P, chestFwd, -0.18 * s), chestLeft, -0.04 * s);
+        bL[1] += 0.12 * s; bR[1] += 0.12 * s;
+        wristL = lerp3(wristL, bL, ck); wristR = lerp3(wristR, bR, ck);
+        handDirL = norm(lerp3(handDirL, v3(-1, -0.4, 0), ck)); handDirR = norm(lerp3(handDirR, v3(1, -0.4, 0), ck));
+        elbowHintL = norm(lerp3(elbowHintL, v3(0.4, 0, -1), ck)); elbowHintR = norm(lerp3(elbowHintR, v3(-0.4, 0, -1), ck));
+      }
     } else if (state === 'cuffed') {
       wristL = madd(madd(P, chestFwd, -0.18 * s), chestLeft, 0.04 * s); wristR = madd(madd(P, chestFwd, -0.18 * s), chestLeft, -0.04 * s);
       wristL[1] += 0.12 * s; wristR[1] += 0.12 * s;

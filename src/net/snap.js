@@ -3,6 +3,7 @@
 import { createActor, makeWeapon } from '../engine/actor.js';
 import { makeDoorStates } from '../engine/doors.js';
 import { WEAPONS } from '../engine/data/weapons.js';
+import { ACT_POSE } from '../engine/data/acts.js';
 
 const r2 = (v) => Math.round(v * 100);
 const r3 = (v) => Math.round(v * 1000);
@@ -40,7 +41,7 @@ export function packSnap(S, w, events, mePids, withBlocks) {
     if (wi && wi.lightOn) f |= FL.light; if (a.nvgOn) f |= FL.nvg; if (a.carry === 'defuser') f |= FL.carry; if (a.reported) f |= FL.reported;
     if (a.flash > 0.4) f |= FL.blind; if (a.gas > 0) f |= FL.gas; if (a.spot > 0) f |= FL.spot;
     const rel = a.ws.st === 'reload' && a.ws.rd ? Math.round((1 - a.ws.t / a.ws.rd) * 100) : -1;
-    A.push([a.id, r2(a.x), r2(a.y), r2(a.z), r3(a.yaw), r3(a.pitch + (a.ws.rp || 0) * Math.PI / 180), r2(a.st), r2(a.lean), r2(a.mvx || 0), r2(a.mvz || 0), r2(a.phase || 0), r2(a.ads || 0), r2(a.low || 0), f, r2(a.stateT || 0), r2(a.fallYaw || 0), rel, r2(a.fireK || 0), r2(a.throwT || 0), a.ws.slot, Math.round(100 * a.hp / (a.maxHp || 100)), r2(a.spd || 0), SIDE.indexOf(a.pvpSide || ''), a.spotTeam ?? -1, a._lookV || 0]);
+    A.push([a.id, r2(a.x), r2(a.y), r2(a.z), r3(a.yaw), r3(a.pitch + (a.ws.rp || 0) * Math.PI / 180), r2(a.st), r2(a.lean), r2(a.mvx || 0), r2(a.mvz || 0), r2(a.phase || 0), r2(a.ads || 0), r2(a.low || 0), f, r2(a.stateT || 0), r2(a.fallYaw || 0), rel, r2(a.fireK || 0), r2(a.throwT || 0), a.ws.slot, Math.round(100 * a.hp / (a.maxHp || 100)), r2(a.spd || 0), SIDE.indexOf(a.pvpSide || ''), a.spotTeam ?? -1, a._lookV || 0, ...actRow(a)]);
   }
   const D = S.doors.map(d => { let fl = 0; if (d.locked) fl |= 1; if (d.lockBroken) fl |= 2; if (d.broken) fl |= 4; if (d.wedge) fl |= 8; if (d.bar > 0) fl |= 16; if (d.c2) fl |= 32; if (d.trapSeen) fl |= 64; if (d.trap && d.trap.armed) fl |= 128; return [d.ang.map(r2), fl, d.bar > 0 ? Math.round(d.bar) : 0, d.trap && d.trap.side ? d.trap.side : 0]; });
   const I = S.items.filter(it => !it.gone).map(it => [it.id, it.kind, r2(it.x), r2(it.y), r2(it.z), r2(it.yaw || 0), it.kind === 'weapon' ? attKey(it.w || { id: it.wid, att: {} }) : it.kind === 'evidence' ? it.ek : 0]);
@@ -62,13 +63,23 @@ export function packSnap(S, w, events, mePids, withBlocks) {
   out.R = Object.keys(S.reinf || {}).map(Number);
   return out;
 }
+// 動作の見た目（ほかの人の拘束・作業・ノブ・押す）: 体の動きの種類・進み・手の行き先、拘束されている進み
+const ACTS = ['', 'cuff', 'kneel', 'grab', 'place', 'radio', 'bandage', 'kick', 'knob', 'peek'];
+function actRow(a) {
+  const x = a.act, g = a.gest;
+  const ap = x ? (x.pose || ACT_POSE[x.k] || '') : a.peek ? 'peek' : '';
+  const tg = x && x.tgt ? x.tgt : a.peek ? [a.peek.x, a.peek.y, a.peek.z] : null;
+  return [ACTS.indexOf(ap), x ? Math.round(100 * Math.min(1, x.t / Math.max(0.05, x.dur))) : 0, tg ? r2(tg[0]) : 0, tg ? r2(tg[1]) : 0, tg ? r2(tg[2]) : 0,
+    g ? (g.k === 'push' ? 1 : 2) : 0, g ? Math.round(100 * Math.min(1, g.t / g.dur)) : 0, g && g.tgt ? r2(g.tgt[0]) : 0, g && g.tgt ? r2(g.tgt[1]) : 0, g && g.tgt ? r2(g.tgt[2]) : 0,
+    Math.round(100 * (a.cuffK || 0))];
+}
 // 自分の詳しい状態（HUD・一人称の銃に使う）
 function meBlock(a) {
   return {
     hp: Math.round(a.hp * 10) / 10, mh: a.maxHp, ar: [a.armor.pf, a.armor.pb, a.armor.helm], bl: a.bleed > 0 ? 1 : 0, inj: [a.inj.arm, a.inj.leg],
     ws: [a.ws.slot, a.ws.st, r2(a.ws.t || 0), r2(a.ws.rd || 0), a.ws.next ?? -1, a.ws.gear || null],
     w: a.inv.w.map(w => w ? [w.id, w.mags ? w.mags.slice() : null, w.mag, w.ch, w.res, w.mode, w.lightOn ? 1 : 0, w.am] : null),
-    g: a.inv.gear.map(g => [g.id, g.n]), act: a.act ? [a.act.k, r2(a.act.t), r2(a.act.dur)] : null,
+    g: a.inv.gear.map(g => [g.id, g.n]), act: a.act ? [a.act.k, r2(a.act.t), r2(a.act.dur), a.act.tgt ? r2(a.act.tgt[0]) : null, a.act.tgt ? r2(a.act.tgt[1]) : 0, a.act.tgt ? r2(a.act.tgt[2]) : 0, a.act.pose || null, a.act.quick ? 1 : 0, a.act.kind || null] : null,
     m3: a.inv.m320 ? [a.inv.m320.sel, a.inv.m320.flash, a.inv.m320.stinger, a.inv.m320.cs] : null, lt: r2(a.ws.lt || 0),
     pk: a.peek ? [a.peek.k, r2(a.peek.x), r2(a.peek.y), r2(a.peek.z), r3(a.peek.yaw0), r2(a.peek.max), a.peek.door, a.peek.fov] : null,
     st: a.stance, db: a.dbno ? Math.round(a.dbno * 10) / 10 : 0, sp: a.spawnProt > 0 ? 1 : 0, s: [a.stats.k, a.stats.d, a.stats.a, a.stats.sh, a.stats.hi], dr: a.dronesLeft ?? null,
@@ -151,7 +162,15 @@ export class Mirror {
         a.ws.st = r1[16] >= 0 ? 'reload' : 'ready'; a.ws.rd = r1[16] >= 0 ? 1 : 0; a.ws.t = r1[16] >= 0 ? 1 - r1[16] / 100 : 0; a.ws.rp = 0;
         a.fireK = r1[17] / 100; a.throwT = r1[18] / 100; a.spd = r1[21] / 100;
         const wi = a.inv.w[a.ws.slot]; if (wi) wi.lightOn = !!(f & FL.light);
+        // 動作の見た目
+        if (r1.length > 25) {
+          const ap = ACTS[r1[25]] || '';
+          a.act = ap && ap !== 'peek' ? { k: '_net', pose: ap, t: r1[26] / 100, dur: 1, tgt: [r1[27] / 100, r1[28] / 100, r1[29] / 100] } : null;
+          a.peek = ap === 'peek' ? { x: r1[27] / 100, y: r1[28] / 100, z: r1[29] / 100, k: 'mirror' } : null;
+          a.gest = r1[30] ? { k: r1[30] === 1 ? 'push' : 'grab', t: r1[31] / 100, dur: 1, tgt: [r1[32] / 100, r1[33] / 100, r1[34] / 100] } : null;
+        }
       }
+      if (r1.length > 35) a.cuffK = r1[35] / 100;
       a.hp = r1[20] / 100 * (a.maxHp || 100);
     }
     // 扉・物・投げ物・目的（最新）
@@ -194,7 +213,7 @@ export class Mirror {
       w.mags = x[1]; w.mag = x[2]; w.ch = x[3]; w.res = x[4]; w.mode = x[5]; w.lightOn = !!x[6]; w.am = x[7];
     });
     a.inv.gear = P.g.map(([id, n]) => ({ id, n }));
-    a.act = P.act ? { k: P.act[0], t: P.act[1] / 100, dur: P.act[2] / 100 } : null;
+    a.act = P.act ? { k: P.act[0], t: P.act[1] / 100, dur: P.act[2] / 100, tgt: P.act[3] != null ? [P.act[3] / 100, P.act[4] / 100, P.act[5] / 100] : null, pose: P.act[6] || null, quick: !!P.act[7], kind: P.act[8] || null } : null;
     a.dbno = P.db; a.spawnProt = P.sp; a.stats.k = P.s[0]; a.stats.d = P.s[1]; a.stats.a = P.s[2]; a.stats.sh = P.s[3]; a.stats.hi = P.s[4];
     if (P.dr != null) a.dronesLeft = P.dr;
     if (P.m3) a.inv.m320 = { sel: P.m3[0], flash: P.m3[1], stinger: P.m3[2], cs: P.m3[3] };

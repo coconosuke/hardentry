@@ -6,6 +6,7 @@ import { WEAPONS, AMMO } from './data/weapons.js';
 import { PLATE, HELMET, SHIELD } from './data/equipment.js';
 import { computePose, hitCapsules, rayCapsule, POSE_LEN, NBONE } from './pose.js';
 import { holdOf, poseState } from './actor.js';
+import { ACT_POSE } from './data/acts.js';
 import { hrand } from './rng.js';
 
 const G = 9.81;
@@ -20,6 +21,22 @@ export function poseInput(a, o = {}) {
   o.stance = a.st; o.lean = a.lean; o.moveX = a.mvx; o.moveZ = a.mvz; o.phase = a.phase;
   o.hold = holdOf(a); o.ads = a.ads; o.low = Math.max(a.low, a.sprint ? 0 : 0); o.reload = a.ws && a.ws.st === 'reload' && a.ws.rd ? 1 - a.ws.t / a.ws.rd : -1;
   o.fire = a.fireK || 0; o.state = poseState(a); o.stateT = a.stateT; o.fallYaw = a.fallYaw; o.seed = a.look ? a.look.seed : 0; o.throwT = a.throwT;
+  // 動作（拘束・作業・拾う・無線…）とその進み、手の行き先（体の向きの座標）
+  const x = a.act;
+  o.act = x ? (x.pose || ACT_POSE[x.k] || null) : a.peek ? 'peek' : null;
+  o.actT = x ? Math.min(1, x.t / Math.max(0.05, x.dur)) : a.peek ? 1 : 0;
+  o.actP = toLocal(a, x ? x.tgt : a.peek ? [a.peek.x, a.peek.y, a.peek.z] : null, o.actP);
+  o.gest = a.gest ? a.gest.k : null; o.gestT = a.gest ? Math.min(1, a.gest.t / a.gest.dur) : 0;
+  o.gestP = toLocal(a, a.gest ? a.gest.tgt : null, o.gestP);
+  o.cuffT = a.cuffK || 0;
+  return o;
+}
+// 世界の点 → 体の向きの座標（+Z 前、+X 左、Y は足元から）
+function toLocal(a, p, out) {
+  if (!p) return null;
+  const dx = p[0] - a.x, dz = p[2] - a.z, c = Math.cos(a.yaw), s = Math.sin(a.yaw);
+  const o = out || [0, 0, 0];
+  o[0] = dx * c - dz * s; o[1] = p[1] - a.y; o[2] = dx * s + dz * c;
   return o;
 }
 const _pi = {};
@@ -30,9 +47,13 @@ export function capsOf(S, a) {
   a._caps = hitCapsules(_bones, POSE_LEN, r.s, a._caps || []);
   a._eye = r.eye;
   a._shieldF = r.shield || null;
+  // 両手首のまん中（拘束で相手の手首を取るのに使う）
+  const wl = 7 * 12, wr = 10 * 12, W = a._wr || (a._wr = [0, 0, 0]);
+  W[0] = (_bones[wl] + _bones[wr]) / 2; W[1] = (_bones[wl + 1] + _bones[wr + 1]) / 2; W[2] = (_bones[wl + 2] + _bones[wr + 2]) / 2;
   a._capT = S.t;
   return a._caps;
 }
+export function wristsOf(S, a) { capsOf(S, a); return a._wr.slice(); }
 export function eyeOf(S, a) {
   if (a._capT === S.t && a._eye) return a._eye;
   capsOf(S, a);
@@ -328,7 +349,7 @@ export function downActor(S, a, by, ev, permanent) {
 export function killActor(S, a, by, ev, kind = 'bullet', part = '') {
   if (a.dead) return;
   a.alive = false; a.dead = true; a.down = false; a.stateT = a.down ? a.stateT : 0; a.comply = 0; a.hp = Math.min(0, a.hp);
-  a.vx = a.vz = 0; a.act = null; a.ads = 0; a.dbno = 0;
+  a.vx = a.vz = 0; if (a.act && a.act.k === 'restrain') { const b = S.byId[a.act.id]; if (b) { b.cuffBy = null; b.cuffYaw = null; b.cuffK = 0; } } a.act = null; a.ads = 0; a.dbno = 0;
   dropWeapon(S, a, ev);
   const killer = by && by.id !== a.id ? by : (a.lastHit && S.byId[a.lastHit.by]);
   const assists = [];

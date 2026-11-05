@@ -5,6 +5,7 @@ import { packStatic, packSnap, packEvent, NET_EV } from '../net/snap.js';
 import { moveActor } from '../engine/move.js';
 import { stepWeapon } from '../engine/weapon.js';
 import { doAction } from '../engine/interact.js';
+import { setSalt } from '../engine/rng.js';
 
 // 手元でも先に行う動作（ホストにも送る）
 const LOCAL_ACTS = new Set(['switch', 'reload', 'mode', 'light']);
@@ -93,6 +94,7 @@ export function netMixin(Match) {
     this.acc += Math.min(dt, 0.1);
     let n = 0;
     while (this.acc >= S.dt && n < 4) {
+      setSalt(sess.seed || 0); // ホストと同じ塩（反動・散らばりをそろえる）
       const cmd = this._command(inp);
       // 動作: ホストへ送る（手元でも先にやるものだけ実行）
       if (cmd.act) for (const ac of cmd.act) { sess.pushAct(ac); if (LOCAL_ACTS.has(ac.a)) { try { doAction(S, this.w, me, ac, ev); } catch (e) { /* なし */ } } }

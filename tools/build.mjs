@@ -65,7 +65,7 @@ fs.writeFileSync(r('dist/claude/preview.html'), skeleton(claudePage));
 // ---- アプリ版
 fs.mkdirSync(r('dist/app'), { recursive: true });
 const icon180 = fs.existsSync(r('src/assets/icon-180.png')) ? fs.readFileSync(r('src/assets/icon-180.png')).toString('base64') : '';
-for (const s of [192, 512]) { const f = r(`src/assets/icon-${s}.png`); if (fs.existsSync(f)) fs.copyFileSync(f, r(`dist/app/icon-${s}.png`)); }
+for (const s of ['192', '512', '512-maskable']) { const f = r(`src/assets/icon-${s}.png`); if (fs.existsSync(f)) fs.copyFileSync(f, r(`dist/app/icon-${s}.png`)); }
 const appPage = `<!doctype html>
 <html lang="ja">
 <head>
@@ -95,7 +95,7 @@ fs.writeFileSync(r('dist/app/manifest.webmanifest'), JSON.stringify({
   icons: [
     { src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
     { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-    { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+    { src: 'icon-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
   ],
 }, null, 1));
 // SW: 毎回ネットワークを確かめ（no-cache）、つながらないときだけ保存分を使う。アイコンとマニフェストは横取りしない。

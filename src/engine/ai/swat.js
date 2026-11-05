@@ -7,7 +7,7 @@ import { curW, curWeapon, ammoCount } from '../actor.js';
 import { hrand } from '../rng.js';
 import { CS, LH, los, levelOfY } from '../world.js';
 import { sideOf, isOpen, isClosed } from '../doors.js';
-import { contextOf, doorOps, personOps } from '../interact.js';
+import { contextOf, doorOps, personOps, reachOK, approachPoint } from '../interact.js';
 
 const sec = (S, t0) => (S.t - t0) * S.dt;
 const TEAMOF = (a) => a.ai.squad || 'red';
@@ -160,6 +160,28 @@ function follow(S, w, a, inp, dt, ctx) {
   inp.stance = L.stance === 1 ? 1 : 0;
 }
 
+// 人・物に手の届く立ち位置まで行き、向いて動作する（家具の向こうなら回り込む）。戻り値: 'busy' | 'fail'
+function reachAndDo(S, w, a, inp, dt, k, t, op) {
+  const ai = a.ai;
+  const key = k + ':' + t.id + ':' + op;
+  if (!reachOK(S, w, a, k, t.id, op)) {
+    const same = ai.apt && ai.apt.key === key;
+    if (!same || sec(S, ai.apt.t) > 2.0) ai.apt = { key, t: S.t, t0: same ? ai.apt.t0 : S.t, p: approachPoint(S, w, a, k, t.id, op, buildNav(w)) };
+    if (!ai.apt.p || sec(S, ai.apt.t0) > 14) { ai.apt = null; return 'fail'; }
+    const r = goTo(S, w, a, inp, ai.apt.p[0], t.y, ai.apt.p[1], { speed: 0.6, r: 0.2 });
+    if (r === 'blocked') { ai.apt = null; return 'fail'; }
+    inp.low = true;
+    return 'busy';
+  }
+  ai.apt = null;
+  inp.mx = inp.mz = 0;
+  const yw = yawTo(t.x - a.x, t.z - a.z);
+  inp.yaw = turnToward(a.yaw, yw, 6 * dt);
+  inp.pitch = turnToward(a.pitch, k === 'item' ? -0.7 : -0.6, 3 * dt);
+  if (Math.abs(angDiff(inp.yaw, yw)) < 0.3) pushAct(inp, { a: 'op', k, id: t.id, op });
+  return 'busy';
+}
+
 // 投降・倒れた人を拘束し、報告する
 function autoSecure(S, w, a, inp, dt, people, ctx) {
   const ai = a.ai;
@@ -168,9 +190,10 @@ function autoSecure(S, w, a, inp, dt, people, ctx) {
   const taken = new Set();
   for (const b of S.actors) if (b !== a && b.kind === 'swat' && b.ai && b.ai.secId != null) taken.add(b.ai.secId);
   let best = null, bd = 1e9, op = null;
+  const bad = ai.noReach || (ai.noReach = {});
   for (const p of people) {
     const b = p.b;
-    if (taken.has(b.id) || p.d > 9) continue;
+    if (taken.has(b.id) || p.d > 9 || (bad[b.id] && S.t < bad[b.id])) continue;
     if (b.alive && !b.cuffed && (b.comply >= 1 || b.down || b.tased > 0 || b.stun > 1)) { if (p.d < bd) { bd = p.d; best = b; op = 'restrain'; } }
     else if ((b.cuffed || b.down || b.dead) && !b.reported) { if (p.d + 3 < bd) { bd = p.d + 3; best = b; op = 'report'; } }
   }
@@ -178,12 +201,8 @@ function autoSecure(S, w, a, inp, dt, people, ctx) {
   for (const b of S.actors) if (b.kind === 'swat' && b !== a && b.down && !b.reported && !taken.has(b.id)) { const d = Math.hypot(b.x - a.x, b.z - a.z); if (d < 8 && d + 4 < bd) { bd = d + 4; best = b; op = 'report'; } }
   if (!best) { ai.secId = null; return false; }
   ai.secId = best.id;
-  const d = Math.hypot(best.x - a.x, best.z - a.z);
-  if (d > 1.4) { goTo(S, w, a, inp, best.x, best.y, best.z, { speed: 0.6, r: 1.2 }); inp.low = true; return true; }
-  // 近い: 向いて動作
-  inp.yaw = turnToward(a.yaw, yawTo(best.x - a.x, best.z - a.z), 6 * dt);
-  inp.pitch = turnToward(a.pitch, -0.6, 3 * dt);
-  if (Math.abs(angDiff(inp.yaw, yawTo(best.x - a.x, best.z - a.z))) < 0.3) pushAct(inp, { a: 'op', k: 'person', id: best.id, op });
+  // 拘束は手の届く所まで、報告は見えていれば少し離れていてよい
+  if (reachAndDo(S, w, a, inp, dt, 'person', best, op) === 'fail') { bad[best.id] = S.t + Math.round(30 / S.dt); ai.secId = null; return false; }
   return true;
 }
 
@@ -245,10 +264,8 @@ function doOrder(S, w, a, inp, dt, o, ctx, sk, people) {
       const b = S.byId[o.target];
       if (!b || b.cuffed || !b.alive) return done();
       if (o.role !== 0) return false;
-      const d = Math.hypot(b.x - a.x, b.z - a.z);
-      if (d > 1.3) { goTo(S, w, a, inp, b.x, b.y, b.z, { speed: 0.7, r: 1.1 }); return true; }
-      inp.yaw = turnToward(a.yaw, yawTo(b.x - a.x, b.z - a.z), 6 * dt); inp.pitch = -0.6;
-      if (!a.act) pushAct(inp, { a: 'op', k: 'person', id: b.id, op: 'restrain' });
+      if (a.act) { inp.mx = inp.mz = 0; return true; }
+      if (reachAndDo(S, w, a, inp, dt, 'person', b, 'restrain') === 'fail') return done();
       return true;
     }
     case 'deploy': {
@@ -292,7 +309,7 @@ function stackAt(S, w, a, inp, dt, o, how) {
   const d = w.doors[o.door]; if (!d) { a.ai.order = null; return false; }
   const side = o.side0 ?? (o.side0 = sideOf(d, S.byId[o.by] ? S.byId[o.by].x : a.x, S.byId[o.by] ? S.byId[o.by].z : a.z));
   const [x, z] = stackPos(S, w, d, side, o.role, how);
-  const r = goTo(S, w, a, inp, x, d.L * LH, z, { speed: 0.8, r: 0.3, noDoors: true });
+  const r = goTo(S, w, a, inp, x, d.L * LH, z, { speed: 0.8, r: 0.3, noDoors: true, keep: o.door });
   inp.low = r === 'moving';
   if (r === 'arrived' || (r !== 'moving' && Math.hypot(x - a.x, z - a.z) < 1.2)) {
     inp.yaw = turnToward(a.yaw, yawTo(d.cx - a.x, d.cz - a.z), 5 * dt);
@@ -332,12 +349,14 @@ function breach(S, w, a, inp, dt, o, ctx, sk) {
   if (stage === 'open') {
     // 開ける人: 必要な道具を持つ隊員
     const need = o.method === 'ram' ? (b) => b.inv.long === 'ram' : o.method === 'breach' ? (b) => b.inv.long === 'breacher' : o.method === 'c2' ? (b) => b.inv.gear.some(g => g.id === 'c2' && g.n > 0) : () => true;
-    const opener = team.find(need) || lead;
+    // 道具を持つ隊員が扉の前へ来られない（5秒）ときは、先頭が蹴る・開ける
+    const opener = (!T.noTool && team.find(need)) || lead;
     if (a !== opener) { stackAt(S, w, a, inp, dt, o, 'split'); return true; }
     if (isOpen(ds) || ds.broken) { T.stage = o.nade && o.nade !== 'none' ? 'nade' : 'enter'; T.stT = S.t; return true; }
     const fx = d.cx + d.nx * side * 0.6, fz = d.cz + d.nz * side * 0.6;
-    const r = goTo(S, w, a, inp, fx, d.L * LH, fz, { speed: 0.6, r: 0.25, noDoors: true });
+    const r = goTo(S, w, a, inp, fx, d.L * LH, fz, { speed: 0.6, r: 0.25, noDoors: true, keep: o.door });
     if (r !== 'arrived' && Math.hypot(fx - a.x, fz - a.z) > 0.45) {
+      if (!T.noTool && a !== lead && sec(S, T.stT) > 5) { T.noTool = true; T.stT = S.t; }
       // 扉の前まで行けない（12秒）: 突入をやめる
       if (sec(S, T.stT) > 12) { for (const b of team) b.ai.order = null; }
       return true;
@@ -345,7 +364,7 @@ function breach(S, w, a, inp, dt, o, ctx, sk) {
     inp.yaw = turnToward(a.yaw, yawTo(d.cx - a.x, d.cz - a.z), 6 * dt);
     if (a.act) return true;
     const ops = doorOps(S, w, a, o.door);
-    let m = o.method || 'open';
+    let m = T.noTool && (o.method === 'ram' || o.method === 'breach' || o.method === 'c2') ? 'open' : o.method || 'open';
     if (m === 'open' && ds.locked && !ds.lockBroken) { m = 'kick'; if (!T.saidLocked) { T.saidLocked = true; pushAct(inp, { a: 'shout', line: 'swat_locked' }); } }
     if (!ops.find(x => x.op === m)) m = ops.find(x => x.op === 'kick') ? 'kick' : 'open';
     if (m === 'c2') {
@@ -463,14 +482,7 @@ function search(S, w, a, inp, dt, o, people) {
   if (!best) { if (sec(S, o.phT) > 3) ai.order = null; return false; }
   const sid = kind === 'item' ? -best.id : best.id;
   if (ai.secId !== sid) { ai.secId = sid; ai.secT = S.t; }
-  const d = Math.hypot(best.x - a.x, best.z - a.z);
-  if (d > 1.3) {
-    const r = goTo(S, w, a, inp, best.x, best.y, best.z, { speed: 0.7, r: 1.1 }); inp.low = true;
-    // 届かない相手・物（8秒）はしばらく後回し
-    if (r === 'blocked' || sec(S, ai.secT) > 8) { bad[sid] = S.t + Math.round(30 / S.dt); ai.secId = null; }
-    return true;
-  }
-  inp.yaw = turnToward(a.yaw, yawTo(best.x - a.x, best.z - a.z), 6 * dt); inp.pitch = turnToward(a.pitch, -0.7, 3 * dt);
-  pushAct(inp, { a: 'op', k: kind, id: best.id, op });
+  // 手の届く所まで行って動作。届かない相手・物（回り込めない・14秒）はしばらく後回し
+  if (reachAndDo(S, w, a, inp, dt, kind, best, op) === 'fail' || sec(S, ai.secT) > 20) { bad[sid] = S.t + Math.round(30 / S.dt); ai.secId = null; ai.apt = null; }
   return true;
 }

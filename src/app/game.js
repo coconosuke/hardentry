@@ -141,6 +141,19 @@ export class Match {
     this.yaw -= dx;
     this.pitch = clamp(this.pitch - dy * (st.invertY ? -1 : 1), -1.4, 1.4);
     if (!p.alive || p.down && !this.S.pvp) return;
+    // 手元の動作（拘束・作業・拾う・取りつけ）: 視線を手元へ寄せる（指で見回すのは続けられる）
+    const x = p.act;
+    if (x && (x.look || x.tgt) && !x.quick && x.kind !== 'self' && x.k !== 'report' && x.k !== 'bash' && x.k !== 'kick') {
+      const e = eyeOf(this.S, p), lk = x.look || x.tgt;
+      const tx = lk[0] - e[0], ty = lk[1] - e[1], tz = lk[2] - e[2];
+      const hd = Math.hypot(tx, tz);
+      // 足もと（扉の下・床の物）は深く見下ろす。真下に近いときは向きはそのまま
+      const wantP = clamp(Math.atan2(ty, Math.max(hd, 0.05)) + 0.12, ty < -0.6 ? -1.4 : -1.25, 0.6);
+      const prog = x.t / Math.max(0.05, x.dur);
+      const kk = 1 - Math.exp(-dt * (prog < 0.35 ? 6 : 2.5));
+      if (hd > 0.12) { let dyaw = Math.atan2(tx, tz) - this.yaw; dyaw = Math.atan2(Math.sin(dyaw), Math.cos(dyaw)); this.yaw += dyaw * kk; }
+      this.pitch += (wantP - this.pitch) * kk;
+    }
   }
   // 照準の近くの敵（エイムアシスト用）
   _nearTarget(cone) {
@@ -243,7 +256,7 @@ export class Match {
   _useMenu(e) {
     const c = contextOf(this.S, this.w, this.p);
     if (!c) return;
-    const items = c.ops.map(o => ({ label: OP_NAME[o.op] || o.op, sub: o.t ? o.t.toFixed(1) + '秒' : '', go: () => this.acts.push({ a: 'op', k: c.k, id: c.id, op: o.op }) }));
+    const items = c.ops.map(o => ({ label: OP_NAME[o.op] || o.op, sub: o.far ? (o.why === 'block' ? '間に物' : '近づく') : o.t ? o.t.toFixed(1) + '秒' : '', disabled: !!o.far, go: () => this.acts.push({ a: 'op', k: c.k, id: c.id, op: o.op }) }));
     if (!items.length) return;
     this.app.input.openRadial('use', items, e.pid, e.x, e.y);
     this.app.input.radial.title = c.k === 'door' ? '扉' : c.k === 'person' ? '人' : c.k === 'item' ? '物' : '';
@@ -453,7 +466,7 @@ export class Match {
           if (e.k === 'locked' && e.id !== me && S.byId[e.id] && S.byId[e.id].kind === 'swat') this._say(S.byId[e.id], 'swat_locked');
           break;
         }
-        case 'deny': if (e.id === me) { const why = { locked: '鍵がかかっている', wedged: 'ウェッジで開かない', barred: 'バリケード', nogear: '残数なし', nodet: '起爆対象なし', open: '開いている', broken: '破損', needdoor: '閉じた扉を見て使う', nolong: '特殊装備なし', noammo: '弾がない' }[e.why]; if (why) hud.showBanner(why, 1400); au.ui('deny'); } break;
+        case 'deny': if (e.id === me) { const why = { locked: '鍵がかかっている', wedged: 'ウェッジで開かない', barred: 'バリケード', nogear: '残数なし', nodet: '起爆対象なし', open: '開いている', broken: '破損', needdoor: '閉じた扉を見て使う', nolong: '特殊装備なし', noammo: '弾がない', far: '手が届かない（近づく）', blocked: '間に物・人があって届かない' }[e.why]; if (why) hud.showBanner(why, 1400); au.ui('deny'); } break;
         case 'nade': { if (e.type === 'cs') { for (let i = 0; i < 8; i++) fx.smoke(e.x, e.y + 0.4, e.z, 1.2, [0.85, 0.85, 0.8], 0.5, 6); au.sfx('gasPop', [e.x, e.y, e.z]); } else { fx.explosion(e.x, e.y, e.z, 3, e.type === 'flash' ? 'flash' : 'stinger'); au.sfx(e.type === 'flash' ? 'flashbang' : 'stinger', [e.x, e.y, e.z]); } const d = Math.hypot(e.x - this.cam.x, e.z - this.cam.z); this.shake = Math.max(this.shake, Math.max(0, 1 - d / 10) * 0.6); break; }
         case 'boom': case 'c2': { fx.explosion(e.x, e.y, e.z, e.r || 3, e.kind || 'c2'); au.sfx('explosion', [e.x, e.y, e.z], { vol: 1.2 }); const d = Math.hypot(e.x - this.cam.x, e.z - this.cam.z); this.shake = Math.max(this.shake, Math.max(0, 1 - d / 18)); break; }
         case 'flashed': if (e.id === me) { this.flashW = Math.max(this.flashW, Math.min(1, 0.4 + e.k * 1.2)); au.deafen(2 + 4 * e.k); } break;
@@ -582,6 +595,8 @@ export class Match {
       } else { const e = eyeOf(S, p); cam = { x: e[0], y: e[1] + 1.2, z: e[2], yaw: p.yaw, pitch: -0.6, roll: 0, fov: 60 * DEG }; }
       this.av.hidden.delete(p.id);
     }
+    // 確かめ用の外からの視点（テストで動作の姿を横から撮る）
+    if (this.debugCam) { cam = Object.assign({ roll: 0, fov: 60 * DEG }, this.debugCam); this.av.hidden.delete(p.id); }
     this.cam = cam;
     // 音は体の位置で聞く（のぞいているときも）
     if (p.peek && p.alive) { const e = eyeOf(S, p); this.au.listen(e[0], e[1], e[2], p.yaw, p.pitch); } else this.au.listen(cam.x, cam.y, cam.z, cam.yaw, cam.pitch);
@@ -597,7 +612,7 @@ export class Match {
     }
     // 人と効果
     this.av.prepare(S, this.w);
-    const fp = !this.dead && p.alive && !(p.down && !S.pvp) && !(drone && drone.alive) && !p.peek;
+    const fp = !this.dead && p.alive && !(p.down && !S.pvp) && !(drone && drone.alive) && !p.peek && !this.debugCam;
     if (fp) this.vm.update(p, cam, dt); else this.vm.on = false;
     // 曳光弾
     for (const b of S.bullets) {
@@ -707,7 +722,7 @@ export class Match {
       gearSel: this.gearSel, gearId: p.ws.gear, team: this.team,
       spread: wi ? spreadDeg(S, p, WEAPONS[wi.id], wi) : 2,
       optic: null, canVault: true,
-      ctxLabel: c ? (OP_NAME[c.def.op] || c.def.op) : '',
+      ctxLabel: c ? (c.def.far ? (c.def.why === 'block' ? '回り込む' : '近づく') : (OP_NAME[c.def.op] || c.def.op)) : '',
       cmdLabel: '命令', mmZoom: this.mmZoom,
       droneOK: S.pvp && S.m.kind === 'bomb' && S.m.phase === 'prep' && p.team === S.m.att,
     };
@@ -715,7 +730,7 @@ export class Match {
     if (this.droneId != null) v.hideCross = true;
     // 案内
     let prompt = '';
-    if (c) prompt = `${ctxName(c, S)}: ${OP_NAME[c.def.op] || c.def.op}` + (c.ops.length > 1 ? '（長押し: メニュー）' : '');
+    if (c) prompt = `${ctxName(c, S)}: ${OP_NAME[c.def.op] || c.def.op}` + (c.def.far ? (c.def.why === 'block' ? '（間に物がある）' : '（近づく）') : c.ops.length > 1 ? '（長押し: メニュー）' : '');
     if (p.act) { v.prog = Math.min(1, p.act.t / p.act.dur); v.progLabel = OP_NAME[p.act.k] || ''; prompt = ''; }
     if (this.droneId != null) prompt = 'ドローン ― 射撃: マーク／乗り越え: ジャンプ／ドローン: 戻る';
     // 手に持った特殊装備の使い方

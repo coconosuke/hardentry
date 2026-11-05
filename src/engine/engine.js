@@ -1,7 +1,7 @@
 // エンジン: 状態（関数を含まないデータ）と1ステップの進め方。命令（入力）→ 出来事（イベント）。
 // 固定ステップ 1/60 秒（シミュレーションでは 1/30 も可）。乱数はシード付き。dump/load で丸ごと保存・復元。
 import { compileMap, CS, LH } from './world.js';
-import { rngNew, rnd } from './rng.js';
+import { rngNew, rnd, setSalt } from './rng.js';
 import { COMPAT } from './data/version.js';
 import { moveActor, separateActors, tryVault } from './move.js';
 import { stepWeapon } from './weapon.js';
@@ -69,6 +69,7 @@ export function createGame(o) {
   const api = { S, w };
   const mod = MODES[o.mode];
   if (!mod) throw new Error('モードがない: ' + o.mode);
+  setSalt(S.seed);
   mod.init(S, w, o);
   reindex(S);
   return api;
@@ -81,13 +82,18 @@ export function step(G, inputs = {}) {
   const dt = S.dt;
   const ev = [];
   if (S.paused) return ev;
+  setSalt(S.seed);
   const mod = MODES[S.mode];
   hooks.canDown = mod.canDown || null;
   // AI の判断（入力を作る）
   const aiIn = thinkAll(S, w, dt, ev);
   for (const a of S.actors) {
     if (a.isDrone) continue;
-    const inp = a.pid != null ? (inputs[a.id] || idle(a)) : (aiIn[a.id] || idle(a));
+    let inp = a.pid != null ? (inputs[a.id] || idle(a)) : (aiIn[a.id] || idle(a));
+    // 拘束されている最中: 動かず、警官に背中を向ける
+    if (a.cuffBy != null) { const c = S.byId[a.cuffBy]; if (!c || !c.act || c.act.k !== 'restrain' || c.act.id !== a.id) { a.cuffBy = null; a.cuffYaw = null; } else inp = heldInput(a, inp, dt); }
+    // AI が手元の動作をしている: その場で、手元（目標）を見続ける
+    else if (a.pid == null && a.act && !a.act.quick && a.act.kind !== 'self' && a.act.k !== 'report') inp = actingInput(a, inp, dt);
     a._inp = inp;
     if (inp.act) for (const ac of inp.act) {
       if (ac.a === 'vault') tryVault(S, w, a);
@@ -122,6 +128,17 @@ export function step(G, inputs = {}) {
   return ev;
 }
 
+function heldInput(a, inp, dt) {
+  let yaw = a.yaw;
+  if (a.cuffYaw != null) { let d = a.cuffYaw - a.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); const st = 4.5 * dt; yaw = a.yaw + (Math.abs(d) <= st ? d : Math.sign(d) * st); }
+  return { ...inp, mx: 0, mz: 0, yaw, fire: false, ads: false, low: false, sprint: false, lean: 0, act: null };
+}
+function actingInput(a, inp, dt) {
+  const x = a.act, lk = x.look || x.tgt;
+  let yaw = a.yaw;
+  if (lk) { const tx = lk[0] - a.x, tz = lk[2] - a.z; if (Math.hypot(tx, tz) > 0.25) { let d = Math.atan2(tx, tz) - a.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); const st = 6 * dt; yaw = a.yaw + (Math.abs(d) <= st ? d : Math.sign(d) * st); } }
+  return { ...inp, mx: 0, mz: 0, yaw, fire: false, ads: false, sprint: false };
+}
 export function idle(a) { return { mx: 0, mz: 0, yaw: a.yaw, pitch: a.pitch, fire: false, ads: false, low: false, stance: a.stance, lean: 0, sprint: false, act: null }; }
 
 // 保存と復元（壊れた壁は差分だけ）
@@ -129,7 +146,7 @@ export function dump(G) {
   const { S, w } = G;
   const blocks = [];
   for (const k of Object.keys(S.bdiff)) { const b = +k * 4; blocks.push([+k, w.blocks[b], w.blocks[b + 1], w.blocks[b + 2], w.blocks[b + 3], w.bhp[b], w.bhp[b + 1], w.bhp[b + 2], w.bhp[b + 3]]); }
-  const o = JSON.parse(JSON.stringify(S, (k, v) => (k === 'byId' || k === '_caps' || k === '_eye' || k === '_capT' || k === '_inp' || k === '_whiz' || k === '_shieldF' ? undefined : v)));
+  const o = JSON.parse(JSON.stringify(S, (k, v) => (k === 'byId' || k === '_caps' || k === '_eye' || k === '_capT' || k === '_inp' || k === '_whiz' || k === '_shieldF' || k === '_wr' ? undefined : v)));
   o.blocksDiff = blocks;
   return o;
 }

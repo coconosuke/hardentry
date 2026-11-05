@@ -6,6 +6,7 @@ import { WEAPONS } from '../engine/data/weapons.js';
 import { GEAR } from '../engine/data/equipment.js';
 import { curWeapon } from '../engine/actor.js';
 import { WV } from './build.js';
+import { ACT_POSE, FREE_HANDS } from '../engine/data/acts.js';
 
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const sm = (t) => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
@@ -86,8 +87,13 @@ export class ViewModel {
     this.drawK = lerp(this.drawK, draw, 1 - Math.exp(-dt * 25));
     // 特殊装備そのものを使う動作（破城槌・散弾・ワンド）は銃を下げない
     const ownAct = !!(a.act && L3 && ((L3 === 'ram' && a.act.k === 'ram') || (L3 === 'breacher' && a.act.k === 'breach') || (L3 === 'wand' && a.act.k === 'wand')));
-    const act = a.act && !ownAct ? 1 : 0;
+    const act = a.act && !ownAct && !a.act.quick && a.act.pose !== 'knob' ? 1 : 0;
     this.actK = lerp(this.actK || 0, act, 1 - Math.exp(-dt * 8));
+    // 両手を使う動作（拘束・作業・拾う・取りつけ・包帯）: 銃は下へ（吊る）、両手が前に出る
+    const ap = a.act && !ownAct ? (a.act.pose || ACT_POSE[a.act.k] || null) : null;
+    const actT = a.act ? clamp(a.act.t / Math.max(0.05, a.act.dur), 0, 1) : 0;
+    const freeOn = !!(ap && FREE_HANDS.has(ap));
+    this.freeK = lerp(this.freeK || 0, freeOn ? 1 : 0, 1 - Math.exp(-dt * 9));
     // 位置（カメラ空間: x右 y上 z前）と回転
     // 腰だめ: 画面の右下に収まり、銃口が画面の中央の少し下へ向く（スマホの小さい画面で大きすぎないよう、少し遠く・低く）
     const hip = P.heavy ? [0.05, -0.25, 0.5] : L3 === 'wand' ? [0.09, -0.2, 0.4] : pistol ? [0.105, -0.112, 0.4] : [0.128, -0.128, 0.36];
@@ -105,7 +111,10 @@ export class ViewModel {
     // 揺れ
     yaw += this.sway[0] * 0.6; pitch += this.sway[1] * 0.6; px -= this.sway[0] * 0.04; py -= this.sway[1] * 0.03;
     // ローレディ・ダッシュ・動作中・持ち替え
-    const lowK = Math.max(low, this.actK * 0.9);
+    const lowK = Math.max(low, this.actK * (1 - this.freeK) * 0.9);
+    pitch -= 1.25 * this.freeK; py -= 0.32 * this.freeK; px += 0.07 * this.freeK; pz -= 0.05 * this.freeK;
+    // 蹴る: 体が前へ出る
+    if (ap === 'kick') { const e = Math.sin(Math.PI * clamp((actT - 0.3) / 0.38, 0, 1)); py -= 0.035 * e; pz += 0.03 * e; pitch += 0.06 * e; }
     pitch -= 0.62 * lowK; py -= 0.05 * lowK; pz -= 0.04 * lowK; px += 0.02 * lowK;
     yaw += 0.95 * this.sprK; roll += 0.45 * this.sprK; pitch -= 0.25 * this.sprK; px -= 0.02 * this.sprK; py -= 0.04 * this.sprK;
     pitch -= 1.1 * this.drawK; py -= 0.22 * this.drawK;
@@ -208,11 +217,108 @@ export class ViewModel {
       if (this.sprK > 0.5 && pistol) hL = camP(-0.15, -0.35, 0.2);
       if (shieldHand) hL = shieldHand;
     }
-    this._arms(shR, hR, shL, hL, gF, gU, R, U);
+    // ---- 動作の手（三人称の姿勢と同じ動き）。手を当てる所（世界の点）があれば、手はそこへ（腕の長さまで）
+    let tool = null;
+    const reachK = ap === 'cuff' ? sm((actT - 0.04) / 0.16) * (1 - sm((actT - 0.9) / 0.1)) : sm(actT / 0.16) * (1 - sm((actT - 0.93) / 0.07));
+    const wob = (f, o) => Math.sin(this.t * f + o) * 0.01;
+    const tgtW = a.act && a.act.tgt ? a.act.tgt : null;
+    const at = (b, rx, uy, fz) => [b[0] + R[0] * rx + U[0] * uy + F[0] * fz, b[1] + R[1] * rx + U[1] * uy + F[1] * fz, b[2] + R[2] * rx + U[2] * uy + F[2] * fz];
+    if (this.freeK > 0.01 && ap) {
+      let tL = hL, tR = hR;
+      if (ap === 'cuff') {
+        // 相手の手首を左手で押さえ、右手で結束バンドを回して締める
+        const base = tgtW || camP(0, -0.15, 0.42);
+        const tie = clamp((actT - 0.62) / 0.2, 0, 1), loop = Math.sin(Math.PI * tie), ang = tie * Math.PI * 2;
+        const pull = bell((actT - 0.82) / 0.1) * 0.07;
+        tL = at(base, -0.06 - pull, 0.02 + wob(9, 0) * 0.5, -0.02);
+        tR = at(base, 0.05 + pull - Math.cos(ang) * 0.05 * loop, Math.sin(ang) * 0.06 * loop - 0.005, -0.03 - 0.04 * loop);
+        if (actT > 0.45 && actT < 0.97) tool = { k: 'zip', a: actT < 0.82 ? tR : lerpV(tL, tR, 0.5), b: actT < 0.82 ? at(base, 0, 0, 0) : lerpV(tL, tR, 0.5), on: actT >= 0.82, c: base, f: F, u: U, r: R };
+      } else if (ap === 'kneel' || ap === 'peek') {
+        const base = tgtW && ap !== 'peek' ? tgtW : camP(0, -0.15, 0.44);
+        const k = a.act.k, lockK = k === 'pick' || k === 'lockgun';
+        if (lockK) {
+          // ピッキング: 左手のテンションレンチで鍵穴の下を押さえ、右手のピックを細かく動かす
+          tL = at(base, -0.085, -0.04, -0.075); tR = at(base, 0.075 + wob(23, 1) * 0.6, -0.005 + wob(29, 0) * 0.8, -0.07);
+        } else { tL = at(base, -0.075, wob(13, 0), -0.05); tR = at(base, 0.045, 0.015 + wob(17, 2), -0.04); }
+        tool = { k: lockK ? 'pick' : k === 'wedge' || k === 'unwedge' ? 'wedge' : k === 'mirror' ? 'mirror' : k === 'revive' ? null : k === 'plant' ? 'box' : 'tool', at: tR, l: tL, c: base, f: F, u: U, r: R };
+      } else if (ap === 'grab') {
+        // 右手で拾って胸へ（左手はひざ）
+        const up1 = sm((actT - 0.5) / 0.4);
+        const base = tgtW || camP(0.03, -0.16, 0.46);
+        tR = lerpV(at(base, 0, 0.03, -0.03), camP(0.1, -0.12, 0.33), up1); tL = camP(-0.16, -0.3, 0.3);
+        if (up1 > 0.05) tool = { k: 'item', at: tR, f: F, u: U, r: R };
+      } else if (ap === 'place') {
+        const push = actT > 0.72 ? Math.sin(Math.PI * clamp((actT - 0.72) / 0.22, 0, 1)) * 0.04 : 0;
+        const base = tgtW || camP(0, -0.09, 0.5);
+        tL = at(base, -0.12, 0, -0.04 + push); tR = at(base, 0.12, 0, -0.04 + push);
+        tool = { k: a.act.k === 'c2' ? 'c2' : a.act.k === 'frame' ? 'frame' : 'panel', a: tL, b: tR, f: F, u: U, r: R };
+      } else if (ap === 'bandage') {
+        const ang = actT * Math.PI * 8;
+        tL = camP(-0.05, -0.16, 0.36); tR = camP(-0.01 + Math.cos(ang) * 0.04, -0.15 + Math.sin(ang) * 0.04, 0.38);
+        tool = { k: 'bandage', at: tL, f: F, u: U, r: R };
+      }
+      const kk = this.freeK * (ap === 'peek' ? 1 : reachK);
+      hL = lerpV(hL, tL, kk); hR = lerpV(hR, tR, kk);
+      if (this.freeK > 0.9) this.gm = null; // 銃は吊った（画面の外）
+    }
+    if (ap === 'radio') { const r = sm(actT / 0.2) * (1 - sm((actT - 0.85) / 0.15)); hL = lerpV(hL, camP(-0.17, -0.15, 0.22), r); }
+    // 蹴る: ひざを上げ、かかとから扉へ（当たる瞬間に画面の下へブーツが入る）
+    if (ap === 'kick') { const e = Math.sin(Math.PI * clamp((actT - 0.3) / 0.38, 0, 1)); tool = { k: 'boot', at: camP(0.08, -0.6 + 0.38 * e, 0.4 + 0.36 * e), f: F, u: U, r: R }; }
+    // ノブへ左手を伸ばす → 扉を押す・引く
+    if (ap === 'knob') { const g = sm(actT / 0.8); hL = lerpV(hL, tgtW ? at(tgtW, 0, 0, -0.02) : camP(-0.07, -0.07, 0.58), g); }
+    if (a.gest && a.gest.k === 'push') { const g = Math.sin(Math.PI * clamp(a.gest.t / a.gest.dur, 0, 1)); hL = lerpV(hL, a.gest.tgt ? at(a.gest.tgt, 0, 0, -0.02) : camP(-0.07, -0.07, 0.58), g); }
+    if (a.gest && a.gest.k === 'grab') { const g = Math.sin(Math.PI * clamp(a.gest.t / a.gest.dur, 0, 1)); hL = lerpV(hL, a.gest.tgt ? at(a.gest.tgt, 0, 0.03, -0.03) : camP(-0.04, -0.45, 0.5), g); }
+    // 腕の長さまで（肩から 0.6m。ひざをついて前へかがむ動作は体ごと伸ばすので少し長く）
+    const armMax = ap === 'kneel' || ap === 'grab' || ap === 'place' ? 0.68 : 0.585;
+    const clampArm = (sh, h) => { const d = [h[0] - sh[0], h[1] - sh[1], h[2] - sh[2]], l = Math.hypot(d[0], d[1], d[2]), mx = armMax; return l > mx ? [sh[0] + d[0] * mx / l, sh[1] + d[1] * mx / l, sh[2] + d[2] * mx / l] : h; };
+    hL = clampArm(shL, hL); if (!this.gm || this.freeK > 0.5) hR = clampArm(shR, hR);
+    this._arms(shR, hR, shL, hL, gF, gU, R, U, tool);
   }
 
-  _arms(shR, hR, shL, hL, gF, gU, R, U) {
+  _arms(shR, hR, shL, hL, gF, gU, R, U, tool) {
     const B = new MeshBuilder();
+    // 動作の道具（結束バンド・ピック・ウェッジ・C2・包帯・ブーツ…）
+    if (tool) {
+      const tb = (c, r, u, f, hx, hy, hz, col, layer = LAYER.plain) => { B.xf = [r[0], r[1], r[2], u[0], u[1], u[2], f[0], f[1], f[2], c[0], c[1], c[2]]; B.box(-hx, -hy, -hz, hx, hy, hz, layer, col); B.xf = null; };
+      const t = tool;
+      if (t.k === 'zip') {
+        // 結束バンド: 右手から相手の手首へ回す帯。締めたら手首の2つの輪と、まん中の留め具
+        const W = hex('#eceae2');
+        if (!t.on) { B.tube(t.a, t.b, 0.005, 0.005, 5, LAYER.plain, W); B.tube(t.a, [t.a[0] - t.u[0] * 0.04, t.a[1] - t.u[1] * 0.04, t.a[2] - t.u[2] * 0.04], 0.005, 0.005, 5, LAYER.plain, W); }
+        else {
+          const c = t.c, r = t.r, u = t.u;
+          for (const sx of [-0.045, 0.045]) {
+            const cc = [c[0] + r[0] * sx, c[1] + r[1] * sx, c[2] + r[2] * sx];
+            for (let q = 0; q < 6; q++) { const a0 = q / 6 * Math.PI * 2, a1 = (q + 1) / 6 * Math.PI * 2; const p = (a) => [cc[0] + u[0] * Math.cos(a) * 0.035 + t.f[0] * Math.sin(a) * 0.035, cc[1] + u[1] * Math.cos(a) * 0.035 + t.f[1] * Math.sin(a) * 0.035, cc[2] + u[2] * Math.cos(a) * 0.035 + t.f[2] * Math.sin(a) * 0.035]; B.tube(p(a0), p(a1), 0.006, 0.006, 4, LAYER.plain, W); }
+          }
+          B.tube([c[0] - r[0] * 0.045, c[1] - r[1] * 0.045, c[2] - r[2] * 0.045], [c[0] + r[0] * 0.045, c[1] + r[1] * 0.045, c[2] + r[2] * 0.045], 0.007, 0.007, 5, LAYER.plain, hex('#d8d6cc'));
+        }
+      } else if (t.at) {
+        const c = t.at, f = t.f, u = t.u, r = t.r;
+        const fw = (d) => [c[0] + f[0] * d, c[1] + f[1] * d, c[2] + f[2] * d];
+        if (t.k === 'pick') {
+          // ピック（右手 → 鍵穴）とテンションレンチ（左手 → 鍵穴の下）
+          const kh = t.c, kl = [kh[0] - u[0] * 0.012, kh[1] - u[1] * 0.012, kh[2] - u[2] * 0.012];
+          B.tube(c, kh, 0.0035, 0.0025, 4, LAYER.metal, hex('#c8ccd0'));
+          if (t.l) B.tube(t.l, kl, 0.004, 0.004, 4, LAYER.metal, hex('#9aa0a6'));
+          tb(fw(0.0), r, u, f, 0.008, 0.012, 0.03, hex('#2a2c30'));
+        }
+        else if (t.k === 'wedge') tb(fw(0.05), r, u, f, 0.025, 0.012, 0.05, hex('#3a3c40'), LAYER.rubber);
+        else if (t.k === 'mirror') { B.tube(fw(0.0), fw(0.2), 0.006, 0.006, 6, LAYER.metal, hex('#5a5e64')); tb(fw(0.22), r, u, f, 0.03, 0.022, 0.004, hex('#b8c8d2'), LAYER.metal); }
+        else if (t.k === 'tool') { tb(fw(0.04), r, u, f, 0.03, 0.015, 0.045, hex('#2f3236')); B.emit = 1.2; tb(fw(0.06), r, u, f, 0.006, 0.017, 0.006, hex('#40ff70')); B.emit = 0; }
+        else if (t.k === 'box') { tb(fw(0.05), r, u, f, 0.06, 0.03, 0.05, hex('#3b4048')); B.emit = 1.5; tb(fw(0.05), r, [u[0], u[1], u[2]], f, 0.01, 0.032, 0.01, hex('#ff3a2e')); B.emit = 0; }
+        else if (t.k === 'item') tb(fw(0.02), r, u, f, 0.04, 0.025, 0.06, hex('#3a3328'));
+        else if (t.k === 'bandage') B.cyl(c[0], c[2], c[1] - 0.03, c[1] + 0.03, 0.03, 0.03, 8, LAYER.fabric, hex('#efece4'));
+        else if (t.k === 'boot') { const leg = [c[0] - u[0] * 0.25 - f[0] * 0.1, c[1] - u[1] * 0.25 - f[1] * 0.1, c[2] - u[2] * 0.25 - f[2] * 0.1]; B.tube(leg, c, 0.06, 0.055, 8, LAYER.cloth, this.sleeve); tb(fw(0.06), r, u, f, 0.05, 0.05, 0.12, hex('#1a1b1d'), LAYER.rubber); }
+      }
+      if ((t.k === 'c2' || t.k === 'frame' || t.k === 'panel') && t.a) {
+        const m = lerpV(t.a, t.b, 0.5), f = t.f, u = t.u, r = t.r;
+        const c = [m[0] + f[0] * 0.04, m[1] + f[1] * 0.04, m[2] + f[2] * 0.04];
+        if (t.k === 'c2') { tb(c, r, u, f, 0.07, 0.035, 0.03, hex('#8a8c7c')); B.emit = 1.2; tb([c[0] + f[0] * 0.031, c[1] + f[1] * 0.031, c[2] + f[2] * 0.031], r, u, f, 0.008, 0.008, 0.002, hex('#ff3a2e')); B.emit = 0; }
+        else if (t.k === 'frame') tb(c, r, u, f, 0.2, 0.012, 0.03, hex('#6a6c5c'));
+        else tb(c, r, u, f, 0.22, 0.16, 0.012, hex('#5d6066'), LAYER.metal);
+      }
+    }
     const down = [-U[0], -U[1], -U[2]];
     const poleR = [R[0] * 0.6 + down[0], R[1] * 0.6 + down[1], R[2] * 0.6 + down[2]];
     const poleL = [-R[0] * 0.6 + down[0], -R[1] * 0.6 + down[1], -R[2] * 0.6 + down[2]];

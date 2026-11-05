@@ -104,8 +104,8 @@ function bombThink(S, w, a, inp, dt, ctx, sk) {
     if (item && !a.carry) {
       const nearest = S.actors.filter(b => b.team === a.team && b.alive && !b.down).sort((p, q) => Math.hypot(p.x - item.x, p.z - item.z) - Math.hypot(q.x - item.x, q.z - item.z))[0];
       if (nearest === a) {
-        const r = goTo(S, w, a, inp, item.x, item.y, item.z, { r: 0.6, unlock: true });
-        if (Math.hypot(item.x - a.x, item.z - a.z) < 1.0) pushAct(inp, { a: 'op', k: 'item', id: item.id, op: 'pickup' });
+        const r = goTo(S, w, a, inp, item.x, item.y, item.z, { r: 0.5, unlock: true });
+        if (Math.hypot(item.x - a.x, item.z - a.z) < 0.95) { inp.yaw = turnToward(a.yaw, yawTo(item.x - a.x, item.z - a.z), 6 * dt); pushAct(inp, { a: 'op', k: 'item', id: item.id, op: 'pickup' }); }
         return inp;
       }
     }
@@ -133,8 +133,8 @@ function bombThink(S, w, a, inp, dt, ctx, sk) {
   if (def.planted && !def.disabled) {
     const nearest = S.actors.filter(b => b.team === a.team && b.alive && !b.down).sort((p, q) => Math.hypot(p.x - def.x, p.z - def.z) - Math.hypot(q.x - def.x, q.z - def.z))[0];
     if (nearest === a) {
-      const r = goTo(S, w, a, inp, def.x, def.y, def.z, { r: 1.0, unlock: true });
-      if (Math.hypot(def.x - a.x, def.z - a.z) < 1.4) { if (!a.act) pushAct(inp, { a: 'op', k: 'site', id: -1, op: 'defuse' }); inp.mx = inp.mz = 0; inp.stance = 1; }
+      const r = goTo(S, w, a, inp, def.x, def.y, def.z, { r: 0.75, unlock: true });
+      if (Math.hypot(def.x - a.x, def.z - a.z) < 1.1) { inp.yaw = turnToward(a.yaw, yawTo(def.x - a.x, def.z - a.z), 6 * dt); if (!a.act) pushAct(inp, { a: 'op', k: 'site', id: -1, op: 'defuse' }); inp.mx = inp.mz = 0; inp.stance = 1; }
       return inp;
     }
     return holdNear(S, w, a, inp, dt, def.x, def.y, def.z, 5);
