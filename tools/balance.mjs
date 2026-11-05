@@ -20,7 +20,8 @@ let md = `# バランス測定\n\n${new Date().toISOString()}・対戦 ${NP}回/
 
 if (only !== 'pve') {
   const rows = out.pvp;
-  for (const map of (mapsF || PVP_MAPS).filter(m => PVP_MAPS.includes(m))) for (const mode of ['tdm', 'elim', 'bomb']) for (let s = 0; s < NP; s++) {
+  const modesF = F.modes ? String(F.modes).split(',') : ['tdm', 'elim', 'bomb'];
+  for (const map of (mapsF || PVP_MAPS).filter(m => PVP_MAPS.includes(m))) for (const mode of modesF) for (let s = 0; s < NP; s++) {
     const r = runPvp(map, mode, seed0 + s, { size: F.size || '4v4', bot: F.bot || 2, max: 1500 });
     rows.push(r);
     process.stdout.write(`${map} ${mode} #${r.seed}: 勝ち ${r.winner} キル ${r.kills.join('-')} ${r.t}s [${r.wall}ms]\n`);

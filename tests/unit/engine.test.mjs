@@ -265,6 +265,7 @@ test('interact: 落ちている物は1m以内で拾える。テーブル越し�
   ok(!reachOK(S, w, a, 'item', it.id, 'collect'), 'テーブルの向こうの床: 届かない');
   it.z = a.z + 0.45; it.y = 0.76;
   ok(reachOK(S, w, a, 'item', it.id, 'collect'), 'テーブルの上: そばからなら届く');
+  w.props[w.props.length - 1].alive = false; // マップは試合のあいだで共有なので片づける
 });
 test('interact: 半開きの扉は体で押すと開いていく（閉じた扉は押しても開かない）', () => {
   const { G, S, w, a } = mkPve();
@@ -285,4 +286,17 @@ test('interact: 半開きの扉は体で押すと開いていく（閉じた扉�
   const a0 = Math.abs(ds.ang[0]);
   walkTo(90);
   ok(Math.abs(ds.ang[0]) > a0 + 0.3, '押した分だけ開く ' + a0.toFixed(2) + ' → ' + Math.abs(ds.ang[0]).toFixed(2));
+});
+test('interact: AI の隊員の拘束も最後まで続く（よそ見で中断しない）', () => {
+  const G = createGame({ map: 'suburb', mode: 'pve', mission: 'barricade', diff: 'normal', team: 2, allAI: true, seed: 3 });
+  const S = G.S, w = G.w, a = S.actors.find(b => b.kind === 'swat'), b = S.actors.find(x => x.kind === 'sus');
+  for (const x of S.actors) if (x !== a) x.ai = null;
+  openSpot(S, w, a, b);
+  a.yaw = Math.PI / 2; // 横を向いている
+  const ev0 = [];
+  doAction(S, w, a, { a: 'op', k: 'person', id: b.id, op: 'restrain' }, ev0);
+  ok(a.act && a.act.k === 'restrain', 'AI が拘束を始める ' + JSON.stringify(ev0));
+  let done = null, cancel = null;
+  for (let i = 0; i < 260 && !done && !cancel; i++) { const ev = step(G, {}); done = ev.find(e => e.e === 'cuffed'); cancel = ev.find(e => e.e === 'actcancel'); }
+  ok(done && b.cuffed && !cancel, 'AI の拘束が終わる ' + (cancel ? cancel.why : ''));
 });

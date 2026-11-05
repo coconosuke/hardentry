@@ -108,7 +108,7 @@ try {
   const tA = Date.now();
   for (const map of PVE_MAPS) for (const mission of Object.keys(MISSIONS)) {
     if (MAPS[map].missions && !MAPS[map].missions[mission]) continue;
-    try { pve.push(runPve(map, mission, 7, { max: QUICK ? 420 : 900 })); } catch (e) { errs.push(`${map}/${mission}: ${e.message}`); }
+    try { pve.push(runPve(map, mission, 7, { max: QUICK ? 420 : 1200 })); } catch (e) { errs.push(`${map}/${mission}: ${e.message}`); }
   }
   const done = pve.filter(r => r.res === 'done').length, fail = pve.filter(r => r.res === 'fail').length;
   rec('自動の試合', `作戦: AIだけで ${pve.length}試合（マップ×作戦）が例外なく最後まで動く`, !errs.length && pve.length >= 25, `完了${done}・失敗${fail}・時間切れ${pve.length - done - fail}・${((Date.now() - tA) / 1000).toFixed(0)}秒 ${errs.slice(0, 2).join(' / ')}`);

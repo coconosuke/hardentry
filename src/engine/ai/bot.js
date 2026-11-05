@@ -33,11 +33,17 @@ export function thinkBot(S, w, a, dt, ctx) {
     }
   }
   if (tgt) {
-    if (ai.engId !== tgt.id) { ai.engId = tgt.id; ai.engT = S.t; ai.engD = sk.react[0] + (sk.react[1] - sk.react[0]) * hrand(a.id, S.t, 201); }
+    if (ai.engId !== tgt.id) {
+      ai.engId = tgt.id; ai.engT = S.t; ai.engD = sk.react[0] + (sk.react[1] - sk.react[0]) * hrand(a.id, S.t, 201);
+      // 角を押さえて待っている（止まって、その方向を見ていた）側は早く正確に撃てる（覗き込む側が不利）
+      const ang = Math.abs(angDiff(a.yaw, yawTo(tgt.x - a.x, tgt.z - a.z)));
+      ai.holdK = ang < 0.45 && Math.hypot(a.vx, a.vz) < 0.5 ? 0.6 : 1;
+      ai.engD *= ai.holdK;
+    }
     const ty = tgt.y + (tgt.down ? 0.25 : tgt.st > 1.5 ? 0.3 : tgt.st > 0.5 ? 0.95 : 1.3);
     // 頭か胴か（腕前で頭を狙う割合）
     const head = hrand(a.id, Math.floor(S.t / 60), 202) < (S.rules.botLevel >= 3 ? 0.35 : 0.15);
-    const off = aimAt(S, a, inp, tgt.x, head ? tgt.y + bodyHead(tgt) : ty, tgt.z, sk, dt, { id: tgt.id });
+    const off = aimAt(S, a, inp, tgt.x, head ? tgt.y + bodyHead(tgt) : ty, tgt.z, sk, dt, { id: tgt.id, errMul: sec(S, ai.engT) < 1.5 ? (ai.holdK || 1) : 1 });
     inp.ads = td > 4;
     if (sec(S, ai.engT) >= ai.engD) trigger(S, a, inp, sk, off < 0.07 + (td < 5 ? 0.1 : 0));
     // 動き: 横へ、遠ければしゃがむ
@@ -132,9 +138,18 @@ function bombThink(S, w, a, inp, dt, ctx, sk) {
   const def = m.defuser || {};
   if (def.planted && !def.disabled) {
     const nearest = S.actors.filter(b => b.team === a.team && b.alive && !b.down).sort((p, q) => Math.hypot(p.x - def.x, p.z - def.z) - Math.hypot(q.x - def.x, q.z - def.z))[0];
-    if (nearest === a) {
+    // 取り返し: 近くの敵を片づけてから外す（敵を見て2.5秒たつか、残りが少なくなったら外しに行く）
+    const intel = m.intel && m.intel[a.team];
+    const clear = !intel || sec(S, intel.t) > 2.5 || Math.hypot(intel.x - def.x, intel.z - def.z) > 12 || (def.t || 0) > 30;
+    if (nearest === a && clear) {
       const r = goTo(S, w, a, inp, def.x, def.y, def.z, { r: 0.75, unlock: true });
       if (Math.hypot(def.x - a.x, def.z - a.z) < 1.1) { inp.yaw = turnToward(a.yaw, yawTo(def.x - a.x, def.z - a.z), 6 * dt); if (!a.act) pushAct(inp, { a: 'op', k: 'site', id: -1, op: 'defuse' }); inp.mx = inp.mz = 0; inp.stance = 1; }
+      return inp;
+    }
+    // ほかの隊員（と、まだ外しに行かない一番近い人）は、敵の見えた方へ寄って押し返す
+    if (intel && sec(S, intel.t) < 6 && Math.hypot(intel.x - def.x, intel.z - def.z) < 14) {
+      const r = goTo(S, w, a, inp, intel.x, intel.y, intel.z, { speed: 0.7, r: 3.0, unlock: true });
+      if (r !== 'moving') { inp.yaw = turnToward(a.yaw, yawTo(intel.x - a.x, intel.z - a.z), 5 * dt); inp.ads = true; }
       return inp;
     }
     return holdNear(S, w, a, inp, dt, def.x, def.y, def.z, 5);
@@ -147,12 +162,20 @@ function holdNear(S, w, a, inp, dt, x, y, z, R) {
   const ai = a.ai;
   if (!ai.hold || Math.hypot(ai.hold[0] - x, ai.hold[2] - z) > R + 2) {
     const room = roomAtPos(w, x, y, z);
-    const c = room >= 0 ? randomCellInRoom(S, w, room, a.id * 3 + 1) : null;
-    ai.hold = c ? [c[0], c[1], c[2]] : [x, y, z];
-    // 見る向き: 部屋の入口（扉）の1つ
     const rg = roomGraph(w);
     const ps = room >= 0 ? (rg.adj[room] || []).filter(p => p.type === 'door' || p.type === 'open') : [];
-    const p = ps.length ? ps[Math.floor(hrand(a.id, 5, 230) * ps.length)] : null;
+    // 守る位置: 部屋の入口から離れた奥（入ってくる相手を待ち構える）。いくつか試して一番よい所
+    let c = null, bs = -1e9;
+    for (let t = 0; t < 8 && room >= 0; t++) {
+      const q = randomCellInRoom(S, w, room, a.id * 3 + 1 + t * 17);
+      if (!q) continue;
+      const dDoor = ps.length ? Math.min(...ps.map(p => Math.hypot(p.x - q[0], p.z - q[2]))) : 3;
+      const mate = S.actors.some(b => b !== a && b.team === a.team && b.ai && b.ai.hold && Math.hypot(b.ai.hold[0] - q[0], b.ai.hold[2] - q[2]) < 1.5);
+      const sc = Math.min(dDoor, 5) - 0.4 * Math.hypot(q[0] - x, q[2] - z) - (mate ? 3 : 0);
+      if (sc > bs) { bs = sc; c = q; }
+    }
+    ai.hold = c ? [c[0], c[1], c[2]] : [x, y, z];
+    // 見る向き: 部屋の入口（扉）の1つ
     ai.watch = p ? [p.x, y + 1.3, p.z] : null;
   }
   const r = goTo(S, w, a, inp, ai.hold[0], ai.hold[1], ai.hold[2], { r: 0.5, unlock: true });
