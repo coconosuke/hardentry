@@ -1,8 +1,8 @@
-HARD ENTRY ソース一式（2026-11-05T19:47:45.120Z）
+HARD ENTRY ソース一式（2026-11-05T20:36:58.072Z）
 復元: node tools/unbundle.mjs source-bundle.txt <出力先>
 （tools/unbundle.mjs がない場合は、下の "@@@@ FILE " の区切りごとにファイルへ書き出す。base64 と書かれたものはデコードする）
 
-@@@@ FILE DESIGN.md text 45655
+@@@@ FILE DESIGN.md text 46031
 # HARD ENTRY（仮タイトル）設計メモ
 
 ## 文脈が消えたら最初に読む
@@ -209,7 +209,8 @@ HARD ENTRY ソース一式（2026-11-05T19:47:45.120Z）
 - 11-06 未明（採点の不具合）: 交戦規定の判定が「撃たれたあと」の状態を見ていて、容疑者を倒した1発が毎回「倒れている人を撃った（不当な射殺）」になっていた。撃たれる前の状態で判定し、死んだ体に当たった弾（同じ瞬間の散弾・連射の残り）は数えない。
 - 11-06 バランスの記録（ボット 4v4・各3試合、tools/balance.mjs）: 爆弾の攻撃側ラウンド勝率 74% → 65%（ボットの見直し: 角を押さえて止まっている側は反応と最初の狙いが速い・設置後は近くの敵を片づけてから外す。防衛を部屋の奥に置く案は 71% で悪くなったのでやめた）。設置後に外せた例が少ないのがまだ攻撃側寄りの理由。殲滅戦の SWAT 側 49〜58%、TDM のチーム0 33〜58%（試合数が少なく、ぶれの範囲）。武器を入れ替えても攻撃側の勝率は変わらない（64%）ので、差は動き方から。作戦（AIだけ・シード7・20分まで）: 30作戦中15完了。
 - 11-06 テスト一式で見つけて直したもの: 作戦の出現で AI 隊員がプレイヤーと重なって押し続けていた（始まってすぐ2.8m動く）、ボタンの押した長さを出来事の時刻で測る（重いこまで短押しが長押しになっていた）、ゲストの最初の向き、押すもの36px以上・文字11px以上（とても低い画面のタイトルは2列）、対戦ボットの例外（守る位置の見る向き）。
-- 次: アプリ版（GitHub Pages を有効にする）→ 最終点検。
+- 11-06 アプリ版: GitHub Pages 用の中身（index.html・sw.js・manifest・アイコン・.nojekyll・ソース一式・README・設計メモ）を main の直下に push。Pages を有効にするのはリポジトリの設定（この作業環境からは Pages の設定の API が使えない）。公開版（Claude）は版8。
+- 次: Pages を有効にしてもらう → 実機での確認をお願いする → その結果で直す。
 
 @@@@ FILE dev/view.html text 446
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -18046,7 +18047,7 @@ export const ICONS = {
   wpn: '',
 };
 
-@@@@ FILE src/ui/input.js text 16034
+@@@@ FILE src/ui/input.js text 16173
 // 入力: タッチ（スティック・視点・ボタン、2本指以上の同時操作）、長押し、円形メニュー、ジャイロ、キーボードとマウス
 // タップは pointerup で判定し、続く click は捨てる（iPhoneは2本目の指に click が来ない）
 let lastTapUp = 0;
@@ -18303,7 +18304,9 @@ export class Input {
     // 長押しの判定（押している最中）。こまが大きく遅れたとき（0.25秒より長い）は次のこまで判定する
     // （遅れている間に指を離した出来事が待っているかもしれない。離していれば短押し）
     const now = performance.now();
-    const hitch = this._lastTake != null && now - this._lastTake > 250;
+    // 1こまだけ待つ（遅いこまが続くときは次のこまで判定する）
+    const hitch = this._lastTake != null && now - this._lastTake > 250 && !this._hitchSkip;
+    this._hitchSkip = hitch;
     this._lastTake = now;
     for (const [pid, p] of this.ptr) {
       if (p.kind !== 'btn' || p.long || p.moved > 22 || hitch) continue;
@@ -19119,7 +19122,7 @@ export class Stage {
   }
 }
 
-@@@@ FILE src/ui/style.css text 37815
+@@@@ FILE src/ui/style.css text 37838
 /* HARD ENTRY — 見た目の決まり（色・枠・書体）。雰囲気より読みやすさを優先。自分の側はいつも青、相手は赤 */
 :root {
   --bg: #07090c; --panel: rgba(12, 16, 22, 0.9); --panel2: rgba(22, 28, 36, 0.92); --line: rgba(255, 255, 255, 0.13); --line2: rgba(255, 255, 255, 0.28);
@@ -19135,7 +19138,7 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: 
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; touch-action: manipulation; }
 [hidden] { display: none !important; }
 #stage { position: fixed; left: 0; top: 0; transform-origin: 0 0; overflow: hidden; background: var(--bg); font-size: 14px; }
-#stage[data-size="s"] { font-size: 12.5px; }
+#stage[data-size="s"] { font-size: 13.75px; }
 #stage[data-size="l"] { font-size: 15px; }
 #gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 #fade { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 30; }
@@ -19162,7 +19165,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .btn { height: 42px; padding: 0 20px; border-radius: 6px; font-weight: 800; letter-spacing: .03em; background: rgba(255,255,255,.08); border: 1px solid var(--line2); white-space: nowrap; }
 .btn.primary { background: var(--accent); color: #17120a; border-color: var(--accent); }
 .btn.ghost { background: rgba(255,255,255,.04); }
-.btn.small { height: 36px; padding: 0 12px; font-size: .9em; }
+.btn.small { height: 38px; padding: 0 12px; font-size: .9em; }
 .btn.danger { border-color: rgba(255,90,74,.6); color: #ffb3aa; }
 .btn.armed, .mi.armed { background: #8a2a20 !important; border-color: var(--bad) !important; color: #fff !important; }
 .btn.dis, .dis.btn { opacity: .4; }
@@ -19183,18 +19186,18 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .note.center { text-align: center; margin-top: 12px; }
 .good { color: var(--ok); }
 h3 { font: 800 1.05em var(--f-head); margin: 10px 0 4px; color: var(--accent2); letter-spacing: .03em; }
-h3 small { color: var(--sub); font-weight: 600; font-size: .75em; margin-left: 6px; }
+h3 small { color: var(--sub); font-weight: 600; font-size: max(11px, .75em); margin-left: 6px; }
 h4 { margin: 8px 0 4px; font-size: .95em; }
 p { margin: 4px 0; line-height: 1.55; }
 ul, ol { margin: 4px 0; padding-left: 1.3em; line-height: 1.55; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.chip { min-height: 36px; min-width: 40px; padding: 4px 12px; border-radius: 6px; background: rgba(255,255,255,.06); border: 1px solid var(--line); font-weight: 700; font-size: .92em; }
+.chip { min-height: 38px; min-width: 40px; padding: 4px 12px; border-radius: 6px; background: rgba(255,255,255,.06); border: 1px solid var(--line); font-weight: 700; font-size: .92em; }
 .chip.on { background: rgba(242,179,61,.18); border-color: var(--accent); color: var(--accent2); }
-.chip.small { min-height: 36px; padding: 2px 10px; font-size: max(11px, .8em); }
+.chip.small { min-height: 38px; padding: 2px 10px; font-size: max(11px, .8em); }
 .chips.swatches .chip { display: inline-flex; align-items: center; gap: 6px; }
 .chip.sw i { width: 14px; height: 14px; border-radius: 3px; display: inline-block; border: 1px solid rgba(0,0,0,.4); }
 .slider { display: flex; align-items: center; gap: 8px; width: 100%; }
-.slider .sb { width: 36px; height: 36px; border-radius: 6px; background: rgba(255,255,255,.07); border: 1px solid var(--line); font-weight: 800; flex: none; }
+.slider .sb { width: 38px; height: 38px; border-radius: 6px; background: rgba(255,255,255,.07); border: 1px solid var(--line); font-weight: 800; flex: none; }
 .slider .track { position: relative; flex: 1; height: 32px; touch-action: none; }
 .slider .track::before { content: ''; position: absolute; left: 0; right: 0; top: 14px; height: 4px; background: rgba(255,255,255,.14); border-radius: 2px; }
 .slider .fill { position: absolute; left: 0; top: 14px; height: 4px; background: var(--accent); border-radius: 2px; }
@@ -19314,7 +19317,7 @@ table.board small { color: var(--dim); font-size: max(11px, .72em); margin-left:
 .lo-info h3 { margin-top: 2px; } .lo-info .sub { color: var(--sub); font-size: .82em; } .lo-info .desc { font-size: .86em; color: #cfd7de; }
 .bar { display: grid; grid-template-columns: 6.2em 1fr 5.6em; align-items: center; gap: 8px; margin: 4px 0; font-size: .84em; }
 .bar span { color: var(--sub); } .bar i { height: 6px; background: rgba(255,255,255,.1); border-radius: 3px; overflow: hidden; } .bar em { display: block; height: 100%; background: var(--accent); }
-.bar b { text-align: right; font: 700 .95em var(--f-head); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bar b { text-align: right; font: 700 max(11px, .95em) var(--f-head); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .book-split { display: flex; gap: 10px; } .book-split .list { flex: 0 0 34%; display: flex; flex-direction: column; gap: 4px; } .book-split .detail { flex: 1; }
 
 /* 短い知らせ */
@@ -19869,7 +19872,7 @@ export async function runTests(filter) {
   return res;
 }
 
-@@@@ FILE tests/run_all.mjs text 52130
+@@@@ FILE tests/run_all.mjs text 52845
 // テスト一式: node tests/run_all.mjs [--quick] [--no-sizes] [--no-net] → test-results/summary.md
 //  1 ビルド  2 単体  3 マップ  4 音  5 自動の試合（作戦・対戦・同じシードで同じ結果・途中保存）
 //  6 ブラウザ（起動・タップ・音の開始・回した画面・2本指・射撃/ADS/リロード/リーン/しゃがみ・ミニマップ→地図・ミラーの視点・HUDの編集・撤収→結果・保存と続きから・2回押し・WebGL）
@@ -20078,8 +20081,11 @@ try {
     await touch('touchStart', [{ x: sl2.x, y: sl2.y0, id: 2 }]);
     for (let k = 1; k <= 6; k++) await touch('touchMove', [{ x: sl2.x, y: sl2.y0 + (sl2.y1 - sl2.y0) * k / 6, id: 2 }]);
     await touch('touchEnd', []);
+    await page.waitForFunction((v) => window.__app.settings.bright > v + 0.3, sl.v, { timeout: 5000 }).catch(() => {});
     const bright = await page.evaluate(() => window.__app.settings.bright);
-    rec('回した画面', 'スライダーが指の向きどおりに動く', bright > sl.v + 0.3, `明るさ ${sl.v} → ${bright}`);
+    let why = '';
+    if (!(bright > sl.v + 0.3)) { why = ' ' + await page.evaluate(([x, y]) => { const e = document.elementFromPoint(x, y); return 'hit=' + (e ? (e.className || e.tagName) + '<' + (e.parentElement && e.parentElement.className) : 'null') + ' scr=' + window.__app.screens.cur + ' mode=' + window.__app.mode; }, [sl2.x, sl2.y0]); await shot('回した画面-スライダー'); }
+    rec('回した画面', 'スライダーが指の向きどおりに動く', bright > sl.v + 0.3, `明るさ ${sl.v} → ${bright}${why}`);
     await page.evaluate((v) => { window.__app.settings.bright = v; window.__app.applySettings(); }, sl.v);
   }
   {
@@ -20355,7 +20361,8 @@ try {
   {
     await page.evaluate(() => window.__app.resumeGame());
     await page.keyboard.down('KeyW'); await page.waitForTimeout(1200); await page.keyboard.up('KeyW');
-    const g1 = await page.evaluate(() => { const a = window.__app, g = a.game; a.autosave(); return { t: g.S.t, x: g.p.x, z: g.p.z, map: g.S.map }; });
+    // 止めてから保存（再読み込みの直前にも裏に回った保存が走るので、同じ場面にそろえる）
+    const g1 = await page.evaluate(() => { const a = window.__app, g = a.game; a.freeze = true; a.autosave(); return { t: g.S.t, x: g.p.x, z: g.p.z, map: g.S.map }; });
     await page.reload();
     await waitTitle(page, 240000);
     const cont = await center('.screen.title.on [data-a="continue"]');
@@ -20422,8 +20429,8 @@ if (!NONET) {
         await G.page.waitForTimeout(1000);
         const before = await H.page.evaluate(() => { const g = window.__app.game; const b = g.S.actors.find(a => a.pid === 1); return b ? { x: b.x, z: b.z, sh: b.stats.sh } : null; });
         // 前が開けている向きへ（出現した所の前が塀や壁のこともある）
-        await G.page.evaluate(() => { const g = window.__app.game, w = g.w, p = g.p; let best = 0, bd = -1; for (let k = 0; k < 16; k++) { const yw = k * Math.PI / 8; let d = 0; for (let s = 0.3; s <= 3; s += 0.25) { const x = p.x + Math.sin(yw) * s, z = p.z + Math.cos(yw) * s, i = Math.floor(x / 0.5), j = Math.floor(z / 0.5); if (i < 0 || j < 0 || i >= w.W || j >= w.D) break; const k2 = w.idx(0, i, j), t = w.cell[k2]; if (t !== 1 && t !== 2) break; if ((w.propNear.get(k2) || []).some(pid => { const q = w.props[pid]; return q && q.solid && q.alive !== false && q.boxes.some(b => b[4] > 0.3 && x > b[0] - 0.35 && x < b[3] + 0.35 && z > b[2] - 0.35 && z < b[5] + 0.35); })) break; d = s; } if (d > bd) { bd = d; best = yw; } } g.yaw = best; });
-        await G.page.keyboard.down('KeyW'); await G.page.waitForTimeout(6000); await G.page.keyboard.up('KeyW');
+        await G.page.evaluate(() => { const g = window.__app.game, w = g.w, p = g.p, PL = Math.max(0, Math.floor((p.y + 0.3) / 3)); let best = 0, bd = -1; for (let k = 0; k < 16; k++) { const yw = k * Math.PI / 8; let d = 0; for (let s = 0.3; s <= 3; s += 0.25) { const x = p.x + Math.sin(yw) * s, z = p.z + Math.cos(yw) * s, i = Math.floor(x / 0.5), j = Math.floor(z / 0.5); if (i < 0 || j < 0 || i >= w.W || j >= w.D) break; const k2 = w.idx(PL, i, j), t = w.cell[k2]; if (t !== 1 && t !== 2) break; if ((w.propNear.get(k2) || []).some(pid => { const q = w.props[pid]; return q && q.solid && q.alive !== false && q.boxes.some(b => b[4] > 0.3 && x > b[0] - 0.35 && x < b[3] + 0.35 && z > b[2] - 0.35 && z < b[5] + 0.35); })) break; d = s; } if (d > bd) { bd = d; best = yw; } } g.yaw = best; });
+        await G.page.keyboard.down('KeyW'); await G.page.waitForTimeout(8000); await G.page.keyboard.up('KeyW');
         await G.page.evaluate(async () => { const a = window.__app; a.input.hold.add('fire'); await new Promise(r => setTimeout(r, 1200)); a.input.hold.delete('fire'); });
         await new Promise(r => setTimeout(r, 4000));
         const after = await H.page.evaluate(() => { const g = window.__app.game; const b = g.S.actors.find(a => a.pid === 1); return b ? { x: b.x, z: b.z, sh: b.stats.sh } : null; });
