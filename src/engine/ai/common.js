@@ -181,7 +181,13 @@ export function goTo(S, w, a, inp, tx, ty, tz, o = {}) {
   const moved = Math.hypot(a.x - nv.lx, a.z - nv.lz);
   if (moved < 0.02) { nv.stuck = (nv.stuck || 0) + S.dt; } else nv.stuck = Math.max(0, (nv.stuck || 0) - S.dt * 2);
   nv.lx = a.x; nv.lz = a.z;
-  if (nv.stuck > 1.2) { nv.bad = true; nv.stuck = 0; ai.unstick = { until: S.t + Math.round(0.6 / S.dt), dir: ((a.id + S.t) & 1) ? 1 : -1 }; }
+  if (nv.stuck > 1.2) {
+    nv.stuck = 0;
+    // 開いた扉の板の陰に入って動けない: 板に手が届けば閉める（突入する扉 o.keep は除く）
+    const lf0 = o.noDoors && o.keep == null ? -1 : nearLeaf(w, S, a, 0.9, o.keep);
+    if (lf0 >= 0 && reachOK(S, w, a, 'door', lf0, 'close')) { if (!ai.doorT || (S.t - ai.doorT) * S.dt > 1.2) { ai.doorT = S.t; pushAct(inp, { a: 'op', k: 'door', id: lf0, op: 'close' }); } nv.bad = true; return 'door'; }
+    nv.bad = true; ai.unstick = { until: S.t + Math.round(0.6 / S.dt), dir: ((a.id + S.t) & 1) ? 1 : -1 };
+  }
   // 進まない（行ったり来たりして、いまの経路の点に近づけない）: 開いた扉の板にはばまれていれば閉める
   const dNode = Math.hypot(px - a.x, pz - a.z);
   if (nv.ni !== nv.i) { nv.ni = nv.i; nv.bestD = dNode; nv.bestT = S.t; }
@@ -203,12 +209,12 @@ export function goTo(S, w, a, inp, tx, ty, tz, o = {}) {
   return 'moving';
 }
 // いちばん近い開いた扉の板（lim 以内）
-function nearLeaf(w, S, a, lim) {
+function nearLeaf(w, S, a, lim, skip = -1) {
   let best = -1, bd = lim;
   const L = levelOfY(a.y + 0.3);
   for (let i = 0; i < w.doors.length; i++) {
     const d = w.doors[i], ds = S.doors[i];
-    if (!ds || ds.broken || d.L !== L || Math.abs(d.cx - a.x) > 3 || Math.abs(d.cz - a.z) > 3) continue;
+    if (i === skip || !ds || ds.broken || d.L !== L || Math.abs(d.cx - a.x) > 3 || Math.abs(d.cz - a.z) > 3) continue;
     d.leaves.forEach((lf, li) => {
       if (Math.abs(ds.ang[li] || 0) < 0.25) return;
       const [ex, ez] = leafEnd(lf, ds.ang[li]), vx = ex - lf.hx, vz = ez - lf.hz, vv = vx * vx + vz * vz || 1;

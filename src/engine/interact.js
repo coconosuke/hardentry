@@ -54,8 +54,11 @@ function distSeg(px, pz, ax, az, bx, bz) {
 }
 const _bcSeen = new Set();
 // 体と体（手を当てる所）の間: 腰の高さまでの家具の箱（テーブルは天板の下のすき間も含めて、上から見た広さ全部）と、ほかの人の体
+// 直前の bodyClear で間に立っていた人（AI なら脇へよけてもらう）
+export let BLOCKER = null;
 export function bodyClear(S, w, a, tx, tz, L, o = {}) {
   const x0 = a.x, z0 = a.z;
+  BLOCKER = null;
   if (Math.hypot(tx - x0, tz - z0) < 0.06) return true;
   const base = L * LH;
   const i0 = Math.max(0, Math.floor((Math.min(x0, tx) - 1.0) / CS)), i1 = Math.min(w.W - 1, Math.floor((Math.max(x0, tx) + 1.0) / CS));
@@ -78,7 +81,7 @@ export function bodyClear(S, w, a, tx, tz, L, o = {}) {
   for (const b of S.actors) {
     if (b === a || b.id === o.skipId || b.isDrone || !b.alive || b.down) continue;
     if (Math.abs(b.y - a.y) > 1.2) continue;
-    if (distSeg(b.x, b.z, x0, z0, tx, tz) < 0.22) return false;
+    if (distSeg(b.x, b.z, x0, z0, tx, tz) < 0.22) { BLOCKER = b; return false; }
   }
   return true;
 }
@@ -515,7 +518,15 @@ function startOp(S, w, a, ctx, op, ev) {
   const id = ctx.id;
   if (op.op === 'det') { detonateMine(S, w, a, ev); return; }
   // 手が届かない（離れている・間に物がある）
-  if (op.far ?? !reachOK(S, w, a, ctx.k, id, op.op)) { ev.push({ e: 'deny', id: a.id, why: (op.why || REACH_WHY) === 'block' ? 'blocked' : 'far', op: op.op, k: ctx.k }); return; }
+  if (op.far ?? !reachOK(S, w, a, ctx.k, id, op.op)) {
+    // 間に立っているのが AI の味方なら、脇へよけてもらう（RoN の隊員と同じ）
+    if (REACH_WHY === 'block' && BLOCKER && BLOCKER.ai && BLOCKER.pid == null && !BLOCKER.act && (BLOCKER.team === a.team || (BLOCKER.kind === 'swat' && a.kind === 'swat'))) {
+      const tg = actTarget(S, w, a, ctx.k, id, op.op);
+      if (tg) BLOCKER.ai.yieldTo = { until: S.t + Math.round(1.1 / S.dt), ax: a.x, az: a.z, tx: tg[0], tz: tg[2] };
+    }
+    ev.push({ e: 'deny', id: a.id, why: (op.why || REACH_WHY) === 'block' ? 'blocked' : 'far', op: op.op, k: ctx.k });
+    return;
+  }
   if (op.op === 'pickup') { const it = S.items.find(x => x.id === id); if (it && !it.gone) { it.gone = true; a.carry = 'defuser'; a.gest = { k: 'grab', t: 0, dur: 0.7, tgt: [it.x, it.y + 0.05, it.z] }; ev.push({ e: 'defpick', id: a.id }); } return; }
   const tgt = actTarget(S, w, a, ctx.k, id, op.op);
   // 扉を開ける・閉める: 左手をノブへ伸ばしてから（銃は右手のまま、歩きながらでもよい）

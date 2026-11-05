@@ -2,7 +2,7 @@
 import { thinkSuspect, thinkCiv } from './sus.js';
 import { thinkSwat, takeOrders } from './swat.js';
 import { thinkBot } from './bot.js';
-import { baseInput } from './common.js';
+import { baseInput, steerToward } from './common.js';
 import { buildNav } from './nav.js';
 import { leadThink } from './lead.js';
 
@@ -28,12 +28,26 @@ export function thinkAll(S, w, dt, ev) {
     else if (t === 'swat') inp = thinkSwat(S, w, a, dt, ctx);
     else if (t === 'bot') { ctx.enemies = S.actors.filter(b => b.team !== a.team && b.alive && !b.isDrone && b.kind !== 'civ'); inp = thinkBot(S, w, a, dt, ctx); }
     else inp = baseInput(a);
+    // 味方の手の届く所をふさいでいる: 少しのあいだ脇へよける
+    const y = a.ai.yieldTo;
+    if (y) { if (S.t > y.until || a.act) a.ai.yieldTo = null; else if (a.ai.engId == null) makeWay(a, inp, y); }
     out[a.id] = inp;
   }
   S.shouts.length = 0;
   return out;
 }
 
+// 線分（よけてほしい人 → 手を当てる所）から垂直に 0.75m 離れる
+function makeWay(a, inp, y) {
+  const vx = y.tx - y.ax, vz = y.tz - y.az, L2 = vx * vx + vz * vz || 1;
+  const t = Math.max(0, Math.min(1, ((a.x - y.ax) * vx + (a.z - y.az) * vz) / L2));
+  const qx = y.ax + vx * t, qz = y.az + vz * t;
+  let nx = a.x - qx, nz = a.z - qz, l = Math.hypot(nx, nz);
+  if (l < 0.02) { const L = Math.sqrt(L2); nx = -vz / L; nz = vx / L; l = 1; }
+  if (l > 0.75) { inp.mx = inp.mz = 0; return; }
+  steerToward(a, inp, a.x + nx / l * (0.8 - l), a.z + nz / l * (0.8 - l), 0.7, false);
+  inp.act = null;
+}
 // 前のステップの出来事から、聞こえる音を作る（AI の耳）
 export function collectNoise(S, ev) {
   const H = [];
