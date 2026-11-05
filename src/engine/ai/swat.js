@@ -199,6 +199,20 @@ function autoSecure(S, w, a, inp, dt, people, ctx) {
   }
   // 倒れた味方の報告
   for (const b of S.actors) if (b.kind === 'swat' && b !== a && b.down && !b.reported && !taken.has(b.id)) { const d = Math.hypot(b.x - a.x, b.z - a.z); if (d < 8 && d + 4 < bd) { bd = d + 4; best = b; op = 'report'; } }
+  // 見つけた爆弾の解除（爆弾脅迫）: 人の確保より先に
+  if (S.m && S.m.bombs && S.m.bombs.length) {
+    let bb = null, bbd = 1e9;
+    for (const B of S.m.bombs) {
+      if (B.done || !B.found || taken.has('b' + B.id) || (bad['b' + B.id] && S.t < bad['b' + B.id]) || Math.abs(B.y - a.y) > 1.5) continue;
+      const d = Math.hypot(B.x - a.x, B.z - a.z);
+      if (d < 14 && d < bbd) { bbd = d; bb = B; }
+    }
+    if (bb) {
+      ai.secId = 'b' + bb.id;
+      if (reachAndDo(S, w, a, inp, dt, 'bomb', bb, 'bombdefuse') === 'fail') { bad['b' + bb.id] = S.t + Math.round(20 / S.dt); ai.secId = null; return false; }
+      return true;
+    }
+  }
   if (!best) { ai.secId = null; return false; }
   ai.secId = best.id;
   // 拘束は手の届く所まで、報告は見えていれば少し離れていてよい
@@ -479,8 +493,14 @@ function search(S, w, a, inp, dt, o, people) {
     if (d > 14 || taken.has(-it.id) || Math.abs(it.y - a.y) > 2) continue;
     if (d + 1 < bd) { bd = d + 1; best = it; op = 'collect'; kind = 'item'; }
   }
+  // 見つけた爆弾（いちばん先に）
+  if (S.m && S.m.bombs) for (const B of S.m.bombs) {
+    if (B.done || !B.found || taken.has('b' + B.id) || (bad['b' + B.id] && S.t < bad['b' + B.id]) || Math.abs(B.y - a.y) > 2) continue;
+    const d = Math.hypot(B.x - a.x, B.z - a.z) - 6;
+    if (d < bd) { bd = d; best = B; op = 'bombdefuse'; kind = 'bomb'; }
+  }
   if (!best) { if (sec(S, o.phT) > 3) ai.order = null; return false; }
-  const sid = kind === 'item' ? -best.id : best.id;
+  const sid = kind === 'item' ? -best.id : kind === 'bomb' ? 'b' + best.id : best.id;
   if (ai.secId !== sid) { ai.secId = sid; ai.secT = S.t; }
   // 手の届く所まで行って動作。届かない相手・物（回り込めない・14秒）はしばらく後回し
   if (reachAndDo(S, w, a, inp, dt, kind, best, op) === 'fail' || sec(S, ai.secT) > 20) { bad[sid] = S.t + Math.round(30 / S.dt); ai.secId = null; ai.apt = null; }

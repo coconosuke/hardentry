@@ -7,7 +7,7 @@ import { hrand } from '../rng.js';
 import { CS, LH, NB, C, levelOfY } from '../world.js';
 import { M } from '../data/materials.js';
 import { isOpen, isClosed, sideOf } from '../doors.js';
-import { doorOps } from '../interact.js';
+import { doorOps, reachOK } from '../interact.js';
 
 const sec = (S, t0) => (S.t - t0) * S.dt;
 
@@ -173,8 +173,10 @@ function defendPrep(S, w, a, inp, dt, ctx) {
   const j = ai.job;
   if (!j) return holdNear(S, w, a, inp, dt, site.x, site.y, site.z, 4);
   const r = goTo(S, w, a, inp, j.x, j.y, j.z, { r: 0.45, unlock: true, noDoors: j.kind !== 'wall' });
-  if (r === 'blocked' && !j.tries) { j.tries = 1; }
-  if (r !== 'moving' || Math.hypot(j.x - a.x, j.z - a.z) < 0.6) {
+  // 手が届く所に来てから、向いて行う（届かないまま止まったら、その仕事はしばらく後回し）
+  const can = j.kind === 'wall' ? reachOK(S, w, a, 'wall', j.k, 'reinforce') : reachOK(S, w, a, 'door', j.id, j.kind);
+  if (can && (r !== 'moving' || Math.hypot(j.x - a.x, j.z - a.z) < 0.6)) {
+    inp.mx = inp.mz = 0;
     inp.yaw = turnToward(a.yaw, yawTo(j.lx - a.x, j.lz - a.z), 6 * dt);
     inp.pitch = turnToward(a.pitch, 0, 3 * dt);
     if (Math.abs(angDiff(a.yaw, yawTo(j.lx - a.x, j.lz - a.z))) < 0.2) {
@@ -182,13 +184,19 @@ function defendPrep(S, w, a, inp, dt, ctx) {
       else pushAct(inp, { a: 'op', k: 'door', id: j.id, op: j.kind });
       j.done = true;
     }
+  } else if (r === 'blocked' || (r !== 'moving' && !can && Math.hypot(j.x - a.x, j.z - a.z) < 0.6) || (j.t0 != null && (S.t - j.t0) * S.dt > 15)) {
+    j.done = true;
+    (ai.badJobs || (ai.badJobs = {}))[j.key] = S.t + Math.round(20 / S.dt);
   }
-  if (r === 'blocked') j.done = true;
+  if (j.t0 == null) j.t0 = S.t;
   return inp;
 }
 function pickPrepJob(S, w, a, site) {
   const m = S.m;
   const taken = new Set(S.actors.filter(b => b !== a && b.ai && b.ai.job && !b.ai.job.done).map(b => b.ai.job.key));
+  // 届かなかった仕事はしばらく選ばない
+  const bad = a.ai.badJobs || {};
+  for (const k of Object.keys(bad)) if (S.t < bad[k]) taken.add(k);
   const room = roomAtPos(w, site.x, site.y, site.z);
   if (room < 0) return null;
   const r = w.rooms[room];

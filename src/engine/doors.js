@@ -145,6 +145,8 @@ export function stepDoors(S, w, dt, ev) {
         if (segDist(a.x, a.z, lf.hx, lf.hz, ex, ez) < 0.27) { blocked = a; break; }
       }
       if (blocked) {
+        // 板に当たって止めている AI はよける（味方が開け閉めしている扉）
+        if (blocked.ai && blocked.pid == null && !blocked.act && blocked.alive && !blocked.down) blocked.ai.yieldTo = { until: S.t + Math.round(1.0 / S.dt), ax: lf.hx, az: lf.hz, tx: ex, tz: ez };
         if (ds.spd[li] > 5) { // 蹴った扉は人をはね飛ばす
           blocked.stun = Math.max(blocked.stun, 0.8);
           if (blocked.ai && blocked.ai.morale != null) blocked.ai.morale -= 0.15;

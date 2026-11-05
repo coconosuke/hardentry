@@ -266,3 +266,23 @@ test('interact: 落ちている物は1m以内で拾える。テーブル越し�
   it.z = a.z + 0.45; it.y = 0.76;
   ok(reachOK(S, w, a, 'item', it.id, 'collect'), 'テーブルの上: そばからなら届く');
 });
+test('interact: 半開きの扉は体で押すと開いていく（閉じた扉は押しても開かない）', () => {
+  const { G, S, w, a } = mkPve();
+  const d = w.doors.find(q => q.L === 0 && !S.doors[q.id].locked && !q.double);
+  const ds = S.doors[d.id], lf = d.leaves[0];
+  for (const o of S.actors) if (o !== a) { o.x = 2; o.z = 2; }
+  a.pid = 0;
+  // 閉じた扉の前から扉へ向かって歩く: 開かない
+  const side = 1, kx = lf.hx + lf.dx * (lf.len * 0.6), kz = lf.hz + lf.dz * (lf.len * 0.6);
+  const walkTo = (n) => { for (let i = 0; i < n; i++) step(G, { [a.id]: { mx: 0, mz: 1, yaw: Math.atan2(-d.nx * side, -d.nz * side), pitch: 0, stance: 0, lean: 0 } }); };
+  a.x = kx + d.nx * 0.6; a.z = kz + d.nz * 0.6; a.y = 0; a.vx = a.vz = 0;
+  walkTo(60);
+  ok(ds.ang.every(v => Math.abs(v) < 0.05), '閉じた扉は体で押しても開かない');
+  // 少し開いた扉（向こうへ17°）: 押すと開いていく
+  const s0 = Math.sign((a.x - d.cx) * d.nx + (a.z - d.cz) * d.nz) || 1;
+  ds.ang[0] = ds.tgt[0] = -s0 * lf.s * 0.3;
+  a.x = kx + d.nx * 0.6; a.z = kz + d.nz * 0.6; a.vx = a.vz = 0;
+  const a0 = Math.abs(ds.ang[0]);
+  walkTo(90);
+  ok(Math.abs(ds.ang[0]) > a0 + 0.3, '押した分だけ開く ' + a0.toFixed(2) + ' → ' + Math.abs(ds.ang[0]).toFixed(2));
+});

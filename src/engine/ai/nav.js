@@ -119,7 +119,8 @@ const _lc = { S: null, t: -1, set: null };
 export function leafCells(w, S) {
   if (!S || !S.doors) return null;
   if (_lc.S === S && _lc.t === S.t) return _lc.set;
-  const set = new Set();
+  const set = new Set(), owner = new Map();
+  set.owner = owner;
   for (let i = 0; i < w.doors.length; i++) {
     const d = w.doors[i], ds = S.doors[i];
     if (!ds || ds.broken || !d.leaves) continue;
@@ -134,7 +135,7 @@ export function leafCells(w, S) {
         if (ci < 0 || cj < 0 || ci >= w.W || cj >= w.D) continue;
         const k = w.idx(d.L, ci, cj);
         if (w.doorAt[k] >= 0) continue;
-        set.add(k);
+        set.add(k); if (!owner.has(k)) owner.set(k, i);
       }
     });
   }

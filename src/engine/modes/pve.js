@@ -5,8 +5,8 @@ import { OFFICERS, LOADOUTS, SUSPECTS } from '../data/npc.js';
 import { MAPS } from '../maps/index.js';
 import { MISSIONS, DIFFS } from '../data/missions.js';
 import { rnd, rndShuffle, rndInt, rndPick } from '../rng.js';
-import { CS, LH } from '../world.js';
-import { killActor } from '../combat.js';
+import { CS, LH, los } from '../world.js';
+import { killActor, eyeOf } from '../combat.js';
 
 const sec = (S, t0) => (S.t - t0) * S.dt;
 
@@ -115,6 +115,18 @@ export default {
         for (const b of m.bombs) if (!b.done) S.blasts.push({ x: b.x, y: b.y + 0.4, z: b.z, r: 14, dmg: 600, kind: 'bomb', by: -1, t: 0 });
         endMission(S, 'fail', 'bomb', ev);
         return;
+      }
+    }
+    // 爆弾を見つける（警官の目から 10m 以内で見通せる）。見つけた爆弾は AI の隊員も解除しに行く
+    if (m.mission === 'bomb' && S.t % 15 === 7) {
+      for (const b of m.bombs) {
+        if (b.done || b.found) continue;
+        for (const a of S.actors) {
+          if (a.kind !== 'swat' || !a.alive || a.down || Math.abs(a.y - b.y) > 2) continue;
+          if (Math.hypot(a.x - b.x, a.z - b.z) > 10) continue;
+          const e = eyeOf(S, a);
+          if (los(w, e[0], e[1], e[2], b.x, b.y + 0.25, b.z, S.doors)) { b.found = true; ev.push({ e: 'bombfound', id: b.id, by: a.id }); break; }
+        }
       }
     }
     // 乱射犯がいる間、時間とともに市民が危ない（乱射犯のAIが撃つ）

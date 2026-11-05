@@ -224,7 +224,7 @@ export function reachOK(S, w, a, k, id, op, slack = 0) {
 }
 // AI: 目標（人・物）に手が届く立ち位置。近い順に、歩ける床のマスから届くかを試す（家具の向こうなら回り込む）
 export function approachPoint(S, w, a, k, id, op, nav) {
-  const t = k === 'person' ? S.byId[id] : k === 'item' ? S.items.find(x => x.id === id) : null;
+  const t = k === 'person' ? S.byId[id] : k === 'item' ? S.items.find(x => x.id === id) : k === 'bomb' ? (S.m && S.m.bombs || []).find(x => x.id === id) : null;
   if (!t) return null;
   const tp = k === 'person' ? personPoint(S, t) : [t.x, t.y, t.z];
   const L = levelOfY(t.y + 0.3), lim = REACH_D[op] ?? 1.0, R = Math.ceil(lim / CS) + 1;
@@ -503,6 +503,7 @@ export function doAction(S, w, a, ac, ev) {
       else if (a.pid == null && ac.k === 'item') { const it = S.items.find(x => x.id === ac.id); ctx = it ? { k: 'item', id: ac.id, ops: itemOps(S, a, it) } : null; }
       else if (a.pid == null && ac.k === 'site') { const eye = eyeOf(S, a); ctx = siteOps(S, w, a, eye, 0, 0); }
       else if (a.pid == null && ac.k === 'wall') { const kk = ac.id; ctx = { k: 'wall', id: kk, q: ac.q || 1, ops: wallOps(S, w, a, { k: kk, q: ac.q || 1 }) }; }
+      else if (a.pid == null && ac.k === 'bomb') { const b = S.m && S.m.bombs && S.m.bombs.find(q => q.id === ac.id && !q.done); ctx = b ? { k: 'bomb', id: b.id, ops: [{ op: 'bombdefuse', t: ACT_T.bombdefuse }], def: null } : null; }
       if (!ctx) return;
       markReach(S, w, a, ctx);
     }

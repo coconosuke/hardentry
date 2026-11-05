@@ -117,6 +117,8 @@ function startRound(S, w, first) {
     S.reinf = {};
     S.actors = S.actors.filter(a => !a.isDrone);
   }
+  // 対戦では扉に鍵はかけない（R6 と同じ。ふさぐのはバリケード・補強で）
+  for (const ds of S.doors) { ds.locked = false; ds.lockBroken = false; }
   m.phase = 'pre'; m.phaseT = S.t; m.defuser = { planted: false, disabled: false, t: 0 }; m.intel = {}; m.target = null;
   m.reinfLeft = Math.min(10, 2 * S.actors.filter(a => a.team === m.def).length);
   // 陣営の見た目: 攻撃側（またはチーム0）が SWAT

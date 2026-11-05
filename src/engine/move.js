@@ -1,5 +1,6 @@
 // 移動: RoN の速さ（歩き2.4・ゆっくり0.96・しゃがみ1.2）、しゃがみ・伏せ・リーン・乗り越え・階段・PvPのダッシュ
-import { groundAt, pushOut, raycast, STEP, CS, LH, levelOfY, cellType, C } from './world.js';
+import { groundAt, pushOut, raycast, STEP, CS, LH, levelOfY, cellType, C, leafEnd } from './world.js';
+import { OPEN_ANG, isOpen } from './doors.js';
 import { KNEEL_ACT } from './data/acts.js';
 import { curW, bodyHeight } from './actor.js';
 import { PLATE, LONG } from './data/equipment.js';
@@ -114,6 +115,8 @@ export function moveActor(S, w, a, inp, dt, ev) {
       a.x += _po[0]; a.z += _po[1];
     }
   }
+  // 開いている扉の板に体で当たって進もうとしたら、板は押されて回る（RoN と同じく、半開きの扉は体で押し開けられる）
+  if (mag > 0.01) pushLeaves(S, w, a, dvx, dvz, dt);
   // 実際に動いた分で速さを直す（壁に沿って滑る）
   // 押し出された分で速くはならない（重なりを直した分が勢いにならないように）
   const mvx = (a.x - ox) / dt, mvz = (a.z - oz) / dt, sp0 = Math.hypot(a.vx, a.vz);
@@ -216,6 +219,38 @@ export function separateActors(S, w) {
         pushOut(w, c.x, c.z, c.y + STEP, c.y + bodyHeight(c), RADIUS, S.doors, -1, _po);
         if (_po[2]) { c.x += _po[0]; c.z += _po[1]; }
       }
+    }
+  }
+}
+
+// 体で扉の板を押す: 閉じた扉（掛け金がかかっている）は押せない。板は押す速さに合わせて、蝶番を中心に体から離れる向きへ回る
+function pushLeaves(S, w, a, vx, vz, dt) {
+  const L = levelOfY(a.y + 0.3);
+  const k = w.idx(L, Math.floor(a.x / CS), Math.floor(a.z / CS));
+  const dn = w.doorNear.get(k);
+  if (!dn) return;
+  for (const did of dn) {
+    const d = w.doors[did], ds = S.doors[did];
+    if (!ds || ds.broken || ds.bar > 0 || d.L !== L) continue;
+    for (let li = 0; li < d.leaves.length; li++) {
+      const ang = ds.ang[li];
+      if (Math.abs(ang) < 0.05 || ds.tgt[li] !== ang) continue; // 閉じている・動いている最中
+      const lf = d.leaves[li], [ex, ez] = leafEnd(lf, ang);
+      const lx = ex - lf.hx, lz = ez - lf.hz, len = Math.hypot(lx, lz) || 1, ux = lx / len, uz = lz / len;
+      const t = Math.max(0.15, Math.min(1, ((a.x - lf.hx) * ux + (a.z - lf.hz) * uz) / len));
+      const cx = lf.hx + ux * len * t, cz = lf.hz + uz * len * t;
+      if (Math.hypot(a.x - cx, a.z - cz) > RADIUS + 0.08) continue;
+      const nx = -uz, nz = ux, side = Math.sign((a.x - lf.hx) * nx + (a.z - lf.hz) * nz) || 1;
+      const push = -(vx * nx + vz * nz) * side;
+      if (push < 0.1) continue;
+      // どちらへ回すと当たっている所が体から離れるか
+      const [ex2, ez2] = leafEnd(lf, ang + 0.01);
+      const mx = (lf.hx + (ex2 - lf.hx) * t) - cx, mz = (lf.hz + (ez2 - lf.hz) * t) - cz;
+      const dir = (mx * nx + mz * nz) * side < 0 ? 1 : -1;
+      const om = Math.min(1.6, push / Math.max(0.3, len * t));
+      const nxt = Math.max(-OPEN_ANG - 0.05, Math.min(OPEN_ANG + 0.05, ang + dir * om * dt));
+      ds.ang[li] = ds.tgt[li] = nxt;
+      ds.open = isOpen(ds);
     }
   }
 }

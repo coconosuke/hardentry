@@ -113,20 +113,17 @@ export function goTo(S, w, a, inp, tx, ty, tz, o = {}) {
       const p2 = lc && lc.size ? findPath(w, S, here, tk, { unlock: !!(o.unlock || kick), wedgeOK: false, breakBar: !!o.breakBar, avoid: o.avoid }) : null;
       // 扉を使わない移動（突入のスタックなど）でも、ほかの扉の板はどける（突入する扉 o.keep には触れない）
       if (p2 && (!o.noDoors || o.keep != null)) {
-        let bd = 2.6, best = -1;
-        for (let i = 0; i < w.doors.length; i++) {
-          const d = w.doors[i], ds = S.doors[i];
-          if (i === o.keep || !ds || ds.broken || !(isOpen(ds) || ds.ang.some(v => Math.abs(v) > 0.05)) || d.L !== levelOfY(a.y + 0.3)) continue;
-          const dd = Math.hypot(d.cx - a.x, d.cz - a.z);
-          if (dd < bd && p2.slice(0, 12).some(k => w.doorAt[k] === i || lc.has(k))) { bd = dd; best = i; }
-        }
-        if (best < 0) for (let i = 0; i < w.doors.length; i++) { const d = w.doors[i], ds = S.doors[i]; if (i === o.keep || !ds || ds.broken || !(isOpen(ds) || ds.ang.some(v => Math.abs(v) > 0.05)) || d.L !== levelOfY(a.y + 0.3)) continue; const dd = Math.hypot(d.cx - a.x, d.cz - a.z); if (dd < bd) { bd = dd; best = i; } }
-        if (best >= 0) {
-          const d = w.doors[best];
-          // 板に手が届けば閉める。届かなければ（板が向こう側）扉の口まで寄ってから
-          const can = reachOK(S, w, a, 'door', best, 'close');
+        // 道をふさいでいる板（道の上で最初に当たる板の扉）
+        let best = -1;
+        for (const k of p2.slice(0, 16)) { const i = lc.owner ? lc.owner.get(k) : undefined; if (i != null && i !== o.keep) { best = i; break; } }
+        const d = best >= 0 ? w.doors[best] : null;
+        if (d && d.L === levelOfY(a.y + 0.3) && Math.hypot(d.cx - a.x, d.cz - a.z) < 2.6) {
+          const ds = S.doors[best];
+          // 半端に開いた扉は押し開け、開ききった扉は閉める。板に手が届くまで寄る
+          const op = ds.ang.every(v => Math.abs(v) < 0.6) ? 'open' : 'close';
+          const can = reachOK(S, w, a, 'door', best, op);
           steerToward(a, inp, d.cx, d.cz, can || Math.hypot(d.cx - a.x, d.cz - a.z) < 0.35 ? 0 : 0.5);
-          if (can && (!ai.doorT || (S.t - ai.doorT) * S.dt > 1.2)) { ai.doorT = S.t; pushAct(inp, { a: 'op', k: 'door', id: best, op: 'close' }); }
+          if (can && (!ai.doorT || (S.t - ai.doorT) * S.dt > 1.2)) { ai.doorT = S.t; pushAct(inp, { a: 'op', k: 'door', id: best, op }); }
           ai.nav = { tk, path: [], i: 0, t: S.t, bad: false, fail: true, soft: true };
           return 'door';
         }
@@ -160,6 +157,14 @@ export function goTo(S, w, a, inp, tx, ty, tz, o = {}) {
       const d = w.doors[did];
       const dd = Math.hypot(d.cx - a.x, d.cz - a.z);
       if (dd < 1.7) {
+        // 扉の口（線の上）に立っていると、開く板が体に当たって止まる: 来た側へ一歩下がってから開ける
+        const across = (a.x - d.cx) * d.nx + (a.z - d.cz) * d.nz;
+        if (Math.abs(across) < 0.42 && !o.noDoors) {
+          const nk2 = nv.path[Math.min(nv.path.length - 1, nv.i + 1)] ?? tk, c2 = cellCenter(w, nk2);
+          const sgn = (c2[0] - d.cx) * d.nx + (c2[2] - d.cz) * d.nz > 0 ? -1 : 1, mv = sgn * 0.6 - across;
+          steerToward(a, inp, a.x + d.nx * mv, a.z + d.nz * mv, 0.6, false);
+          return 'door';
+        }
         steerToward(a, inp, d.cx, d.cz, 0);
         if (o.noDoors) return 'door';
         // バリケード（対戦）: 壊して通る

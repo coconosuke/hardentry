@@ -55,6 +55,13 @@ export function leadThink(S, w, ev) {
   const near = (b, R) => Math.hypot(b.x - leader.x, b.z - leader.z) < R && Math.abs(b.y - leader.y) < 2 && L.visited.includes(roomAt(w, b.x, b.y, b.z));
   const toSecure = S.actors.some(b => (b.kind === 'sus' || b.kind === 'civ') && near(b, 14) && ((b.alive && !b.cuffed && (b.comply >= 1 || b.down || b.tased > 0)) || ((b.cuffed || !b.alive || b.down) && !b.reported)));
   const loot = S.items.some(it => !it.gone && (it.kind === 'weapon' || it.kind === 'evidence') && near(it, 12));
+  // 見つけた爆弾は何よりも先に（解除するまで捜索の命令を出し直す）
+  const bomb = m.bombs && m.bombs.find(b => b.found && !b.done && Math.abs(b.y - leader.y) < 2 && Math.hypot(b.x - leader.x, b.z - leader.z) < 18);
+  if (bomb) {
+    const defusing = team.some(a => a.act && a.act.k === 'bombdefuse');
+    if (!defusing && (L.cmd !== 'search' || !busy || sec(S, L.t) > 12)) { issue(S, L, leader, { cmd: 'search' }); return; }
+    return;
+  }
   if (toSecure || loot) {
     const key = curRoom + ':' + L.visited.length;
     // 同じ所で何度も捜索しない（届かない物があると繰り返すため）: 新しい部屋に入るまで60秒あける
