@@ -254,7 +254,9 @@ export class Input {
     // 長押しの判定（押している最中）。こまが大きく遅れたとき（0.25秒より長い）は次のこまで判定する
     // （遅れている間に指を離した出来事が待っているかもしれない。離していれば短押し）
     const now = performance.now();
-    const hitch = this._lastTake != null && now - this._lastTake > 250;
+    // 1こまだけ待つ（遅いこまが続くときは次のこまで判定する）
+    const hitch = this._lastTake != null && now - this._lastTake > 250 && !this._hitchSkip;
+    this._hitchSkip = hitch;
     this._lastTake = now;
     for (const [pid, p] of this.ptr) {
       if (p.kind !== 'btn' || p.long || p.moved > 22 || hitch) continue;

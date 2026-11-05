@@ -208,7 +208,9 @@ try {
     await touch('touchEnd', []);
     await page.waitForFunction((v) => window.__app.settings.bright > v + 0.3, sl.v, { timeout: 5000 }).catch(() => {});
     const bright = await page.evaluate(() => window.__app.settings.bright);
-    rec('回した画面', 'スライダーが指の向きどおりに動く', bright > sl.v + 0.3, `明るさ ${sl.v} → ${bright}`);
+    let why = '';
+    if (!(bright > sl.v + 0.3)) { why = ' ' + await page.evaluate(([x, y]) => { const e = document.elementFromPoint(x, y); return 'hit=' + (e ? (e.className || e.tagName) + '<' + (e.parentElement && e.parentElement.className) : 'null') + ' scr=' + window.__app.screens.cur + ' mode=' + window.__app.mode; }, [sl2.x, sl2.y0]); await shot('回した画面-スライダー'); }
+    rec('回した画面', 'スライダーが指の向きどおりに動く', bright > sl.v + 0.3, `明るさ ${sl.v} → ${bright}${why}`);
     await page.evaluate((v) => { window.__app.settings.bright = v; window.__app.applySettings(); }, sl.v);
   }
   {
@@ -484,7 +486,8 @@ try {
   {
     await page.evaluate(() => window.__app.resumeGame());
     await page.keyboard.down('KeyW'); await page.waitForTimeout(1200); await page.keyboard.up('KeyW');
-    const g1 = await page.evaluate(() => { const a = window.__app, g = a.game; a.autosave(); return { t: g.S.t, x: g.p.x, z: g.p.z, map: g.S.map }; });
+    // 止めてから保存（再読み込みの直前にも裏に回った保存が走るので、同じ場面にそろえる）
+    const g1 = await page.evaluate(() => { const a = window.__app, g = a.game; a.freeze = true; a.autosave(); return { t: g.S.t, x: g.p.x, z: g.p.z, map: g.S.map }; });
     await page.reload();
     await waitTitle(page, 240000);
     const cont = await center('.screen.title.on [data-a="continue"]');
