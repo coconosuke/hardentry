@@ -238,8 +238,10 @@ function doOrder(S, w, a, inp, dt, o, ctx, sk, people) {
       const [tx, tz] = o.tgt;
       const r = goTo(S, w, a, inp, tx, o.y, tz, { speed: 0.8, r: 0.5 });
       inp.low = r === 'moving';
-      // 着いた・行けない・近くで詰まった（味方が立っているなど）・時間切れ → その場で待機
+      // 着いた・行けない・近くで詰まった（味方が立っているなど）・進まない（8秒）・時間切れ → その場で待機
       const dd = Math.hypot(tx - a.x, tz - a.z);
+      if (o.bestD == null || dd < o.bestD - 0.3) { o.bestD = dd; o.bestT = S.t; }
+      else if (sec(S, o.bestT) > 8) { o.cmd = 'hold'; o.hy = o.yaw; o.doneT = S.t; o.failed = true; return true; }
       if (dd < 1.8 && los(w, a.x, a.y + 1, a.z, tx, (o.y || 0) + 1, tz, S.doors)) o.nearT = (o.nearT || 0) + S.dt;
       if (r === 'arrived' || r === 'blocked' || (o.nearT || 0) > 1.2 || sec(S, o.phT) > 25) { o.cmd = 'hold'; o.hy = o.yaw; o.doneT = S.t; }
       return true;

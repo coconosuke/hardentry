@@ -520,7 +520,8 @@ function startOp(S, w, a, ctx, op, ev) {
   if (op.op === 'det') { detonateMine(S, w, a, ev); return; }
   // 手が届かない（離れている・間に物がある）
   if (op.far ?? !reachOK(S, w, a, ctx.k, id, op.op)) {
-    // 間に立っているのが AI の味方なら、脇へよけてもらう（RoN の隊員と同じ）
+    // 間に立っているのが AI の味方なら、脇へよけてもらう（RoN の隊員と同じ）。理由はこの動作で調べ直す
+    if (op.far != null) reachOK(S, w, a, ctx.k, id, op.op);
     if (REACH_WHY === 'block' && BLOCKER && BLOCKER.ai && BLOCKER.pid == null && !BLOCKER.act && (BLOCKER.team === a.team || (BLOCKER.kind === 'swat' && a.kind === 'swat'))) {
       const tg = actTarget(S, w, a, ctx.k, id, op.op);
       if (tg) BLOCKER.ai.yieldTo = { until: S.t + Math.round(1.1 / S.dt), ax: a.x, az: a.z, tx: tg[0], tz: tg[2] };

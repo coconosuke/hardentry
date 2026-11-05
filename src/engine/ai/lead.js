@@ -4,7 +4,7 @@
 import { roomGraph, navCell, buildNav } from './nav.js';
 import { isOpen } from '../doors.js';
 import { hrand } from '../rng.js';
-import { CS, LH } from '../world.js';
+import { CS, LH, los } from '../world.js';
 
 const sec = (S, t0) => (S.t - t0) * S.dt;
 function roomAt(w, x, y, z) { const k = navCell(w, x, y + 0.2, z); return k >= 0 ? w.roomAt[k] : -1; }
@@ -72,19 +72,49 @@ export function leadThink(S, w, ev) {
   // 次の部屋を探す（幅優先。屋外は通り道として使う）
   if (curRoom < 0) { if (sec(S, L.t) > 6) issue(S, L, leader, { cmd: 'fallin' }); return; }
   const target = nextStep(S, w, rg, curRoom, L, leader.x, leader.z);
+  if (!target && !m.softDone) {
+    // 全部見た: まだ確保していない人（隊員が最後に見た所。見ていなければ、見回りをやり直したあとは物音を頼りに）へ向かう
+    if (!L.hunt) L.hunt = {};
+    let best = null, bd = 1e9;
+    for (const b of S.actors) {
+      if (!b.alive || b.cuffed || !(b.kind === 'civ' || (b.kind === 'sus' && !b.down)) || (L.hunt[b.id] || 0) > 2) continue;
+      let at = null, tl = -1e9;
+      for (const a of team) { const s2 = a.ai.seen && a.ai.seen[b.id]; if (s2 && s2.t > tl) { tl = s2.t; at = [s2.x, s2.y, s2.z]; } }
+      if (!at && L.sweeps >= 1) at = [b.x, b.y, b.z];
+      if (!at) continue;
+      const d = Math.hypot(at[0] - leader.x, at[2] - leader.z) + Math.abs(at[1] - leader.y) * 6;
+      if (d < bd) { bd = d; best = { b, at }; }
+    }
+    if (best) {
+      const { b, at } = best;
+      // 近くて見通せる（同じ部屋）なら呼びかけ・拘束は隊員が自分で。壁の向こうなら回り込んで近づく
+      const seeIt = Math.hypot(at[0] - leader.x, at[2] - leader.z) < 3.5 && Math.abs(at[1] - leader.y) < 1.5 && los(w, leader.x, leader.y + 1.5, leader.z, at[0], at[1] + 1.0, at[2], S.doors);
+      if (!seeIt) {
+        L.hunt[b.id] = (L.hunt[b.id] || 0) + 1;
+        issue(S, L, leader, { cmd: 'move', x: at[0], y: Math.round(at[1] / LH) * LH, z: at[2], yaw: Math.atan2(at[0] - leader.x, at[2] - leader.z) });
+        return;
+      }
+      if (sec(S, L.t) > 12) { L.hunt[b.id] = (L.hunt[b.id] || 0) + 0.5; issue(S, L, leader, { cmd: 'search' }); }
+      return;
+    }
+  }
   if (!target) {
     // 全部見た: もう一度だけ見回る。それでも残りがなければ終わり
-    if (L.sweeps < 2 && !m.softDone) { L.sweeps++; L.visited = [curRoom]; L.skip = []; return; }
+    if (L.sweeps < 2 && !m.softDone) { L.sweeps++; L.visited = [curRoom]; L.skip = []; L.badDoors = []; L.blocked = []; L.doorTry = {}; L.moveTry = {}; return; }
     L.done = true;
     return;
   }
   // 進まない（同じ所で40秒）: その部屋は飛ばす。同じ扉で2回失敗したら、その扉は使わない
   if (sec(S, L.progT) > 40) {
-    L.skip.push(target.room); L.progT = S.t;
+    L.skip.push(target.room); if (target.next !== target.room) (L.blocked || (L.blocked = [])).push(target.next); L.progT = S.t;
     return;
   }
   const p = target.portal, ds = p.door >= 0 ? S.doors[p.door] : null;
   if (p.type === 'door' && ds && !isOpen(ds) && !ds.broken) {
+    // 同じ扉で何度も（ミラー・突入・やり直し）うまくいかない: その扉は通らない
+    if (!L.doorTry) L.doorTry = {};
+    const n = L.doorTry[p.door] = (L.doorTry[p.door] || 0) + 1;
+    if (n > 3) { (L.badDoors || (L.badDoors = [])).push(p.door); return; }
     const has = (fn) => team.some(fn);
     let method = 'open';
     if (ds.locked && !ds.lockBroken) method = has(a => a.inv.long === 'ram') ? 'ram' : has(a => a.inv.gear.some(g => g.id === 'c2' && g.n > 0)) && hrand(p.door, S.seed, 3) < 0.3 ? 'c2' : 'kick';
@@ -101,7 +131,8 @@ export function leadThink(S, w, ev) {
   // 同じ部屋への移動が続けて空振り（すぐ終わるのに入れない）したら、その部屋は飛ばす
   if (!L.moveTry) L.moveTry = {};
   const tries = L.moveTry[target.next] = (L.moveTry[target.next] || 0) + 1;
-  if (tries > 3) { L.skip.push(target.room); if (target.next !== target.room) L.skip.push(target.next); L.moveTry[target.next] = 0; return; }
+  // 同じ部屋への移動が続けて空振り: その部屋（とその先）へは行かない（見回りをやり直すときに戻す）
+  if (tries > 2) { L.skip.push(target.room); (L.blocked || (L.blocked = [])).push(target.next); return; }
   // 部屋の中の歩ける点: 入口から2.5mほど入った、部屋の真ん中寄りの床（外接四角の中心は L字の部屋だと壁の向こうになる）
   const pt = roomPoint(w, R, p.x, p.z) || [R.cx, R.cz];
   issue(S, L, leader, { cmd: 'move', x: pt[0], y: R.L * LH, z: pt[1], yaw: Math.atan2(pt[0] - p.x, pt[1] - p.z) });
@@ -146,7 +177,7 @@ function nextStep(S, w, rg, from, L, sx, sz) {
       if (p.type !== 'door' && p.type !== 'open' && p.type !== 'stair') continue;
       if (p.door >= 0 && L.badDoors && L.badDoors.includes(p.door)) continue;
       const o = p.a === r ? p.b : p.a;
-      if (done.has(o)) continue;
+      if (done.has(o) || (L.blocked && L.blocked.includes(o))) continue;
       const d = dist.get(r) + Math.hypot(p.x - px, p.z - pz) + (p.type === 'stair' ? 6 : 1);
       if (!dist.has(o) || d < dist.get(o)) { dist.set(o, d); prev.set(o, { r, p }); at.set(o, [p.x, p.z]); open.push(o); }
     }
