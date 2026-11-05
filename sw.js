@@ -1,5 +1,5 @@
-// ビルド f597c5e0f4
-const CACHE = 'hardentry-f597c5e0f4';
+// ビルド d0013d2cb2
+const CACHE = 'hardentry-d0013d2cb2';
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./'])).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', (e) => {
