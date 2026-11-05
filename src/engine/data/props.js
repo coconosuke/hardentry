@@ -54,5 +54,11 @@ export const PROPS = {
   neon: { name: 'ネオンの看板', w: 1.6, d: 0.12, h: 2.6, boxes: [], solid: false },
   stage: { name: 'ステージ', w: 2.0, d: 2.0, h: 0.4, boxes: [B(2.0, 0.4, 2.0, M.FURN)], solid: true, vault: true, foot: [2.0, 2.0], resizable: true },
   forklift: { name: 'フォークリフト', w: 1.2, d: 2.6, h: 2.2, boxes: [B(1.2, 1.25, 2.0, M.METALFURN, 0.1, 0, -0.3), B(1.0, 2.1, 0.2, M.METAL, 0, 0, 0.75)], solid: true, vault: false, foot: [1.2, 2.6] },
+  // モーテルの小物
+  icemaker: { name: '製氷機', w: 0.8, d: 0.75, h: 1.8, boxes: [B(0.8, 1.8, 0.75, M.METALFURN)], solid: true, vault: false, foot: [0.8, 0.75] },
+  ptac: { name: '壁の空調機', w: 1.07, d: 0.4, h: 0.45, boxes: [B(1.07, 0.42, 0.38, M.METALFURN, 0.03)], solid: true, vault: true, foot: [1.07, 0.4] },
+  nightstand: { name: 'ナイトテーブル', w: 0.5, d: 0.42, h: 0.62, boxes: [B(0.5, 0.6, 0.42, M.FURN)], solid: true, vault: true, foot: [0.5, 0.42] },
+  hkcart: { name: '清掃カート', w: 1.3, d: 0.55, h: 1.3, boxes: [B(1.3, 1.25, 0.55, M.METALFURN)], solid: true, vault: true, foot: [1.3, 0.55] },
+  motelsign: { name: 'モーテルの看板', w: 3.0, d: 0.5, h: 5.6, boxes: [B(0.2, 3.6, 0.2, M.METAL, 0, -1.0, 0), B(0.2, 3.6, 0.2, M.METAL, 0, 1.0, 0), B(3.0, 1.9, 0.44, M.METALFURN, 3.6)], solid: true, vault: false, foot: [2.2, 0.3] },
   lamp: { name: '街灯', w: 0.25, d: 0.25, h: 4.5, boxes: [B(0.18, 4.5, 0.18, M.METAL)], solid: true, vault: false, foot: [0.25, 0.25] },
 };

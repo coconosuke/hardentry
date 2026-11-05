@@ -56,14 +56,14 @@ export function bakeLight(w, def, opt = {}) {
   });
   const pidx = (i, j, ly) => (ly * D1 + j) * W1 + i;
   const cellT = (L, i, j) => (i < 0 || j < 0 || i >= w.W || j >= w.D) ? C.VOID : w.cell[w.idx(L, i, j)];
-  const indoorCell = (L, i, j) => { const t = cellT(L, i, j); return t === C.FLOOR || t === C.STAIR || (isWallish(t) && w.indoor[w.idx(L, i, j)] === 2); };
+  const indoorCell = (L, i, j) => { const t = cellT(L, i, j); return t === C.FLOOR || (t === C.STAIR && w.indoor[w.idx(L, i, j)] === 1) || (isWallish(t) && w.indoor[w.idx(L, i, j)] === 2); };
   // 窓・外への開口からの距離（屋内で空を調べる範囲を絞る）
   const nearOpen = new Uint8Array(w.NL * w.W * w.D);
   for (let L = 0; L < w.NL; L++) {
     const q = [];
     for (let j = 0; j < w.D; j++) for (let i = 0; i < w.W; i++) {
       const k = w.idx(L, i, j), t = w.cell[k];
-      if (t === C.OUT || t === C.WINDOW || t === C.GLASSWALL || (t === C.DOOR && w.indoor[k] === 2 && touchesOut(w, L, i, j)) || (t === C.OPEN && touchesOut(w, L, i, j))) { nearOpen[k] = 1; q.push([i, j, 0]); }
+      if (t === C.OUT || (t === C.STAIR && !w.indoor[k]) || t === C.WINDOW || t === C.GLASSWALL || (t === C.DOOR && w.indoor[k] === 2 && touchesOut(w, L, i, j)) || (t === C.OPEN && touchesOut(w, L, i, j))) { nearOpen[k] = 1; q.push([i, j, 0]); }
     }
     let h = 0;
     while (h < q.length) {

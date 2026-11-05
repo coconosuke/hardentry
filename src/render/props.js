@@ -420,6 +420,86 @@ const MODELS = {
     foliage(B, 0.3, 3.9, -0.2, 1.1, 1.0, mulc(C.leaf, 1.1));
     foliage(B, -0.4, 3.4, 0.4, 0.9, 0.8, C.leafD);
   },
+  // 製氷機: ステンレスの箱、上に青く光る帯と「ICE」の白い字、真ん中に扉、下にガラリ
+  icemaker(B, G, P, o, s) {
+    B.box(-0.4, 0.06, -0.37, 0.4, 1.8, 0.37, LAYER.metal, C.steel, { aoBottom: 0.7 });
+    B.box(-0.37, 0, -0.34, 0.37, 0.06, 0.34, LAYER.plain, C.black);
+    B.emit = 1.4; B.box(-0.34, 1.46, 0.37, 0.34, 1.7, 0.374, LAYER.plain, H('#3aa8ff'), { faces: 16 }); B.emit = 0;
+    B.box(-0.2, 1.52, 0.374, -0.17, 1.64, 0.377, LAYER.plain, C.white, { faces: 16, sharp: true });
+    B.box(-0.12, 1.52, 0.374, -0.03, 1.545, 0.377, LAYER.plain, C.white, { faces: 16, sharp: true }); B.box(-0.12, 1.615, 0.374, -0.03, 1.64, 0.377, LAYER.plain, C.white, { faces: 16, sharp: true }); B.box(-0.12, 1.52, 0.374, -0.095, 1.64, 0.377, LAYER.plain, C.white, { faces: 16, sharp: true });
+    B.box(0.02, 1.52, 0.374, 0.045, 1.64, 0.377, LAYER.plain, C.white, { faces: 16, sharp: true }); for (const y of [1.52, 1.57, 1.615]) B.box(0.02, y, 0.374, 0.11, y + 0.025, 0.377, LAYER.plain, C.white, { faces: 16, sharp: true });
+    B.box(-0.3, 0.55, 0.37, 0.3, 1.12, 0.386, LAYER.metal, mulc(C.steel, 0.86));
+    B.box(-0.13, 1.03, 0.386, 0.13, 1.06, 0.41, LAYER.metal, C.dgray);
+    B.box(-0.36, 0.1, 0.37, 0.36, 0.42, 0.378, LAYER.plain, C.dgray);
+    for (let k = 0; k < 4; k++) B.box(-0.34, 0.14 + k * 0.07, 0.378, 0.34, 0.16 + k * 0.07, 0.388, LAYER.metal, C.gray, { sharp: true });
+  },
+  // 壁の空調機（窓の下）: ベージュの箱、上の吹き出し口、前の格子、操作盤とつまみ
+  ptac(B, G, P, o, s) {
+    const body = H('#d9d2c2');
+    B.box(-0.53, 0.03, -0.2, 0.53, 0.44, 0.18, LAYER.paint, body, { aoBottom: 0.7 });
+    B.box(-0.5, 0.44, -0.12, 0.34, 0.45, 0.15, LAYER.plain, mulc(body, 0.6), { sharp: true });
+    for (let k = 0; k < 6; k++) B.box(-0.49, 0.445, -0.1 + k * 0.042, 0.33, 0.456, -0.086 + k * 0.042, LAYER.metal, C.lgray, { sharp: true });
+    for (let k = 0; k < 7; k++) B.box(-0.48, 0.08 + k * 0.042, 0.18, 0.3, 0.096 + k * 0.042, 0.192, LAYER.plain, mulc(body, 0.78), { sharp: true });
+    B.box(0.35, 0.2, 0.18, 0.5, 0.4, 0.186, LAYER.plain, mulc(body, 0.9));
+    for (const y of [0.25, 0.34]) B.tube([0.425, y, 0.186], [0.425, y, 0.21], 0.024, 0.024, 8, LAYER.plain, C.dgray, { caps: true });
+  },
+  // ナイトテーブル（引き出し2段）と卓上の灯り
+  nightstand(B, G, P, o, s) {
+    B.box(-0.25, 0, -0.21, 0.25, 0.58, 0.21, LAYER.wood, C.woodD, { aoBottom: 0.7 });
+    B.box(-0.26, 0.58, -0.22, 0.26, 0.61, 0.22, LAYER.wood, mulc(C.wood, 0.9));
+    for (const y of [0.1, 0.33]) { B.box(-0.22, y, 0.21, 0.22, y + 0.19, 0.218, LAYER.wood, mulc(C.woodD, 1.18)); B.box(-0.04, y + 0.085, 0.218, 0.04, y + 0.105, 0.232, LAYER.metal, H('#b08a4a'), { sharp: true }); }
+    B.cyl(0.07, -0.05, 0.61, 0.64, 0.07, 0.07, 10, LAYER.metal, H('#b08a4a'), { capT: true });
+    B.cyl(0.07, -0.05, 0.64, 0.86, 0.012, 0.012, 6, LAYER.metal, H('#b08a4a'));
+    B.emit = o.off ? 0 : 0.9; B.cyl(0.07, -0.05, 0.82, 0.99, 0.13, 0.085, 12, LAYER.fabric, H('#efe2c4'), { capT: false }); B.emit = 0;
+  },
+  // 清掃カート: 黒い枠、棚にたたんだタオル、両はしにごみ袋（黒）とシーツの袋（灰）
+  hkcart(B, G, P, o, s) {
+    const fr = H('#34373c');
+    for (const y of [0.14, 0.6, 1.06]) B.box(-0.32, y, -0.25, 0.32, y + 0.03, 0.25, LAYER.metal, fr);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) B.box(sx * 0.31 - 0.015, 0.08, sz * 0.24 - 0.015, sx * 0.31 + 0.015, 1.25, sz * 0.24 + 0.015, LAYER.metal, fr, { sharp: true });
+    for (const y of [0.17, 0.63]) for (let k = 0; k < 3; k++) B.box(-0.3 + k * 0.2, y, -0.21, -0.12 + k * 0.2, y + 0.17, 0.21, LAYER.fabric, k % 2 ? C.white : H('#e9e4d8'));
+    B.box(-0.28, 1.09, -0.18, 0.1, 1.21, 0.18, LAYER.plain, H('#3f7fbf'));
+    B.cyl(0.14, 0.02, 1.09, 1.27, 0.035, 0.03, 8, LAYER.plain, H('#e0d84a'), { capT: true });
+    B.cyl(-0.48, 0, 0.12, 1.0, 0.16, 0.14, 10, LAYER.nylon, C.black, { capT: true });
+    B.cyl(0.48, 0, 0.12, 0.98, 0.16, 0.14, 10, LAYER.fabric, H('#9a9c9e'), { capT: true });
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) B.tube([sx * 0.28, 0.05, sz * 0.22 - 0.02], [sx * 0.28, 0.05, sz * 0.22 + 0.02], 0.05, 0.05, 8, LAYER.rubber, C.black, { caps: true });
+  },
+  // モーテルの看板: 2本の柱の上に紺の箱、表と裏に光る縁と「MOTEL」の字、下に「空室あり」の赤い字
+  motelsign(B, G, P, o, s) {
+    for (const sx of [-1, 1]) B.box(sx * 1.0 - 0.1, 0, -0.1, sx * 1.0 + 0.1, 3.7, 0.1, LAYER.metal, H('#4a4c50'), { aoBottom: 0.7 });
+    B.box(-1.5, 3.6, -0.22, 1.5, 5.5, 0.22, LAYER.paint, H('#1f2a44'));
+    B.box(-1.53, 5.5, -0.25, 1.53, 5.58, 0.25, LAYER.metal, C.dgray);
+    B.box(-0.92, 2.86, -0.1, 0.92, 3.42, 0.1, LAYER.paint, H('#17181b'));
+    // 文字（0..1 の枠の中の線）
+    const LET = {
+      M: [[0, 0, 0.18, 1], [0.82, 0, 1, 1], [0.18, 0.72, 0.41, 0.9], [0.59, 0.72, 0.82, 0.9], [0.41, 0.5, 0.59, 0.76]],
+      O: [[0, 0, 0.2, 1], [0.8, 0, 1, 1], [0.2, 0, 0.8, 0.17], [0.2, 0.83, 0.8, 1]],
+      T: [[0, 0.83, 1, 1], [0.4, 0, 0.6, 0.83]],
+      E: [[0, 0, 0.2, 1], [0.2, 0.83, 1, 1], [0.2, 0.42, 0.8, 0.58], [0.2, 0, 1, 0.17]],
+      L: [[0, 0, 0.2, 1], [0.2, 0, 1, 0.17]],
+    };
+    const word = (txt, cx, y0, lw, lh, gap, zf, col) => {
+      const n = txt.length, tot = n * lw + (n - 1) * gap, sg = Math.sign(zf);
+      for (let q = 0; q < n; q++) {
+        for (const [a0, b0, a1, b1] of LET[txt[q]] || []) {
+          let x0 = cx - tot / 2 + q * (lw + gap) + a0 * lw, x1 = cx - tot / 2 + q * (lw + gap) + a1 * lw;
+          if (sg < 0) { const t0 = -x1; x1 = -x0; x0 = t0; }
+          B.box(x0, y0 + b0 * lh, Math.min(zf, zf + sg * 0.02), x1, y0 + b1 * lh, Math.max(zf, zf + sg * 0.02), LAYER.plain, col, { sharp: true });
+        }
+      }
+    };
+    B.emit = 3.0;
+    for (const zf of [0.22, -0.22]) {
+      const sg = Math.sign(zf), za = Math.min(zf, zf + sg * 0.02), zb = Math.max(zf, zf + sg * 0.02), t = 0.04, c1 = H('#ff7a3a');
+      B.box(-1.42, 3.68, za, 1.42, 3.68 + t, zb, LAYER.plain, c1, { sharp: true }); B.box(-1.42, 5.42 - t, za, 1.42, 5.42, zb, LAYER.plain, c1, { sharp: true });
+      B.box(-1.42, 3.68, za, -1.42 + t, 5.42, zb, LAYER.plain, c1, { sharp: true }); B.box(1.42 - t, 3.68, za, 1.42, 5.42, zb, LAYER.plain, c1, { sharp: true });
+      word('MOTEL', 0, 4.1, 0.4, 0.86, 0.12, zf, H('#ffd24a'));
+      B.box(-1.2, 3.86, za, 1.2, 3.9, zb, LAYER.plain, H('#ff4a6a'), { sharp: true });
+    }
+    B.emit = 2.4;
+    for (const zf of [0.1, -0.1]) { const sg = Math.sign(zf), za = Math.min(zf, zf + sg * 0.015), zb = Math.max(zf, zf + sg * 0.015); for (let q = 0; q < 7; q++) { const x0 = -0.74 + q * 0.215; B.box(x0, 3.0, za, x0 + 0.15, 3.28, zb, LAYER.plain, H('#ff3a2e'), { sharp: true }); } }
+    B.emit = 0;
+  },
   lamp(B, G, P, o, s) {
     B.cyl(0, 0, 0, 4.4, 0.09, 0.06, 8, LAYER.metal, C.gray, { capT: false, aoBottom: 0.7 });
     B.tube([0, 4.35, 0], [0, 4.45, 1.2], 0.04, 0.04, 6, LAYER.metal, C.gray);

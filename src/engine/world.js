@@ -54,6 +54,7 @@ export function compileMap(def) {
     else if (c === 'L') { w.cell[k] = C.LOW; w.wallMat[k] = M.CONCRETE; }
     else if (c === 'F') { w.cell[k] = C.FENCE; w.wallMat[k] = M.FENCE; }
     else if (c === 'S') { w.cell[k] = C.STAIR; w.indoor[k] = 1; w.floorMat[k] = F.WOOD; }
+    else if (c === 's') { w.cell[k] = C.STAIR; w.indoor[k] = 0; w.floorMat[k] = F.CONCRETE; } // 外の階段（屋根なし）
     else if (c !== ' ') w.errors.push(`知らない文字 '${c}' (${L},${i},${j})`);
   }
   const T = (L, i, j) => (L < 0 || L >= NL || i < 0 || j < 0 || i >= W || j >= D) ? C.VOID : w.cell[idx(L, i, j)];
@@ -66,13 +67,15 @@ export function compileMap(def) {
     return M.DRYWALL;
   };
   // 屋内に面しているか
-  const nearIndoor = (L, i, j) => { for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const t = T(L, i + di, j + dj); if (t === C.FLOOR || t === C.STAIR) return true; } return false; };
+  // 屋内の床か（外の階段は屋外）
+  const inCell = (L, i, j) => { const t = T(L, i, j); return t === C.FLOOR || (t === C.STAIR && w.indoor[idx(L, i, j)] === 1); };
+  const nearIndoor = (L, i, j) => { for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { if (inCell(L, i + di, j + dj)) return true; } return false; };
   // 2) 床の材質（壁マス・扉マスの床は隣の床から）
   for (let L = 0; L < NL; L++) for (let j = 0; j < D; j++) for (let i = 0; i < W; i++) {
     const k = idx(L, i, j), t = w.cell[k];
     if (isWallish(t)) {
       let fm = 0, ind = 0;
-      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const t2 = T(L, i + di, j + dj); if (t2 === C.FLOOR || t2 === C.OUT || t2 === C.STAIR) { const k2 = idx(L, i + di, j + dj); if (!fm || t2 === C.FLOOR) fm = w.floorMat[k2]; if (t2 === C.FLOOR || t2 === C.STAIR) ind = 1; } }
+      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const t2 = T(L, i + di, j + dj); if (t2 === C.FLOOR || t2 === C.OUT || t2 === C.STAIR) { const k2 = idx(L, i + di, j + dj); if (!fm || t2 === C.FLOOR) fm = w.floorMat[k2]; if (inCell(L, i + di, j + dj)) ind = 1; } }
       w.floorMat[k] = fm || F.CONCRETE;
       w.indoor[k] = ind ? 2 : 0; // 2 = 屋内に面した壁（天井の板がある）
       if (!w.wallMat[k]) w.wallMat[k] = nbWallMat(L, i, j);
@@ -225,7 +228,7 @@ function isIndoorWallLine(w, L, i, j, T, idx) {
     for (let s = 1; s <= 6; s++) {
       const t = T(L, i + di * s, j + dj * s);
       if (!isWallish(t)) break;
-      for (const [ei, ej] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const t2 = T(L, i + di * s + ei, j + dj * s + ej); if (t2 === C.FLOOR || t2 === C.STAIR) return true; }
+      for (const [ei, ej] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const ii = i + di * s + ei, jj = j + dj * s + ej, t2 = T(L, ii, jj); if (t2 === C.FLOOR || (t2 === C.STAIR && w.indoor[idx(L, ii, jj)] === 1)) return true; }
     }
   }
   return false;
@@ -270,7 +273,8 @@ function buildRooms(w, def) {
     const k = w.idx(L, i, j);
     const t = w.cell[k];
     if (w.roomAt[k] >= 0 || !(t === C.FLOOR || t === C.OUT || t === C.STAIR)) continue;
-    const id = w.rooms.length, out = t === C.OUT;
+    const isOut = (kk, tt) => tt === C.OUT || (tt === C.STAIR && !w.indoor[kk]);
+    const id = w.rooms.length, out = isOut(k, t);
     const room = { id, L, out, cells: [], name: null, en: null, x0: 1e9, z0: 1e9, x1: -1e9, z1: -1e9 };
     const stack = [[i, j]];
     w.roomAt[k] = id;
@@ -284,7 +288,7 @@ function buildRooms(w, def) {
         if (ni < 0 || nj < 0 || ni >= W || nj >= D) continue;
         const k2 = w.idx(L, ni, nj), t2 = w.cell[k2];
         if (w.roomAt[k2] >= 0) continue;
-        if ((t2 === C.OUT) !== out) continue;
+        if (isOut(k2, t2) !== out) continue;
         if (!(t2 === C.FLOOR || t2 === C.OUT || t2 === C.STAIR)) continue;
         w.roomAt[k2] = id; stack.push([ni, nj]);
       }
@@ -510,7 +514,7 @@ export function raycast(w, ox, oy, oz, dx, dy, dz, max, doorsState, opt = {}) {
         if (r && r[0] < stopAt && r[1] > 0) { hits.push({ t0: Math.max(0, r[0]), t1: r[1], kind: 'slab', mat: L === 0 ? M.CONCRETE : M.CONCRETE, k, nx: r[2], ny: r[3], nz: r[4], L }); }
       }
       // 最上階の屋根
-      if (L === w.NL - 1 && (w.cell[k] === C.FLOOR || w.indoor[k] === 2 || w.cell[k] === C.STAIR)) {
+      if (L === w.NL - 1 && (w.cell[k] === C.FLOOR || w.indoor[k] === 2 || (w.cell[k] === C.STAIR && w.indoor[k]))) {
         const r = rayBox(ox, oy, oz, dx, dy, dz, i * CS, base + CEIL, j * CS, (i + 1) * CS, base + LH, (j + 1) * CS);
         if (r && r[1] > 0) hits.push({ t0: Math.max(0, r[0]), t1: r[1], kind: 'slab', mat: M.CONCRETE, k, nx: r[2], ny: r[3], nz: r[4], L: L + 1 });
       }
@@ -699,7 +703,7 @@ export function occluded(w, ax, ay, az, bx, by, bz, doorsState = null, props = t
         if (segBox(ax, ay, az, dx, dy, dz, t, tN, i * CS, base - SLAB, j * CS, (i + 1) * CS, base, (j + 1) * CS)) return true;
       }
       if (Lv === 0 && ylo < 0 && tt !== C.VOID) return true;
-      if (Lv === w.NL - 1 && yhi > base + CEIL && (tt === C.FLOOR || w.indoor[k] === 2 || tt === C.STAIR)) {
+      if (Lv === w.NL - 1 && yhi > base + CEIL && (tt === C.FLOOR || w.indoor[k] === 2 || (tt === C.STAIR && w.indoor[k]))) {
         if (segBox(ax, ay, az, dx, dy, dz, t, tN, i * CS, base + CEIL, j * CS, (i + 1) * CS, base + LH, (j + 1) * CS)) return true;
       }
       if (WALLISH.has(tt)) {

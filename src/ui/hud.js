@@ -451,8 +451,9 @@ export function buildPlan(w, def, s = 4) {
     for (let j = 0; j < w.D; j++) for (let i = 0; i < w.W; i++) {
       const k = w.idx(L, i, j), t = w.cell[k];
       let col = null;
-      if (t === C.FLOOR || t === C.STAIR) col = '#57606a';
+      if (t === C.FLOOR || (t === C.STAIR && w.indoor[k])) col = '#57606a';
       else if (t === C.OUT) col = '#2e3a33';
+      else if (t === C.STAIR) col = '#4a5650';
       else if (t === C.DOOR) col = '#a0643a';
       else if (t === C.WINDOW || t === C.GLASSWALL) col = '#4aa3d8';
       else if (t === C.OPEN) col = '#57606a';

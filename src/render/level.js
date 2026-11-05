@@ -315,8 +315,8 @@ function faceSide(ctx, L, x, z, nx, nz) {
     const i = Math.floor((x + nx * d) / CS), j = Math.floor((z + nz * d) / CS);
     if (i < 0 || j < 0 || i >= w.W || j >= w.D) return { side: 'out', room: -1 };
     const k = w.idx(L, i, j), t = w.cell[k];
-    if (t === C.FLOOR || t === C.STAIR) return { side: 'in', room: w.roomAt[k] };
-    if (t === C.OUT) return { side: 'out', room: w.roomAt[k] };
+    if (t === C.FLOOR || (t === C.STAIR && w.indoor[k])) return { side: 'in', room: w.roomAt[k] };
+    if (t === C.OUT || t === C.STAIR) return { side: 'out', room: w.roomAt[k] };
     if (t === C.VOID) return { side: 'out', room: -1 };
   }
   return { side: 'in', room: -1 };
@@ -449,8 +449,10 @@ function slabEdges(ctx, B, L, i0, j0, i1, j1) {
     if (!has(i - 1, j)) B.quad([x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0], [-1, 0, 0], [z0 * s, y0 * s, z1 * s, y0 * s, z1 * s, y1 * s, z0 * s, y1 * s], layer, col);
     if (!has(i, j + 1)) B.quad([x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1], [0, 0, 1], [x0 * s, y0 * s, x1 * s, y0 * s, x1 * s, y1 * s, x0 * s, y1 * s], layer, col);
     if (!has(i, j - 1)) B.quad([x1, y0, z0], [x0, y0, z0], [x0, y1, z0], [x1, y1, z0], [0, 0, -1], [-x1 * s, y0 * s, -x0 * s, y0 * s, -x0 * s, y1 * s, -x1 * s, y1 * s], layer, col);
-    // 外の帯の下の面（下から見上げたとき中が見えないように）
-    if (!has(i + 1, j) || !has(i - 1, j) || !has(i, j + 1) || !has(i, j - 1)) B.quad([x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1], [0, -1, 0], [x0 * s, z0 * s, x1 * s, z0 * s, x1 * s, z1 * s, x0 * s, z1 * s], layer, mulc(col, 0.85));
+    // 外の帯の下の面（下から見上げたとき中が見えないように）。下の階が屋外（外廊下の下など）なら全面
+    const tb = w.cell[w.idx(L - 1, i, j)];
+    const openBelow = tb === C.OUT || tb === C.VOID || tb === C.LOW || tb === C.FENCE || (isWallish(tb) && w.indoor[w.idx(L - 1, i, j)] !== 2);
+    if (openBelow || !has(i + 1, j) || !has(i - 1, j) || !has(i, j + 1) || !has(i, j - 1)) B.quad([x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1], [0, -1, 0], [x0 * s, z0 * s, x1 * s, z0 * s, x1 * s, z1 * s, x0 * s, z1 * s], layer, mulc(col, 0.85));
   }
   // 最上階の屋根のふち（と低い立ち上がり）
 }

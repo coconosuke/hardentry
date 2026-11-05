@@ -14,8 +14,8 @@ export function canvas(W, D, fill = ' ') {
     // 扉: 横の壁（h）なら x から n マス、縦の壁（v）なら z から n マス
     door(x, z, dir, n = 2, ch = 'D') { for (let k = 0; k < n; k++) dir === 'h' ? c.set(x + k, z, ch) : c.set(x, z + k, ch); return c; },
     win(x, z, dir, n = 2, ch = 'G') { for (let k = 0; k < n; k++) dir === 'h' ? c.set(x + k, z, ch) : c.set(x, z + k, ch); return c; },
-    // 階段の範囲を 'S' で
-    stairs(x, z, iw, jw) { c.rect(x, z, x + iw - 1, z + jw - 1, 'S'); return c; },
+    // 階段の範囲を 'S' で（外の階段は 's'）
+    stairs(x, z, iw, jw, ch = 'S') { c.rect(x, z, x + iw - 1, z + jw - 1, ch); return c; },
     rows() { return g.map(r => r.join('')); },
   };
   return c;
