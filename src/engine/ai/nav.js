@@ -188,8 +188,11 @@ export function findPath(w, S, from, to, opt = {}) {
         if (!s || !stairFoot(s, wk === 3 ? i : ni, wk === 3 ? j : nj)) continue;
       }
       if (wk === 2 && !doorPass(w, S, k2, opt)) continue;
-      if (opt.leaf && opt.leaf.has(k2) && k2 !== to) continue;
+      // 開いた扉の板のマス: 通れるが遠回りより少し高くつく（歩くと板は体に押されて回る。move.js の pushLeaves）。leafHard なら通らない
+      const onLeaf = opt.leaf && opt.leaf.has(k2) && k2 !== to;
+      if (onLeaf && opt.leafHard) continue;
       let c = d < 4 ? 1 : 1.414;
+      if (onLeaf) c += 4;
       if (wk === 2) c += 1.5;
       if (avoid && avoid.has(k2)) c += 6;
       if (opt.costFn) c += opt.costFn(k2);

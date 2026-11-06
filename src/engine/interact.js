@@ -230,6 +230,8 @@ export function approachPoint(S, w, a, k, id, op, nav) {
   const L = levelOfY(t.y + 0.3), lim = REACH_D[op] ?? 1.0, R = Math.ceil(lim / CS) + 1;
   const ci = Math.floor(tp[0] / CS), cj = Math.floor(tp[2] / CS);
   const sx = a.x, sz = a.z, sy = a.y;
+  // 同じ部屋の点を先に（扉の向こう側の点を選ぶと、扉の口に立っている相手の体で扉が開かず、回り込めなかった）
+  const myRoom = w.roomAt ? w.roomAt[w.idx(levelOfY(a.y + 0.3), Math.floor(a.x / CS), Math.floor(a.z / CS))] : -1;
   const cand = [];
   for (let j = cj - R; j <= cj + R; j++) for (let i = ci - R; i <= ci + R; i++) {
     if (i < 0 || j < 0 || i >= w.W || j >= w.D) continue;
@@ -237,7 +239,7 @@ export function approachPoint(S, w, a, k, id, op, nav) {
     if (nav && nav.walk[kk] !== 1) continue;
     const x = (i + 0.5) * CS, z = (j + 0.5) * CS, dt = Math.hypot(x - tp[0], z - tp[2]);
     if (dt < 0.45 || dt > lim - 0.08) continue;
-    cand.push([Math.hypot(x - sx, z - sz) + dt * 0.5, x, z]);
+    cand.push([Math.hypot(x - sx, z - sz) + dt * 0.5 + (w.roomAt && w.roomAt[kk] !== myRoom ? 3 : 0), x, z]);
   }
   cand.sort((p, q) => p[0] - q[0]);
   let found = null;

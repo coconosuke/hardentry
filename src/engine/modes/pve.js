@@ -42,7 +42,7 @@ export default {
     const susSpots = rndShuffle(r, (sp.sus || []).slice());
     const civSpots = rndShuffle(r, (sp.civ || []).slice());
     const profs = MM.prof || M.prof;
-    S.m = { kind: 'pve', mission: o.mission, phase: 'play', startT: S.t, sus: [], civ: [], evidence: [], bombs: [], hostages: [], log: [], reportsDone: 0, softDone: false, execDelay: D.exec, fail: null, diff: o.diff || 'normal', entry: o.entry ?? 0, title: M.name };
+    S.m = { kind: 'pve', mission: o.mission, phase: 'play', startT: S.t, sus: [], civ: [], evidence: [], bombs: [], hostages: [], log: [], reportsDone: 0, softDone: false, execDelay: D.exec, spree: D.spree, fail: null, diff: o.diff || 'normal', entry: o.entry ?? 0, title: M.name };
     // 人質救出: 人質と見張り
     if (o.mission === 'hostage') {
       const hs = rndShuffle(r, (sp.hostage || sp.civ || []).slice());

@@ -122,7 +122,9 @@ export function leadThink(S, w, ev) {
     const nade = flashOK && hrand(p.door, S.seed, 5) < 0.35 ? 'flash' : 'none';
     // 罠の疑い: 先にミラー（見つけたら外す）
     if (!L.mirrored) L.mirrored = [];
-    if (!L.mirrored.includes(p.door) && hrand(p.door, S.seed, 7) < 0.5) { L.mirrored.push(p.door); issue(S, L, leader, { cmd: 'mirror', door: p.door }); return; }
+    // 乱射犯の作戦・近くで銃声がしたばかり: ミラーで時間を使わない（RoN でも急ぐ場面）
+    const hurry = m.mission === 'active' || team.some(a => a.ai.alarmT != null && (S.t - a.ai.alarmT) * S.dt < 10);
+    if (!hurry && !L.mirrored.includes(p.door) && hrand(p.door, S.seed, 7) < 0.5) { L.mirrored.push(p.door); issue(S, L, leader, { cmd: 'mirror', door: p.door }); return; }
     if (ds.trapSeen && ds.trap && ds.trap.armed) { issue(S, L, leader, { cmd: 'disarm', door: p.door }); return; }
     issue(S, L, leader, { cmd: 'breach', door: p.door, method, nade });
     return;

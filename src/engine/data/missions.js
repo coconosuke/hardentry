@@ -29,9 +29,9 @@ export const MISSIONS = {
 export const MISSION_LIST = ['barricade', 'hostage', 'bomb', 'raid', 'active'];
 // 難しさ: cap = 容疑者 → プレイヤーの1発の上限（RoN 70/80 を 100HP に換算）
 export const DIFFS = {
-  normal: { name: '標準', cap: 44, susMul: 1.0, exec: 12, trapMul: 1, desc: '被弾1発のダメージ上限44。容疑者の反応は遅め。' },
-  hard: { name: 'ハード', cap: 50, susMul: 1.15, exec: 9, trapMul: 1.5, desc: '上限50。容疑者が多く、反応が速い。人質の処刑が早い。' },
-  hardcore: { name: 'ハードコア', cap: 999, susMul: 1.3, exec: 7, trapMul: 2, desc: '上限なし。一発で倒れることもある。HUDは最小限。' },
+  normal: { name: '標準', cap: 44, susMul: 1.0, exec: 12, trapMul: 1, spree: [22, 30], desc: '被弾1発のダメージ上限44。容疑者の反応は遅め。' },
+  hard: { name: 'ハード', cap: 50, susMul: 1.15, exec: 9, trapMul: 1.5, spree: [15, 22], desc: '上限50。容疑者が多く、反応が速い。人質の処刑が早い。' },
+  hardcore: { name: 'ハードコア', cap: 999, susMul: 1.3, exec: 7, trapMul: 2, spree: [10, 15], desc: '上限なし。一発で倒れることもある。HUDは最小限。' },
 };
 export const EVIDENCE = {
   drugs: { name: '麻薬の包み' }, phone: { name: '携帯電話' }, docs: { name: '書類' }, cash: { name: '現金の束' }, drive: { name: 'ハードディスク' }, guns: { name: '銃のケース' },

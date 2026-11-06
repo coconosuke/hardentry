@@ -118,13 +118,18 @@ export function thinkSuspect(S, w, a, dt, ctx) {
   }
   // 乱射犯: 市民を探して撃つ
   if (ai.active && !tgt) {
+    // 狙う間をあける（RoN のように少しずつ。始まって数秒で市民が全員倒れて、急ぐ意味がなくならないように）。間は難しさで変わる
+    const sp = (S.m && S.m.spree) || [22, 30];
+    if (ai.killAt == null) ai.killAt = S.t + Math.round(sp[0] * (0.7 + 0.6 * hrand(a.id, 2, 77)) / S.dt);
+    if (ai.civT != null) { const c0 = S.byId[ai.civT]; if (!c0 || !c0.alive || c0.down) { ai.civT = null; ai.killAt = S.t + Math.round(sp[1] * (0.7 + 0.6 * hrand(a.id, S.t, 78)) / S.dt); } }
     let civ = null, cd = 1e9;
-    for (const c of ctx.civs) {
-      if (!c.alive || c.cuffed) continue;
+    if (S.t >= ai.killAt) for (const c of ctx.civs) {
+      if (!c.alive || c.cuffed || c.down) continue;
       const v = visibility(S, w, a, c, { fov: 100, maxD: 30 });
       if (v > 0.2) { const d = Math.hypot(c.x - a.x, c.z - a.z); if (d < cd) { cd = d; civ = c; } }
     }
     if (civ) {
+      ai.civT = civ.id;
       const off = aimAt(S, a, inp, civ.x, civ.y + 1.2, civ.z, sk, dt, { id: civ.id });
       ai.threatT = S.t;
       trigger(S, a, inp, sk, off < 0.12);

@@ -1,5 +1,5 @@
 // 扉: 開ける（向こうへ押す）・少し開ける・閉める・蹴る・ピッキング・ウェッジ・C2・破城槌・ブリーチングショットガン・ミラー・罠・バリケード
-import { leafEnd, CS, LH } from './world.js';
+import { leafEnd, CS, LH, pushOut } from './world.js';
 import { hrand } from './rng.js';
 
 export const OPEN_ANG = 1.62;   // 約93°
@@ -147,6 +147,19 @@ export function stepDoors(S, w, dt, ev) {
       if (blocked) {
         // 板に当たって止めている AI はよける（味方が開け閉めしている扉）
         if (blocked.ai && blocked.pid == null && !blocked.act && blocked.alive && !blocked.down) blocked.ai.yieldTo = { until: S.t + Math.round(1.0 / S.dt), ax: lf.hx, az: lf.hz, tx: ex, tz: ez };
+        // 自分では動けない人（ひざまずいた・倒れた・拘束された・怯んだ）: ゆっくり動く板が少しずつ押しのける。扉は止めずに押し続ける
+        // （扉の口でひざまずいた容疑者のせいで扉が開かず、拘束にも行けない、を防ぐ）
+        if (ds.spd[li] <= 5 && blocked.alive && (blocked.cuffed || blocked.down || blocked.comply >= 2 || blocked.stun > 0.3)) {
+          const [cx0, cz0] = leafEnd(lf, cur), vx = cx0 - lf.hx, vz = cz0 - lf.hz, ll = Math.hypot(vx, vz) || 1;
+          let nx = -vz / ll, nz = vx / ll;
+          if ((blocked.x - lf.hx) * nx + (blocked.z - lf.hz) * nz < 0) { nx = -nx; nz = -nz; }
+          const px = blocked.x + nx * 0.8 * dt, pz = blocked.z + nz * 0.8 * dt;
+          const po = pushOut(w, px, pz, blocked.y + 0.3, blocked.y + 1.2, 0.26, null, -1, _po);
+          blocked.x = px + po[0]; blocked.z = pz + po[1];
+          nxt = cur;
+          ds.ang[li] = nxt;
+          continue;
+        }
         if (ds.spd[li] > 5) { // 蹴った扉は人をはね飛ばす
           blocked.stun = Math.max(blocked.stun, 0.8);
           if (blocked.ai && blocked.ai.morale != null) blocked.ai.morale -= 0.15;
@@ -158,6 +171,7 @@ export function stepDoors(S, w, dt, ev) {
     ds.open = isOpen(ds);
   }
 }
+const _po = [0, 0, 0];
 function segDist(px, pz, ax, az, bx, bz) {
   const vx = bx - ax, vz = bz - az, L2 = vx * vx + vz * vz || 1e-9;
   let t = ((px - ax) * vx + (pz - az) * vz) / L2; t = t < 0 ? 0 : t > 1 ? 1 : t;

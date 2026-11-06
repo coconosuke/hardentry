@@ -7,7 +7,7 @@ import { curW, curWeapon, ammoCount } from '../actor.js';
 import { hrand } from '../rng.js';
 import { CS, LH, los, levelOfY } from '../world.js';
 import { sideOf, isOpen, isClosed } from '../doors.js';
-import { contextOf, doorOps, personOps, reachOK, approachPoint } from '../interact.js';
+import { contextOf, doorOps, personOps, reachOK, approachPoint, REACH_WHY, BLOCKER } from '../interact.js';
 
 const sec = (S, t0) => (S.t - t0) * S.dt;
 const TEAMOF = (a) => a.ai.squad || 'red';
@@ -67,8 +67,14 @@ export function thinkSwat(S, w, a, dt, ctx) {
     const ty = t.y + (t.st > 1.5 ? 0.3 : t.st > 0.5 ? 0.95 : 1.3);
     const off = aimAt(S, a, inp, t.x, ty, t.z, sk, dt, { id: t.id });
     inp.ads = true;
-    const clear = lineClear(S, a, t);
-    if (sec(S, ai.engT) >= ai.engD && clear) trigger(S, a, inp, sk, off < 0.08);
+    const blk = lineBlocker(S, a, t, ty);
+    if (sec(S, ai.engT) >= ai.engD && !blk) trigger(S, a, inp, sk, off < 0.08);
+    // 射線に味方・市民: 横へずれて射線を空ける（その場で待ち続けない）。向きは相手のまま
+    if (blk && !a.act) {
+      const dx = t.x - a.x, dz = t.z - a.z;
+      const side = (blk.x - a.x) * dz - (blk.z - a.z) * dx;   // 正: 相手を見て左にいる
+      inp.mx = side > 0 ? 1 : -1; inp.mz = 0; inp.sprint = false;
+    }
     if (!ai.yellT || sec(S, ai.yellT) > 1.6) { ai.yellT = S.t; pushAct(inp, { a: 'shout', line: 'swat_drop' }); }
     // 撃ち合いの最中も命令の動きは止める
     return inp;
@@ -114,8 +120,8 @@ export function isThreat(S, b) {
   if (b.ai.st === 'fight' && b.ws && b.ws.slot >= 0 && !b.low) return true;
   return false;
 }
-// 射線に味方・市民がいないか
-function lineClear(S, a, t) {
+// 射線をふさぐ味方・市民（いなければ null）。弾の高さも見る: 倒れている人・しゃがんだ人の上を越える線はふさがない
+function lineBlocker(S, a, t, ty) {
   const e = eyeOf(S, a);
   const dx = t.x - e[0], dz = t.z - e[2], L = Math.hypot(dx, dz) || 1;
   for (const b of S.actors) {
@@ -124,9 +130,13 @@ function lineClear(S, a, t) {
     const along = (px * dx + pz * dz) / L;
     if (along < 0.3 || along > L) continue;
     const perp = Math.abs(px * dz - pz * dx) / L;
-    if (perp < 0.45 && Math.abs(b.y - a.y) < 1.5) return false;
+    if (perp >= 0.4) continue;
+    const top = b.y + (b.down || b.st > 1.5 ? 0.5 : b.st > 0.5 ? 1.2 : 1.8);
+    const ly = e[1] + (ty - e[1]) * (along / L);
+    if (ly > top + 0.08 || ly < b.y) continue;
+    return b;
   }
-  return true;
+  return null;
 }
 
 function leaderOf(S, a) {
@@ -165,6 +175,9 @@ function reachAndDo(S, w, a, inp, dt, k, t, op) {
   const ai = a.ai;
   const key = k + ':' + t.id + ':' + op;
   if (!reachOK(S, w, a, k, t.id, op)) {
+    // 間に立っているのが動作をしていない AI の味方: 脇へよけてもらう（拘束の相手を4人で囲んで、互いに手が届かなかった）
+    if (REACH_WHY === 'block' && BLOCKER && BLOCKER !== a && BLOCKER.ai && BLOCKER.pid == null && !BLOCKER.act && BLOCKER.kind === 'swat' && Math.hypot(t.x - a.x, t.z - a.z) < 2.2)
+      BLOCKER.ai.yieldTo = { until: S.t + Math.round(1.1 / S.dt), ax: a.x, az: a.z, tx: t.x, tz: t.z };
     const same = ai.apt && ai.apt.key === key;
     if (!same || sec(S, ai.apt.t) > 2.0) ai.apt = { key, t: S.t, t0: same ? ai.apt.t0 : S.t, p: approachPoint(S, w, a, k, t.id, op, buildNav(w)) };
     if (!ai.apt.p || sec(S, ai.apt.t0) > 14) { ai.apt = null; return 'fail'; }
@@ -240,10 +253,12 @@ function doOrder(S, w, a, inp, dt, o, ctx, sk, people) {
       inp.low = r === 'moving';
       // 着いた・行けない・近くで詰まった（味方が立っているなど）・進まない（8秒）・時間切れ → その場で待機
       const dd = Math.hypot(tx - a.x, tz - a.z);
+      // 進んでいるか: 目的に近づいた、または道なりに歩いている（扉の板などで回り道をすると、まっすぐの距離はしばらく縮まない）
+      if (o.px == null || Math.hypot(a.x - o.px, a.z - o.pz) > 1.5) { o.px = a.x; o.pz = a.z; o.bestT = S.t; }
       if (o.bestD == null || dd < o.bestD - 0.3) { o.bestD = dd; o.bestT = S.t; }
       else if (sec(S, o.bestT) > 8) { o.cmd = 'hold'; o.hy = o.yaw; o.doneT = S.t; o.failed = true; return true; }
       if (dd < 1.8 && los(w, a.x, a.y + 1, a.z, tx, (o.y || 0) + 1, tz, S.doors)) o.nearT = (o.nearT || 0) + S.dt;
-      if (r === 'arrived' || r === 'blocked' || (o.nearT || 0) > 1.2 || sec(S, o.phT) > 25) { o.cmd = 'hold'; o.hy = o.yaw; o.doneT = S.t; }
+      if (r === 'arrived' || r === 'blocked' || (o.nearT || 0) > 1.2 || sec(S, o.phT) > 45) { o.cmd = 'hold'; o.hy = o.yaw; o.doneT = S.t; }
       return true;
     }
     case 'hold': case 'cover': {

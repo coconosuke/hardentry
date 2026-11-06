@@ -93,6 +93,13 @@ export function detect(S, a, b, vis, dt) {
 export function lastSeen(S, a, id) { const m = a.ai.seen && a.ai.seen[id]; return m && m.t > -1e8 ? m : null; }
 export function seenAgo(S, a, id) { const m = lastSeen(S, a, id); return m ? (S.t - m.t) * S.dt : 1e9; }
 
+// 道をふさぐ扉の板へ寄り、手が届いたら押し開ける／閉める
+function leafStep(S, w, a, inp, did, op) {
+  const d = w.doors[did], ai = a.ai;
+  const can = reachOK(S, w, a, 'door', did, op);
+  steerToward(a, inp, d.cx, d.cz, can || Math.hypot(d.cx - a.x, d.cz - a.z) < 0.35 ? 0 : 0.5);
+  if (can && (!ai.doorT || (S.t - ai.doorT) * S.dt > 1.2)) { ai.doorT = S.t; pushAct(inp, { a: 'op', k: 'door', id: did, op }); }
+}
 // ---- 経路に沿って歩く。戻り値: 'moving' | 'arrived' | 'blocked' | 'door'
 // a.ai.nav = { tk: 目的のマス, path: [...], i, t: 作った時刻, stuck }
 export function goTo(S, w, a, inp, tx, ty, tz, o = {}) {
@@ -120,11 +127,11 @@ export function goTo(S, w, a, inp, tx, ty, tz, o = {}) {
         if (d && d.L === levelOfY(a.y + 0.3) && Math.hypot(d.cx - a.x, d.cz - a.z) < 2.6) {
           const ds = S.doors[best];
           // 半端に開いた扉は押し開け、開ききった扉は閉める。板に手が届くまで寄る
-          const op = ds.ang.every(v => Math.abs(v) < 0.6) ? 'open' : 'close';
-          const can = reachOK(S, w, a, 'door', best, op);
-          steerToward(a, inp, d.cx, d.cz, can || Math.hypot(d.cx - a.x, d.cz - a.z) < 0.35 ? 0 : 0.5);
-          if (can && (!ai.doorT || (S.t - ai.doorT) * S.dt > 1.2)) { ai.doorT = S.t; pushAct(inp, { a: 'op', k: 'door', id: best, op }); }
-          ai.nav = { tk, path: [], i: 0, t: S.t, bad: false, fail: true, soft: true };
+          // ただし道がその扉の口を通るなら、閉めずに向こうへ押し開ける（両開きの扉の板が斜めに残ったとき、閉める→体に当たって止まる→歩いて押し戻す、を繰り返していた）
+          const through = p2.some(k => w.doorAt[k] === best);
+          const op = through || ds.ang.every(v => Math.abs(v) < 0.6) ? 'open' : 'close';
+          ai.nav = { tk, path: [], i: 0, t: S.t, bad: false, fail: true, soft: true, door: best, op };
+          leafStep(S, w, a, inp, best, op);
           return 'door';
         }
       }
@@ -136,7 +143,12 @@ export function goTo(S, w, a, inp, tx, ty, tz, o = {}) {
       nv = ai.nav = { tk, path: sp, i: 0, t: S.t, bad: false, stuck: 0, lx: a.x, lz: a.z };
     }
   }
-  if (nv.fail) { if ((S.t - nv.t) * S.dt > (nv.soft ? 0.6 : 1.5)) ai.nav = null; return nv.soft ? 'door' : 'blocked'; }
+  if (nv.fail) {
+    // 板をどける途中: 道を作り直すまでの間も、板へ寄り続ける（作り直す1こまだけ動いて、ほとんど進まなかった）
+    if (nv.soft && nv.door != null) leafStep(S, w, a, inp, nv.door, nv.op);
+    if ((S.t - nv.t) * S.dt > (nv.soft ? 0.6 : 1.5)) ai.nav = null;
+    return nv.soft ? 'door' : 'blocked';
+  }
   // 次の点
   while (nv.i < nv.path.length) {
     const c = cellCenter(w, nv.path[nv.i]);
@@ -192,7 +204,8 @@ export function goTo(S, w, a, inp, tx, ty, tz, o = {}) {
     nv.stuck = 0;
     // 開いた扉の板の陰に入って動けない: 板に手が届けば閉める（突入する扉 o.keep は除く）
     const lf0 = o.noDoors && o.keep == null ? -1 : nearLeaf(w, S, a, 0.9, o.keep);
-    if (lf0 >= 0 && reachOK(S, w, a, 'door', lf0, 'close')) { if (!ai.doorT || (S.t - ai.doorT) * S.dt > 1.2) { ai.doorT = S.t; pushAct(inp, { a: 'op', k: 'door', id: lf0, op: 'close' }); } nv.bad = true; return 'door'; }
+    const op0 = lf0 >= 0 ? leafOpFor(w, nv, lf0, a) : 'close';
+    if (lf0 >= 0 && op0 && reachOK(S, w, a, 'door', lf0, op0)) { if (!ai.doorT || (S.t - ai.doorT) * S.dt > 1.2) { ai.doorT = S.t; pushAct(inp, { a: 'op', k: 'door', id: lf0, op: op0 }); } nv.bad = true; return 'door'; }
     nv.bad = true; ai.unstick = { until: S.t + Math.round(0.6 / S.dt), dir: ((a.id + S.t) & 1) ? 1 : -1 };
   }
   // 進まない（行ったり来たりして、いまの経路の点に近づけない）: 開いた扉の板にはばまれていれば閉める
@@ -202,7 +215,8 @@ export function goTo(S, w, a, inp, tx, ty, tz, o = {}) {
   if ((S.t - nv.bestT) * S.dt > 2.5) {
     nv.bestT = S.t; nv.bestD = dNode;
     const lf = o.noDoors ? -1 : nearLeaf(w, S, a, 1.0);
-    if (lf >= 0 && reachOK(S, w, a, 'door', lf, 'close')) pushAct(inp, { a: 'op', k: 'door', id: lf, op: 'close' });
+    const op1 = lf >= 0 ? leafOpFor(w, nv, lf, a) : 'close';
+    if (lf >= 0 && op1 && reachOK(S, w, a, 'door', lf, op1)) pushAct(inp, { a: 'op', k: 'door', id: lf, op: op1 });
     else { nv.bad = true; ai.unstick = { until: S.t + Math.round(0.8 / S.dt), dir: ((a.id + S.t) & 1) ? 1 : -1 }; }
   }
   const spd = o.speed ?? 1;
@@ -214,6 +228,22 @@ export function goTo(S, w, a, inp, tx, ty, tz, o = {}) {
   }
   steerToward(a, inp, px, pz, spd, o.faceMove !== false && o.look == null);
   return 'moving';
+}
+// 詰まったときの板の扱い: これから通る道がその扉の口を通るなら扉には触らない（null。横へずれて進み直す）。通らないなら閉める
+// （扉の口で閉めて自分たちが通れなくなる、を繰り返していた。押し開ける案は、確保していない部屋を突入の手順なしで開けてしまい、AIだけの作戦90回で完了 52 と、触らない 59・閉める 58 より悪かった）
+function leafOpFor(w, nv, did, a) {
+  const thr = null;
+  const d = w.doors[did], path = nv && nv.path ? nv.path : [], i0 = nv && nv.i ? nv.i : 0;
+  let px = a.x, pz = a.z;
+  for (let i = i0; i < path.length && i < i0 + 16; i++) {
+    if (w.doorAt[path[i]] === did) return thr;
+    const c = cellCenter(w, path[i]);
+    // 道の線（なめらかにした道は扉のマスを飛ばすことがある）が扉の面を、扉の幅の中で横切るか
+    const s0 = (px - d.cx) * d.nx + (pz - d.cz) * d.nz, s1 = (c[0] - d.cx) * d.nx + (c[2] - d.cz) * d.nz;
+    if (s0 * s1 < 0) { const t = s0 / (s0 - s1), along = d.axis === 0 ? px + (c[0] - px) * t : pz + (c[2] - pz) * t; if (along > d.a0 - 0.1 && along < d.a1 + 0.1) return thr; }
+    px = c[0]; pz = c[2];
+  }
+  return 'close';
 }
 // いちばん近い開いた扉の板（lim 以内）
 function nearLeaf(w, S, a, lim, skip = -1) {
