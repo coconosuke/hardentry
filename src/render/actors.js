@@ -23,15 +23,16 @@ function vaoSkin(gl, v, i) {
 export class ActorView {
   constructor(r) {
     this.r = r; this.gl = r.gl;
-    this.people = new Map(); this.guns = new Map(); this.looks = new Map();
+    // 人と銃の形は描き手（renderer）ごとに共有する（試合ごとに作り直して GPU に残し続けない）
+    this.people = r._people || (r._people = new Map()); this.guns = r._guns || (r._guns = new Map()); this.looks = new Map();
     this.bones = new Float32Array(NBONE * 12); this.mats = new Float32Array(NBONE * 16);
     this.pi = {}; this.M = new Float32Array(16);
     this.list = []; // このこまに描く人
     this.items = [];
     this.hidden = new Set(); // 一人称で自分は描かない
-    r.hooks.opaque.push((rr, f) => this.drawOpaque(f));
-    r.hooks.shadow.push((rr, pl) => this.drawShadow(pl));
+    this._off = [r.hook('opaque', (rr, f) => this.drawOpaque(f)), r.hook('shadow', (rr, pl) => this.drawShadow(pl))];
   }
+  dispose() { for (const f of this._off || []) f(); this._off = []; this.list.length = 0; this.items.length = 0; }
   look(a) {
     let L = this.looks.get(a.id);
     if (L && L.v === a._lookV) return L;

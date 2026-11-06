@@ -34,8 +34,9 @@ export class ViewModel {
     this.sleeve = hex('#232c3b'); this.glove = hex('#1c1d20');
     this.nadeMeshes = {};
     this.out = { muzzle: [0, 0, 0], fwd: [0, 0, 1], light: null, eject: [0, 0, 0], right: [1, 0, 0], up: [0, 1, 0] };
-    r.hooks.viewmodel.push((rr, f) => this.draw(f));
+    this._off = [r.hook('viewmodel', (rr, f) => this.draw(f))];
   }
+  dispose() { for (const f of this._off || []) f(); this._off = []; }
   setColors(sleeve, glove) { this.sleeve = sleeve; this.glove = glove; }
   nadeMesh(id) {
     if (this.nadeMeshes[id]) return this.nadeMeshes[id];

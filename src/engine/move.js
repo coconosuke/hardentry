@@ -88,7 +88,8 @@ export function moveActor(S, w, a, inp, dt, ev) {
   let mx = inp.mx || 0, mz = inp.mz || 0;
   let mag = Math.hypot(mx, mz); if (mag > 1) { mx /= mag; mz /= mag; mag = 1; }
   // ダッシュ（PvPだけ。立って前へ）
-  a.sprint = !!(S.pvp && inp.sprint && a.st < 0.2 && mz > 0.55 && !a.adsOn && !a.down && !a.act);
+  // ダッシュ: 作戦・対戦とも（スティックを上へ押し込む・Shift）。盾を構えている・運んでいる・拘束されているときは走れない
+  a.sprint = !!(inp.sprint && a.st < 0.2 && mz > 0.55 && !a.adsOn && !a.down && !a.act && !a.cuffed && !a.comply && !(a.ws && a.ws.slot === 1 && a.inv && a.inv.long === 'shield'));
   const vmax = maxSpeed(S, a, inp);
   // 後ろ・横は遅い
   let dirMul = 1;

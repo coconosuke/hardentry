@@ -15,6 +15,7 @@ export function makeWeapon(o) {
   const w = { id: o.id, att: { sight: okA('sight', o.sight, 'iron'), muzzle: W.integral ? W.integral : okA('muzzle', o.muzzle, 'none'), grip: okA('grip', o.grip, 'none'), light: o.light !== false }, am, mode: 0, lightOn: false };
   if (W.tube || W.breakAction) { w.mag = W.mag; w.ch = W.chamber ? 1 : 0; w.res = W.spare; w.mags = null; }
   else { w.mag = W.mag; w.ch = W.chamber ? 1 : 0; w.mags = []; for (let i = 0; i < (o.spare ?? W.spare); i++) w.mags.push(W.mag); w.res = 0; }
+  w.spare0 = w.mags ? w.mags.length : w.res;
   return w;
 }
 

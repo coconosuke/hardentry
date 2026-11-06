@@ -7,6 +7,9 @@ import { WEAPONS } from '../engine/data/weapons.js';
 import { GEAR, LONG } from '../engine/data/equipment.js';
 import { ammoCount } from '../engine/actor.js';
 
+// 移動スティックの既定の場所（左下から。左利きは左右が入れ替わる）
+const STICK_DEF = { name: '移動スティック', ax: 'l', ay: 'b', x: 118, y: 96 };
+
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 const svg = (id) => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[id] || ''}</svg>`;
 const TEAMCOL = { gold: '#e8b830', red: '#e5483f', blue: '#3d8cf0' };
@@ -52,7 +55,9 @@ export class Hud {
     this.mirror = el('div', 'hud-mirror'); r.appendChild(this.mirror);
     // のぞいている間（ミラー・オプティワンド）
     this.peekEl = el('div', 'hud-peek', '<div class="pk-hint">スワイプで見回す・動くと戻る</div><div class="pk-x" data-btn="peekx" role="button">戻る</div>'); r.appendChild(this.peekEl);
-    this.stickEl = el('div', 'hud-stick', '<div class="knob"></div><div class="spr">ダッシュ</div>'); r.appendChild(this.stickEl);
+    this.stickEl = el('div', 'hud-stick', '<div class="knob"></div><div class="spr">ダッシュ</div>'); this.stickEl.dataset.edit = 'stick'; r.appendChild(this.stickEl);
+    // スコア表（対戦）: ボタンかタブで開く
+    this.boardEl = el('div', 'hud-board'); this.boardEl.dataset.btn = 'board'; r.appendChild(this.boardEl);
     this.radialEl = el('div', 'hud-radial'); r.appendChild(this.radialEl);
     // ボタン
     for (const [id, b] of Object.entries(BTN)) {
@@ -67,6 +72,7 @@ export class Hud {
     this.editBar = el('div', 'hud-editbar', `<div class="nm">項目を選択</div>
       <label>大きさ <input type="range" min="0.6" max="1.8" step="0.05" data-k="s"></label>
       <label>濃さ <input type="range" min="0.15" max="1" step="0.05" data-k="o"></label>
+      <label class="sprl" hidden>ダッシュの位置 <input type="range" min="1" max="2.4" step="0.05" data-k="spr"></label>
       <button data-a="hide">隠す</button><button data-a="reset1">元に戻す</button><button data-a="resetAll">すべて初期化</button><button data-a="done" class="pri">保存</button>`);
     r.appendChild(this.editBar);
   }
@@ -93,15 +99,18 @@ export class Hud {
       const e = this.btn[id], ov = H[id] || {};
       let hide = !!ov.hide;
       if (def.pve && !this.mode.pve) hide = true;
+      if (def.pvpOnly && !this.mode.pvp) hide = true;
       if (def.pvp && !this.mode.drone) hide = true;
-      if (def.opt === 'leftFire' && this.S.leftFire === false && !H[id]) hide = true;
+      // 設定で消したボタン（左の射撃）: 配置を動かしたことがあっても消す（動かすと設定が効かなくなっていた）
+      const offBySetting = def.opt === 'leftFire' && this.S.leftFire === false;
+      if (offBySetting) hide = true;
       if (this.editing) hide = def.pve && !this.mode.pve ? true : false;
       e.classList.toggle('hidden', hide && !this.editing);
       const [x, y] = this.posOf(def, ov);
       const s = (ov.s || 1) * def.s * k;
       const wdt = def.w ? def.w * (ov.s || 1) * k : s;
       e.style.left = (x - wdt / 2) + 'px'; e.style.top = (y - s / 2) + 'px'; e.style.width = wdt + 'px'; e.style.height = s + 'px';
-      e.style.opacity = this.editing && ov.hide ? 0.25 : (ov.o ?? op);
+      e.style.opacity = this.editing && (ov.hide || offBySetting) ? 0.25 : (ov.o ?? op);
       e.style.setProperty('--bs', s + 'px');
     }
     for (const [id, def] of Object.entries(INFO)) {
@@ -113,42 +122,76 @@ export class Hud {
       e.classList.toggle('hidden', (!!ov.hide && !this.editing) || (id === 'squad' && !this.mode.pve) || (id === 'minimap' && this.S.minimap === false) || (id === 'subs' && this.S.subtitles === false && !this.editing));
       if (this.editing) e.style.opacity = ov.hide ? 0.25 : 1; else e.style.opacity = '';
     }
-    // スティックの家（固定のとき）
-    const sk = this.S.handed === 'left' ? 'r' : 'l';
-    const [sx, sy] = [sk === 'l' ? this.stage.safe.l + 118 * k : this.stage.w - this.stage.safe.r - 118 * k, this.stage.h - Math.max(this.stage.safe.b, 4) - 96 * k];
-    this.stickHome = { x: sx, y: sy, s: k };
+    // 移動スティック: 位置（固定のとき・待っているときの場所）・大きさ・濃さ・ダッシュの判定位置は HUD の設定（H.stick）
+    const so = H.stick || {};
+    const [sx, sy] = this.posOf(STICK_DEF, so);
+    this.stickHome = { x: sx, y: sy, s: k * (so.s || 1), o: so.o ?? 0.55, spr: so.spr ?? 1.25 };
+    this.stickEl.classList.toggle('sel', this.editing && this.sel === 'stick');
     if (!this.stickActive) this._stickIdle();
+  }
+  // ダッシュの印: スティックの中心から spr×半径 だけ上（指がそこより上へ行くとダッシュ）
+  _sprMark(R) {
+    const h = this.stickHome, m = this.stickEl.lastChild;
+    m.style.top = (R - (h ? h.spr : 1.25) * R) + 'px';
   }
   _stickIdle() {
     const h = this.stickHome; if (!h) return;
-    const k = this.k(), R = 60 * k;
+    const R = 60 * h.s;
     const e = this.stickEl;
     e.style.left = (h.x - R) + 'px'; e.style.top = (h.y - R) + 'px'; e.style.width = e.style.height = (R * 2) + 'px';
     e.classList.remove('act');
-    e.firstChild.style.transform = 'translate(-50%,-50%)';
+    e.classList.toggle('show-spr', !!this.editing || !!this.sprLocked);
+    e.classList.toggle('spr-on', !!this.sprLocked);
+    e.style.opacity = this.editing ? Math.max(0.45, h.o) : h.o;
+    this._sprMark(R);
+    e.firstChild.style.transform = this.sprLocked ? `translate(-50%, calc(-50% - ${R * 0.8}px))` : 'translate(-50%,-50%)';
   }
-  stick(st, dx, dy, spr) {
-    if (!st) { this.stickActive = false; this._stickIdle(); this.stickEl.classList.remove('spr-on'); return; }
+  stick(st, dx, dy, spr, lock) {
+    this.sprLocked = !!lock;
+    if (!st) { this.stickActive = false; this._stickIdle(); if (!lock) this.stickEl.classList.remove('spr-on'); return; }
     this.stickActive = true;
-    const k = this.k(), R = 60 * k;
+    const h = this.stickHome || { s: this.k(), o: 0.55, spr: 1.25 };
+    const R = 60 * h.s;
     const e = this.stickEl;
-    e.classList.add('act');
+    e.classList.add('act'); e.classList.add('show-spr');
+    e.style.opacity = Math.min(1, h.o + 0.45);
     e.style.left = (st.ox - R) + 'px'; e.style.top = (st.oy - R) + 'px'; e.style.width = e.style.height = (R * 2) + 'px';
     e.firstChild.style.transform = `translate(calc(-50% + ${(dx || 0) * R}px), calc(-50% + ${(dy || 0) * R}px))`;
+    this._sprMark(R);
     e.classList.toggle('spr-on', !!spr);
+  }
+
+  // ---- スコア表: d = { title, teams: [{ name, score, cls, rows: [{ name, k, d, a, me, bot, out }] }] } か null
+  board(d) {
+    const e = this.boardEl;
+    if (!d) { if (this._boardKey) { this._boardKey = ''; e.classList.remove('on'); e.innerHTML = ''; } return; }
+    const key = JSON.stringify(d);
+    if (key === this._boardKey) return;
+    this._boardKey = key;
+    const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    let h = `<div class="bd"><div class="bh">${esc(d.title)}<small>タップで閉じる</small></div><div class="bt">`;
+    for (const t of d.teams) {
+      h += `<div class="tm ${t.cls}"><div class="tn"><b>${esc(t.name)}</b><em>${t.score}</em></div><table><tr><th class="nm">名前</th><th>キル</th><th>デス</th><th>アシスト</th><th>K/D</th></tr>`;
+      for (const r of t.rows) h += `<tr class="${r.me ? 'me' : ''}${r.out ? ' out' : ''}"><td class="nm">${esc(r.name)}${r.bot ? '<i>BOT</i>' : ''}</td><td>${r.k}</td><td>${r.d}</td><td>${r.a}</td><td>${r.d ? (r.k / r.d).toFixed(2) : r.k.toFixed(2)}</td></tr>`;
+      h += '</table></div>';
+    }
+    h += '</div></div>';
+    e.innerHTML = h;
+    e.classList.add('on');
   }
 
   // ---- 円形メニュー
   radial(r) {
     const e = this.radialEl;
     if (!r) { e.classList.remove('on'); e.innerHTML = ''; return; }
-    const k = this.k(), R = 92 * k;
+    const rs = this.S.radialScale || 1, k = this.k(), R = 92 * k * rs;
+    r.scale = k * rs;
     e.classList.add('on');
     let cx = r.x, cy = r.y;
     cx = Math.max(R + 40, Math.min(this.stage.w - R - 40, cx)); cy = Math.max(R + 30, Math.min(this.stage.h - R - 30, cy));
     if (r.x !== cx || r.y !== cy) { r.x = cx; r.y = cy; }
     const n = r.items.length;
-    let h = `<div class="rc" style="left:${cx}px;top:${cy}px;width:${R * 2}px;height:${R * 2}px"><div class="mid">${r.title || ''}<small>${r.tapMode ? '選んでタップ／外で取り消し' : '指をずらして離す'}</small></div>`;
+    let h = `<div class="rc" style="left:${cx}px;top:${cy}px;width:${R * 2}px;height:${R * 2}px;--rs:${(k * rs).toFixed(3)}"><div class="mid">${r.title || ''}<small>${r.tapMode ? '選んでタップ／外で取り消し' : '指をずらして離す'}</small></div>`;
     r.items.forEach((it, i) => {
       const a = (i / n) * Math.PI * 2;
       const x = Math.sin(a) * R * 0.86, y = -Math.cos(a) * R * 0.86;
@@ -226,9 +269,10 @@ export class Hud {
         } else if (wi && W) {
           const [m, r] = ammoCount(wi);
           am.querySelector('.mode').textContent = (W.modes[wi.mode] === 'auto' ? '連射' : W.modes[wi.mode] === 'burst' ? '3点' : '単発') + (p.ws.st === 'reload' ? '・リロード中' : p.ws.st === 'shell' ? '・装填中' : '');
-          am.querySelector('.cnt').innerHTML = `<b class="${m === 0 ? 'empty' : m <= W.mag * 0.25 ? 'lowa' : ''}">${m}</b><span>/${wi.mags ? wi.mags.length + '本' : r}</span>`;
+          // 対戦は予備が減らない（∞）
+          am.querySelector('.cnt').innerHTML = `<b class="${m === 0 ? 'empty' : m <= W.mag * 0.25 ? 'lowa' : ''}">${m}</b><span>/${v.pvp ? '∞' : wi.mags ? wi.mags.length + '本' : r}</span>`;
           // 弾倉ごとの残り（RoN の弾倉の確認のように）
-          am.querySelector('.mags').innerHTML = wi.mags ? wi.mags.slice().sort((a, b) => b - a).map(n => `<i style="--f:${n / W.mag}"></i>`).join('') : '';
+          am.querySelector('.mags').innerHTML = wi.mags && !v.pvp ? wi.mags.slice().sort((a, b) => b - a).map(n => `<i style="--f:${n / W.mag}"></i>`).join('') : '';
         } else { am.querySelector('.mode').textContent = ''; am.querySelector('.cnt').innerHTML = '<b>-</b>'; am.querySelector('.mags').innerHTML = ''; }
       }
       // 武器の切り替え
@@ -366,27 +410,31 @@ export class Hud {
     this.layout();
     const H = settings.hud || (settings.hud = {});
     const bar = this.editBar;
+    const defOf = (id) => id === 'stick' ? STICK_DEF : id.startsWith('i_') ? INFO[id.slice(2)] : BTN[id];
     const pick = (id) => {
       this.sel = id;
       for (const e of this.root.querySelectorAll('.sel')) e.classList.remove('sel');
-      const e = id.startsWith('i_') ? this.info[id.slice(2)] : this.btn[id];
+      const e = id === 'stick' ? this.stickEl : id.startsWith('i_') ? this.info[id.slice(2)] : this.btn[id];
       if (e) e.classList.add('sel');
-      const def = id.startsWith('i_') ? INFO[id.slice(2)] : BTN[id];
+      const def = defOf(id);
       bar.querySelector('.nm').textContent = def ? def.name : id;
       const ov = H[id] || {};
       bar.querySelector('[data-k="s"]').value = ov.s || 1;
-      bar.querySelector('[data-k="o"]').value = ov.o ?? (settings.hudOpacity ?? 0.85);
+      bar.querySelector('[data-k="o"]').value = ov.o ?? (id === 'stick' ? 0.55 : (settings.hudOpacity ?? 0.85));
+      bar.querySelector('[data-k="spr"]').value = ov.spr ?? 1.25;
+      bar.querySelector('.sprl').hidden = id !== 'stick';
+      bar.querySelector('[data-a="hide"]').hidden = id === 'stick';
       bar.querySelector('[data-a="hide"]').textContent = ov.hide ? '表示' : '隠す';
     };
     let drag = null;
     this._editDown = (e) => {
       let t = e.target, id = null;
-      while (t && t !== this.root) { if (t.dataset && t.dataset.info) { id = 'i_' + t.dataset.info; break; } if (t.dataset && t.dataset.btn) { id = t.dataset.btn; break; } if (t === bar) return; t = t.parentNode; }
+      while (t && t !== this.root) { if (t.dataset && t.dataset.edit) { id = t.dataset.edit; break; } if (t.dataset && t.dataset.info) { id = 'i_' + t.dataset.info; break; } if (t.dataset && t.dataset.btn) { id = t.dataset.btn; break; } if (t === bar) return; t = t.parentNode; }
       if (!id) return;
       e.preventDefault(); e.stopPropagation();
       pick(id);
       const [sx, sy] = this.stage.toStage(e.clientX, e.clientY);
-      const def = id.startsWith('i_') ? INFO[id.slice(2)] : BTN[id];
+      const def = defOf(id);
       const ov = H[id] || {};
       drag = { id, sx, sy, x0: ov.x ?? def.x, y0: ov.y ?? def.y, pid: e.pointerId, def };
       try { this.root.setPointerCapture(e.pointerId); } catch (er) { /* なし */ }

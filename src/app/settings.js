@@ -10,7 +10,7 @@ export const DEFAULTS = {
   gyro: 'off', gyroSens: 1.0, gyroInvX: false, gyroInvY: false,
   // 操作
   adsMode: 'tap', // tap（押すたび切替）| hold（押している間）| mixed（短く押すと切替・長く押すと押している間）
-  leanMode: 'toggle', stickMode: 'float', stickSprint: true, handed: 'right', leftFire: true, confirm: 'auto',
+  leanMode: 'toggle', stickMode: 'float', stickSprint: true, handed: 'right', leftFire: true, stickLock: false, radialScale: 1, confirm: 'auto',
   // HUD
   hud: {}, hudOpacity: 0.85, hudScale: 1.0, crosshair: 'cross', crossColor: '#ffffff', minimap: true, subtitles: true, subBg: 0.42, hitMarker: true,
   // 画面

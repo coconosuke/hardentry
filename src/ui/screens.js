@@ -438,7 +438,8 @@ export class Screens {
       row('ADS', '照準ボタン', 'adsMode'); ch('adsMode', [['tap', '切替'], ['hold', '長押し'], ['mixed', '両方']]);
       row('リーン', '', 'leanMode'); ch('leanMode', [['toggle', '切替'], ['hold', '長押し']]);
       row('移動スティック', '', 'stickMode'); ch('stickMode', [['float', '可変'], ['fixed', '固定']]);
-      row('スティックでダッシュ', '対戦のみ。上に倒しきる', 'stickSprint'); ch('stickSprint', [[true, 'オン'], [false, 'オフ']]);
+      row('スティックでダッシュ', '上へ押し込む（作戦・対戦とも）', 'stickSprint'); ch('stickSprint', [[true, 'オン'], [false, 'オフ']]);
+      row('ダッシュの固定', 'ダッシュの所で指を離すと走り続ける', 'stickLock'); ch('stickLock', [[false, 'オフ'], [true, 'オン']]);
       row('射撃ボタン（左）', '', 'leftFire'); ch('leftFire', [[true, '表示'], [false, '非表示']]);
       row('射撃ボタンで視点移動', '押したままドラッグ', 'fireLook'); ch('fireLook', [[true, 'オン'], [false, 'オフ']]);
       row('利き手', 'ボタンの左右を反転', 'handed'); ch('handed', [['right', '右'], ['left', '左']]);
@@ -460,6 +461,12 @@ export class Screens {
       R.push('<div class="row"><div class="rl"><b>HUDの配置</b><small>ボタン・字幕などの位置・大きさ・濃さ</small></div><div class="rc"><button class="btn small" data-a="editHud">配置を編集</button></div></div>');
       row('全体の濃さ', '', 'hudOpacity'); sl('hudOpacity', 0.2, 1, 0.05, pct);
       row('全体の大きさ', '', 'hudScale'); sl('hudScale', 0.75, 1.3, 0.05, pct);
+      // 移動スティック（位置は「配置を編集」でスティックをドラッグ）
+      const stk = () => { const H = S.hud || (S.hud = {}); return H.stick || (H.stick = {}); };
+      row('移動スティックの大きさ', '位置は「配置を編集」でドラッグ', 'stickS'); binds.push(() => slider(this.stage, body.querySelector('[data-k="stickS"]'), { min: 0.6, max: 1.8, step: 0.05, value: (S.hud && S.hud.stick && S.hud.stick.s) || 1, fmt: pct, label: '移動スティックの大きさ', onInput: (v) => { stk().s = v; save(); } }));
+      row('移動スティックの濃さ', '', 'stickO'); binds.push(() => slider(this.stage, body.querySelector('[data-k="stickO"]'), { min: 0.15, max: 1, step: 0.05, value: (S.hud && S.hud.stick && S.hud.stick.o) ?? 0.55, fmt: pct, label: '移動スティックの濃さ', onInput: (v) => { stk().o = v; save(); } }));
+      row('ダッシュの判定位置', 'スティックの中心からの距離（半径の何倍か）', 'stickSpr'); binds.push(() => slider(this.stage, body.querySelector('[data-k="stickSpr"]'), { min: 1, max: 2.4, step: 0.05, value: (S.hud && S.hud.stick && S.hud.stick.spr) ?? 1.25, fmt: (v) => v.toFixed(2) + '倍', label: 'ダッシュの判定位置', onInput: (v) => { stk().spr = v; save(); } }));
+      row('長押しメニューの大きさ', '命令などの円形メニュー', 'radialScale'); sl('radialScale', 0.8, 1.6, 0.05, pct);
       row('照準', '腰だめ', 'crosshair'); ch('crosshair', [['cross', '十字'], ['dot', '点'], ['none', 'なし']]);
       row('照準の色', '', 'crossColor'); binds.push(() => chips(body.querySelector('[data-k="crossColor"]'), [['#ffffff', '白'], ['#7dff7a', '緑'], ['#ffe14a', '黄'], ['#4ae8ff', '水色'], ['#ff5ad2', '桃']], S.crossColor, (v) => { S.crossColor = v; save(); }, { swatch: true }));
       row('ミニマップ', 'タップで地図', 'minimap'); ch('minimap', [[true, '表示'], [false, '非表示']]);

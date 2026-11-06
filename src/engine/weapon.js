@@ -99,11 +99,13 @@ function finishState(S, a, ev) {
         if (!wi.ch && W.chamber) { if (wi.mag > 0) { wi.mag--; wi.ch = 1; } }
       }
     }
+    // 対戦: 予備の弾倉は減らない（TDM で弾が尽きると死ぬしかなくなるため。作戦は RoN のとおり減る）
+    if (S.pvp) { if (wi.mags) wi.mags = new Array(Math.max(1, wi.spare0 || W.spare || 1)).fill(W.mag); else wi.res = Math.max(wi.res, wi.spare0 || W.spare || 0); }
     ws.st = 'ready'; ws.t = 0; ws.rk = null;
     if (ev) ev.push({ e: 'reloaded', id: a.id });
   } else if (st === 'shell' && wi && W) {
     // 1発込めた
-    if (wi.res > 0 && wi.mag < W.mag) { wi.mag++; wi.res--; if (ev) ev.push({ e: 'shell', id: a.id }); }
+    if (wi.res > 0 && wi.mag < W.mag) { wi.mag++; wi.res--; if (S.pvp) wi.res = Math.max(wi.res, wi.spare0 || W.spare || 0); if (ev) ev.push({ e: 'shell', id: a.id }); }
     if (!wi.ch && wi.mag > 0 && W.chamber) { wi.mag--; wi.ch = 1; ws.st = 'pump'; ws.t = (W.pump || 0.35); return; }
     if (wi.mag < W.mag && wi.res > 0 && !ws.stopShell) { ws.t = W.rl.shell; }
     else { ws.st = 'ready'; ws.t = 0; ws.stopShell = false; }

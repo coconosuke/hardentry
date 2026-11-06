@@ -5,6 +5,7 @@ import { makeDoorStates } from '../engine/doors.js';
 import { WEAPONS } from '../engine/data/weapons.js';
 import { ACT_POSE } from '../engine/data/acts.js';
 
+const KSENT = new WeakMap(); // 状態ごとの「最後に送った成績」
 const r2 = (v) => Math.round(v * 100);
 const r3 = (v) => Math.round(v * 1000);
 const isNum = (v) => typeof v === 'number' && isFinite(v);
@@ -58,6 +59,14 @@ export function packSnap(S, w, events, mePids, withBlocks) {
     P[pid] = meBlock(a);
   }
   const out = { T: Math.round(S.t * S.dt * 1000) / 1000, A, D, I, N, C, M, P, E: events };
+  // 成績（スコア表）: 変わったとき、または約2秒ごと（途中から入った人にも届く）
+  if (S.pvp) {
+    const K = S.actors.filter(a => !a.isDrone).map(a => [a.id, a.stats.k, a.stats.d, a.stats.a]);
+    const key = K.join(';'), st = KSENT.get(S) || { key: '', n: 0 };
+    st.n++;
+    if (key !== st.key || st.n >= 30) { st.key = key; st.n = 0; out.K = K; }
+    KSENT.set(S, st);
+  }
   // 壊れた壁（ときどき全部）
   if (withBlocks) out.B = Object.keys(S.bdiff).map(k => { const b = +k * 4; return [+k, w.blocks[b], w.blocks[b + 1], w.blocks[b + 2], w.blocks[b + 3]]; });
   out.R = Object.keys(S.reinf || {}).map(Number);
@@ -192,6 +201,8 @@ export class Mirror {
       for (const [k, b0, b1, b2, b3] of last.B) { const b = k * 4, w = this.w; if (w.blocks[b] !== b0 || w.blocks[b + 1] !== b1 || w.blocks[b + 2] !== b2 || w.blocks[b + 3] !== b3) { w.blocks[b] = b0; w.blocks[b + 1] = b1; w.blocks[b + 2] = b2; w.blocks[b + 3] = b3; S.bdiff[k] = 1; this.changed.push(k); } }
     }
     if (last.R) { const R = {}; for (const k of last.R) { R[k] = 1; if (!S.reinf[k]) this.changed.push(k); } S.reinf = R; }
+    // 成績（スコア表）
+    for (let i = B.length - 1; i >= 0; i--) { const K = B[i].g.K; if (K) { if (K !== this._lastK) { this._lastK = K; for (const [id, k, d, as] of K) { const a = S.byId[id]; if (a && a.stats) { a.stats.k = k; a.stats.d = d; a.stats.a = as; } } } break; } }
     const M = last.M || {}, m = S.m;
     if (m.kind === 'pve') { m.phase = M.ph; m.softDone = !!M.soft; m.bombT = M.bt; for (const b of m.bombs) { b.done = (M.bd || []).includes(b.id); b.found = (M.bf || []).includes(b.id); } m.result = M.res; m.why = M.why; if (M.score) m.score = M.score; }
     else if (m.kind && m.kind !== 'train') {

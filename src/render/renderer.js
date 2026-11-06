@@ -98,6 +98,9 @@ export class Renderer {
     this.hooks = { opaque: [], shadow: [], transparent: [], viewmodel: [] };
     this._init();
   }
+  // 描き足す処理を登録し、外す関数を返す。場面（タイトル・試合）が変わったら外す
+  // （外さないと、前の場面の人・粒子・手元の銃が描かれ続ける。タイトルの隊員が試合の中に、当たり判定のない動かない人として残っていた）
+  hook(kind, fn) { this.hooks[kind].push(fn); return () => { const L = this.hooks[kind], i = L.indexOf(fn); if (i >= 0) L.splice(i, 1); }; }
   _init() {
     const gl = this.gl;
     const L = COMMON + LIGHT;

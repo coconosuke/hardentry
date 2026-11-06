@@ -57,6 +57,7 @@ export class Input {
   reset() {
     this.mx = this.mz = this.lookDX = this.lookDY = 0;
     this.ptr.clear(); this.stick = null; this.hold.clear(); this.edges.length = 0; this.keys.clear();
+    this.sprintArm = false; this.sprintLock = false;
     this.mouseBtn = { l: false, r: false };
     this.radial = null; if (this.onRadial) this.onRadial(null);
     if (this.onStick) this.onStick(null);
@@ -80,6 +81,7 @@ export class Input {
         // 時刻は出来事の起きた時（重いこまで処理が遅れても、短く押したのを長押しにしない）
         const p = { kind: 'btn', btn: b, el, x: sx, y: sy, x0: sx, y0: sy, t0: evT(e), tp: performance.now(), moved: 0, long: false };
         this.ptr.set(e.pointerId, p);
+        if (this.sprintLock && b !== 'map' && b !== 'pause') { this.sprintLock = false; this.sprintArm = false; if (this.onStick) this.onStick(null); }
         this.hold.add(b); el.classList.add('down');
         this.edges.push({ b, k: 'down', sub: el.dataset.sub || null });
         if (this.onBtn) this.onBtn(b, 'down', p);
@@ -94,6 +96,7 @@ export class Input {
       const leftZone = this.S.handed === 'left' ? sx > this.stage.w * 0.55 : sx < this.stage.w * 0.45;
       const onStick = fixed ? Math.hypot(sx - home.x, sy - home.y) < 95 * (home.s || 1) : leftZone;
       if (onStick && !this.stick) {
+        this.sprintLock = false;
         this.stick = { id: e.pointerId, ox: fixed ? home.x : sx, oy: fixed ? home.y : sy, x: sx, y: sy, fixed: !!fixed };
         this.ptr.set(e.pointerId, { kind: 'stick' });
         if (this.onStick) this.onStick(this.stick, 0, 0);
@@ -123,7 +126,12 @@ export class Input {
       const p = this.ptr.get(e.pointerId);
       this.ptr.delete(e.pointerId);
       if (!p) return;
-      if (p.kind === 'stick') { this.stick = null; this.mx = 0; this.mz = 0; this.sprintArm = false; if (this.onStick) this.onStick(null); return; }
+      if (p.kind === 'stick') {
+        // ダッシュの所で離した: 「ダッシュの固定」がオンなら走り続ける（PUBGM・CODM のように。スティックかボタンに触れるとやめる）
+        const lock = !cancel && this.sprintArm && this.S.stickLock === true;
+        this.stick = null; this.mx = 0; this.mz = 0; this.sprintArm = lock; this.sprintLock = lock;
+        if (this.onStick) this.onStick(null, 0, 0, lock, lock); return;
+      }
       if (p.kind === 'radialTap') { if (!cancel) this._radialPick(true); return; }
       if (p.kind !== 'btn') return;
       this.hold.delete(p.btn); p.el.classList.remove('down');
@@ -177,13 +185,15 @@ export class Input {
     const st = this.stick;
     st.x = sx; st.y = sy;
     const home = this.getStickHome ? this.getStickHome() : null;
-    const R = 58 * ((home && home.s) || 1);
+    const R = 58 * ((home && home.s) || 1), spr = (home && home.spr) || 1.25;
     let dx = (sx - st.ox) / R, dy = (sy - st.oy) / R;
     const l = Math.hypot(dx, dy);
-    // スティックを上に大きく倒すとダッシュ（CODモバイル）
-    this.sprintArm = this.S.stickSprint !== false && dy < -1.25 && Math.abs(dx) < 0.8;
+    // スティックを上へ押し込む（ダッシュの印より上）とダッシュ（CODM・PUBGM）。作戦・対戦とも
+    this.sprintArm = this.S.stickSprint !== false && dy < -spr && Math.abs(dx) < 0.8;
     if (l > 1) { dx /= l; dy /= l; }
-    if (!st.fixed && l > 1.9) { st.ox = sx - dx * R * 1.9; st.oy = sy - dy * R * 1.9; }
+    // 可変のスティック: 大きく離れたら土台がついてくる（ダッシュの印より外で）
+    const follow = Math.max(1.9, spr + 0.45);
+    if (!st.fixed && l > follow) { st.ox = sx - dx * R * follow; st.oy = sy - dy * R * follow; }
     const dz = 0.1, ll = Math.min(1, l);
     const k = ll < dz ? 0 : (ll - dz) / (1 - dz) / (ll || 1);
     this.mx = dx * k; this.mz = -dy * k;
@@ -199,7 +209,7 @@ export class Input {
     const r = this.radial; if (!r) return;
     const dx = sx - r.x, dy = sy - r.y, d = Math.hypot(dx, dy);
     const n = r.items.length;
-    if (d < 34) r.sel = -1;
+    if (d < 34 * Math.max(0.8, r.scale || 1)) r.sel = -1;
     else { let a = Math.atan2(dx, -dy); if (a < 0) a += Math.PI * 2; r.sel = Math.floor((a + Math.PI / n) / (Math.PI * 2 / n)) % n; }
     if (this.onRadial) this.onRadial(r);
   }
@@ -236,6 +246,7 @@ export class Input {
   // 1こま分を取り出す
   take() {
     let mx = this.mx, mz = this.mz;
+    if (this.sprintLock) { mx = 0; mz = 1; }
     const K = this.keys;
     if (K.size) {
       const kx = (K.has('KeyD') || K.has('ArrowRight') ? 1 : 0) - (K.has('KeyA') || K.has('ArrowLeft') ? 1 : 0);
@@ -245,7 +256,7 @@ export class Input {
     const out = {
       mx, mz, lookDX: this.lookDX, lookDY: this.lookDY, gyroX: this.gyro.x, gyroY: this.gyro.y,
       fire: this.hold.has('fire') || this.hold.has('fireL') || this.mouseBtn.l,
-      sprint: this.sprintArm || K.has('ShiftLeft') || this.hold.has('sprint'),
+      sprint: this.sprintArm || this.sprintLock || K.has('ShiftLeft') || this.hold.has('sprint'),
       hold: this.hold, edges: this.edges.slice(),
       mouse: !!document.pointerLockElement, touch: this.touchUsed,
     };

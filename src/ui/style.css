@@ -229,10 +229,12 @@ table.board small { color: var(--dim); font-size: max(11px, .72em); margin-left:
 .hb[data-btn="team"] svg { opacity: 0; }
 .hb[data-btn="fmode"] .lb { bottom: -1.3em; font-size: 11px; }
 .hud-stick { position: absolute; border-radius: 50%; border: 1.5px solid rgba(255,255,255,.28); background: rgba(10,14,20,.18); opacity: .55; transition: opacity .15s; }
-.hud-stick.act { opacity: 1; }
 .hud-stick .knob { position: absolute; left: 50%; top: 50%; width: 42%; height: 42%; border-radius: 50%; background: rgba(255,255,255,.55); transform: translate(-50%,-50%); }
-.hud-stick .spr { position: absolute; left: 50%; top: -26px; transform: translateX(-50%); font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 4px; background: rgba(0,0,0,.5); opacity: 0; }
-.hud-stick.spr-on .spr { opacity: 1; background: var(--accent); color: #111; }
+/* ダッシュの印: 指がここより上へ行くとダッシュ（位置は HUD の設定） */
+.hud-stick .spr { position: absolute; left: 50%; transform: translate(-50%, -50%); font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 4px; background: rgba(0,0,0,.5); border: 1px dashed rgba(255,255,255,.45); white-space: nowrap; opacity: 0; transition: opacity .12s; }
+.hud-stick.show-spr .spr { opacity: .8; }
+.hud-stick.spr-on .spr { opacity: 1; background: var(--accent); color: #111; border-style: solid; border-color: var(--accent2); }
+#hud.editing .hud-stick { pointer-events: auto; touch-action: none; }
 .hud-mm { position: absolute; width: 120px; height: 120px; border-radius: 50%; overflow: hidden; border: 1.5px solid rgba(255,255,255,.35); transform-origin: 50% 50%; pointer-events: auto; touch-action: none; }
 .hud-mm.down { border-color: var(--accent); filter: brightness(1.25); }
 .hud-mm-x { position: absolute; right: 16px; bottom: 16px; width: 18px; height: 18px; border-radius: 50%; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,.85); }
@@ -331,13 +333,32 @@ table.board small { color: var(--dim); font-size: max(11px, .72em); margin-left:
 .hud-ammo .mags em.on { opacity: 1; color: var(--accent2); }
 .hud-ammo .cnt b.lname { font-size: 15px; letter-spacing: .02em; }
 .hud-mirror.on { display: block; } .hud-mirror b { color: var(--accent2); margin-right: 8px; } .hud-mirror .bad { color: #ff9a8e; font-weight: 800; }
-.hud-radial { position: absolute; inset: 0; display: none; pointer-events: none; }
-.hud-radial.on { display: block; background: rgba(0,0,0,.25); }
-.hud-radial .rc { position: absolute; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle, rgba(8,12,18,.6) 0, rgba(8,12,18,.85) 100%); border: 1px solid var(--line2); }
-.hud-radial .mid { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); text-align: center; font-size: 12px; font-weight: 800; font-family: var(--f-body); }
-.hud-radial .mid small { display: block; font-size: 11px; color: var(--sub); font-weight: 500; white-space: nowrap; }
-.hud-radial .ri { position: absolute; transform: translate(-50%, -50%); padding: 4px 8px; border-radius: 5px; background: rgba(20,26,34,.92); border: 1px solid var(--line); font-size: 11.5px; font-weight: 700; font-family: var(--f-body); white-space: nowrap; text-align: center; }
-.hud-radial .ri small { display: block; font-size: 11px; color: var(--sub); font-weight: 500; }
+/* スコア表（対戦） */
+.hud-board { position: absolute; inset: 0; display: none; z-index: 25; pointer-events: none; }
+.hud-board.on { display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.35); pointer-events: auto; }
+.hud-board .bd { background: rgba(8,12,18,.94); border: 1px solid var(--line2); border-radius: 8px; padding: 8px 10px 10px; max-width: min(96%, 760px); max-height: 92%; overflow: auto; font-family: var(--f-body); }
+.hud-board .bh { font-weight: 800; font-size: 13px; text-align: center; margin-bottom: 6px; }
+.hud-board .bh small { display: block; font-size: 11px; color: var(--sub); font-weight: 500; }
+.hud-board .bt { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.hud-board .tm { min-width: 260px; flex: 1; }
+.hud-board .tn { display: flex; justify-content: space-between; align-items: baseline; padding: 3px 8px; border-radius: 4px; font-size: 12px; }
+.hud-board .tm.mine .tn { background: rgba(70,140,255,.28); } .hud-board .tm.foe .tn { background: rgba(255,80,70,.26); }
+.hud-board .tn em { font-style: normal; font-weight: 900; font-size: 16px; font-family: var(--f-head); }
+.hud-board table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.hud-board th { font-size: 11px; color: var(--sub); font-weight: 600; padding: 3px 4px; text-align: right; }
+.hud-board td { padding: 4px; text-align: right; border-top: 1px solid rgba(255,255,255,.08); font-variant-numeric: tabular-nums; }
+.hud-board .nm { text-align: left; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hud-board td.nm i { font-style: normal; font-size: 11px; color: var(--sub); margin-left: 5px; }
+.hud-board tr.me td { color: var(--accent2); font-weight: 800; }
+.hud-board tr.out td { opacity: .45; }
+/* 長押しの円形メニューは、ほかのボタン・情報より上に出す */
+.hud-radial { position: absolute; inset: 0; display: none; pointer-events: none; z-index: 30; }
+.hud-radial.on { display: block; background: rgba(0,0,0,.38); }
+.hud-radial .rc { position: absolute; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle, rgba(8,12,18,.86) 0, rgba(8,12,18,.95) 100%); border: 1px solid var(--line2); }
+.hud-radial .mid { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); text-align: center; font-size: max(12px, calc(12px * var(--rs, 1))); font-weight: 800; font-family: var(--f-body); }
+.hud-radial .mid small { display: block; font-size: max(11px, calc(11px * var(--rs, 1))); color: var(--sub); font-weight: 500; white-space: nowrap; }
+.hud-radial .ri { position: absolute; transform: translate(-50%, -50%); padding: calc(4px * var(--rs, 1)) calc(8px * var(--rs, 1)); border-radius: 5px; background: rgba(20,26,34,.96); border: 1px solid var(--line); font-size: max(11.5px, calc(11.5px * var(--rs, 1))); font-weight: 700; font-family: var(--f-body); white-space: nowrap; text-align: center; }
+.hud-radial .ri small { display: block; font-size: max(11px, calc(11px * var(--rs, 1))); color: var(--sub); font-weight: 500; }
 .hud-radial .ri.sel { background: var(--accent); color: #111; border-color: var(--accent2); } .hud-radial .ri.sel small { color: #3b2c0e; }
 .hud-radial .ri.dis { opacity: .35; }
 .hud-editbar { position: absolute; left: 50%; top: calc(var(--st) + 6px); transform: translateX(-50%); display: none; align-items: center; gap: 8px; background: rgba(8,12,18,.95); border: 1px solid var(--line2); border-radius: 8px; padding: 6px 10px; pointer-events: auto; font-family: var(--f-body); font-size: 11px; z-index: 5; white-space: nowrap; }

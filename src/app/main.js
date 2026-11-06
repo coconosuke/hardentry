@@ -66,7 +66,7 @@ class App {
     this.hud.setSettings(this.settings);
     this.input = new Input(this.stage, this.stageEl, this.audio);
     this.input.setSettings(this.settings);
-    this.input.onStick = (st, dx, dy, spr) => this.hud.stick(st, dx, dy, spr);
+    this.input.onStick = (st, dx, dy, spr, lock) => this.hud.stick(st, dx, dy, spr, lock);
     this.input.onRadial = (r) => this.hud.radial(r);
     this.input.getStickHome = () => this.hud.stickHome;
     this.fpsEl = $('#fps'); this.fadeEl = $('#fade'); this.ctxEl = $('.ctxlost');

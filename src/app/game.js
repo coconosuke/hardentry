@@ -34,6 +34,7 @@ export class Match {
     this.def = MAPS[this.S.map];
     this.pid = o.pid ?? 0;
     this.p = this.S.actors.find(a => a.pid === this.pid) || this.S.actors[0];
+    if (app.titleScene) app.titleScene.detach();
     this.r.setMap(this.w, this.def, this.S);
     this.av = new ActorView(this.r); this.fx = new FX(this.r); this.vm = new ViewModel(this.r, this.av);
     this.fx.blood = app.settings.blood !== false;
@@ -68,9 +69,9 @@ export class Match {
     this.au.playMusic(this.S.pvp ? 'pvp' : this.S.mode === 'pve' ? 'op' : 'menu', { fade: 3, vol: this.S.pvp ? 0.55 : this.S.mode === 'pve' ? 0.6 : 0.35 });
     if (!o.dump && !this.S.pvp && this.S.mode === 'pve') setTimeout(() => this._say(null, 'toc_start', false, 'TOC'), 900);
   }
-  destroy() { this.r.clearMap(); this.fx.clear(); this.au.occluder = null; this.au.ambience(false); this.au.stopMusic(1.5); }
+  destroy() { this.r.clearMap(); this.fx.clear(); this.av.dispose(); this.fx.dispose(); this.vm.dispose(); this.au.occluder = null; this.au.ambience(false); this.au.stopMusic(1.5); }
   rebind(r) {
-    if (r) { this.r = r; this.av = new ActorView(r); this.fx = new FX(r); this.vm = new ViewModel(r, this.av); this.fx.blood = this.app.settings.blood !== false; { const g = gfxOf(this.app.settings); this.fx.amount = { low: 0.5, normal: 1, high: 1.5 }[g.fx] || 1; this.fx.shells = g.shells !== false; } this.av.hidden.add(this.p.id); this.vm.setColors(this.av.look(this.p).pal.slice(3, 6), [0.02, 0.02, 0.025]); this.fx.onClink = (x, y, z) => this.au.sfx('shell', [x, y, z], { vol: 0.35 }); }
+    if (r) { if (this.av) { this.av.dispose(); this.fx.dispose(); this.vm.dispose(); } this.r = r; this.av = new ActorView(r); this.fx = new FX(r); this.vm = new ViewModel(r, this.av); this.fx.blood = this.app.settings.blood !== false; { const g = gfxOf(this.app.settings); this.fx.amount = { low: 0.5, normal: 1, high: 1.5 }[g.fx] || 1; this.fx.shells = g.shells !== false; } this.av.hidden.add(this.p.id); this.vm.setColors(this.av.look(this.p).pal.slice(3, 6), [0.02, 0.02, 0.025]); this.fx.onClink = (x, y, z) => this.au.sfx('shell', [x, y, z], { vol: 0.35 }); }
     this.r.setMap(this.w, this.def, this.S);
   }
   applySettings() { this.fx.blood = this.app.settings.blood !== false; }
@@ -206,7 +207,8 @@ export class Match {
           else if (k === 'long') this._useMenu(e);
           break;
         case 'cmd': if (this.S.pvp) break; if (k === 'tap') this._cmdDefault(); else if (k === 'long') this._cmdMenu(e); break;
-        case 'team': if (k === 'tap') this.team = TEAMS[(TEAMS.indexOf(this.team) + 1) % 3]; break;
+        case 'team': if (k === 'tap') { if (this.S.pvp) this.boardOn = !this.boardOn; else this.team = TEAMS[(TEAMS.indexOf(this.team) + 1) % 3]; } break;
+        case 'board': if (k === 'tap' || k === 'longup') this.boardOn = !this.boardOn; break;
         case 'gear':
           if (k === 'tap') { if (p.ws.slot === 2) this.acts.push({ a: 'switch', slot: p.ws.prev >= 0 ? p.ws.prev : 0 }); else if (this.gearSel) this.acts.push({ a: 'gear', id: this.gearSel }); }
           else if (k === 'long') this._gearMenu(e);
@@ -235,7 +237,7 @@ export class Match {
     const p = this.p;
     const cmd = {
       mx: inp.mx, mz: inp.mz, yaw: this.yaw, pitch: this.pitch,
-      fire: inp.fire && !this.app.input.radial, ads: this.adsOn, low: this.lowOn, stance: this.stance, lean: this.leanSide, sprint: inp.sprint && this.S.pvp,
+      fire: inp.fire && !this.app.input.radial, ads: this.adsOn, low: this.lowOn, stance: this.stance, lean: this.leanSide, sprint: inp.sprint,
       act: this.acts.length ? this.acts.splice(0) : null, power: 0.75,
     };
     if (this.droneId != null) { cmd.mx = 0; cmd.mz = 0; cmd.fire = false; }
@@ -767,6 +769,9 @@ export class Match {
     if (S.m && S.m.sites && S.pvp) for (const s2 of S.m.sites) if (S.m.target == null || s2.id === S.m.target) marks.push({ x: s2.x, z: s2.z, col: 'rgba(255,255,255,0.9)', r: 5, sq: true });
     v.marks = marks;
     hud.update(v);
+    // スコア表（対戦）: 開いている間は 0.5 秒ごとに作り直す
+    if (S.pvp && this.boardOn) { this._bdT = (this._bdT || 0) - dt; if (this._bdT <= 0) { this._bdT = 0.5; hud.board(this._boardData()); } }
+    else hud.board(null);
     this._mmT = (this._mmT || 0) - dt;
     if (this._mmT <= 0) { this._mmT = 0.066; hud.drawMinimap(v); }
   }
@@ -779,6 +784,17 @@ export class Match {
     const v = !!e && Math.hypot(a.x - e.x, a.z - e.z) < 30 && los(this.w, e.x, e.y, e.z, a.x, a.y + 1.2, a.z, this.S.doors);
     this._vc[k] = { t: this.time, v };
     return v;
+  }
+  // スコア表の中身: 自分のチームが先。キル×2＋アシストの順。爆弾・殲滅戦は倒れている人を薄く
+  _boardData() {
+    const S = this.S, m = S.m || {}, p = this.p;
+    const MODE = { tdm: 'チームデスマッチ', elim: '殲滅戦', bomb: '爆弾' };
+    const sideName = (t) => { const a = S.actors.find(x => x.team === t && !x.isDrone); return a && a.pvpSide === 'swat' ? 'SWAT' : a && a.pvpSide === 'sus' ? '立てこもり犯' : 'チーム' + (t + 1); };
+    const score = (t) => m.kind === 'tdm' ? (m.score || [0, 0])[t] : (m.wins || [0, 0])[t];
+    const rows = (t) => S.actors.filter(a => !a.isDrone && a.team === t).map(a => ({ name: a.name || '?', k: a.stats.k, d: a.stats.d, a: a.stats.a, me: a === p, bot: a.pid == null, out: m.kind !== 'tdm' && (!a.alive || a.down) })).sort((x, y) => (y.k * 2 + y.a) - (x.k * 2 + x.a) || x.d - y.d);
+    const mine = p.team, foe = 1 - p.team;
+    const sub = m.kind === 'tdm' ? `目標 ${m.limit} キル` : `ラウンド ${m.round || 1}・先に ${m.winsNeeded} 勝`;
+    return { title: `${MODE[m.kind] || '対戦'}　${sub}`, teams: [{ name: sideName(mine) + '（味方）', score: score(mine), cls: 'mine', rows: rows(mine) }, { name: sideName(foe), score: score(foe), cls: 'foe', rows: rows(foe) }] };
   }
   _objectives() {
     const S = this.S, m = S.m || {};

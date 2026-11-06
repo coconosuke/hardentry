@@ -33,7 +33,12 @@ export class FX {
     this.blood = true;
     this.amount = 1; this.shells = true; // エフェクトの量（設定）・薬莢
     this.seed = 1;
-    r.hooks.transparent.push((rr, f) => this.draw(f));
+    this._off = [r.hook('transparent', (rr, f) => this.draw(f))];
+  }
+  dispose() {
+    for (const f of this._off || []) f(); this._off = [];
+    const gl = this.gl; if (gl) for (const b of [this.pb, this.db]) if (b) { try { gl.deleteVertexArray(b.vao); gl.deleteBuffer(b.vb); } catch (e) { /* なし */ } }
+    this.pb = this.db = null; this.clear();
   }
   rnd() { this.seed = (this.seed * 1664525 + 1013904223) >>> 0; return this.seed / 4294967296; }
   rs(a) { return (this.rnd() * 2 - 1) * a; }

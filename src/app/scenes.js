@@ -18,11 +18,14 @@ export class TitleScene {
   enter() {
     if (!this.ready) this.prepare();
     const r = this.app.renderer;
+    this.detach();
     r.setMap(this.G.w, this.def, this.G.S);
     this.av = new ActorView(r); this.fx = new FX(r);
     this.entered = true;
   }
-  leave() { this.entered = false; }
+  // 試合が始まる・描き手が作り直されるとき: タイトルの人と粒子を描くのをやめる
+  detach() { if (this.av) this.av.dispose(); if (this.fx) this.fx.dispose(); this.av = this.fx = null; this.entered = false; }
+  leave() { this.detach(); }
   frame(dt, dim) {
     if (!this.entered) this.enter();
     this.t += dt;

@@ -1,7 +1,7 @@
 import { test, ok, eq, near } from '../lib/t.mjs';
 import { createGame, step, dump, load } from '../../src/engine/engine.js';
 import { WEAPONS } from '../../src/engine/data/weapons.js';
-import { eyeOf } from '../../src/engine/combat.js';
+import { eyeOf, killActor as killActorFor } from '../../src/engine/combat.js';
 
 function mk(o = {}) { return createGame({ map: 'training', mode: 'train', seed: 7, team: 1, house: false, ...o }); }
 
@@ -299,4 +299,40 @@ test('interact: AI の隊員の拘束も最後まで続く（よそ見で中断�
   let done = null, cancel = null;
   for (let i = 0; i < 260 && !done && !cancel; i++) { const ev = step(G, {}); done = ev.find(e => e.e === 'cuffed'); cancel = ev.find(e => e.e === 'actcancel'); }
   ok(done && b.cuffed && !cancel, 'AI の拘束が終わる ' + (cancel ? cancel.why : ''));
+});
+test('pvp: 対戦では予備の弾倉が減らず、死んでも武器を落とさない', () => {
+  const G = createGame({ map: 'motel', mode: 'tdm', teams: [1, 1], seed: 3 });
+  const S = G.S, p = S.actors.find(a => a.pid === 0), wi = p.inv.w[0], n0 = wi.mags.length;
+  for (let i = 0; i < 200; i++) step(G, {});
+  wi.mag = 3;
+  step(G, { [p.id]: { yaw: p.yaw, pitch: 0, act: [{ a: 'reload', fast: true }] } });
+  for (let i = 0; i < 260; i++) step(G, { [p.id]: { yaw: p.yaw, pitch: 0 } });
+  ok(wi.mag >= WEAPONS[wi.id].mag - 1, '装填された ' + wi.mag);
+  eq(wi.mags.length, n0, '速いリロードでも本数は同じ');
+  ok(wi.mags.every(n => n === WEAPONS[wi.id].mag), '予備はいつも満タン');
+  const foe = S.actors.find(a => a.team !== p.team);
+  const ev = [];
+  killActorFor(S, foe, p, ev);
+  eq(S.items.filter(it => it.kind === 'weapon').length, 0, '武器は床に落ちない');
+});
+test('pve: 作戦では予備の弾倉は減り、容疑者は武器を落とす（証拠）', () => {
+  const G = createGame({ map: 'gasstation', mode: 'pve', mission: 'raid', diff: 'normal', team: 1, seed: 3 });
+  const S = G.S, p = S.actors.find(a => a.pid === 0), wi = p.inv.w[0], n0 = wi.mags.length;
+  for (let i = 0; i < 40; i++) step(G, { [p.id]: { yaw: p.yaw, pitch: 0 } });
+  wi.mag = 3;
+  step(G, { [p.id]: { yaw: p.yaw, pitch: 0, act: [{ a: 'reload', fast: true }] } });
+  for (let i = 0; i < 260; i++) step(G, { [p.id]: { yaw: p.yaw, pitch: 0 } });
+  eq(wi.mags.length, n0 - 1, '速いリロードで1本減る');
+  const sus = S.actors.find(a => a.kind === 'sus' && a.inv.w.some(Boolean));
+  const ev = [];
+  killActorFor(S, sus, p, ev);
+  ok(S.items.some(it => it.kind === 'weapon' && it.from === sus.id), '容疑者の武器が落ちる');
+});
+test('move: ダッシュは作戦でも対戦でもできる（前へ・立って・構えていないとき）', () => {
+  for (const o of [{ map: 'gasstation', mode: 'pve', mission: 'barricade', diff: 'normal', team: 1, seed: 3 }, { map: 'motel', mode: 'tdm', teams: [1, 1], seed: 3 }]) {
+    const G = createGame(o), S = G.S, p = S.actors.find(a => a.pid === 0);
+    for (let i = 0; i < 200; i++) step(G, {});
+    for (let i = 0; i < 40; i++) step(G, { [p.id]: { mx: 0, mz: 1, yaw: p.yaw, pitch: 0, stance: 0, sprint: true } });
+    ok(p.sprint, o.mode + ': 走っている');
+  }
 });

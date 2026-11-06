@@ -360,7 +360,8 @@ export function killActor(S, a, by, ev, kind = 'bullet', part = '') {
 }
 
 export function dropWeapon(S, a, ev) {
-  if (a.kind === 'swat' && !S.pvp) return; // 隊員の銃は落とさない
+  // 隊員の銃は落とさない。対戦では誰も落とさない（復活のたびに床に銃が増え続けた。R6 と同じく落とさない）
+  if (S.pvp || a.kind === 'swat') return;
   const wi = a.ws && a.ws.slot >= 0 ? a.inv.w[a.ws.slot] : null;
   const list = a.kind === 'sus' ? a.inv.w.filter(Boolean) : (wi ? [wi] : []);
   for (const x of list) {
