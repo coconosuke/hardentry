@@ -1,8 +1,8 @@
-HARD ENTRY ソース一式（2026-11-05T20:51:20.082Z）
+HARD ENTRY ソース一式（2026-11-06T03:29:15.265Z）
 復元: node tools/unbundle.mjs source-bundle.txt <出力先>
 （tools/unbundle.mjs がない場合は、下の "@@@@ FILE " の区切りごとにファイルへ書き出す。base64 と書かれたものはデコードする）
 
-@@@@ FILE DESIGN.md text 46359
+@@@@ FILE DESIGN.md text 50049
 # HARD ENTRY（仮タイトル）設計メモ
 
 ## 文脈が消えたら最初に読む
@@ -78,9 +78,10 @@ HARD ENTRY ソース一式（2026-11-05T20:51:20.082Z）
 
 ### PvP（対戦）
 - 陣営: SWAT（青）と 立てこもり犯（赤）。武器と装備の候補が陣営で違う。
-- TDM（リスポーンあり）: 上限キル＝人数の多い方×10、8分、復活4秒、出現保護2秒。
+- TDM（リスポーンあり）: 上限キル＝人数の多い方×10、8分、復活4秒、出現保護2秒。始まりは両チームともマップの反対の端（建物の外）から。どちらの端かは試合ごと（11-06 決定。片方だけ建物の中から始めると、銀行で外の側が6戦全敗だった）。
 - 殲滅戦: 1ラウンド2分30秒、先に3ラウンド（設定で2〜5）、中間で陣地交代。
 - 爆弾: 準備45秒（犯人: バリケード・補強・扉の罠を置く／SWAT: ドローン2台で偵察）、行動3分、解除装置の設置7秒、設置後45秒、犯人の解除7秒。先に3勝（設定で2〜5）、（勝利数−1）ラウンド後に攻守交代、同点で延長（毎ラウンド交代、先に1勝多く）。
+- 爆弾の目標はラウンドごとに1か所（A か B。ラウンドの始めに表示し、ミニマップにもその1か所だけ）。R6 と同じく、守る側は1つの目標を全員で守る（11-06 決定。2か所が離れたマップで守りが2つに割れ、攻撃側が勝ちすぎていた）。
 
 ### 世界の作り（2026-10-29 20時 決定）
 - 文字マス 0.5m。階 3.0m（天井 2.8m）。壁は「マスの中央の板」で、高さ方向に4つのブロック（0〜0.7・0.7〜1.4・1.4〜2.1・2.1〜2.8m）。ブロックごとに材質と耐久があり、壊れると穴になる（R6の穴あけ・BattleBitの破壊）。板の向きと角は隣の壁マスから決める（中心の柱＋つながる向きの腕）。
@@ -177,7 +178,10 @@ HARD ENTRY ソース一式（2026-11-05T20:51:20.082Z）
 - 2026-10-30: GitHub のリリースから落とした実行ファイル（sherpa-onnx）を動かすのは許可されなかった（外部のコード）。声は ffmpeg 内蔵の flite で作る。聞き取りの確認は tools/asr.py（numpy＋onnxruntime で Whisper base.en の ONNX を自前で推論。モデルは /home/claude/tts/sherpa-onnx-whisper-base.en、GitHub の asr-models リリースから）。
 
 ## バランス変更の記録（1つずつ戻せるように）
-（まだなし）
+- 11-06 爆弾: 防衛ボットは角を押さえて止まっているとき反応と最初の狙いが速い（`bot.js` holdK）・設置後は近くの敵を片づけてから外す → 攻撃側ラウンド勝率 74% → 65%。
+- 11-06 爆弾: 目標を1ラウンド1か所に（`pvp.js` m.target）・守る側は足音・扉・銃声を聞いてそちらを向く（`bot.js` heardAt）・設置後に外す人は手が届く位置まで寄る（以前は届かない所から外そうとして失敗していた） → 攻撃側 65% → 48%（99ラウンド、ボット4v4・各3試合）。殲滅戦の SWAT 側 58%（57/98）。
+- 11-06 TDM: 両チームとも外の反対の端から始める（`pvp.js` startRound の ends） → チーム0 44% → 50%（48試合、銀行 0/6 → 3/6）。
+- 11-06 作戦の AI（上の「AI 隊員」の6点）: AIだけの作戦の完了 44/90 → 59/90（6マップ×5作戦×シード7〜9、20分まで）。乱射犯は 9 → 14、爆弾 6 → 8、強制捜査 6 → 13。平均点 60 → 63。対戦の数字はほぼ変わらない（爆弾の攻撃側 49%、殲滅戦の SWAT 側 53%）。
 
 ## 今の状態と次の作業
 - 2026-10-29 15:12 着手。リサーチ完了（research/NOTES.md）。
@@ -211,6 +215,14 @@ HARD ENTRY ソース一式（2026-11-05T20:51:20.082Z）
 - 11-06 テスト一式で見つけて直したもの: 作戦の出現で AI 隊員がプレイヤーと重なって押し続けていた（始まってすぐ2.8m動く）、ボタンの押した長さを出来事の時刻で測る（重いこまで短押しが長押しになっていた）、ゲストの最初の向き、押すもの36px以上・文字11px以上（とても低い画面のタイトルは2列）、対戦ボットの例外（守る位置の見る向き）。
 - 11-06 アプリ版: GitHub Pages 用の中身（index.html・sw.js・manifest・アイコン・.nojekyll・ソース一式・README・設計メモ）を main の直下に push。Pages を有効にするのはリポジトリの設定（この作業環境からは Pages の設定の API が使えない）。公開版（Claude）は版9。
 - 11-06 テスト一式: 77/78 合格（test-results/summary.md）。落ちたのはオンラインのゲストの移動（ソフトウェア描画の2画面で試合が実時間の数分の1でしか進まず、ホストは1.5秒より古い入力を捨てるため。射撃は届き、個別の確認では0.6m動いた）。
+- 11-06 午前（「続けて」）: 爆弾の目標を1ラウンド1か所に、守る側のボットが音を聞いて向く、設置後の取り返し、TDM の始まりを両チームとも外に、扉を蹴っている味方がいれば同じ扉を蹴らない。数字は上の「バランス変更の記録」。
+- 11-06 午前（AI 隊員）: AIだけの作戦を見直して直したもの。
+  - 撃つ判断: 射線に味方・市民がいるかを弾の高さでも見る（倒れた人・しゃがんだ人の上は越える）。ふさがれていれば横へずれて射線を空ける。以前は一列に並んだまま誰も撃てず、ナイトクラブで乱射犯1人に4人が17秒で倒された。
+  - 乱射犯は市民を狙う間をあける（標準: 最初22秒・次から30秒、ハード 15/22、ハードコア 10/15、それぞれ±30%）。始まって6秒で市民4人が倒れ、急ぐ意味がなかった。乱射犯の作戦と、銃声がしたばかりのときは、指揮はミラーを使わない。
+  - 開いた扉の板: 道の計算で板のマスを通れなくするのをやめ、少し高くつくだけにした（歩くと板は押されて回る）。板をどける途中も板へ寄り続ける。詰まったとき、これから通る扉の板は閉めない（扉の口で閉めて、自分たちが通れなくなっていた）。
+  - 移動の命令の「進まない」は、歩いた距離でも見る（回り道でまっすぐの距離が縮まらない間に待機へ変わっていた）。時間切れは25→45秒。
+  - ゆっくり動く扉の板は、自分で動けない人（ひざまずいた・倒れた・拘束された・怯んだ）を少しずつ押しのける。扉の口でひざまずいた容疑者のせいで扉が開かず、拘束にも行けず、指揮が同じ人を探し続けていた。
+  - 拘束・回収で手を伸ばす位置は同じ部屋の側を先に。間に味方が立っていれば脇へよけてもらう。
 - 次: Pages を有効にしてもらう → 実機での確認をお願いする → その結果で直す。
 
 @@@@ FILE dev/view.html text 446
@@ -296,7 +308,7 @@ export async function getAssetURL(name, type) {
   return URL.createObjectURL(new Blob([buf], { type }));
 }
 
-@@@@ FILE src/app/game.js text 61997
+@@@@ FILE src/app/game.js text 62158
 // 1回の試合: エンジンを進め、入力を命令にし、出来事を音・効果・HUDへ。カメラ（一人称）と描画。
 import { createGame, step, dump, load } from '../engine/engine.js';
 import { eyeOf, capsOf } from '../engine/combat.js';
@@ -802,7 +814,7 @@ export class Match {
         case 'dronedead': if (e.id === this.droneId) { this.droneId = null; hud.showBanner('ドローンが壊された', 1500, 'bad'); } break;
         case 'phase': if (e.p === 'prep') hud.showBanner('準備フェーズ', 2000); else if (e.p === 'action') { hud.showBanner('行動開始', 1600, 'warn'); au.ui('go'); this.droneId = null; } break;
         case 'round': { const win = e.win; const mine = win === p.team; hud.showBanner(win < 0 ? '引き分け' : (mine ? 'ラウンド勝利' : 'ラウンド敗北') + `<br><small>${whyName(e.why)} ・ ${e.wins[p.team]} - ${e.wins[1 - p.team]}</small>`, 4000, win < 0 ? '' : mine ? 'ok' : 'bad'); au.ui(mine ? 'win' : 'lose'); break; }
-        case 'roundstart': this.fx.clear(); this.r.rebuildCells(Object.keys(this._lastBdiff || {}).map(Number).concat(this._allBroken()), S); this._lastBdiff = {}; this.adsOn = false; this.stance = 0; this.leanSide = 0; this.r.setMap(this.w, this.def, S); hud.showBanner(`ラウンド ${e.round}`, 1800); break;
+        case 'roundstart': this.fx.clear(); this.r.rebuildCells(Object.keys(this._lastBdiff || {}).map(Number).concat(this._allBroken()), S); this._lastBdiff = {}; this.adsOn = false; this.stance = 0; this.leanSide = 0; this.r.setMap(this.w, this.def, S); { const st = S.m && S.m.sites && e.site >= 0 ? S.m.sites[e.site] : null; hud.showBanner(`ラウンド ${e.round}` + (st ? `　目標: ${st.name}` : ''), 2400); } break;
         case 'swap': hud.feed('攻守交代', 'warn'); break;
         case 'respawn': if (e.id === me) { this.dead = false; this.spec = null; this.yaw = p.yaw; this.pitch = 0; this.av.hidden.add(me); hud.hideBanner(); } break;
         case 'matchend': { const mine = e.win === p.team; hud.showBanner(e.win < 0 ? '引き分け' : mine ? '勝利' : '敗北', 0, mine ? 'ok' : 'bad'); au.ui(mine ? 'win' : 'lose'); break; }
@@ -1063,7 +1075,7 @@ export class Match {
       if (seenRecently || vis) marks.push({ x: a.x, z: a.z, col: a.kind === 'civ' ? '#7be07b' : a.cuffed || a.comply ? '#ffd24a' : '#ff4a3a', r: 3 });
     }
     if (S.m && S.m.bombs) for (const b of S.m.bombs) if (!b.done && b.found) marks.push({ x: b.x, z: b.z, col: '#ff9a20', r: 4, sq: true });
-    if (S.m && S.m.sites && S.pvp) for (const s2 of S.m.sites) marks.push({ x: s2.x, z: s2.z, col: 'rgba(255,255,255,0.9)', r: 5, sq: true });
+    if (S.m && S.m.sites && S.pvp) for (const s2 of S.m.sites) if (S.m.target == null || s2.id === S.m.target) marks.push({ x: s2.x, z: s2.z, col: 'rgba(255,255,255,0.9)', r: 5, sq: true });
     v.marks = marks;
     hud.update(v);
     this._mmT = (this._mmT || 0) - dt;
@@ -2813,9 +2825,9 @@ export function ammoCount(w) {
   return [w.mag + (w.ch || 0), w.res];
 }
 
-@@@@ FILE src/engine/ai/bot.js text 13702
+@@@@ FILE src/engine/ai/bot.js text 14287
 // 対戦のボット: TDM（敵を探して撃つ）、殲滅戦（慎重に）、爆弾（攻撃: 場所へ行って設置・守る／防衛: 準備で補強とバリケード、場所を守る、解除）
-import { baseInput, pushAct, visibility, detect, lastSeen, seenAgo, goTo, aimAt, trigger, hearNearest, randomCellInRoom, roomAtPos, angDiff, yawTo, turnToward, SKILL } from './common.js';
+import { baseInput, pushAct, visibility, detect, lastSeen, seenAgo, goTo, steerToward, aimAt, trigger, hearNearest, randomCellInRoom, roomAtPos, angDiff, yawTo, turnToward, SKILL } from './common.js';
 import { navCell, cellCenter, buildNav, roomGraph } from './nav.js';
 import { eyeOf } from '../combat.js';
 import { curW, curWeapon, ammoCount } from '../actor.js';
@@ -2931,7 +2943,7 @@ function bombThink(S, w, a, inp, dt, ctx, sk) {
         return inp;
       }
     }
-    const site = m.sites[m.target ?? (m.target = Math.floor(hrand(m.round || 1, 7, 220) * m.sites.length))];
+    const site = m.sites[m.target ?? 0];
     if (!site) return inp;
     if (a.carry === 'defuser') {
       const dd = Math.hypot(site.x - a.x, site.z - a.z);
@@ -2956,10 +2968,12 @@ function bombThink(S, w, a, inp, dt, ctx, sk) {
     const nearest = S.actors.filter(b => b.team === a.team && b.alive && !b.down).sort((p, q) => Math.hypot(p.x - def.x, p.z - def.z) - Math.hypot(q.x - def.x, q.z - def.z))[0];
     // 取り返し: 近くの敵を片づけてから外す（敵を見て2.5秒たつか、残りが少なくなったら外しに行く）
     const intel = m.intel && m.intel[a.team];
-    const clear = !intel || sec(S, intel.t) > 2.5 || Math.hypot(intel.x - def.x, intel.z - def.z) > 12 || (def.t || 0) > 30;
+    const clear = !intel || sec(S, intel.t) > 2.0 || Math.hypot(intel.x - def.x, intel.z - def.z) > 12 || (def.t || 0) > 22;
     if (nearest === a && clear) {
-      const r = goTo(S, w, a, inp, def.x, def.y, def.z, { r: 0.75, unlock: true });
-      if (Math.hypot(def.x - a.x, def.z - a.z) < 1.1) { inp.yaw = turnToward(a.yaw, yawTo(def.x - a.x, def.z - a.z), 6 * dt); if (!a.act) pushAct(inp, { a: 'op', k: 'site', id: -1, op: 'defuse' }); inp.mx = inp.mz = 0; inp.stance = 1; }
+      // 手が届けば外し始める。届かなければ近づく（道の終わりで止まったら、まっすぐ寄る）
+      if (reachOK(S, w, a, 'site', -1, 'defuse')) { inp.mx = inp.mz = 0; inp.yaw = turnToward(a.yaw, yawTo(def.x - a.x, def.z - a.z), 6 * dt); if (!a.act) pushAct(inp, { a: 'op', k: 'site', id: -1, op: 'defuse' }); inp.stance = 1; return inp; }
+      const r = goTo(S, w, a, inp, def.x, def.y, def.z, { r: 0.45, unlock: true });
+      if (r !== 'moving' && Math.hypot(def.x - a.x, def.z - a.z) < 3) steerToward(a, inp, def.x, def.z, 0.5, true);
       return inp;
     }
     // ほかの隊員（と、まだ外しに行かない一番近い人）は、敵の見えた方へ寄って押し返す
@@ -2970,7 +2984,7 @@ function bombThink(S, w, a, inp, dt, ctx, sk) {
     }
     return holdNear(S, w, a, inp, dt, def.x, def.y, def.z, 5);
   }
-  const site = m.sites[a.ai.siteIdx ?? (a.ai.siteIdx = (a.ai.slot || 0) % m.sites.length)];
+  const site = m.sites[m.target ?? 0];
   return holdNear(S, w, a, inp, dt, site.x, site.y, site.z, 4.5);
 }
 // 場所の近くで角を見張る
@@ -2989,7 +3003,11 @@ function holdNear(S, w, a, inp, dt, x, y, z, R) {
   const r = goTo(S, w, a, inp, ai.hold[0], ai.hold[1], ai.hold[2], { r: 0.5, unlock: true });
   if (r !== 'moving') {
     inp.mx = inp.mz = 0;
-    if (ai.watch) { inp.yaw = turnToward(a.yaw, yawTo(ai.watch[0] - a.x, ai.watch[2] - a.z), 3 * dt); inp.ads = true; }
+    // 足音・扉の音・銃声が聞こえたら、その方へ向き直って待つ（R6 は音で相手の来る方を知る）
+    const hh = hearNearest(S, w, a, 40, (x) => (x.k === 'step' || x.k === 'door' || x.k === 'breach' || x.k === 'shot') && x.team !== a.team && x.team >= 0);
+    if (hh && Math.abs(hh.y - a.y) < 2.5) { ai.heardAt = [hh.x, hh.y + 1.3, hh.z]; ai.heardT = S.t; }
+    const look = ai.heardAt && sec(S, ai.heardT) < 4 ? ai.heardAt : ai.watch;
+    if (look) { inp.yaw = turnToward(a.yaw, yawTo(look[0] - a.x, look[2] - a.z), (look === ai.watch ? 3 : 5) * dt); inp.ads = true; }
     if (hrand(a.id, Math.floor(S.t / 120), 231) < 0.35) inp.stance = 1;
   }
   return inp;
@@ -2998,7 +3016,7 @@ function holdNear(S, w, a, inp, dt, x, y, z, R) {
 function defendPrep(S, w, a, inp, dt, ctx) {
   const ai = a.ai, m = S.m;
   if (a.act) { inp.mx = inp.mz = 0; return inp; }
-  const site = m.sites[ai.siteIdx ?? (ai.siteIdx = (ai.slot || 0) % m.sites.length)];
+  const site = m.sites[m.target ?? 0];
   // 仕事を決める: 補強できる壁 → バリケード → 罠
   if (!ai.job || ai.job.done) ai.job = pickPrepJob(S, w, a, site);
   const j = ai.job;
@@ -3133,7 +3151,7 @@ export function collectNoise(S, ev) {
   S.heard = H;
 }
 
-@@@@ FILE src/engine/ai/common.js text 18181
+@@@@ FILE src/engine/ai/common.js text 20625
 // AIの共通の道具: 見る（明るさ・視野・見通し）、聞く、経路に沿って歩く（扉を開ける）、狙う（反応の遅れ・ぶれ・反動の抑え）
 import { occluded, CS, LH, levelOfY, groundAt, leafEnd } from '../world.js';
 import { reachOK } from '../interact.js';
@@ -3229,6 +3247,13 @@ export function detect(S, a, b, vis, dt) {
 export function lastSeen(S, a, id) { const m = a.ai.seen && a.ai.seen[id]; return m && m.t > -1e8 ? m : null; }
 export function seenAgo(S, a, id) { const m = lastSeen(S, a, id); return m ? (S.t - m.t) * S.dt : 1e9; }
 
+// 道をふさぐ扉の板へ寄り、手が届いたら押し開ける／閉める
+function leafStep(S, w, a, inp, did, op) {
+  const d = w.doors[did], ai = a.ai;
+  const can = reachOK(S, w, a, 'door', did, op);
+  steerToward(a, inp, d.cx, d.cz, can || Math.hypot(d.cx - a.x, d.cz - a.z) < 0.35 ? 0 : 0.5);
+  if (can && (!ai.doorT || (S.t - ai.doorT) * S.dt > 1.2)) { ai.doorT = S.t; pushAct(inp, { a: 'op', k: 'door', id: did, op }); }
+}
 // ---- 経路に沿って歩く。戻り値: 'moving' | 'arrived' | 'blocked' | 'door'
 // a.ai.nav = { tk: 目的のマス, path: [...], i, t: 作った時刻, stuck }
 export function goTo(S, w, a, inp, tx, ty, tz, o = {}) {
@@ -3256,11 +3281,11 @@ export function goTo(S, w, a, inp, tx, ty, tz, o = {}) {
         if (d && d.L === levelOfY(a.y + 0.3) && Math.hypot(d.cx - a.x, d.cz - a.z) < 2.6) {
           const ds = S.doors[best];
           // 半端に開いた扉は押し開け、開ききった扉は閉める。板に手が届くまで寄る
-          const op = ds.ang.every(v => Math.abs(v) < 0.6) ? 'open' : 'close';
-          const can = reachOK(S, w, a, 'door', best, op);
-          steerToward(a, inp, d.cx, d.cz, can || Math.hypot(d.cx - a.x, d.cz - a.z) < 0.35 ? 0 : 0.5);
-          if (can && (!ai.doorT || (S.t - ai.doorT) * S.dt > 1.2)) { ai.doorT = S.t; pushAct(inp, { a: 'op', k: 'door', id: best, op }); }
-          ai.nav = { tk, path: [], i: 0, t: S.t, bad: false, fail: true, soft: true };
+          // ただし道がその扉の口を通るなら、閉めずに向こうへ押し開ける（両開きの扉の板が斜めに残ったとき、閉める→体に当たって止まる→歩いて押し戻す、を繰り返していた）
+          const through = p2.some(k => w.doorAt[k] === best);
+          const op = through || ds.ang.every(v => Math.abs(v) < 0.6) ? 'open' : 'close';
+          ai.nav = { tk, path: [], i: 0, t: S.t, bad: false, fail: true, soft: true, door: best, op };
+          leafStep(S, w, a, inp, best, op);
           return 'door';
         }
       }
@@ -3272,7 +3297,12 @@ export function goTo(S, w, a, inp, tx, ty, tz, o = {}) {
       nv = ai.nav = { tk, path: sp, i: 0, t: S.t, bad: false, stuck: 0, lx: a.x, lz: a.z };
     }
   }
-  if (nv.fail) { if ((S.t - nv.t) * S.dt > (nv.soft ? 0.6 : 1.5)) ai.nav = null; return nv.soft ? 'door' : 'blocked'; }
+  if (nv.fail) {
+    // 板をどける途中: 道を作り直すまでの間も、板へ寄り続ける（作り直す1こまだけ動いて、ほとんど進まなかった）
+    if (nv.soft && nv.door != null) leafStep(S, w, a, inp, nv.door, nv.op);
+    if ((S.t - nv.t) * S.dt > (nv.soft ? 0.6 : 1.5)) ai.nav = null;
+    return nv.soft ? 'door' : 'blocked';
+  }
   // 次の点
   while (nv.i < nv.path.length) {
     const c = cellCenter(w, nv.path[nv.i]);
@@ -3305,7 +3335,9 @@ export function goTo(S, w, a, inp, tx, ty, tz, o = {}) {
         if (o.noDoors) return 'door';
         // バリケード（対戦）: 壊して通る
         if (ds.bar > 0 && o.breakBar) {
-          if (!ai.doorT || (S.t - ai.doorT) * S.dt > 0.7) { ai.doorT = S.t; pushAct(inp, { a: 'op', k: 'door', id: did, op: 'bash' }); }
+          // 味方がもう叩いているなら、後ろで待つ（同じバリケードを2人で叩こうとして手が届かない、を繰り返さない）
+          const busy = S.actors.some(b => b !== a && b.team === a.team && b.act && b.act.k === 'bash' && b.act.id === did);
+          if (!busy && (!ai.doorT || (S.t - ai.doorT) * S.dt > 0.7)) { ai.doorT = S.t; pushAct(inp, { a: 'op', k: 'door', id: did, op: 'bash' }); }
           return 'door';
         }
         if (!ai.doorT || (S.t - ai.doorT) * S.dt > 1.2) {
@@ -3326,7 +3358,8 @@ export function goTo(S, w, a, inp, tx, ty, tz, o = {}) {
     nv.stuck = 0;
     // 開いた扉の板の陰に入って動けない: 板に手が届けば閉める（突入する扉 o.keep は除く）
     const lf0 = o.noDoors && o.keep == null ? -1 : nearLeaf(w, S, a, 0.9, o.keep);
-    if (lf0 >= 0 && reachOK(S, w, a, 'door', lf0, 'close')) { if (!ai.doorT || (S.t - ai.doorT) * S.dt > 1.2) { ai.doorT = S.t; pushAct(inp, { a: 'op', k: 'door', id: lf0, op: 'close' }); } nv.bad = true; return 'door'; }
+    const op0 = lf0 >= 0 ? leafOpFor(w, nv, lf0, a) : 'close';
+    if (lf0 >= 0 && op0 && reachOK(S, w, a, 'door', lf0, op0)) { if (!ai.doorT || (S.t - ai.doorT) * S.dt > 1.2) { ai.doorT = S.t; pushAct(inp, { a: 'op', k: 'door', id: lf0, op: op0 }); } nv.bad = true; return 'door'; }
     nv.bad = true; ai.unstick = { until: S.t + Math.round(0.6 / S.dt), dir: ((a.id + S.t) & 1) ? 1 : -1 };
   }
   // 進まない（行ったり来たりして、いまの経路の点に近づけない）: 開いた扉の板にはばまれていれば閉める
@@ -3336,7 +3369,8 @@ export function goTo(S, w, a, inp, tx, ty, tz, o = {}) {
   if ((S.t - nv.bestT) * S.dt > 2.5) {
     nv.bestT = S.t; nv.bestD = dNode;
     const lf = o.noDoors ? -1 : nearLeaf(w, S, a, 1.0);
-    if (lf >= 0 && reachOK(S, w, a, 'door', lf, 'close')) pushAct(inp, { a: 'op', k: 'door', id: lf, op: 'close' });
+    const op1 = lf >= 0 ? leafOpFor(w, nv, lf, a) : 'close';
+    if (lf >= 0 && op1 && reachOK(S, w, a, 'door', lf, op1)) pushAct(inp, { a: 'op', k: 'door', id: lf, op: op1 });
     else { nv.bad = true; ai.unstick = { until: S.t + Math.round(0.8 / S.dt), dir: ((a.id + S.t) & 1) ? 1 : -1 }; }
   }
   const spd = o.speed ?? 1;
@@ -3348,6 +3382,22 @@ export function goTo(S, w, a, inp, tx, ty, tz, o = {}) {
   }
   steerToward(a, inp, px, pz, spd, o.faceMove !== false && o.look == null);
   return 'moving';
+}
+// 詰まったときの板の扱い: これから通る道がその扉の口を通るなら扉には触らない（null。横へずれて進み直す）。通らないなら閉める
+// （扉の口で閉めて自分たちが通れなくなる、を繰り返していた。押し開ける案は、確保していない部屋を突入の手順なしで開けてしまい、AIだけの作戦90回で完了 52 と、触らない 59・閉める 58 より悪かった）
+function leafOpFor(w, nv, did, a) {
+  const thr = null;
+  const d = w.doors[did], path = nv && nv.path ? nv.path : [], i0 = nv && nv.i ? nv.i : 0;
+  let px = a.x, pz = a.z;
+  for (let i = i0; i < path.length && i < i0 + 16; i++) {
+    if (w.doorAt[path[i]] === did) return thr;
+    const c = cellCenter(w, path[i]);
+    // 道の線（なめらかにした道は扉のマスを飛ばすことがある）が扉の面を、扉の幅の中で横切るか
+    const s0 = (px - d.cx) * d.nx + (pz - d.cz) * d.nz, s1 = (c[0] - d.cx) * d.nx + (c[2] - d.cz) * d.nz;
+    if (s0 * s1 < 0) { const t = s0 / (s0 - s1), along = d.axis === 0 ? px + (c[0] - px) * t : pz + (c[2] - pz) * t; if (along > d.a0 - 0.1 && along < d.a1 + 0.1) return thr; }
+    px = c[0]; pz = c[2];
+  }
+  return 'close';
 }
 // いちばん近い開いた扉の板（lim 以内）
 function nearLeaf(w, S, a, lim, skip = -1) {
@@ -3476,7 +3526,7 @@ export function aimingAt(a, b, cone = 0.22) {
 export function canFight(a) { return a.alive && !a.down && !a.cuffed && !a.comply && a.tased <= 0; }
 export function hasGun(a) { return !!(a.inv.w[0] || a.inv.w[1]); }
 
-@@@@ FILE src/engine/ai/lead.js text 12916
+@@@@ FILE src/engine/ai/lead.js text 13167
 // AIの指揮: 人の指揮官がいない（全員AI・プレイヤーが倒れた・自動テスト）とき、隊の先頭のAIが RoN の命令を順に出して建物を制圧する。
 // 部屋のつながり（扉・開口・階段）をたどり、まだ入っていない近い部屋へ: 閉じた扉はスタック→突入（鍵なら蹴る/破城槌/C2、ときどき閃光）、
 // 開いた所は移動。人を見たら隊員が自分で呼びかけ・拘束・報告し、落ちた武器や証拠は「捜索して確保」で回収する。
@@ -3601,7 +3651,9 @@ export function leadThink(S, w, ev) {
     const nade = flashOK && hrand(p.door, S.seed, 5) < 0.35 ? 'flash' : 'none';
     // 罠の疑い: 先にミラー（見つけたら外す）
     if (!L.mirrored) L.mirrored = [];
-    if (!L.mirrored.includes(p.door) && hrand(p.door, S.seed, 7) < 0.5) { L.mirrored.push(p.door); issue(S, L, leader, { cmd: 'mirror', door: p.door }); return; }
+    // 乱射犯の作戦・近くで銃声がしたばかり: ミラーで時間を使わない（RoN でも急ぐ場面）
+    const hurry = m.mission === 'active' || team.some(a => a.ai.alarmT != null && (S.t - a.ai.alarmT) * S.dt < 10);
+    if (!hurry && !L.mirrored.includes(p.door) && hrand(p.door, S.seed, 7) < 0.5) { L.mirrored.push(p.door); issue(S, L, leader, { cmd: 'mirror', door: p.door }); return; }
     if (ds.trapSeen && ds.trap && ds.trap.armed) { issue(S, L, leader, { cmd: 'disarm', door: p.door }); return; }
     issue(S, L, leader, { cmd: 'breach', door: p.door, method, nade });
     return;
@@ -3668,7 +3720,7 @@ function nextStep(S, w, rg, from, L, sx, sz) {
   return { room: found, next: cur, portal: step.p };
 }
 
-@@@@ FILE src/engine/ai/nav.js text 15585
+@@@@ FILE src/engine/ai/nav.js text 15840
 // 経路: 0.5mのマスの格子で A*。扉・階段・家具をふまえる。滑らかにする（見通しで角を落とす）。
 import { CS, LH, C, STEP, isWallish, groundAt, leafEnd, pushOut } from '../world.js';
 import { M } from '../data/materials.js';
@@ -3859,8 +3911,11 @@ export function findPath(w, S, from, to, opt = {}) {
         if (!s || !stairFoot(s, wk === 3 ? i : ni, wk === 3 ? j : nj)) continue;
       }
       if (wk === 2 && !doorPass(w, S, k2, opt)) continue;
-      if (opt.leaf && opt.leaf.has(k2) && k2 !== to) continue;
+      // 開いた扉の板のマス: 通れるが遠回りより少し高くつく（歩くと板は体に押されて回る。move.js の pushLeaves）。leafHard なら通らない
+      const onLeaf = opt.leaf && opt.leaf.has(k2) && k2 !== to;
+      if (onLeaf && opt.leafHard) continue;
       let c = d < 4 ? 1 : 1.414;
+      if (onLeaf) c += 4;
       if (wk === 2) c += 1.5;
       if (avoid && avoid.has(k2)) c += 6;
       if (opt.costFn) c += opt.costFn(k2);
@@ -3999,7 +4054,7 @@ export function roomGraph(w) {
   return w._rg;
 }
 
-@@@@ FILE src/engine/ai/sus.js text 18100
+@@@@ FILE src/engine/ai/sus.js text 18686
 // 容疑者と市民のAI（Ready Or Not のように）: 士気と呼びかけで投降、偽装投降、隠れる・待ち伏せ・逃げる、人質犯、乱射犯
 import { baseInput, pushAct, visibility, detect, lastSeen, seenAgo, goTo, steerToward, aimAt, trigger, hearNearest, randomCellInRoom, roomAtPos, aimingAt, canFight, hasGun, angDiff, yawTo, turnToward, SKILL } from './common.js';
 import { eyeOf, dropWeapon } from '../combat.js';
@@ -4120,13 +4175,18 @@ export function thinkSuspect(S, w, a, dt, ctx) {
   }
   // 乱射犯: 市民を探して撃つ
   if (ai.active && !tgt) {
+    // 狙う間をあける（RoN のように少しずつ。始まって数秒で市民が全員倒れて、急ぐ意味がなくならないように）。間は難しさで変わる
+    const sp = (S.m && S.m.spree) || [22, 30];
+    if (ai.killAt == null) ai.killAt = S.t + Math.round(sp[0] * (0.7 + 0.6 * hrand(a.id, 2, 77)) / S.dt);
+    if (ai.civT != null) { const c0 = S.byId[ai.civT]; if (!c0 || !c0.alive || c0.down) { ai.civT = null; ai.killAt = S.t + Math.round(sp[1] * (0.7 + 0.6 * hrand(a.id, S.t, 78)) / S.dt); } }
     let civ = null, cd = 1e9;
-    for (const c of ctx.civs) {
-      if (!c.alive || c.cuffed) continue;
+    if (S.t >= ai.killAt) for (const c of ctx.civs) {
+      if (!c.alive || c.cuffed || c.down) continue;
       const v = visibility(S, w, a, c, { fov: 100, maxD: 30 });
       if (v > 0.2) { const d = Math.hypot(c.x - a.x, c.z - a.z); if (d < cd) { cd = d; civ = c; } }
     }
     if (civ) {
+      ai.civT = civ.id;
       const off = aimAt(S, a, inp, civ.x, civ.y + 1.2, civ.z, sk, dt, { id: civ.id });
       ai.threatT = S.t;
       trigger(S, a, inp, sk, off < 0.12);
@@ -4398,7 +4458,7 @@ export function thinkCiv(S, w, a, dt, ctx) {
   return inp;
 }
 
-@@@@ FILE src/engine/ai/swat.js text 28457
+@@@@ FILE src/engine/ai/swat.js text 29889
 // 隊員AI（Ready Or Not の命令を再現）: 追従・移動・待機・援護・スタック・突入（開け方×投げ物）・ミラー・ウェッジ・罠の解除・ピッキング・拘束・投入・捜索して確保
 // 命令がなくても: 交戦規定にしたがって撃つ、呼びかける、投降した人を拘束する、倒れた人を報告する
 import { baseInput, pushAct, visibility, detect, goTo, steerToward, aimAt, trigger, canFight, hasGun, aimingAt, angDiff, yawTo, turnToward, roomAtPos, hearNearest, SKILL } from './common.js';
@@ -4408,7 +4468,7 @@ import { curW, curWeapon, ammoCount } from '../actor.js';
 import { hrand } from '../rng.js';
 import { CS, LH, los, levelOfY } from '../world.js';
 import { sideOf, isOpen, isClosed } from '../doors.js';
-import { contextOf, doorOps, personOps, reachOK, approachPoint } from '../interact.js';
+import { contextOf, doorOps, personOps, reachOK, approachPoint, REACH_WHY, BLOCKER } from '../interact.js';
 
 const sec = (S, t0) => (S.t - t0) * S.dt;
 const TEAMOF = (a) => a.ai.squad || 'red';
@@ -4468,8 +4528,14 @@ export function thinkSwat(S, w, a, dt, ctx) {
     const ty = t.y + (t.st > 1.5 ? 0.3 : t.st > 0.5 ? 0.95 : 1.3);
     const off = aimAt(S, a, inp, t.x, ty, t.z, sk, dt, { id: t.id });
     inp.ads = true;
-    const clear = lineClear(S, a, t);
-    if (sec(S, ai.engT) >= ai.engD && clear) trigger(S, a, inp, sk, off < 0.08);
+    const blk = lineBlocker(S, a, t, ty);
+    if (sec(S, ai.engT) >= ai.engD && !blk) trigger(S, a, inp, sk, off < 0.08);
+    // 射線に味方・市民: 横へずれて射線を空ける（その場で待ち続けない）。向きは相手のまま
+    if (blk && !a.act) {
+      const dx = t.x - a.x, dz = t.z - a.z;
+      const side = (blk.x - a.x) * dz - (blk.z - a.z) * dx;   // 正: 相手を見て左にいる
+      inp.mx = side > 0 ? 1 : -1; inp.mz = 0; inp.sprint = false;
+    }
     if (!ai.yellT || sec(S, ai.yellT) > 1.6) { ai.yellT = S.t; pushAct(inp, { a: 'shout', line: 'swat_drop' }); }
     // 撃ち合いの最中も命令の動きは止める
     return inp;
@@ -4515,8 +4581,8 @@ export function isThreat(S, b) {
   if (b.ai.st === 'fight' && b.ws && b.ws.slot >= 0 && !b.low) return true;
   return false;
 }
-// 射線に味方・市民がいないか
-function lineClear(S, a, t) {
+// 射線をふさぐ味方・市民（いなければ null）。弾の高さも見る: 倒れている人・しゃがんだ人の上を越える線はふさがない
+function lineBlocker(S, a, t, ty) {
   const e = eyeOf(S, a);
   const dx = t.x - e[0], dz = t.z - e[2], L = Math.hypot(dx, dz) || 1;
   for (const b of S.actors) {
@@ -4525,9 +4591,13 @@ function lineClear(S, a, t) {
     const along = (px * dx + pz * dz) / L;
     if (along < 0.3 || along > L) continue;
     const perp = Math.abs(px * dz - pz * dx) / L;
-    if (perp < 0.45 && Math.abs(b.y - a.y) < 1.5) return false;
+    if (perp >= 0.4) continue;
+    const top = b.y + (b.down || b.st > 1.5 ? 0.5 : b.st > 0.5 ? 1.2 : 1.8);
+    const ly = e[1] + (ty - e[1]) * (along / L);
+    if (ly > top + 0.08 || ly < b.y) continue;
+    return b;
   }
-  return true;
+  return null;
 }
 
 function leaderOf(S, a) {
@@ -4566,6 +4636,9 @@ function reachAndDo(S, w, a, inp, dt, k, t, op) {
   const ai = a.ai;
   const key = k + ':' + t.id + ':' + op;
   if (!reachOK(S, w, a, k, t.id, op)) {
+    // 間に立っているのが動作をしていない AI の味方: 脇へよけてもらう（拘束の相手を4人で囲んで、互いに手が届かなかった）
+    if (REACH_WHY === 'block' && BLOCKER && BLOCKER !== a && BLOCKER.ai && BLOCKER.pid == null && !BLOCKER.act && BLOCKER.kind === 'swat' && Math.hypot(t.x - a.x, t.z - a.z) < 2.2)
+      BLOCKER.ai.yieldTo = { until: S.t + Math.round(1.1 / S.dt), ax: a.x, az: a.z, tx: t.x, tz: t.z };
     const same = ai.apt && ai.apt.key === key;
     if (!same || sec(S, ai.apt.t) > 2.0) ai.apt = { key, t: S.t, t0: same ? ai.apt.t0 : S.t, p: approachPoint(S, w, a, k, t.id, op, buildNav(w)) };
     if (!ai.apt.p || sec(S, ai.apt.t0) > 14) { ai.apt = null; return 'fail'; }
@@ -4641,10 +4714,12 @@ function doOrder(S, w, a, inp, dt, o, ctx, sk, people) {
       inp.low = r === 'moving';
       // 着いた・行けない・近くで詰まった（味方が立っているなど）・進まない（8秒）・時間切れ → その場で待機
       const dd = Math.hypot(tx - a.x, tz - a.z);
+      // 進んでいるか: 目的に近づいた、または道なりに歩いている（扉の板などで回り道をすると、まっすぐの距離はしばらく縮まない）
+      if (o.px == null || Math.hypot(a.x - o.px, a.z - o.pz) > 1.5) { o.px = a.x; o.pz = a.z; o.bestT = S.t; }
       if (o.bestD == null || dd < o.bestD - 0.3) { o.bestD = dd; o.bestT = S.t; }
       else if (sec(S, o.bestT) > 8) { o.cmd = 'hold'; o.hy = o.yaw; o.doneT = S.t; o.failed = true; return true; }
       if (dd < 1.8 && los(w, a.x, a.y + 1, a.z, tx, (o.y || 0) + 1, tz, S.doors)) o.nearT = (o.nearT || 0) + S.dt;
-      if (r === 'arrived' || r === 'blocked' || (o.nearT || 0) > 1.2 || sec(S, o.phT) > 25) { o.cmd = 'hold'; o.hy = o.yaw; o.doneT = S.t; }
+      if (r === 'arrived' || r === 'blocked' || (o.nearT || 0) > 1.2 || sec(S, o.phT) > 45) { o.cmd = 'hold'; o.hy = o.yaw; o.doneT = S.t; }
       return true;
     }
     case 'hold': case 'cover': {
@@ -5478,7 +5553,7 @@ export const FLOORS = [
 // 人の体を通るときの貫通の消費（1回あたり）
 export const BODY_PEN = 220;
 
-@@@@ FILE src/engine/data/missions.js text 2951
+@@@@ FILE src/engine/data/missions.js text 3002
 // 作戦の種類と難しさ（資料室の手順書と資料もここから作る）
 export const MISSIONS = {
   barricade: {
@@ -5510,9 +5585,9 @@ export const MISSIONS = {
 export const MISSION_LIST = ['barricade', 'hostage', 'bomb', 'raid', 'active'];
 // 難しさ: cap = 容疑者 → プレイヤーの1発の上限（RoN 70/80 を 100HP に換算）
 export const DIFFS = {
-  normal: { name: '標準', cap: 44, susMul: 1.0, exec: 12, trapMul: 1, desc: '被弾1発のダメージ上限44。容疑者の反応は遅め。' },
-  hard: { name: 'ハード', cap: 50, susMul: 1.15, exec: 9, trapMul: 1.5, desc: '上限50。容疑者が多く、反応が速い。人質の処刑が早い。' },
-  hardcore: { name: 'ハードコア', cap: 999, susMul: 1.3, exec: 7, trapMul: 2, desc: '上限なし。一発で倒れることもある。HUDは最小限。' },
+  normal: { name: '標準', cap: 44, susMul: 1.0, exec: 12, trapMul: 1, spree: [22, 30], desc: '被弾1発のダメージ上限44。容疑者の反応は遅め。' },
+  hard: { name: 'ハード', cap: 50, susMul: 1.15, exec: 9, trapMul: 1.5, spree: [15, 22], desc: '上限50。容疑者が多く、反応が速い。人質の処刑が早い。' },
+  hardcore: { name: 'ハードコア', cap: 999, susMul: 1.3, exec: 7, trapMul: 2, spree: [10, 15], desc: '上限なし。一発で倒れることもある。HUDは最小限。' },
 };
 export const EVIDENCE = {
   drugs: { name: '麻薬の包み' }, phone: { name: '携帯電話' }, docs: { name: '書類' }, cash: { name: '現金の束' }, drive: { name: 'ハードディスク' }, guns: { name: '銃のケース' },
@@ -5640,7 +5715,7 @@ export const PROPS = {
 
 @@@@ FILE src/engine/data/version.js text 209
 // 版番号: 互換（セーブ・オンラインの相性。上げたら古いセーブは捨てる）と表示用
-export const VERSION = '0.1.0';
+export const VERSION = '0.1.1';
 export const COMPAT = 1;
 export const TITLE = 'HARD ENTRY';
 
@@ -5848,9 +5923,9 @@ export function attachOptions(wid) {
 }
 export const CAT_NAME = { rifle: '小銃', smg: '短機関銃', shotgun: '散弾銃', pistol: '拳銃', less: '非致死' };
 
-@@@@ FILE src/engine/doors.js text 10430
+@@@@ FILE src/engine/doors.js text 11472
 // 扉: 開ける（向こうへ押す）・少し開ける・閉める・蹴る・ピッキング・ウェッジ・C2・破城槌・ブリーチングショットガン・ミラー・罠・バリケード
-import { leafEnd, CS, LH } from './world.js';
+import { leafEnd, CS, LH, pushOut } from './world.js';
 import { hrand } from './rng.js';
 
 export const OPEN_ANG = 1.62;   // 約93°
@@ -5998,6 +6073,19 @@ export function stepDoors(S, w, dt, ev) {
       if (blocked) {
         // 板に当たって止めている AI はよける（味方が開け閉めしている扉）
         if (blocked.ai && blocked.pid == null && !blocked.act && blocked.alive && !blocked.down) blocked.ai.yieldTo = { until: S.t + Math.round(1.0 / S.dt), ax: lf.hx, az: lf.hz, tx: ex, tz: ez };
+        // 自分では動けない人（ひざまずいた・倒れた・拘束された・怯んだ）: ゆっくり動く板が少しずつ押しのける。扉は止めずに押し続ける
+        // （扉の口でひざまずいた容疑者のせいで扉が開かず、拘束にも行けない、を防ぐ）
+        if (ds.spd[li] <= 5 && blocked.alive && (blocked.cuffed || blocked.down || blocked.comply >= 2 || blocked.stun > 0.3)) {
+          const [cx0, cz0] = leafEnd(lf, cur), vx = cx0 - lf.hx, vz = cz0 - lf.hz, ll = Math.hypot(vx, vz) || 1;
+          let nx = -vz / ll, nz = vx / ll;
+          if ((blocked.x - lf.hx) * nx + (blocked.z - lf.hz) * nz < 0) { nx = -nx; nz = -nz; }
+          const px = blocked.x + nx * 0.8 * dt, pz = blocked.z + nz * 0.8 * dt;
+          const po = pushOut(w, px, pz, blocked.y + 0.3, blocked.y + 1.2, 0.26, null, -1, _po);
+          blocked.x = px + po[0]; blocked.z = pz + po[1];
+          nxt = cur;
+          ds.ang[li] = nxt;
+          continue;
+        }
         if (ds.spd[li] > 5) { // 蹴った扉は人をはね飛ばす
           blocked.stun = Math.max(blocked.stun, 0.8);
           if (blocked.ai && blocked.ai.morale != null) blocked.ai.morale -= 0.15;
@@ -6009,6 +6097,7 @@ export function stepDoors(S, w, dt, ev) {
     ds.open = isOpen(ds);
   }
 }
+const _po = [0, 0, 0];
 function segDist(px, pz, ax, az, bx, bz) {
   const vx = bx - ax, vz = bz - az, L2 = vx * vx + vz * vz || 1e-9;
   let t = ((px - ax) * vx + (pz - az) * vz) / L2; t = t < 0 ? 0 : t > 1 ? 1 : t;
@@ -6211,7 +6300,7 @@ export function load(o) {
 }
 export { CS, LH };
 
-@@@@ FILE src/engine/interact.js text 48631
+@@@@ FILE src/engine/interact.js text 48999
 // 調べる・使う: 見ている物（扉・人・落ちている物・爆弾・壁）と、そのときできる操作。時間のかかる動作の進み。
 import { raycast, los, CS, LH, levelOfY, NB, isWallish, C, leafEnd, pushOut } from './world.js';
 import { M, MATS } from './data/materials.js';
@@ -6444,6 +6533,8 @@ export function approachPoint(S, w, a, k, id, op, nav) {
   const L = levelOfY(t.y + 0.3), lim = REACH_D[op] ?? 1.0, R = Math.ceil(lim / CS) + 1;
   const ci = Math.floor(tp[0] / CS), cj = Math.floor(tp[2] / CS);
   const sx = a.x, sz = a.z, sy = a.y;
+  // 同じ部屋の点を先に（扉の向こう側の点を選ぶと、扉の口に立っている相手の体で扉が開かず、回り込めなかった）
+  const myRoom = w.roomAt ? w.roomAt[w.idx(levelOfY(a.y + 0.3), Math.floor(a.x / CS), Math.floor(a.z / CS))] : -1;
   const cand = [];
   for (let j = cj - R; j <= cj + R; j++) for (let i = ci - R; i <= ci + R; i++) {
     if (i < 0 || j < 0 || i >= w.W || j >= w.D) continue;
@@ -6451,7 +6542,7 @@ export function approachPoint(S, w, a, k, id, op, nav) {
     if (nav && nav.walk[kk] !== 1) continue;
     const x = (i + 0.5) * CS, z = (j + 0.5) * CS, dt = Math.hypot(x - tp[0], z - tp[2]);
     if (dt < 0.45 || dt > lim - 0.08) continue;
-    cand.push([Math.hypot(x - sx, z - sz) + dt * 0.5, x, z]);
+    cand.push([Math.hypot(x - sx, z - sz) + dt * 0.5 + (w.roomAt && w.roomAt[kk] !== myRoom ? 3 : 0), x, z]);
   }
   cand.sort((p, q) => p[0] - q[0]);
   let found = null;
@@ -6672,7 +6763,7 @@ function siteOps(S, w, a, eye, dx, dz) {
   }
   if (a.carry === 'defuser' && m.phase === 'action' && !(m.defuser && m.defuser.planted)) {
     for (const s of m.sites) {
-      if (s.L !== levelOfY(a.y + 0.2)) continue;
+      if (s.L !== levelOfY(a.y + 0.2) || (m.target != null && s.id !== m.target)) continue;
       if (Math.hypot(s.x - a.x, s.z - a.z) < s.r) return { k: 'site', id: s.id, ops: [{ op: 'plant', t: ACT_T.plant }], def: { op: 'plant', t: ACT_T.plant } };
     }
   }
@@ -8798,7 +8889,7 @@ export const MODE_INFO = {
   bomb: { name: '爆弾', en: 'BOMB', desc: 'シージ式の攻守。立てこもり犯（防衛）は45秒の準備で壁を補強し扉をふさぐ。SWAT（攻撃）はドローンで偵察し、解除装置を爆弾の場所に仕掛けて45秒守る。ダウンしても味方が蘇生できる（DBNO）。' },
 };
 
-@@@@ FILE src/engine/modes/pve.js text 15187
+@@@@ FILE src/engine/modes/pve.js text 15203
 // 作戦（PvE）: バリケード・人質救出・爆弾脅迫・強制捜査（レイド）・アクティブシューター
 // 採点（100点）: 主目的50（容疑者25・市民25）、副目的30（報告10・証拠10・作戦別10）、隊員の安全10、規則10。違反で減点。評価 S〜F
 import { spawnSwat, spawnSuspect, spawnCivilian, cellPos } from './spawn.js';
@@ -8843,7 +8934,7 @@ export default {
     const susSpots = rndShuffle(r, (sp.sus || []).slice());
     const civSpots = rndShuffle(r, (sp.civ || []).slice());
     const profs = MM.prof || M.prof;
-    S.m = { kind: 'pve', mission: o.mission, phase: 'play', startT: S.t, sus: [], civ: [], evidence: [], bombs: [], hostages: [], log: [], reportsDone: 0, softDone: false, execDelay: D.exec, fail: null, diff: o.diff || 'normal', entry: o.entry ?? 0, title: M.name };
+    S.m = { kind: 'pve', mission: o.mission, phase: 'play', startT: S.t, sus: [], civ: [], evidence: [], bombs: [], hostages: [], log: [], reportsDone: 0, softDone: false, execDelay: D.exec, spree: D.spree, fail: null, diff: o.diff || 'normal', entry: o.entry ?? 0, title: M.name };
     // 人質救出: 人質と見張り
     if (o.mission === 'hostage') {
       const hs = rndShuffle(r, (sp.hostage || sp.civ || []).slice());
@@ -9061,7 +9152,7 @@ export function scoreMission(S) {
   return out;
 }
 
-@@@@ FILE src/engine/modes/pvp.js text 14990
+@@@@ FILE src/engine/modes/pvp.js text 16762
 // 対戦（PvP）: リスポーンありTDM・殲滅戦（リスポーンなし）・爆弾（シージ式の攻守）
 // 陣営: チーム0/1。見た目は SWAT（攻撃・チーム0のTDM）と立てこもり犯（防衛）。空きはボット。
 import { createActor, makeInventory, makeArmor } from '../actor.js';
@@ -9183,16 +9274,27 @@ function startRound(S, w, first) {
   }
   // 対戦では扉に鍵はかけない（R6 と同じ。ふさぐのはバリケード・補強で）
   for (const ds of S.doors) { ds.locked = false; ds.lockBroken = false; }
-  m.phase = 'pre'; m.phaseT = S.t; m.defuser = { planted: false, disabled: false, t: 0 }; m.intel = {}; m.target = null;
+  m.phase = 'pre'; m.phaseT = S.t; m.defuser = { planted: false, disabled: false, t: 0 }; m.intel = {};
+  // 爆弾: このラウンドの目標は1か所（R6 と同じく、守る側は1つの目標を全員で守る。2か所が離れたマップで守りが2つに割れないように）
+  m.target = m.kind === 'bomb' && m.sites && m.sites.length ? Math.floor(hrand(S.seed + (m.round || 1) * 7, 7, 220) * m.sites.length) : null;
   m.reinfLeft = Math.min(10, 2 * S.actors.filter(a => a.team === m.def).length);
   // 陣営の見た目: 攻撃側（またはチーム0）が SWAT
   const sideOf = (t) => m.kind === 'bomb' ? (t === m.att ? 'swat' : 'sus') : ((t === 0) !== !!m.swapped ? 'swat' : 'sus');
   const spawnA = (def.spawn.pvp && def.spawn.pvp.a) || def.spawn.swat.map(s => [s.x, s.z, s.L || 0]);
   const spawnB = (def.spawn.pvp && def.spawn.pvp.b) || (def.spawn.sus || []);
   const used = new Set();
+  // TDM: 両チームとも建物の外、マップの反対の端から始める（片方だけ建物の中だと、外の側が攻め込むだけの勝負になる）。どちらの端かは試合ごとに決める
+  const ends = m.kind === 'tdm' && def.spawn.tdm && def.spawn.tdm.length >= 2 ? [def.spawn.tdm[0], def.spawn.tdm[1]] : null;
+  const flip = hrand(S.seed, 3, 221) < 0.5 ? 1 : 0;
+  const placed = [];
   for (const a of S.actors) {
     const side = sideOf(a.team);
     a.pvpSide = side; a._lookV = (a._lookV || 0) + 1;
+    if (ends) {
+      resetFighter(S, w, a, ends[a.team ^ flip], side);
+      spreadOut(S, w, a, placed);
+      continue;
+    }
     const list = (side === 'swat') ? spawnA : spawnB;
     let pt = null;
     for (let tries = 0; tries < list.length; tries++) { const c = list[(a.slotIdx + tries * 3 + (m.round * 5)) % list.length]; const key = c.join(','); if (!used.has(key)) { used.add(key); pt = c; break; } }
@@ -9205,6 +9307,23 @@ function startRound(S, w, first) {
     const carrier = att.find(a => a.pid != null) || att[0];
     if (carrier) carrier.carry = 'defuser';
   }
+}
+// 同じ点から始める仲間を、重ならないように近くの床へずらす（このラウンドで置いた人だけを見る）
+function spreadOut(S, w, a, placed) {
+  const L = Math.max(0, Math.round((a.y - 0.4) / LH));
+  const near = (x, z) => placed.some(p => Math.abs(p.y - a.y) < 1.5 && Math.hypot(p.x - x, p.z - z) < 0.9);
+  if (near(a.x, a.z)) {
+    out: for (let r = 1; r <= 8; r++) for (let dj = -r; dj <= r; dj++) for (let di = -r; di <= r; di++) {
+      if (Math.max(Math.abs(di), Math.abs(dj)) !== r) continue;
+      const x = a.x + di * CS, z = a.z + dj * CS;
+      const q = nearestFloor(w, L, x, z, 0.3);
+      if (!q || Math.hypot(q[0] - x, q[1] - z) > 0.05 || near(q[0], q[1])) continue;
+      a.x = q[0]; a.z = q[1]; a.y = groundAt(w, q[0], q[1], L * LH + 0.4);
+      break out;
+    }
+  }
+  a.spawnAt = [a.x, a.z];
+  placed.push({ x: a.x, y: a.y, z: a.z });
 }
 function resetFighter(S, w, a, pt, side) {
   const [x, z, L = 0] = pt;
@@ -9247,7 +9366,7 @@ function nextRound(S, w, ev) {
     if (m.round === W) { m.swapped = !m.swapped; ev.push({ e: 'swap' }); }
   }
   startRound(S, w, false);
-  ev.push({ e: 'roundstart', round: m.round });
+  ev.push({ e: 'roundstart', round: m.round, site: m.target ?? -1 });
 }
 // ---- TDM（リスポーンあり）
 function stepTdm(S, w, dt, ev, el) {
@@ -12276,7 +12395,7 @@ export class GuestSession {
   }
 }
 
-@@@@ FILE src/net/snap.js text 19434
+@@@@ FILE src/net/snap.js text 19506
 // 通信の中身: ホストのエンジンの状態 → 小さな写し（数を丸めた配列）。ゲストは写しから「見せるための状態」を作る。
 // 静かな情報（名前・見た目・装備の種類・目的の一覧）は st、動く情報（位置・姿勢・扉・物・出来事）は g。
 import { createActor, makeWeapon } from '../engine/actor.js';
@@ -12330,7 +12449,7 @@ export function packSnap(S, w, events, mePids, withBlocks) {
   let M;
   if (m.kind === 'pve') M = { ph: m.phase, soft: m.softDone ? 1 : 0, bt: m.bombT != null ? Math.round(m.bombT) : null, bd: (m.bombs || []).filter(b => b.done).map(b => b.id), bf: (m.bombs || []).filter(b => b.found).map(b => b.id), res: m.result || null, why: m.why || null, score: m.phase === 'end' ? m.score : undefined };
   else if (m.kind === 'train') M = { ph: 'play' };
-  else M = { ph: m.phase, el: Math.round((S.t - m.phaseT) * S.dt * 10) / 10, rd: m.round, w: m.wins, sc: m.score, att: m.att, def: m.def, df: m.defuser ? [m.defuser.planted ? 1 : 0, m.defuser.disabled ? 1 : 0, Math.round((m.defuser.t || 0) * 10) / 10, r2(m.defuser.x || 0), r2(m.defuser.z || 0), m.defuser.site ?? -1] : null, over: m.over ? 1 : 0, win: m.winner ?? null, sw: m.swapped ? 1 : 0, rl: m.reinfLeft ?? 0 };
+  else M = { ph: m.phase, el: Math.round((S.t - m.phaseT) * S.dt * 10) / 10, rd: m.round, w: m.wins, sc: m.score, att: m.att, def: m.def, df: m.defuser ? [m.defuser.planted ? 1 : 0, m.defuser.disabled ? 1 : 0, Math.round((m.defuser.t || 0) * 10) / 10, r2(m.defuser.x || 0), r2(m.defuser.z || 0), m.defuser.site ?? -1] : null, over: m.over ? 1 : 0, win: m.winner ?? null, sw: m.swapped ? 1 : 0, tg: m.target ?? -1, rl: m.reinfLeft ?? 0 };
   const P = {};
   for (const [pid, id] of Object.entries(mePids || {})) {
     const a = S.byId[id]; if (!a) continue;
@@ -12474,7 +12593,7 @@ export class Mirror {
     const M = last.M || {}, m = S.m;
     if (m.kind === 'pve') { m.phase = M.ph; m.softDone = !!M.soft; m.bombT = M.bt; for (const b of m.bombs) { b.done = (M.bd || []).includes(b.id); b.found = (M.bf || []).includes(b.id); } m.result = M.res; m.why = M.why; if (M.score) m.score = M.score; }
     else if (m.kind && m.kind !== 'train') {
-      m.phase = M.ph; m.round = M.rd; m.wins = M.w || m.wins; m.score = M.sc || m.score; m.att = M.att; m.def = M.def; m.over = !!M.over; m.winner = M.win; m.swapped = !!M.sw; m.reinfLeft = M.rl;
+      m.phase = M.ph; m.round = M.rd; m.wins = M.w || m.wins; m.score = M.sc || m.score; m.att = M.att; m.def = M.def; m.over = !!M.over; m.winner = M.win; m.swapped = !!M.sw; m.target = M.tg != null && M.tg >= 0 ? M.tg : null; m.reinfLeft = M.rl;
       m.phaseT = S.t - Math.round((M.el || 0) / S.dt);
       m.defuser = M.df ? { planted: !!M.df[0], disabled: !!M.df[1], t: M.df[2], x: M.df[3] / 100, z: M.df[4] / 100, site: M.df[5] } : null;
     }
