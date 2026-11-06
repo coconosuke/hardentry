@@ -1,6 +1,7 @@
 // 描画の司令塔: 太陽の影 → 本描画(HDR: 空・世界・扉・人・銃・粒子・ガラス) → 一人称 → 光のにじみ → 仕上げ（トーンマップ・暗視・閃光） → FXAA
 import { createGL, tex2D, fbo, depthTex } from './gl.js';
 import { m4, m4mul, m4persp, m4lookAt, m4invert, frustumPlanes, aabbVisible } from './math.js';
+import { buildOutskirts } from './outskirts.js';
 import { makeTextures, TEX, NLAYER, LAYER } from './textures.js';
 import { COMMON, LIGHT, WORLD_VS, WORLD_FS, SKIN_VS, SKIN_FS, SHADOW_VS, SHADOW_SKIN_VS, SHADOW_FS, FS_VS, SKY_FS, FX_VS, FX_FS, DOWN_FS, UP_FS, COMP_FS, FXAA_FS, COPY_FS, MAX_DL } from './shaders.js';
 import { prepareLevel, buildChunk, doorLeafMesh, barricadeMesh, CHUNK } from './level.js';
@@ -220,6 +221,8 @@ export class Renderer {
     }
     // 扉
     this.doorMeshes = w.doors.map(d => ({ leaves: d.leaves.map((lf, li) => makeWorldMesh(gl, doorLeafMesh(ctx, d, li))), bar: makeWorldMesh(gl, barricadeMesh(d)) }));
+    // マップの外まわり（道・隣の建物・遠くの景色）
+    try { const o = buildOutskirts(w, def, { lite: !!(this.q && this.q.budget <= 0.4e6) }); this.outer = { mesh: makeWorldMesh(gl, o.B), glass: makeWorldMesh(gl, o.G), tris: o.B.i.length / 3 }; } catch (e) { console.warn('outskirts', e); this.outer = null; }
     this.roofY = w.NL * LH;
     this.buildMs = performance.now() - t0;
   }
@@ -267,6 +270,7 @@ export class Renderer {
     const gl = this.gl;
     for (const ch of this.chunks || []) { delMesh(gl, ch.mesh); delMesh(gl, ch.glass); }
     for (const d of this.doorMeshes || []) { for (const m of d.leaves) delMesh(gl, m); delMesh(gl, d.bar); }
+    if (this.outer) { delMesh(gl, this.outer.mesh); delMesh(gl, this.outer.glass); this.outer = null; }
     for (const t of [this.lgT, this.wmT, this.aoT, this.dlr]) if (t) gl.deleteTexture(t);
     this.chunks = null; this.doorMeshes = null; this.lgT = this.wmT = this.aoT = this.dlr = null;
   }
@@ -382,6 +386,7 @@ export class Renderer {
     }
     vis.sort((a, b) => a[0] - b[0]);
     for (const [, ch] of vis) { drawMesh(gl, ch.mesh); this.stats.draws++; this.stats.tris += ch.tris; this.stats.chunks++; }
+    if (this.outer && this.outer.mesh) { if (P.u.uOuter) gl.uniform1f(P.u.uOuter, 1); drawMesh(gl, this.outer.mesh); if (P.u.uOuter) gl.uniform1f(P.u.uOuter, 0); this.stats.draws++; this.stats.tris += this.outer.tris; }
     // 扉
     if (f.doors) this._drawDoors(P, f.doors);
     for (const h of this.hooks.opaque) h(this, f);
@@ -408,6 +413,7 @@ export class Renderer {
     this._bindLight(GP, f);
     gl.uniformMatrix4fv(GP.u.uVP, false, this.vp);
     gl.disable(gl.CULL_FACE);
+    if (this.outer && this.outer.glass) { if (GP.u.uOuter) gl.uniform1f(GP.u.uOuter, 1); drawMesh(gl, this.outer.glass); if (GP.u.uOuter) gl.uniform1f(GP.u.uOuter, 0); }
     for (let k = vis.length - 1; k >= 0; k--) { const ch = vis[k][1]; if (ch.glass) { drawMesh(gl, ch.glass); this.stats.draws++; } }
     for (const h of this.hooks.transparent) h(this, f);
     gl.depthMask(true);

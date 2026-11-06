@@ -18,7 +18,7 @@ uniform highp sampler2D uDLR;     // 動く光ごとに、届く部屋（光が�
 uniform vec4 uLGd;                // W1, D1, NLy, NL
 uniform vec4 uMapD;               // W, D, CS, LH
 uniform vec3 uSunDir; uniform vec3 uSunCol; uniform float uShadowOn; uniform mat4 uShadowVP; uniform highp sampler2DShadow uShadow; uniform float uShadowTexel;
-uniform vec3 uSkyCol; uniform float uAmbMin;
+uniform vec3 uSkyCol; uniform float uAmbMin; uniform float uOuter;
 uniform vec4 uDLp[${MAX_DL}]; uniform vec4 uDLc[${MAX_DL}]; uniform vec4 uDLd[${MAX_DL}]; uniform int uDLn;
 uniform vec3 uCam; uniform vec3 uFogCol; uniform float uFogD; uniform float uFogIn; uniform float uTime;
 uniform float uRoofY;
@@ -100,6 +100,12 @@ vec3 dynLights(vec3 p, vec3 n, float room){
 }
 // 光とまとめ: 下地の色 alb にかける光（HDR）
 vec3 shade(vec3 p, vec3 n, vec3 alb, float room, float ao, out float outdoor){
+  // マップの外まわり: 空の明るさと太陽だけ（光の格子の外。影は描かない）
+  if (uOuter > 0.5) {
+    outdoor = 1.0;
+    vec3 g0 = uSkyCol * (0.5 + 0.4 * max(n.y, 0.0) + 0.1 * max(-n.y, 0.0));
+    return alb * ((g0 + uAmbMin) * ao + uSunCol * max(dot(n, uSunDir), 0.0) * 0.92);
+  }
   vec2 a;
   vec3 g = gridLight(p, n, a);
   // 屋根の上（光の格子の外）
