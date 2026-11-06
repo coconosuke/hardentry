@@ -59,12 +59,13 @@ export function packSnap(S, w, events, mePids, withBlocks) {
     P[pid] = meBlock(a);
   }
   const out = { T: Math.round(S.t * S.dt * 1000) / 1000, A, D, I, N, C, M, P, E: events };
-  // 成績（スコア表）: 変わったとき、または約2秒ごと（途中から入った人にも届く）
+  // 成績（スコア表）: 変わってから20回は毎回（送る回数は通信で間引かれるので、1回だけだと届かないことがある）、ほかは10回に1回
   if (S.pvp) {
     const K = S.actors.filter(a => !a.isDrone).map(a => [a.id, a.stats.k, a.stats.d, a.stats.a]);
-    const key = K.join(';'), st = KSENT.get(S) || { key: '', n: 0 };
+    const key = K.join(';'), st = KSENT.get(S) || { key: '', n: 0, fresh: 0 };
     st.n++;
-    if (key !== st.key || st.n >= 30) { st.key = key; st.n = 0; out.K = K; }
+    if (key !== st.key) { st.key = key; st.fresh = 20; }
+    if (st.fresh > 0 || st.n >= 10) { st.fresh = Math.max(0, st.fresh - 1); st.n = 0; out.K = K; }
     KSENT.set(S, st);
   }
   // 壊れた壁（ときどき全部）
