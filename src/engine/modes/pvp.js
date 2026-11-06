@@ -129,7 +129,7 @@ function startRound(S, w, first) {
   const spawnB = (def.spawn.pvp && def.spawn.pvp.b) || (def.spawn.sus || []);
   const used = new Set();
   // TDM: 両チームとも建物の外、マップの反対の端から始める（片方だけ建物の中だと、外の側が攻め込むだけの勝負になる）。どちらの端かは試合ごとに決める
-  const ends = m.kind === 'tdm' && def.spawn.tdm && def.spawn.tdm.length >= 2 ? [def.spawn.tdm[0], def.spawn.tdm[1]] : null;
+  const ends = m.kind === 'tdm' && def.spawn.tdm && def.spawn.tdm.length >= 2 ? tdmEnds(S, w, def) : null;
   const flip = hrand(S.seed, 3, 221) < 0.5 ? 1 : 0;
   const placed = [];
   for (const a of S.actors) {
@@ -152,6 +152,24 @@ function startRound(S, w, first) {
     const carrier = att.find(a => a.pid != null) || att[0];
     if (carrier) carrier.carry = 'defuser';
   }
+}
+// TDM の始まりの2点: 1階の候補のうち、互いに見通せない（まわり1mも含めて）いちばん遠い組
+// （郊外の家は最初の2点が同じ通りの両端で、始まって1秒で撃ち合いになっていた）
+function tdmEnds(S, w, def) {
+  if (w._tdmEnds) return w._tdmEnds;
+  const pts = def.spawn.tdm, P = pts.map(q => cellPos(w, q[0], q[1], q[2] || 0));
+  const O = [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]];
+  let best = null, bd = -1;
+  for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
+    if ((pts[i][2] || 0) || (pts[j][2] || 0)) continue;
+    const a = P[i], b = P[j], d = Math.hypot(a.x - b.x, a.z - b.z);
+    if (d <= bd) continue;
+    let seen = false;
+    for (const [ox, oz] of O) { for (const [px, pz] of O) if (los(w, a.x + ox, a.y + 1.5, a.z + oz, b.x + px, b.y + 1.5, b.z + pz, null)) { seen = true; break; } if (seen) break; }
+    if (!seen) { bd = d; best = [pts[i], pts[j]]; }
+  }
+  w._tdmEnds = best || [pts[0], pts[1]];
+  return w._tdmEnds;
 }
 // 同じ点から始める仲間を、重ならないように近くの床へずらす（このラウンドで置いた人だけを見る）
 function spreadOut(S, w, a, placed) {
