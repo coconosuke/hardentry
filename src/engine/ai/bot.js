@@ -1,5 +1,5 @@
 // 対戦のボット: TDM（敵を探して撃つ）、殲滅戦（慎重に）、爆弾（攻撃: 場所へ行って設置・守る／防衛: 準備で補強とバリケード、場所を守る、解除）
-import { baseInput, pushAct, visibility, detect, lastSeen, seenAgo, goTo, aimAt, trigger, hearNearest, randomCellInRoom, roomAtPos, angDiff, yawTo, turnToward, SKILL } from './common.js';
+import { baseInput, pushAct, visibility, detect, lastSeen, seenAgo, goTo, steerToward, aimAt, trigger, hearNearest, randomCellInRoom, roomAtPos, angDiff, yawTo, turnToward, SKILL } from './common.js';
 import { navCell, cellCenter, buildNav, roomGraph } from './nav.js';
 import { eyeOf } from '../combat.js';
 import { curW, curWeapon, ammoCount } from '../actor.js';
@@ -115,7 +115,7 @@ function bombThink(S, w, a, inp, dt, ctx, sk) {
         return inp;
       }
     }
-    const site = m.sites[m.target ?? (m.target = Math.floor(hrand(m.round || 1, 7, 220) * m.sites.length))];
+    const site = m.sites[m.target ?? 0];
     if (!site) return inp;
     if (a.carry === 'defuser') {
       const dd = Math.hypot(site.x - a.x, site.z - a.z);
@@ -140,10 +140,12 @@ function bombThink(S, w, a, inp, dt, ctx, sk) {
     const nearest = S.actors.filter(b => b.team === a.team && b.alive && !b.down).sort((p, q) => Math.hypot(p.x - def.x, p.z - def.z) - Math.hypot(q.x - def.x, q.z - def.z))[0];
     // 取り返し: 近くの敵を片づけてから外す（敵を見て2.5秒たつか、残りが少なくなったら外しに行く）
     const intel = m.intel && m.intel[a.team];
-    const clear = !intel || sec(S, intel.t) > 2.5 || Math.hypot(intel.x - def.x, intel.z - def.z) > 12 || (def.t || 0) > 30;
+    const clear = !intel || sec(S, intel.t) > 2.0 || Math.hypot(intel.x - def.x, intel.z - def.z) > 12 || (def.t || 0) > 22;
     if (nearest === a && clear) {
-      const r = goTo(S, w, a, inp, def.x, def.y, def.z, { r: 0.75, unlock: true });
-      if (Math.hypot(def.x - a.x, def.z - a.z) < 1.1) { inp.yaw = turnToward(a.yaw, yawTo(def.x - a.x, def.z - a.z), 6 * dt); if (!a.act) pushAct(inp, { a: 'op', k: 'site', id: -1, op: 'defuse' }); inp.mx = inp.mz = 0; inp.stance = 1; }
+      // 手が届けば外し始める。届かなければ近づく（道の終わりで止まったら、まっすぐ寄る）
+      if (reachOK(S, w, a, 'site', -1, 'defuse')) { inp.mx = inp.mz = 0; inp.yaw = turnToward(a.yaw, yawTo(def.x - a.x, def.z - a.z), 6 * dt); if (!a.act) pushAct(inp, { a: 'op', k: 'site', id: -1, op: 'defuse' }); inp.stance = 1; return inp; }
+      const r = goTo(S, w, a, inp, def.x, def.y, def.z, { r: 0.45, unlock: true });
+      if (r !== 'moving' && Math.hypot(def.x - a.x, def.z - a.z) < 3) steerToward(a, inp, def.x, def.z, 0.5, true);
       return inp;
     }
     // ほかの隊員（と、まだ外しに行かない一番近い人）は、敵の見えた方へ寄って押し返す
@@ -154,7 +156,7 @@ function bombThink(S, w, a, inp, dt, ctx, sk) {
     }
     return holdNear(S, w, a, inp, dt, def.x, def.y, def.z, 5);
   }
-  const site = m.sites[a.ai.siteIdx ?? (a.ai.siteIdx = (a.ai.slot || 0) % m.sites.length)];
+  const site = m.sites[m.target ?? 0];
   return holdNear(S, w, a, inp, dt, site.x, site.y, site.z, 4.5);
 }
 // 場所の近くで角を見張る
@@ -173,7 +175,11 @@ function holdNear(S, w, a, inp, dt, x, y, z, R) {
   const r = goTo(S, w, a, inp, ai.hold[0], ai.hold[1], ai.hold[2], { r: 0.5, unlock: true });
   if (r !== 'moving') {
     inp.mx = inp.mz = 0;
-    if (ai.watch) { inp.yaw = turnToward(a.yaw, yawTo(ai.watch[0] - a.x, ai.watch[2] - a.z), 3 * dt); inp.ads = true; }
+    // 足音・扉の音・銃声が聞こえたら、その方へ向き直って待つ（R6 は音で相手の来る方を知る）
+    const hh = hearNearest(S, w, a, 40, (x) => (x.k === 'step' || x.k === 'door' || x.k === 'breach' || x.k === 'shot') && x.team !== a.team && x.team >= 0);
+    if (hh && Math.abs(hh.y - a.y) < 2.5) { ai.heardAt = [hh.x, hh.y + 1.3, hh.z]; ai.heardT = S.t; }
+    const look = ai.heardAt && sec(S, ai.heardT) < 4 ? ai.heardAt : ai.watch;
+    if (look) { inp.yaw = turnToward(a.yaw, yawTo(look[0] - a.x, look[2] - a.z), (look === ai.watch ? 3 : 5) * dt); inp.ads = true; }
     if (hrand(a.id, Math.floor(S.t / 120), 231) < 0.35) inp.stance = 1;
   }
   return inp;
@@ -182,7 +188,7 @@ function holdNear(S, w, a, inp, dt, x, y, z, R) {
 function defendPrep(S, w, a, inp, dt, ctx) {
   const ai = a.ai, m = S.m;
   if (a.act) { inp.mx = inp.mz = 0; return inp; }
-  const site = m.sites[ai.siteIdx ?? (ai.siteIdx = (ai.slot || 0) % m.sites.length)];
+  const site = m.sites[m.target ?? 0];
   // 仕事を決める: 補強できる壁 → バリケード → 罠
   if (!ai.job || ai.job.done) ai.job = pickPrepJob(S, w, a, site);
   const j = ai.job;

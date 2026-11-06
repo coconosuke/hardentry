@@ -458,7 +458,7 @@ function siteOps(S, w, a, eye, dx, dz) {
   }
   if (a.carry === 'defuser' && m.phase === 'action' && !(m.defuser && m.defuser.planted)) {
     for (const s of m.sites) {
-      if (s.L !== levelOfY(a.y + 0.2)) continue;
+      if (s.L !== levelOfY(a.y + 0.2) || (m.target != null && s.id !== m.target)) continue;
       if (Math.hypot(s.x - a.x, s.z - a.z) < s.r) return { k: 'site', id: s.id, ops: [{ op: 'plant', t: ACT_T.plant }], def: { op: 'plant', t: ACT_T.plant } };
     }
   }

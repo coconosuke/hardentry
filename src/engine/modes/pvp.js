@@ -119,16 +119,27 @@ function startRound(S, w, first) {
   }
   // 対戦では扉に鍵はかけない（R6 と同じ。ふさぐのはバリケード・補強で）
   for (const ds of S.doors) { ds.locked = false; ds.lockBroken = false; }
-  m.phase = 'pre'; m.phaseT = S.t; m.defuser = { planted: false, disabled: false, t: 0 }; m.intel = {}; m.target = null;
+  m.phase = 'pre'; m.phaseT = S.t; m.defuser = { planted: false, disabled: false, t: 0 }; m.intel = {};
+  // 爆弾: このラウンドの目標は1か所（R6 と同じく、守る側は1つの目標を全員で守る。2か所が離れたマップで守りが2つに割れないように）
+  m.target = m.kind === 'bomb' && m.sites && m.sites.length ? Math.floor(hrand(S.seed + (m.round || 1) * 7, 7, 220) * m.sites.length) : null;
   m.reinfLeft = Math.min(10, 2 * S.actors.filter(a => a.team === m.def).length);
   // 陣営の見た目: 攻撃側（またはチーム0）が SWAT
   const sideOf = (t) => m.kind === 'bomb' ? (t === m.att ? 'swat' : 'sus') : ((t === 0) !== !!m.swapped ? 'swat' : 'sus');
   const spawnA = (def.spawn.pvp && def.spawn.pvp.a) || def.spawn.swat.map(s => [s.x, s.z, s.L || 0]);
   const spawnB = (def.spawn.pvp && def.spawn.pvp.b) || (def.spawn.sus || []);
   const used = new Set();
+  // TDM: 両チームとも建物の外、マップの反対の端から始める（片方だけ建物の中だと、外の側が攻め込むだけの勝負になる）。どちらの端かは試合ごとに決める
+  const ends = m.kind === 'tdm' && def.spawn.tdm && def.spawn.tdm.length >= 2 ? [def.spawn.tdm[0], def.spawn.tdm[1]] : null;
+  const flip = hrand(S.seed, 3, 221) < 0.5 ? 1 : 0;
+  const placed = [];
   for (const a of S.actors) {
     const side = sideOf(a.team);
     a.pvpSide = side; a._lookV = (a._lookV || 0) + 1;
+    if (ends) {
+      resetFighter(S, w, a, ends[a.team ^ flip], side);
+      spreadOut(S, w, a, placed);
+      continue;
+    }
     const list = (side === 'swat') ? spawnA : spawnB;
     let pt = null;
     for (let tries = 0; tries < list.length; tries++) { const c = list[(a.slotIdx + tries * 3 + (m.round * 5)) % list.length]; const key = c.join(','); if (!used.has(key)) { used.add(key); pt = c; break; } }
@@ -141,6 +152,23 @@ function startRound(S, w, first) {
     const carrier = att.find(a => a.pid != null) || att[0];
     if (carrier) carrier.carry = 'defuser';
   }
+}
+// 同じ点から始める仲間を、重ならないように近くの床へずらす（このラウンドで置いた人だけを見る）
+function spreadOut(S, w, a, placed) {
+  const L = Math.max(0, Math.round((a.y - 0.4) / LH));
+  const near = (x, z) => placed.some(p => Math.abs(p.y - a.y) < 1.5 && Math.hypot(p.x - x, p.z - z) < 0.9);
+  if (near(a.x, a.z)) {
+    out: for (let r = 1; r <= 8; r++) for (let dj = -r; dj <= r; dj++) for (let di = -r; di <= r; di++) {
+      if (Math.max(Math.abs(di), Math.abs(dj)) !== r) continue;
+      const x = a.x + di * CS, z = a.z + dj * CS;
+      const q = nearestFloor(w, L, x, z, 0.3);
+      if (!q || Math.hypot(q[0] - x, q[1] - z) > 0.05 || near(q[0], q[1])) continue;
+      a.x = q[0]; a.z = q[1]; a.y = groundAt(w, q[0], q[1], L * LH + 0.4);
+      break out;
+    }
+  }
+  a.spawnAt = [a.x, a.z];
+  placed.push({ x: a.x, y: a.y, z: a.z });
 }
 function resetFighter(S, w, a, pt, side) {
   const [x, z, L = 0] = pt;
@@ -183,7 +211,7 @@ function nextRound(S, w, ev) {
     if (m.round === W) { m.swapped = !m.swapped; ev.push({ e: 'swap' }); }
   }
   startRound(S, w, false);
-  ev.push({ e: 'roundstart', round: m.round });
+  ev.push({ e: 'roundstart', round: m.round, site: m.target ?? -1 });
 }
 // ---- TDM（リスポーンあり）
 function stepTdm(S, w, dt, ev, el) {

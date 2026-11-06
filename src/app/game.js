@@ -503,7 +503,7 @@ export class Match {
         case 'dronedead': if (e.id === this.droneId) { this.droneId = null; hud.showBanner('ドローンが壊された', 1500, 'bad'); } break;
         case 'phase': if (e.p === 'prep') hud.showBanner('準備フェーズ', 2000); else if (e.p === 'action') { hud.showBanner('行動開始', 1600, 'warn'); au.ui('go'); this.droneId = null; } break;
         case 'round': { const win = e.win; const mine = win === p.team; hud.showBanner(win < 0 ? '引き分け' : (mine ? 'ラウンド勝利' : 'ラウンド敗北') + `<br><small>${whyName(e.why)} ・ ${e.wins[p.team]} - ${e.wins[1 - p.team]}</small>`, 4000, win < 0 ? '' : mine ? 'ok' : 'bad'); au.ui(mine ? 'win' : 'lose'); break; }
-        case 'roundstart': this.fx.clear(); this.r.rebuildCells(Object.keys(this._lastBdiff || {}).map(Number).concat(this._allBroken()), S); this._lastBdiff = {}; this.adsOn = false; this.stance = 0; this.leanSide = 0; this.r.setMap(this.w, this.def, S); hud.showBanner(`ラウンド ${e.round}`, 1800); break;
+        case 'roundstart': this.fx.clear(); this.r.rebuildCells(Object.keys(this._lastBdiff || {}).map(Number).concat(this._allBroken()), S); this._lastBdiff = {}; this.adsOn = false; this.stance = 0; this.leanSide = 0; this.r.setMap(this.w, this.def, S); { const st = S.m && S.m.sites && e.site >= 0 ? S.m.sites[e.site] : null; hud.showBanner(`ラウンド ${e.round}` + (st ? `　目標: ${st.name}` : ''), 2400); } break;
         case 'swap': hud.feed('攻守交代', 'warn'); break;
         case 'respawn': if (e.id === me) { this.dead = false; this.spec = null; this.yaw = p.yaw; this.pitch = 0; this.av.hidden.add(me); hud.hideBanner(); } break;
         case 'matchend': { const mine = e.win === p.team; hud.showBanner(e.win < 0 ? '引き分け' : mine ? '勝利' : '敗北', 0, mine ? 'ok' : 'bad'); au.ui(mine ? 'win' : 'lose'); break; }
@@ -764,7 +764,7 @@ export class Match {
       if (seenRecently || vis) marks.push({ x: a.x, z: a.z, col: a.kind === 'civ' ? '#7be07b' : a.cuffed || a.comply ? '#ffd24a' : '#ff4a3a', r: 3 });
     }
     if (S.m && S.m.bombs) for (const b of S.m.bombs) if (!b.done && b.found) marks.push({ x: b.x, z: b.z, col: '#ff9a20', r: 4, sq: true });
-    if (S.m && S.m.sites && S.pvp) for (const s2 of S.m.sites) marks.push({ x: s2.x, z: s2.z, col: 'rgba(255,255,255,0.9)', r: 5, sq: true });
+    if (S.m && S.m.sites && S.pvp) for (const s2 of S.m.sites) if (S.m.target == null || s2.id === S.m.target) marks.push({ x: s2.x, z: s2.z, col: 'rgba(255,255,255,0.9)', r: 5, sq: true });
     v.marks = marks;
     hud.update(v);
     this._mmT = (this._mmT || 0) - dt;

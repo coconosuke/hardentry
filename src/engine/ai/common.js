@@ -169,7 +169,9 @@ export function goTo(S, w, a, inp, tx, ty, tz, o = {}) {
         if (o.noDoors) return 'door';
         // バリケード（対戦）: 壊して通る
         if (ds.bar > 0 && o.breakBar) {
-          if (!ai.doorT || (S.t - ai.doorT) * S.dt > 0.7) { ai.doorT = S.t; pushAct(inp, { a: 'op', k: 'door', id: did, op: 'bash' }); }
+          // 味方がもう叩いているなら、後ろで待つ（同じバリケードを2人で叩こうとして手が届かない、を繰り返さない）
+          const busy = S.actors.some(b => b !== a && b.team === a.team && b.act && b.act.k === 'bash' && b.act.id === did);
+          if (!busy && (!ai.doorT || (S.t - ai.doorT) * S.dt > 0.7)) { ai.doorT = S.t; pushAct(inp, { a: 'op', k: 'door', id: did, op: 'bash' }); }
           return 'door';
         }
         if (!ai.doorT || (S.t - ai.doorT) * S.dt > 1.2) {

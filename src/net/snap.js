@@ -51,7 +51,7 @@ export function packSnap(S, w, events, mePids, withBlocks) {
   let M;
   if (m.kind === 'pve') M = { ph: m.phase, soft: m.softDone ? 1 : 0, bt: m.bombT != null ? Math.round(m.bombT) : null, bd: (m.bombs || []).filter(b => b.done).map(b => b.id), bf: (m.bombs || []).filter(b => b.found).map(b => b.id), res: m.result || null, why: m.why || null, score: m.phase === 'end' ? m.score : undefined };
   else if (m.kind === 'train') M = { ph: 'play' };
-  else M = { ph: m.phase, el: Math.round((S.t - m.phaseT) * S.dt * 10) / 10, rd: m.round, w: m.wins, sc: m.score, att: m.att, def: m.def, df: m.defuser ? [m.defuser.planted ? 1 : 0, m.defuser.disabled ? 1 : 0, Math.round((m.defuser.t || 0) * 10) / 10, r2(m.defuser.x || 0), r2(m.defuser.z || 0), m.defuser.site ?? -1] : null, over: m.over ? 1 : 0, win: m.winner ?? null, sw: m.swapped ? 1 : 0, rl: m.reinfLeft ?? 0 };
+  else M = { ph: m.phase, el: Math.round((S.t - m.phaseT) * S.dt * 10) / 10, rd: m.round, w: m.wins, sc: m.score, att: m.att, def: m.def, df: m.defuser ? [m.defuser.planted ? 1 : 0, m.defuser.disabled ? 1 : 0, Math.round((m.defuser.t || 0) * 10) / 10, r2(m.defuser.x || 0), r2(m.defuser.z || 0), m.defuser.site ?? -1] : null, over: m.over ? 1 : 0, win: m.winner ?? null, sw: m.swapped ? 1 : 0, tg: m.target ?? -1, rl: m.reinfLeft ?? 0 };
   const P = {};
   for (const [pid, id] of Object.entries(mePids || {})) {
     const a = S.byId[id]; if (!a) continue;
@@ -195,7 +195,7 @@ export class Mirror {
     const M = last.M || {}, m = S.m;
     if (m.kind === 'pve') { m.phase = M.ph; m.softDone = !!M.soft; m.bombT = M.bt; for (const b of m.bombs) { b.done = (M.bd || []).includes(b.id); b.found = (M.bf || []).includes(b.id); } m.result = M.res; m.why = M.why; if (M.score) m.score = M.score; }
     else if (m.kind && m.kind !== 'train') {
-      m.phase = M.ph; m.round = M.rd; m.wins = M.w || m.wins; m.score = M.sc || m.score; m.att = M.att; m.def = M.def; m.over = !!M.over; m.winner = M.win; m.swapped = !!M.sw; m.reinfLeft = M.rl;
+      m.phase = M.ph; m.round = M.rd; m.wins = M.w || m.wins; m.score = M.sc || m.score; m.att = M.att; m.def = M.def; m.over = !!M.over; m.winner = M.win; m.swapped = !!M.sw; m.target = M.tg != null && M.tg >= 0 ? M.tg : null; m.reinfLeft = M.rl;
       m.phaseT = S.t - Math.round((M.el || 0) / S.dt);
       m.defuser = M.df ? { planted: !!M.df[0], disabled: !!M.df[1], t: M.df[2], x: M.df[3] / 100, z: M.df[4] / 100, site: M.df[5] } : null;
     }
