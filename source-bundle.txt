@@ -1,8 +1,8 @@
-HARD ENTRY ソース一式（2026-11-06T03:29:15.265Z）
+HARD ENTRY ソース一式（2026-11-06T05:27:09.960Z）
 復元: node tools/unbundle.mjs source-bundle.txt <出力先>
 （tools/unbundle.mjs がない場合は、下の "@@@@ FILE " の区切りごとにファイルへ書き出す。base64 と書かれたものはデコードする）
 
-@@@@ FILE DESIGN.md text 50049
+@@@@ FILE DESIGN.md text 53689
 # HARD ENTRY（仮タイトル）設計メモ
 
 ## 文脈が消えたら最初に読む
@@ -78,7 +78,8 @@ HARD ENTRY ソース一式（2026-11-06T03:29:15.265Z）
 
 ### PvP（対戦）
 - 陣営: SWAT（青）と 立てこもり犯（赤）。武器と装備の候補が陣営で違う。
-- TDM（リスポーンあり）: 上限キル＝人数の多い方×10、8分、復活4秒、出現保護2秒。始まりは両チームともマップの反対の端（建物の外）から。どちらの端かは試合ごと（11-06 決定。片方だけ建物の中から始めると、銀行で外の側が6戦全敗だった）。
+- TDM（リスポーンあり）: 上限キル＝人数の多い方×10、8分、復活4秒、出現保護2秒。始まりは両チームともマップの反対の端（建物の外）から。端は TDM の出現候補のうち、互いに見通せない（まわり1mも含めて）いちばん遠い2点。どちらの端かは試合ごと（11-06 決定。片方だけ建物の中から始めると、銀行で外の側が6戦全敗だった。郊外の家は最初の2点が同じ通りの両端で、始まって1秒で撃ち合いになっていた）。
+- 対戦の武器: 死んでも武器を落とさない（R6 と同じ。TDM で床に銃が増え続けていた）。予備の弾倉は減らない（∞表示。TDM で弾が尽きると死ぬしかなくなるため）。作戦は今までどおり（弾倉は減る、容疑者は武器を落とす＝証拠）。
 - 殲滅戦: 1ラウンド2分30秒、先に3ラウンド（設定で2〜5）、中間で陣地交代。
 - 爆弾: 準備45秒（犯人: バリケード・補強・扉の罠を置く／SWAT: ドローン2台で偵察）、行動3分、解除装置の設置7秒、設置後45秒、犯人の解除7秒。先に3勝（設定で2〜5）、（勝利数−1）ラウンド後に攻守交代、同点で延長（毎ラウンド交代、先に1勝多く）。
 - 爆弾の目標はラウンドごとに1か所（A か B。ラウンドの始めに表示し、ミニマップにもその1か所だけ）。R6 と同じく、守る側は1つの目標を全員で守る（11-06 決定。2か所が離れたマップで守りが2つに割れ、攻撃側が勝ちすぎていた）。
@@ -110,7 +111,7 @@ HARD ENTRY ソース一式（2026-11-06T03:29:15.265Z）
 - 爆弾脅迫: 警官の目から 10m 以内で見通せた爆弾は「見つけた」になり、AI の隊員も解除しに行く（AI の指揮は見つけた爆弾を最優先）。
 
 ### 移動（2026-10-29 20時 決定）
-- 速さ（m/s。RoNの値）: 歩き 2.4、ゆっくり 0.96、しゃがみ 1.2、しゃがみゆっくり 0.48、伏せ 0.45、ローレディ ×1.2、ADS ×0.7、横 ×0.9・後ろ ×0.8。加速 5 m/s²（防具で下がる）。PvE はダッシュなし（RoNと同じ）。PvP はダッシュあり 4.6 m/s（防具 軽×1.08・中×1.0・重×0.9、R6の3段階）。
+- 速さ（m/s。RoNの値）: 歩き 2.4、ゆっくり 0.96、しゃがみ 1.2、しゃがみゆっくり 0.48、伏せ 0.45、ローレディ ×1.2、ADS ×0.7、横 ×0.9・後ろ ×0.8。加速 5 m/s²（防具で下がる）。ダッシュ 4.6 m/s は作戦・対戦とも（11-06 13:20 の要望で作戦にも。もとは RoN に合わせて作戦はなし）。対戦は防具で 軽×1.08・中×1.0・重×0.9（R6の3段階）。盾を構えている・拘束・投降中は走れない。
 - リーン（左右 0.35m、傾き12°、壁にめり込まない）、しゃがみ0.25秒、伏せ0.8秒、乗り越え（高さ0.5〜1.2mの物と割れた窓、0.7秒）。足を負傷すると遅くなる。
 
 ### 武器と弾（2026-10-29 20時 決定）
@@ -131,7 +132,7 @@ HARD ENTRY ソース一式（2026-11-06T03:29:15.265Z）
 - 枠: 主武器・副武器・特殊装備1つ（盾・破城槌・ブリーチングショットガン・オプティワンド・M320）・小さな装備3枠（閃光・スティンガー・CS・C2・ウェッジ・ロックピックガン・ペッパースプレー・テーザー）・防具（なし/軽/重 × ケブラー/セラミック/スチール）・ヘルメット・頭（暗視装置・ガスマスク・防閃光ゴーグル・防弾マスク）。いつも持つ物: 手錠（結束バンド）・マルチツール・ケミライト・ミラーガン（扉の下）。
 
 ### 操作とHUD（スマホ）
-- 左: 移動スティック（左45%のどこでも／固定）。右: ドラッグで視点、射撃（右・左にも出せる）、ADS（タップで切替／押している間／両方）、リロード（タップで通常、長押しで速い）、しゃがみ（タップ、長押しで伏せ）、乗り越え、左右リーン（PUBGM式）、警告（大きいボタン。呼びかけ）、調べる（その時できること: 開ける・拘束・拾う・報告・解除。長押しで扉の操作の円形メニュー）、命令（タップで見ている物への既定の命令、長押しで円形メニュー。金/赤/青の選択）、装備（タップで持ち替え、長押しで選ぶ。射撃ボタンで投げる・置く）、武器2つ（下の中央、タップで切替）、射撃モード・ライト・暗視・ローレディの小ボタン、地図（タブレット）、一時停止。PvPはスティックを上に倒しきるとダッシュ。
+- 左: 移動スティック（左45%のどこでも／固定）。右: ドラッグで視点、射撃（右・左にも出せる）、ADS（タップで切替／押している間／両方）、リロード（タップで通常、長押しで速い）、しゃがみ（タップ、長押しで伏せ）、乗り越え、左右リーン（PUBGM式）、警告（大きいボタン。呼びかけ）、調べる（その時できること: 開ける・拘束・拾う・報告・解除。長押しで扉の操作の円形メニュー）、命令（タップで見ている物への既定の命令、長押しで円形メニュー。金/赤/青の選択）、装備（タップで持ち替え、長押しで選ぶ。射撃ボタンで投げる・置く）、武器2つ（下の中央、タップで切替）、射撃モード・ライト・暗視・ローレディの小ボタン、地図（タブレット）、一時停止。スティックを上へ押し込むとダッシュ（作戦・対戦とも。ダッシュの印より上）。任意で「ダッシュの固定」（その所で離すと走り続け、スティックかボタンに触れるとやめる）。スティックの位置（配置の編集でドラッグ）・大きさ・濃さ・ダッシュの判定位置（半径の1〜2.4倍、既定1.25）は HUD の設定で。長押しの円形メニューはいちばん上の層に出し、大きさ（80〜160%）を設定で変えられる。対戦はスコア表のボタン（右上。タブキーでも）でキル・デス・アシスト・K/D を見られる（オンラインのゲストにも成績を送る）。
 - 画面: 左上ミニマップ、上の中央に方位と時間・目的、右上に出来事（キル・拘束・TOC）、左に隊員の状態、下の中央に体力・防具・弾倉、字幕。
 - 設定: 感度（見回し・ADS・倍率ごと・ジャイロ（オフ／ADS中だけ／いつも）・射撃中）、エイムアシスト（オフ／弱／標準、PvEの既定は弱、PvPは部屋の設定）、HUDのボタンごとの位置・大きさ・濃さ、照準の形と色、ミニマップ、画質（3段階・解像度・FPS上限・視野角・血）、音量（全体・効果音・声・BGM・UI、消音モードでも鳴らす）、字幕。
 
@@ -223,7 +224,14 @@ HARD ENTRY ソース一式（2026-11-06T03:29:15.265Z）
   - 移動の命令の「進まない」は、歩いた距離でも見る（回り道でまっすぐの距離が縮まらない間に待機へ変わっていた）。時間切れは25→45秒。
   - ゆっくり動く扉の板は、自分で動けない人（ひざまずいた・倒れた・拘束された・怯んだ）を少しずつ押しのける。扉の口でひざまずいた容疑者のせいで扉が開かず、拘束にも行けず、指揮が同じ人を探し続けていた。
   - 拘束・回収で手を伸ばす位置は同じ部屋の側を先に。間に味方が立っていれば脇へよけてもらう。
-- 次: Pages を有効にしてもらう → 実機での確認をお願いする → その結果で直す。
+- 11-06 昼: テスト一式 78/78 合格（オンラインのゲストの移動も通った）。版 0.1.1。main（アプリ版）に push、公開版（Claude）は版10。
+- 11-06 13:20 の要望（9点＋13:21 の円形メニュー）:
+  - 判定のない動かない人: 描き手の追加の処理（hook）が場面ごとに外れず、タイトルの背景の隊員4人と、前の試合の最後のこまの人が、試合の中に描かれ続けていた（当たりはない）。場面が変わったら外す（renderer.hook が外す関数を返す。ActorView・FX・ViewModel に dispose）。
+  - マップの外まわり（src/render/outskirts.js）: 境の地面の続き、範囲の境（舗装は警察の規制線とパトカー、芝は塀・生け垣・金網）、歩道・道路（角の先まで。東西は南北の道路に突き当たる）・街灯（夜は光のたまり）、隣の建物の列（マップごと: 住宅・アパート・店・事務所・倉庫・道路ぞい）、2列目、地平の丘か街並み、港は岸壁・海・コンテナ・クレーン。光は空と太陽だけ（シェーダーの uOuter）。三角形は1マップ2〜3万（画質「低」は2列目・地平の木・光のたまりを省く）。
+  - オンラインのスコア表、対戦で武器を落とさない・弾倉の上限なし、左の射撃ボタンの非表示（配置を動かすと効かなかった）、押し込みダッシュ（作戦・対戦とも）とスティックの設定、円形メニューを一番上に（大きさも）。
+  - リスポーン地点（TDM・ボット4v4・8マップ×3試合、復活1609回）: 敵から見える所に出たのは2%、10m以内に敵 0%、復活して3秒以内に倒された 1%（5秒以内 5%）。郊外の家の始まりの2点だけ直した（上）。
+- 11-06 午後: テスト一式 78/78（その後、スコア表の成績の送り方だけ直し、オンラインの個別の確認でゲストのスコア表に全員の成績が出るのを確かめた）。版 0.1.2。
+- 次: Pages を有効にしてもらう → 実機での確認をお願いする → その結果で直す。残り: AIだけの作戦で、爆弾（2階に爆弾があると時間切れ）と人質（突入の前に人質が撃たれる）が弱い。ナイトクラブの強制捜査（容疑者9人）は AI だけだと全滅しやすい。
 
 @@@@ FILE dev/view.html text 446
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -308,7 +316,7 @@ export async function getAssetURL(name, type) {
   return URL.createObjectURL(new Blob([buf], { type }));
 }
 
-@@@@ FILE src/app/game.js text 62158
+@@@@ FILE src/app/game.js text 64021
 // 1回の試合: エンジンを進め、入力を命令にし、出来事を音・効果・HUDへ。カメラ（一人称）と描画。
 import { createGame, step, dump, load } from '../engine/engine.js';
 import { eyeOf, capsOf } from '../engine/combat.js';
@@ -345,6 +353,7 @@ export class Match {
     this.def = MAPS[this.S.map];
     this.pid = o.pid ?? 0;
     this.p = this.S.actors.find(a => a.pid === this.pid) || this.S.actors[0];
+    if (app.titleScene) app.titleScene.detach();
     this.r.setMap(this.w, this.def, this.S);
     this.av = new ActorView(this.r); this.fx = new FX(this.r); this.vm = new ViewModel(this.r, this.av);
     this.fx.blood = app.settings.blood !== false;
@@ -379,9 +388,9 @@ export class Match {
     this.au.playMusic(this.S.pvp ? 'pvp' : this.S.mode === 'pve' ? 'op' : 'menu', { fade: 3, vol: this.S.pvp ? 0.55 : this.S.mode === 'pve' ? 0.6 : 0.35 });
     if (!o.dump && !this.S.pvp && this.S.mode === 'pve') setTimeout(() => this._say(null, 'toc_start', false, 'TOC'), 900);
   }
-  destroy() { this.r.clearMap(); this.fx.clear(); this.au.occluder = null; this.au.ambience(false); this.au.stopMusic(1.5); }
+  destroy() { this.r.clearMap(); this.fx.clear(); this.av.dispose(); this.fx.dispose(); this.vm.dispose(); this.au.occluder = null; this.au.ambience(false); this.au.stopMusic(1.5); }
   rebind(r) {
-    if (r) { this.r = r; this.av = new ActorView(r); this.fx = new FX(r); this.vm = new ViewModel(r, this.av); this.fx.blood = this.app.settings.blood !== false; { const g = gfxOf(this.app.settings); this.fx.amount = { low: 0.5, normal: 1, high: 1.5 }[g.fx] || 1; this.fx.shells = g.shells !== false; } this.av.hidden.add(this.p.id); this.vm.setColors(this.av.look(this.p).pal.slice(3, 6), [0.02, 0.02, 0.025]); this.fx.onClink = (x, y, z) => this.au.sfx('shell', [x, y, z], { vol: 0.35 }); }
+    if (r) { if (this.av) { this.av.dispose(); this.fx.dispose(); this.vm.dispose(); } this.r = r; this.av = new ActorView(r); this.fx = new FX(r); this.vm = new ViewModel(r, this.av); this.fx.blood = this.app.settings.blood !== false; { const g = gfxOf(this.app.settings); this.fx.amount = { low: 0.5, normal: 1, high: 1.5 }[g.fx] || 1; this.fx.shells = g.shells !== false; } this.av.hidden.add(this.p.id); this.vm.setColors(this.av.look(this.p).pal.slice(3, 6), [0.02, 0.02, 0.025]); this.fx.onClink = (x, y, z) => this.au.sfx('shell', [x, y, z], { vol: 0.35 }); }
     this.r.setMap(this.w, this.def, this.S);
   }
   applySettings() { this.fx.blood = this.app.settings.blood !== false; }
@@ -517,7 +526,8 @@ export class Match {
           else if (k === 'long') this._useMenu(e);
           break;
         case 'cmd': if (this.S.pvp) break; if (k === 'tap') this._cmdDefault(); else if (k === 'long') this._cmdMenu(e); break;
-        case 'team': if (k === 'tap') this.team = TEAMS[(TEAMS.indexOf(this.team) + 1) % 3]; break;
+        case 'team': if (k === 'tap') { if (this.S.pvp) this.boardOn = !this.boardOn; else this.team = TEAMS[(TEAMS.indexOf(this.team) + 1) % 3]; } break;
+        case 'board': if (k === 'tap' || k === 'longup') this.boardOn = !this.boardOn; break;
         case 'gear':
           if (k === 'tap') { if (p.ws.slot === 2) this.acts.push({ a: 'switch', slot: p.ws.prev >= 0 ? p.ws.prev : 0 }); else if (this.gearSel) this.acts.push({ a: 'gear', id: this.gearSel }); }
           else if (k === 'long') this._gearMenu(e);
@@ -546,7 +556,7 @@ export class Match {
     const p = this.p;
     const cmd = {
       mx: inp.mx, mz: inp.mz, yaw: this.yaw, pitch: this.pitch,
-      fire: inp.fire && !this.app.input.radial, ads: this.adsOn, low: this.lowOn, stance: this.stance, lean: this.leanSide, sprint: inp.sprint && this.S.pvp,
+      fire: inp.fire && !this.app.input.radial, ads: this.adsOn, low: this.lowOn, stance: this.stance, lean: this.leanSide, sprint: inp.sprint,
       act: this.acts.length ? this.acts.splice(0) : null, power: 0.75,
     };
     if (this.droneId != null) { cmd.mx = 0; cmd.mz = 0; cmd.fire = false; }
@@ -1078,6 +1088,9 @@ export class Match {
     if (S.m && S.m.sites && S.pvp) for (const s2 of S.m.sites) if (S.m.target == null || s2.id === S.m.target) marks.push({ x: s2.x, z: s2.z, col: 'rgba(255,255,255,0.9)', r: 5, sq: true });
     v.marks = marks;
     hud.update(v);
+    // スコア表（対戦）: 開いている間は 0.5 秒ごとに作り直す
+    if (S.pvp && this.boardOn) { this._bdT = (this._bdT || 0) - dt; if (this._bdT <= 0) { this._bdT = 0.5; hud.board(this._boardData()); } }
+    else hud.board(null);
     this._mmT = (this._mmT || 0) - dt;
     if (this._mmT <= 0) { this._mmT = 0.066; hud.drawMinimap(v); }
   }
@@ -1090,6 +1103,17 @@ export class Match {
     const v = !!e && Math.hypot(a.x - e.x, a.z - e.z) < 30 && los(this.w, e.x, e.y, e.z, a.x, a.y + 1.2, a.z, this.S.doors);
     this._vc[k] = { t: this.time, v };
     return v;
+  }
+  // スコア表の中身: 自分のチームが先。キル×2＋アシストの順。爆弾・殲滅戦は倒れている人を薄く
+  _boardData() {
+    const S = this.S, m = S.m || {}, p = this.p;
+    const MODE = { tdm: 'チームデスマッチ', elim: '殲滅戦', bomb: '爆弾' };
+    const sideName = (t) => { const a = S.actors.find(x => x.team === t && !x.isDrone); return a && a.pvpSide === 'swat' ? 'SWAT' : a && a.pvpSide === 'sus' ? '立てこもり犯' : 'チーム' + (t + 1); };
+    const score = (t) => m.kind === 'tdm' ? (m.score || [0, 0])[t] : (m.wins || [0, 0])[t];
+    const rows = (t) => S.actors.filter(a => !a.isDrone && a.team === t).map(a => ({ name: a.name || '?', k: a.stats.k, d: a.stats.d, a: a.stats.a, me: a === p, bot: a.pid == null, out: m.kind !== 'tdm' && (!a.alive || a.down) })).sort((x, y) => (y.k * 2 + y.a) - (x.k * 2 + x.a) || x.d - y.d);
+    const mine = p.team, foe = 1 - p.team;
+    const sub = m.kind === 'tdm' ? `目標 ${m.limit} キル` : `ラウンド ${m.round || 1}・先に ${m.winsNeeded} 勝`;
+    return { title: `${MODE[m.kind] || '対戦'}　${sub}`, teams: [{ name: sideName(mine) + '（味方）', score: score(mine), cls: 'mine', rows: rows(mine) }, { name: sideName(foe), score: score(foe), cls: 'foe', rows: rows(foe) }] };
   }
   _objectives() {
     const S = this.S, m = S.m || {};
@@ -1150,7 +1174,7 @@ function mirrorHTML(e, S) {
 }
 function impSound(m) { return m === M.METAL || m === M.METALFURN || m === M.CAR || m === M.DOORMETAL ? 'impMetal' : m === M.WOOD || m === M.DOORWOOD || m === M.FURN ? 'impWood' : m === M.GLASS ? 'impGlass' : 'impHard'; }
 
-@@@@ FILE src/app/main.js text 17506
+@@@@ FILE src/app/main.js text 17518
 // アプリ全体: 起動・画面の切り替え・試合の開始と終了・保存・画面の作り直し（WebGLが落ちたとき）
 import { Stage } from '../ui/stage.js';
 import { Input, tapHooks } from '../ui/input.js';
@@ -1219,7 +1243,7 @@ class App {
     this.hud.setSettings(this.settings);
     this.input = new Input(this.stage, this.stageEl, this.audio);
     this.input.setSettings(this.settings);
-    this.input.onStick = (st, dx, dy, spr) => this.hud.stick(st, dx, dy, spr);
+    this.input.onStick = (st, dx, dy, spr, lock) => this.hud.stick(st, dx, dy, spr, lock);
     this.input.onRadial = (r) => this.hud.radial(r);
     this.input.getStickHome = () => this.hud.stickHome;
     this.fpsEl = $('#fps'); this.fadeEl = $('#fade'); this.ctxEl = $('.ctxlost');
@@ -1950,7 +1974,7 @@ export function loadRun() {
   return r;
 }
 
-@@@@ FILE src/app/scenes.js text 2063
+@@@@ FILE src/app/scenes.js text 2318
 // タイトルとメニューの背景: 夜のガソリンスタンドの前に並ぶ隊員を、ゆっくり回るカメラで写す
 import { createGame, step } from '../engine/engine.js';
 import { MAPS } from '../engine/maps/index.js';
@@ -1971,11 +1995,14 @@ export class TitleScene {
   enter() {
     if (!this.ready) this.prepare();
     const r = this.app.renderer;
+    this.detach();
     r.setMap(this.G.w, this.def, this.G.S);
     this.av = new ActorView(r); this.fx = new FX(r);
     this.entered = true;
   }
-  leave() { this.entered = false; }
+  // 試合が始まる・描き手が作り直されるとき: タイトルの人と粒子を描くのをやめる
+  detach() { if (this.av) this.av.dispose(); if (this.fx) this.fx.dispose(); this.av = this.fx = null; this.entered = false; }
+  leave() { this.detach(); }
   frame(dt, dim) {
     if (!this.entered) this.enter();
     this.t += dt;
@@ -1998,7 +2025,7 @@ export class TitleScene {
   }
 }
 
-@@@@ FILE src/app/settings.js text 3214
+@@@@ FILE src/app/settings.js text 3248
 // 設定の既定値と保存。sv: 設定の形の版（形を変えたら上げて、古い値を直す）
 import { load, save } from './save.js';
 import { LOADOUTS, PVP_LOADOUTS } from '../engine/data/npc.js';
@@ -2011,7 +2038,7 @@ export const DEFAULTS = {
   gyro: 'off', gyroSens: 1.0, gyroInvX: false, gyroInvY: false,
   // 操作
   adsMode: 'tap', // tap（押すたび切替）| hold（押している間）| mixed（短く押すと切替・長く押すと押している間）
-  leanMode: 'toggle', stickMode: 'float', stickSprint: true, handed: 'right', leftFire: true, confirm: 'auto',
+  leanMode: 'toggle', stickMode: 'float', stickSprint: true, handed: 'right', leftFire: true, stickLock: false, radialScale: 1, confirm: 'auto',
   // HUD
   hud: {}, hudOpacity: 0.85, hudScale: 1.0, crosshair: 'cross', crossColor: '#ffffff', minimap: true, subtitles: true, subBg: 0.42, hitMarker: true,
   // 画面
@@ -2729,7 +2756,7 @@ export function gunKeys(snd) {
 }
 export { GUNS };
 
-@@@@ FILE src/engine/actor.js text 5098
+@@@@ FILE src/engine/actor.js text 5143
 // 人（隊員・容疑者・市民・ボット・プレイヤー）。状態は関数を含まないデータだけ。
 import { WEAPONS, attachOptions } from './data/weapons.js';
 import { PLATE, HELMET, GEAR, LONG } from './data/equipment.js';
@@ -2747,6 +2774,7 @@ export function makeWeapon(o) {
   const w = { id: o.id, att: { sight: okA('sight', o.sight, 'iron'), muzzle: W.integral ? W.integral : okA('muzzle', o.muzzle, 'none'), grip: okA('grip', o.grip, 'none'), light: o.light !== false }, am, mode: 0, lightOn: false };
   if (W.tube || W.breakAction) { w.mag = W.mag; w.ch = W.chamber ? 1 : 0; w.res = W.spare; w.mags = null; }
   else { w.mag = W.mag; w.ch = W.chamber ? 1 : 0; w.mags = []; for (let i = 0; i < (o.spare ?? W.spare); i++) w.mags.push(W.mag); w.res = 0; }
+  w.spare0 = w.mags ? w.mags.length : w.res;
   return w;
 }
 
@@ -4985,7 +5013,7 @@ function search(S, w, a, inp, dt, o, people) {
   return true;
 }
 
-@@@@ FILE src/engine/combat.js text 21393
+@@@@ FILE src/engine/combat.js text 21514
 // 弾と当たり: 弾丸は速さと重力を持ち、1ステップごとの線分で当たりを調べる。材質を貫通して弱まる（RoNの式）。
 // ダメージは PvE（RoN換算・防具・負傷・出血）と PvP（R6寄り・頭は即死・手足75%・ダウン）の2系統。
 import { raycast, CS, levelOfY } from './world.js';
@@ -5348,7 +5376,8 @@ export function killActor(S, a, by, ev, kind = 'bullet', part = '') {
 }
 
 export function dropWeapon(S, a, ev) {
-  if (a.kind === 'swat' && !S.pvp) return; // 隊員の銃は落とさない
+  // 隊員の銃は落とさない。対戦では誰も落とさない（復活のたびに床に銃が増え続けた。R6 と同じく落とさない）
+  if (S.pvp || a.kind === 'swat') return;
   const wi = a.ws && a.ws.slot >= 0 ? a.inv.w[a.ws.slot] : null;
   const list = a.kind === 'sus' ? a.inv.w.filter(Boolean) : (wi ? [wi] : []);
   for (const x of list) {
@@ -5715,7 +5744,7 @@ export const PROPS = {
 
 @@@@ FILE src/engine/data/version.js text 209
 // 版番号: 互換（セーブ・オンラインの相性。上げたら古いセーブは捨てる）と表示用
-export const VERSION = '0.1.1';
+export const VERSION = '0.1.2';
 export const COMPAT = 1;
 export const TITLE = 'HARD ENTRY';
 
@@ -9152,7 +9181,7 @@ export function scoreMission(S) {
   return out;
 }
 
-@@@@ FILE src/engine/modes/pvp.js text 16762
+@@@@ FILE src/engine/modes/pvp.js text 17778
 // 対戦（PvP）: リスポーンありTDM・殲滅戦（リスポーンなし）・爆弾（シージ式の攻守）
 // 陣営: チーム0/1。見た目は SWAT（攻撃・チーム0のTDM）と立てこもり犯（防衛）。空きはボット。
 import { createActor, makeInventory, makeArmor } from '../actor.js';
@@ -9284,7 +9313,7 @@ function startRound(S, w, first) {
   const spawnB = (def.spawn.pvp && def.spawn.pvp.b) || (def.spawn.sus || []);
   const used = new Set();
   // TDM: 両チームとも建物の外、マップの反対の端から始める（片方だけ建物の中だと、外の側が攻め込むだけの勝負になる）。どちらの端かは試合ごとに決める
-  const ends = m.kind === 'tdm' && def.spawn.tdm && def.spawn.tdm.length >= 2 ? [def.spawn.tdm[0], def.spawn.tdm[1]] : null;
+  const ends = m.kind === 'tdm' && def.spawn.tdm && def.spawn.tdm.length >= 2 ? tdmEnds(S, w, def) : null;
   const flip = hrand(S.seed, 3, 221) < 0.5 ? 1 : 0;
   const placed = [];
   for (const a of S.actors) {
@@ -9307,6 +9336,24 @@ function startRound(S, w, first) {
     const carrier = att.find(a => a.pid != null) || att[0];
     if (carrier) carrier.carry = 'defuser';
   }
+}
+// TDM の始まりの2点: 1階の候補のうち、互いに見通せない（まわり1mも含めて）いちばん遠い組
+// （郊外の家は最初の2点が同じ通りの両端で、始まって1秒で撃ち合いになっていた）
+function tdmEnds(S, w, def) {
+  if (w._tdmEnds) return w._tdmEnds;
+  const pts = def.spawn.tdm, P = pts.map(q => cellPos(w, q[0], q[1], q[2] || 0));
+  const O = [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]];
+  let best = null, bd = -1;
+  for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
+    if ((pts[i][2] || 0) || (pts[j][2] || 0)) continue;
+    const a = P[i], b = P[j], d = Math.hypot(a.x - b.x, a.z - b.z);
+    if (d <= bd) continue;
+    let seen = false;
+    for (const [ox, oz] of O) { for (const [px, pz] of O) if (los(w, a.x + ox, a.y + 1.5, a.z + oz, b.x + px, b.y + 1.5, b.z + pz, null)) { seen = true; break; } if (seen) break; }
+    if (!seen) { bd = d; best = [pts[i], pts[j]]; }
+  }
+  w._tdmEnds = best || [pts[0], pts[1]];
+  return w._tdmEnds;
 }
 // 同じ点から始める仲間を、重ならないように近くの床へずらす（このラウンドで置いた人だけを見る）
 function spreadOut(S, w, a, placed) {
@@ -9572,7 +9619,7 @@ export function placeActors(S, w, def) {
   for (let i = 0; i < Math.min(2, civ.length); i++) { const [x, z] = civ[(i + S.m.resets) % civ.length]; spawnCivilian(S, w, x, z, 0, i ? 'adult' : 'staff'); }
 }
 
-@@@@ FILE src/engine/move.js text 13178
+@@@@ FILE src/engine/move.js text 13439
 // 移動: RoN の速さ（歩き2.4・ゆっくり0.96・しゃがみ1.2）、しゃがみ・伏せ・リーン・乗り越え・階段・PvPのダッシュ
 import { groundAt, pushOut, raycast, STEP, CS, LH, levelOfY, cellType, C, leafEnd } from './world.js';
 import { OPEN_ANG, isOpen } from './doors.js';
@@ -9663,7 +9710,8 @@ export function moveActor(S, w, a, inp, dt, ev) {
   let mx = inp.mx || 0, mz = inp.mz || 0;
   let mag = Math.hypot(mx, mz); if (mag > 1) { mx /= mag; mz /= mag; mag = 1; }
   // ダッシュ（PvPだけ。立って前へ）
-  a.sprint = !!(S.pvp && inp.sprint && a.st < 0.2 && mz > 0.55 && !a.adsOn && !a.down && !a.act);
+  // ダッシュ: 作戦・対戦とも（スティックを上へ押し込む・Shift）。盾を構えている・運んでいる・拘束されているときは走れない
+  a.sprint = !!(inp.sprint && a.st < 0.2 && mz > 0.55 && !a.adsOn && !a.down && !a.act && !a.cuffed && !a.comply && !(a.ws && a.ws.slot === 1 && a.inv && a.inv.long === 'shield'));
   const vmax = maxSpeed(S, a, inp);
   // 後ろ・横は遅い
   let dirMul = 1;
@@ -10590,7 +10638,7 @@ export function stepStatus(S, w, dt, ev) {
   }
 }
 
-@@@@ FILE src/engine/weapon.js text 10455
+@@@@ FILE src/engine/weapon.js text 10826
 // 銃の動き: 撃つ・弾倉（1本ずつ残弾）・通常/速いリロード・1発ずつ込める・ポンプ・持ち替え・反動（BattleBit式）・散らばり
 import { WEAPONS, AMMO, ATTACH } from './data/weapons.js';
 import { LONG, HAND_LONG } from './data/equipment.js';
@@ -10692,11 +10740,13 @@ function finishState(S, a, ev) {
         if (!wi.ch && W.chamber) { if (wi.mag > 0) { wi.mag--; wi.ch = 1; } }
       }
     }
+    // 対戦: 予備の弾倉は減らない（TDM で弾が尽きると死ぬしかなくなるため。作戦は RoN のとおり減る）
+    if (S.pvp) { if (wi.mags) wi.mags = new Array(Math.max(1, wi.spare0 || W.spare || 1)).fill(W.mag); else wi.res = Math.max(wi.res, wi.spare0 || W.spare || 0); }
     ws.st = 'ready'; ws.t = 0; ws.rk = null;
     if (ev) ev.push({ e: 'reloaded', id: a.id });
   } else if (st === 'shell' && wi && W) {
     // 1発込めた
-    if (wi.res > 0 && wi.mag < W.mag) { wi.mag++; wi.res--; if (ev) ev.push({ e: 'shell', id: a.id }); }
+    if (wi.res > 0 && wi.mag < W.mag) { wi.mag++; wi.res--; if (S.pvp) wi.res = Math.max(wi.res, wi.spare0 || W.spare || 0); if (ev) ev.push({ e: 'shell', id: a.id }); }
     if (!wi.ch && wi.mag > 0 && W.chamber) { wi.mag--; wi.ch = 1; ws.st = 'pump'; ws.t = (W.pump || 0.35); return; }
     if (wi.mag < W.mag && wi.res > 0 && !ws.stopShell) { ws.t = W.rl.shell; }
     else { ws.st = 'ready'; ws.t = 0; ws.stopShell = false; }
@@ -12395,7 +12445,7 @@ export class GuestSession {
   }
 }
 
-@@@@ FILE src/net/snap.js text 19506
+@@@@ FILE src/net/snap.js text 20443
 // 通信の中身: ホストのエンジンの状態 → 小さな写し（数を丸めた配列）。ゲストは写しから「見せるための状態」を作る。
 // 静かな情報（名前・見た目・装備の種類・目的の一覧）は st、動く情報（位置・姿勢・扉・物・出来事）は g。
 import { createActor, makeWeapon } from '../engine/actor.js';
@@ -12403,6 +12453,7 @@ import { makeDoorStates } from '../engine/doors.js';
 import { WEAPONS } from '../engine/data/weapons.js';
 import { ACT_POSE } from '../engine/data/acts.js';
 
+const KSENT = new WeakMap(); // 状態ごとの「最後に送った成績」
 const r2 = (v) => Math.round(v * 100);
 const r3 = (v) => Math.round(v * 1000);
 const isNum = (v) => typeof v === 'number' && isFinite(v);
@@ -12456,6 +12507,15 @@ export function packSnap(S, w, events, mePids, withBlocks) {
     P[pid] = meBlock(a);
   }
   const out = { T: Math.round(S.t * S.dt * 1000) / 1000, A, D, I, N, C, M, P, E: events };
+  // 成績（スコア表）: 変わってから20回は毎回（送る回数は通信で間引かれるので、1回だけだと届かないことがある）、ほかは10回に1回
+  if (S.pvp) {
+    const K = S.actors.filter(a => !a.isDrone).map(a => [a.id, a.stats.k, a.stats.d, a.stats.a]);
+    const key = K.join(';'), st = KSENT.get(S) || { key: '', n: 0, fresh: 0 };
+    st.n++;
+    if (key !== st.key) { st.key = key; st.fresh = 20; }
+    if (st.fresh > 0 || st.n >= 10) { st.fresh = Math.max(0, st.fresh - 1); st.n = 0; out.K = K; }
+    KSENT.set(S, st);
+  }
   // 壊れた壁（ときどき全部）
   if (withBlocks) out.B = Object.keys(S.bdiff).map(k => { const b = +k * 4; return [+k, w.blocks[b], w.blocks[b + 1], w.blocks[b + 2], w.blocks[b + 3]]; });
   out.R = Object.keys(S.reinf || {}).map(Number);
@@ -12590,6 +12650,8 @@ export class Mirror {
       for (const [k, b0, b1, b2, b3] of last.B) { const b = k * 4, w = this.w; if (w.blocks[b] !== b0 || w.blocks[b + 1] !== b1 || w.blocks[b + 2] !== b2 || w.blocks[b + 3] !== b3) { w.blocks[b] = b0; w.blocks[b + 1] = b1; w.blocks[b + 2] = b2; w.blocks[b + 3] = b3; S.bdiff[k] = 1; this.changed.push(k); } }
     }
     if (last.R) { const R = {}; for (const k of last.R) { R[k] = 1; if (!S.reinf[k]) this.changed.push(k); } S.reinf = R; }
+    // 成績（スコア表）
+    for (let i = B.length - 1; i >= 0; i--) { const K = B[i].g.K; if (K) { if (K !== this._lastK) { this._lastK = K; for (const [id, k, d, as] of K) { const a = S.byId[id]; if (a && a.stats) { a.stats.k = k; a.stats.d = d; a.stats.a = as; } } } break; } }
     const M = last.M || {}, m = S.m;
     if (m.kind === 'pve') { m.phase = M.ph; m.softDone = !!M.soft; m.bombT = M.bt; for (const b of m.bombs) { b.done = (M.bd || []).includes(b.id); b.found = (M.bf || []).includes(b.id); } m.result = M.res; m.why = M.why; if (M.score) m.score = M.score; }
     else if (m.kind && m.kind !== 'train') {
@@ -12624,7 +12686,7 @@ function lerp(a, b, k) { return a + (b - a) * k; }
 function lerpA(a, b, k) { let d = b - a; const T = 2000 * Math.PI; d = ((d + T / 2) % T + T) % T - T / 2; return a + d * k; }
 function lerpPhase(a, b, k) { let d = b - a; if (d < -300) d += 628.3; if (d > 300) d -= 628.3; return a + d * k; }
 
-@@@@ FILE src/render/actors.js text 12090
+@@@@ FILE src/render/actors.js text 12391
 // 人・持っている銃・落ちている物を描く（renderer のフックに入れる）
 import { personMeshData, lookFor, boneMatrices, SV } from './people.js';
 import { gunModel, longModel, shieldModel } from './guns.js';
@@ -12650,15 +12712,16 @@ function vaoSkin(gl, v, i) {
 export class ActorView {
   constructor(r) {
     this.r = r; this.gl = r.gl;
-    this.people = new Map(); this.guns = new Map(); this.looks = new Map();
+    // 人と銃の形は描き手（renderer）ごとに共有する（試合ごとに作り直して GPU に残し続けない）
+    this.people = r._people || (r._people = new Map()); this.guns = r._guns || (r._guns = new Map()); this.looks = new Map();
     this.bones = new Float32Array(NBONE * 12); this.mats = new Float32Array(NBONE * 16);
     this.pi = {}; this.M = new Float32Array(16);
     this.list = []; // このこまに描く人
     this.items = [];
     this.hidden = new Set(); // 一人称で自分は描かない
-    r.hooks.opaque.push((rr, f) => this.drawOpaque(f));
-    r.hooks.shadow.push((rr, pl) => this.drawShadow(pl));
+    this._off = [r.hook('opaque', (rr, f) => this.drawOpaque(f)), r.hook('shadow', (rr, pl) => this.drawShadow(pl))];
   }
+  dispose() { for (const f of this._off || []) f(); this._off = []; this.list.length = 0; this.items.length = 0; }
   look(a) {
     let L = this.looks.get(a.id);
     if (L && L.v === a._lookV) return L;
@@ -13097,7 +13160,7 @@ export function hex(h) {
 export function mixc(a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]; }
 export function mulc(a, k) { return [a[0] * k, a[1] * k, a[2] * k]; }
 
-@@@@ FILE src/render/fx.js text 15588
+@@@@ FILE src/render/fx.js text 15885
 // 効果: 着弾の粉じん・火花・木くず・ガラス・血、曳光弾、銃口の炎、薬莢、煙とガス、爆発、弾痕と血の跡
 import { groundAt } from '../engine/world.js';
 import { M } from '../engine/data/materials.js';
@@ -13133,7 +13196,12 @@ export class FX {
     this.blood = true;
     this.amount = 1; this.shells = true; // エフェクトの量（設定）・薬莢
     this.seed = 1;
-    r.hooks.transparent.push((rr, f) => this.draw(f));
+    this._off = [r.hook('transparent', (rr, f) => this.draw(f))];
+  }
+  dispose() {
+    for (const f of this._off || []) f(); this._off = [];
+    const gl = this.gl; if (gl) for (const b of [this.pb, this.db]) if (b) { try { gl.deleteVertexArray(b.vao); gl.deleteBuffer(b.vb); } catch (e) { /* なし */ } }
+    this.pb = this.db = null; this.clear();
   }
   rnd() { this.seed = (this.seed * 1664525 + 1013904223) >>> 0; return this.seed / 4294967296; }
   rs(a) { return (this.rnd() * 2 - 1) * a; }
@@ -15052,6 +15120,483 @@ export function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
 export function lerp(a, b, t) { return a + (b - a) * t; }
 export function smooth(t) { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); }
 
+@@@@ FILE src/render/outskirts.js text 31392
+// マップの外まわり（遊べる範囲の外の景色）。当たり判定はない（範囲の外へは出られない）。
+//  近く: 端の地面の続き・範囲の境（規制線・塀・生け垣）・歩道・道路・街灯・パトカー・隣の建物
+//  遠く: 2列目の建物と木、地平の丘や街並み（霧に溶ける）
+// 光は光の格子を使わず、空の明るさと太陽で当てる（renderer の uOuter）。夜は窓と街灯が光る。
+import { MeshBuilder, hex, mulc, mixc, xfYaw } from './build.js';
+import { LAYER } from './textures.js';
+import { buildProp } from './props.js';
+import { CS, C, isWallish } from '../engine/world.js';
+import { F } from '../engine/data/materials.js';
+
+const H = hex;
+const COL = {
+  asphalt: H('#4f5053'), road: H('#46474a'), grass: H('#5f803c'), grassD: H('#4c6b30'), dirt: H('#7f6a4e'), field: H('#7a7a48'),
+  walk: H('#aeaaa1'), curb: H('#c2beb5'), line: H('#d9d7cd'), yline: H('#d2ad48'), conc: H('#a29e96'), lot: H('#5a5b5e'),
+  water: H('#1d3340'), quay: H('#8f8b83'), hedge: H('#2e4824'), trunk: H('#5a4632'), leaf: H('#4e7a34'), leafD: H('#3b5f28'),
+  pole: H('#7d8085'), wood: H('#7a5c3e'), fence: H('#8e9397'), white: H('#e8e6e0'), orange: H('#d0702a'), dark: H('#1e1f22'),
+  winDay: H('#5f7381'), winNight: H('#141a20'), winLit: H('#ffd39a'), winLit2: H('#cfe0ff'), frame: H('#3a3d40'), roof: H('#6c6a66'),
+};
+const BRICK = ['#8f4a38', '#7a4e3c', '#9a6a4e', '#6e4436', '#8a5a44'].map(H);
+const PLASTER = ['#d6cfc0', '#c9c2b4', '#bfc6c8', '#d8c8a8', '#b8b2a6', '#cfd2c4'].map(H);
+const SIDING = ['#c9cfcf', '#d8d2c0', '#b7c4cc', '#cfc3a8', '#e0ddd4', '#a9b6a6', '#c8b8a0'].map(H);
+const CONC = ['#bdb9b0', '#a8a59e', '#b4b0a6', '#9e9a92'].map(H);
+const METAL = ['#8f969c', '#7d868c', '#a0a4a6', '#6f7a80', '#8a8070'].map(H);
+const AWN = ['#8e2b2b', '#2f4f7a', '#3e6b3a', '#c48a2c', '#5a3a6a'].map(H);
+const CONT = ['#8c2b22', '#2a5a7a', '#3f6a3a', '#c48a2c', '#5b5e62', '#7a4a2a'].map(H);
+
+// マップごとの外まわり: style（街・住宅街・道路ぞい・港）、建物の種類、地面
+const THEMES = {
+  gasstation: { style: 'roadside', bld: 'roadside', ground: 'field', hills: true },
+  motel: { style: 'roadside', bld: 'roadside', ground: 'dirt', hills: true },
+  training: { style: 'roadside', bld: 'facility', ground: 'grass', hills: true },
+  suburb: { style: 'suburb', bld: 'house', ground: 'grass', hills: true },
+  apartment: { style: 'city', bld: 'apt', ground: 'lot', skyline: true },
+  bank: { style: 'city', bld: 'shop', ground: 'lot', skyline: true },
+  office: { style: 'city', bld: 'office', ground: 'grass', skyline: true },
+  club: { style: 'city', bld: 'warehouse', ground: 'lot', skyline: true },
+  port: { style: 'port', bld: 'warehouse', ground: 'lot', water: 'N' },
+};
+
+function rng(seed) { let s = seed >>> 0 || 1; return () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function hashStr(t) { let h = 2166136261; for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+
+// 辺: 境の上の点 O＋t×u（沿う向き）＋d×n（外向き）
+function sides(Wm, Dm) {
+  return [
+    { id: 'N', O: [0, 0], u: [1, 0], n: [0, -1], len: Wm },
+    { id: 'S', O: [0, Dm], u: [1, 0], n: [0, 1], len: Wm },
+    { id: 'W', O: [0, 0], u: [0, 1], n: [-1, 0], len: Dm },
+    { id: 'E', O: [Wm, 0], u: [0, 1], n: [1, 0], len: Dm },
+  ];
+}
+const P = (s, t, d) => [s.O[0] + s.u[0] * t + s.n[0] * d, s.O[1] + s.u[1] * t + s.n[1] * d];
+// (t0..t1, d0..d1) の長方形 → 世界の軸にそった箱の x0,z0,x1,z1
+function rect(s, t0, t1, d0, d1) { const a = P(s, t0, d0), b = P(s, t1, d1); return [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1])]; }
+// 外を向く（建物の正面がマップを向く）回転: 局所 +Z が -n
+const yawToMap = (s) => Math.atan2(-s.n[0], -s.n[1]);
+const yawAlong = (s) => Math.atan2(s.u[0], s.u[1]);
+
+// 地面の板（上向き）。テクスチャは 0.5m で1回
+function ground(B, x0, z0, x1, z1, y, layer, col) {
+  const s = 0.5;
+  B.quad([x0, y, z1], [x1, y, z1], [x1, y, z0], [x0, y, z0], [0, 1, 0], [x0 * s, z1 * s, x1 * s, z1 * s, x1 * s, z0 * s, x0 * s, z0 * s], layer, col);
+}
+const GL = { asphalt: [LAYER.asphalt, COL.asphalt], grass: [LAYER.grass, COL.grass], dirt: [LAYER.dirt, COL.dirt], walk: [LAYER.sidewalk, COL.walk], field: [LAYER.grass, COL.field], lot: [LAYER.asphalt, COL.lot] };
+
+// 境の地面の種類（1階の端のマスごと）: 'asphalt' | 'grass' | 'dirt' | 'walk' | null（建物・壁）
+function edgeRuns(w, s) {
+  const runs = [];
+  const n = s.id === 'N' || s.id === 'S' ? w.W : w.D;
+  let cur = null;
+  for (let q = 0; q < n; q++) {
+    const i = s.id === 'W' ? 0 : s.id === 'E' ? w.W - 1 : q, j = s.id === 'N' ? 0 : s.id === 'S' ? w.D - 1 : q;
+    const k = w.idx(0, i, j), t = w.cell[k];
+    let kind = null;
+    if (!isWallish(t) && t !== C.VOID) {
+      const r = w.roomAt[k], out = r >= 0 && w.rooms[r] && w.rooms[r].out;
+      if (out) { const fm = w.floorMat[k]; kind = fm === F.ASPHALT ? 'asphalt' : fm === F.GRASS ? 'grass' : fm === F.DIRT ? 'dirt' : 'walk'; }
+    } else if (t === C.FENCE) kind = 'fence';
+    if (cur && cur.kind === kind) cur.t1 = (q + 1) * CS;
+    else { cur = { kind, t0: q * CS, t1: (q + 1) * CS }; runs.push(cur); }
+  }
+  return runs;
+}
+
+// o.lite: 画質「低」。2列目の建物・地平の木・光のたまりを省く
+export function buildOutskirts(w, def, o = {}) {
+  const T = THEMES[def.id] || THEMES.gasstation;
+  const night = def.time === 'night', dusk = def.time === 'dusk';
+  const R = rng(hashStr(def.id || 'map'));
+  const Wm = w.W * CS, Dm = w.D * CS;
+  const B = new MeshBuilder(), G = new MeshBuilder();
+  B.room = 0; G.room = 0;
+  const S = sides(Wm, Dm);
+  const runsBy = {}; for (const s of S) runsBy[s.id] = edgeRuns(w, s);
+  const asphaltShare = (s) => runsBy[s.id].filter(r => r.kind === 'asphalt' || r.kind === 'walk').reduce((a, r) => a + r.t1 - r.t0, 0) / s.len;
+  // 道路のある辺: 街と港はすべて。住宅街は舗装の多い辺、道路ぞいは舗装がいちばん多い辺（幹線道路）
+  const roadOn = {};
+  if (T.style === 'city' || T.style === 'port') for (const s of S) roadOn[s.id] = !(T.water && s.id === T.water);
+  else if (T.style === 'suburb') for (const s of S) roadOn[s.id] = asphaltShare(s) > 0.3;
+  else { let best = S[0]; for (const s of S) if (asphaltShare(s) > asphaltShare(best)) best = s; roadOn[best.id] = true; }
+  const highway = T.style === 'roadside';
+
+  // ---- 1) 遠くまでの地面（マップの外の4枚）。少し低くして、境の地面の続き（下の apron）と重ならないように
+  const E = 390, gy = -0.06, [gl, gc] = GL[T.ground] || GL.grass;
+  ground(B, -E, -E, Wm + E, 0, gy, gl, gc);
+  ground(B, -E, Dm, Wm + E, Dm + E, gy, gl, gc);
+  ground(B, -E, 0, 0, Dm, gy, gl, gc);
+  ground(B, Wm, 0, Wm + E, Dm, gy, gl, gc);
+
+  // 道の寸法（境からの距離）
+  const AP = 2.4;                       // 境の地面の続き
+  const SW = 2.2;                       // 歩道
+  const lamps = [];
+  const RW = (id) => roadOn[id] ? (highway ? 14 : 8) : 0;
+  for (const s of S) {
+    const rw = RW(s.id);
+    const d0 = AP, d1 = AP + SW, r0 = d1, r1 = d1 + rw, o0 = r1, o1 = r1 + (rw ? SW : 0);
+    const NS = s.id === 'N' || s.id === 'S';
+    // 道路の長さ: 南北は角の先まで。東西は南北の道路の手前の端まで（T字に突き当たる）、なければ先まで
+    const ta = NS ? -70 : (roadOn.N ? -(AP + SW) : -70), tb = NS ? s.len + 70 : (roadOn.S ? s.len + AP + SW : s.len + 70);
+    s.dRow = rw ? o1 + 1.2 : AP + 3.5; // 建物の列が始まる距離
+    // ---- 2) 境の地面の続き（端のマスの材質をそのまま外へ）
+    for (const r of runsBy[s.id]) {
+      if (!r.kind || r.kind === 'fence') continue;
+      const [l, c] = GL[r.kind];
+      const [x0, z0, x1, z1] = rect(s, r.t0, r.t1, 0, AP);
+      ground(B, x0, z0, x1, z1, 0, l, c);
+    }
+    // ---- 3) 範囲の境: 舗装は規制線（警察の柵とテープ）、土と芝は塀・生け垣・金網
+    for (const r of runsBy[s.id]) {
+      if (!r.kind || r.kind === 'fence') continue;
+      const paved = r.kind === 'asphalt' || r.kind === 'walk';
+      if (paved) cordon(B, G, s, r.t0, r.t1, 0.35, night);
+      else if (T.style === 'suburb') woodFence(B, s, r.t0, r.t1, 0.12);
+      else if (T.style === 'city') hedge(B, s, r.t0, r.t1, 0.5, R);
+      else chainLink(B, G, s, r.t0, r.t1, 0.12, 2.2);
+    }
+    // パトカー: いちばん長い舗装の続きに1台（境の外、道路を止めている）
+    const pr = runsBy[s.id].filter(r => r.kind === 'asphalt' || r.kind === 'walk').sort((a, b) => (b.t1 - b.t0) - (a.t1 - a.t0))[0];
+    if (pr && pr.t1 - pr.t0 > 6) policeCar(B, G, s, (pr.t0 + pr.t1) / 2 + (R() - 0.5) * 3, rw ? r0 + 2.4 : 1.9, night, R);
+    // ---- 4) 歩道と道路（角の先まで延ばす: 交差点）
+    if (rw) {
+      // 内側の歩道（マップの側）。南北は角まで、東西は辺の長さだけ（角で重ならない）
+      const [ax0, az0, ax1, az1] = rect(s, NS ? -d1 : 0, NS ? s.len + d1 : s.len, d0, d1);
+      B.box(ax0, gy, az0, ax1, 0.12, az1, LAYER.sidewalk, COL.walk, { faces: 4 | 1 | 2 | 16 | 32, uv: 0.5 });
+      // 道路
+      const [rx0, rz0, rx1, rz1] = rect(s, ta, tb, r0, r1);
+      ground(B, rx0, rz0, rx1, rz1, NS ? -0.01 : -0.016, LAYER.asphalt, COL.road);
+      lanes(B, s, ta, tb, r0, r1, highway);
+      // 外側の歩道
+      const [bx0, bz0, bx1, bz1] = rect(s, ta, tb, o0, o1);
+      B.box(bx0, gy, bz0, bx1, 0.12, bz1, LAYER.sidewalk, COL.walk, { faces: 4 | 1 | 2 | 16 | 32, uv: 0.5 });
+      // 街灯（外側の歩道。道路の方へ腕を出す）。夜は足元に光のたまり
+      for (let t = ta + 8 + R() * 6; t < tb - 4; t += highway ? 30 : 24) { lamps.push({ s, t, d: o0 + 0.45 }); }
+      // 横断歩道（マップの角の先）
+      if (NS) for (const tc of [-d1 - (RW('W') ? RW('W') / 2 : 3), s.len + d1 + (RW('E') ? RW('E') / 2 : 3)]) crosswalk(B, s, tc, r0, r1);
+    }
+    // ---- 5) 隣の建物の列（街・住宅街・道路ぞい・港）
+    const t0 = NS ? -60 : 0, t1 = NS ? s.len + 60 : s.len;
+    if (T.water && s.id === T.water) { harbor(B, G, s, t0 - 60, t1 + 60, R, night); continue; }
+    rowOfBuildings(B, G, s, t0, t1, s.dRow, T, R, night, dusk, 1);
+    // 2列目（遠く。細部を減らす）。東西は辺の長さだけ（角は南北の列が受け持つ）
+    if (!o.lite) rowOfBuildings(B, G, s, NS ? t0 - 40 : -5, NS ? t1 + 40 : s.len + 5, s.dRow + 34 + R() * 8, T, R, night, dusk, 2);
+  }
+  for (const L of lamps) streetLamp(B, L.s, L.t, L.d, night || dusk, !o.lite);
+  // ---- 6) 地平: 丘（郊外・道路ぞい）か街並み（街・港）
+  horizon(B, Wm, Dm, T, R, night, !!o.lite);
+  return { B, G };
+}
+
+// ---- 道路の線: 中央線（黄）と車線（白の破線）、路肩の白線
+function lanes(B, s, t0, t1, r0, r1, highway) {
+  const y = 0.0, rw = r1 - r0, mid = (r0 + r1) / 2;
+  const strip = (ta, tb, da, db, col) => { const [x0, z0, x1, z1] = rect(s, ta, tb, da, db); ground(B, x0, z0, x1, z1, y, LAYER.plain, col); };
+  strip(t0, t1, r0 + 0.25, r0 + 0.37, COL.line); strip(t0, t1, r1 - 0.37, r1 - 0.25, COL.line);
+  if (highway) {
+    strip(t0, t1, mid - 0.2, mid - 0.08, COL.yline); strip(t0, t1, mid + 0.08, mid + 0.2, COL.yline);
+    for (const dl of [r0 + rw * 0.25, r1 - rw * 0.25]) for (let t = t0; t < t1; t += 9) strip(t, t + 3, dl - 0.06, dl + 0.06, COL.line);
+  } else {
+    for (let t = t0; t < t1; t += 6) strip(t, t + 3, mid - 0.06, mid + 0.06, COL.yline);
+  }
+}
+function crosswalk(B, s, tc, r0, r1) {
+  for (let d = r0 + 0.6; d < r1 - 0.6; d += 0.9) { const [x0, z0, x1, z1] = rect(s, tc - 1.6, tc + 1.6, d, d + 0.45); ground(B, x0, z0, x1, z1, 0.004, LAYER.plain, COL.line); }
+}
+
+// ---- 規制線: 警察の柵（白とオレンジの横板）と黄色いテープ
+function cordon(B, G, s, t0, t1, d, night) {
+  const y0 = 0;
+  for (let t = t0 + 0.9; t < t1 - 0.5; t += 2.6) {
+    B.setXf(xfYaw(...xz(P(s, t, d)), yawAlong(s)));
+    // 局所: X が道に直角、Z が境に沿う
+    for (const sz of [-0.55, 0.55]) { B.box(-0.28, y0, sz - 0.04, -0.2, 0.95, sz + 0.04, LAYER.wood, COL.white); B.box(0.2, y0, sz - 0.04, 0.28, 0.95, sz + 0.04, LAYER.wood, COL.white); }
+    for (const [ya, yb] of [[0.78, 0.98], [0.5, 0.66]]) for (let k = 0; k < 4; k++) B.box(-0.03, ya, -0.7 + k * 0.35, 0.03, yb, -0.7 + (k + 1) * 0.35, LAYER.paint, k % 2 ? COL.white : COL.orange);
+    if (night) { B.emit = 2.2; B.box(-0.05, 0.98, -0.05, 0.05, 1.06, 0.05, LAYER.plain, H('#ffb040')); B.emit = 0; }
+    B.setXf(null);
+  }
+  // テープ（柵の上の高さ）
+  const [x0, z0, x1, z1] = rect(s, t0, t1, d - 0.006, d + 0.006);
+  B.box(x0, 1.0, z0, x1, 1.06, z1, LAYER.plain, H('#e8c62a'), { faces: 1 | 2 | 16 | 32 | 4 });
+}
+function xz(p) { return [p[0], 0, p[1]]; }
+
+// ---- 塀・生け垣・金網
+function woodFence(B, s, t0, t1, d) {
+  const [x0, z0, x1, z1] = rect(s, t0, t1, d, d + 0.05);
+  B.box(x0, 0, z0, x1, 1.8, z1, LAYER.siding, H('#9a7a56'), { uv: 0.5 });
+  for (let t = t0; t <= t1; t += 2.4) { const [a, b, c, e] = rect(s, t - 0.05, t + 0.05, d - 0.05, d + 0.1); B.box(a, 0, b, c, 1.9, e, LAYER.wood, COL.wood); }
+}
+function hedge(B, s, t0, t1, d, R) {
+  // 生け垣: 角を丸めた低い箱を少しずつ高さを変えて並べる（色は暗めの緑）
+  for (let t = t0; t < t1; t += 1.6) { const [x0, z0, x1, z1] = rect(s, t, Math.min(t1, t + 1.62), d - 0.42, d + 0.42); B.bbox(x0, -0.02, z0, x1, 0.95 + R() * 0.2, z1, 0.12, LAYER.leaves, mixc(COL.hedge, COL.leafD, R() * 0.5), { faces: 1 | 2 | 4 | 16 | 32, uv: 0.7 }); }
+}
+function chainLink(B, G, s, t0, t1, d, h) {
+  const [x0, z0, x1, z1] = rect(s, t0, t1, d, d);
+  G.emit = 2;
+  const along = s.u[0] !== 0;
+  if (along) {
+    G.quad([x0, 0, z0], [x1, 0, z0], [x1, h, z0], [x0, h, z0], [0, 0, 1], [x0, 0, x1, 0, x1, h, x0, h], LAYER.plain, COL.fence);
+    G.quad([x1, 0, z0], [x0, 0, z0], [x0, h, z0], [x1, h, z0], [0, 0, -1], [x1, 0, x0, 0, x0, h, x1, h], LAYER.plain, COL.fence);
+  } else {
+    G.quad([x0, 0, z1], [x0, 0, z0], [x0, h, z0], [x0, h, z1], [1, 0, 0], [z1, 0, z0, 0, z0, h, z1, h], LAYER.plain, COL.fence);
+    G.quad([x0, 0, z0], [x0, 0, z1], [x0, h, z1], [x0, h, z0], [-1, 0, 0], [z0, 0, z1, 0, z1, h, z0, h], LAYER.plain, COL.fence);
+  }
+  G.emit = 0;
+  for (let t = t0; t <= t1 + 0.01; t += 3) { const p = P(s, Math.min(t, t1), d); B.cyl(p[0], p[1], 0, h + 0.05, 0.035, 0.035, 6, LAYER.metal, COL.fence); }
+  const [a, b, c, e] = rect(s, t0, t1, d - 0.02, d + 0.02);
+  B.box(a, h - 0.04, b, c, h, e, LAYER.metal, COL.fence);
+}
+
+// ---- パトカー（紺と白、屋根に赤と青の灯）
+function policeCar(B, G, s, t, d, night, R) {
+  const p = P(s, t, d), yaw = yawAlong(s) + (R() < 0.5 ? 0 : Math.PI) + (R() - 0.5) * 0.5;
+  buildProp(B, G, { type: 'car', x: p[0], y: 0, z: p[1], rot: -yaw / (Math.PI / 2), sx: 1, sy: 1, sz: 1, opt: { color: 1 }, id: 900 + Math.floor(R() * 99) }, null);
+  B.setXf(xfYaw(p[0], 0, p[1], yaw));
+  B.box(-0.92, 0.5, -0.9, 0.92, 0.82, 0.9, LAYER.paint, COL.white, { faces: 1 | 2 });
+  B.emit = night ? 2.6 : 1.2;
+  B.box(-0.5, 1.4, -0.12, 0, 1.52, 0.12, LAYER.plain, H('#ff2a2a'));
+  B.emit = night ? 2.6 : 1.2;
+  B.box(0, 1.4, -0.12, 0.5, 1.52, 0.12, LAYER.plain, H('#2a5cff'));
+  B.emit = 0;
+  B.setXf(null);
+}
+
+// ---- 街灯（夜・夕方は灯りと足元の光のたまり）
+function streetLamp(B, s, t, d, lit, pool = true) {
+  const p = P(s, t, d), yaw = Math.atan2(-s.n[0], -s.n[1]);
+  B.setXf(xfYaw(p[0], 0.12, p[1], yaw));
+  B.cyl(0, 0, 0, 6.2, 0.09, 0.06, 8, LAYER.metal, COL.pole, { capT: false });
+  B.box(-0.04, 6.05, 0, 0.04, 6.13, 1.6, LAYER.metal, COL.pole);
+  B.box(-0.16, 5.98, 1.35, 0.16, 6.12, 1.95, LAYER.metal, H('#3a3c40'));
+  B.emit = lit ? 3.2 : 0.4; B.box(-0.14, 5.97, 1.38, 0.14, 5.98, 1.92, LAYER.plain, H('#ffd7a0'), { faces: 8 }); B.emit = 0;
+  B.setXf(null);
+  if (lit && pool) {
+    // 光のたまり（道の上の薄い円。2段）
+    const c = P(s, t, d - 1.7);
+    for (const [r, e] of [[3.6, 0.10], [2.0, 0.16]]) {
+      B.emit = e; const pts = []; for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI * 2; pts.push([c[0] + Math.cos(a) * r, 0.008 + (e > 0.12 ? 0.004 : 0), c[1] + Math.sin(a) * r]); }
+      B.poly(pts.slice().reverse(), [0, 1, 0], LAYER.plain, H('#3a3226')); B.emit = 0;
+    }
+  }
+}
+
+// ---- 建物の列
+function rowOfBuildings(B, G, s, t0, t1, d, T, R, night, dusk, row) {
+  let t = t0 + R() * 6;
+  while (t < t1) {
+    const kind = T.bld;
+    const wdt = kind === 'house' ? 11 + R() * 5 : kind === 'warehouse' ? 18 + R() * 16 : kind === 'roadside' ? 9 + R() * 12 : kind === 'office' ? 16 + R() * 14 : 9 + R() * 11;
+    const gap = kind === 'house' ? 5 + R() * 4 : kind === 'roadside' ? 14 + R() * 30 : kind === 'warehouse' ? 4 + R() * 8 : kind === 'office' ? 10 + R() * 10 : (R() < 0.25 ? 3 + R() * 4 : 0.2);
+    const depth = kind === 'house' ? 9 + R() * 3 : kind === 'warehouse' ? 16 + R() * 10 : kind === 'office' ? 14 + R() * 6 : 10 + R() * 6;
+    const set = kind === 'house' ? 6 + R() * 3 : kind === 'office' ? 6 + R() * 10 : kind === 'roadside' ? 4 + R() * 12 : R() * 1.5;
+    const ta = t, tb = Math.min(t1, t + wdt);
+    if (tb - ta > 6) {
+      const da = d + set, db = d + set + depth;
+      if (kind === 'house') house(B, s, ta, tb, da, db, R, night, row);
+      else block(B, G, s, ta, tb, da, db, kind, R, night, dusk, row);
+      // 前庭・駐車場・木
+      if (kind === 'house' && row === 1) {
+        const [x0, z0, x1, z1] = rect(s, ta - gap / 2, tb + gap / 2, d, da);
+        ground(B, x0, z0, x1, z1, -0.02, LAYER.grass, mixc(COL.grass, COL.grassD, R()));
+        tree(B, P(s, ta + R() * (tb - ta), d + 1.6 + R() * (set - 2.5)), R, row);
+        if (R() < 0.6) woodFence(B, { ...s, O: P(s, tb + gap / 2, 0), u: s.n, n: s.u }, d, db, 0);
+      }
+      if (kind === 'office' && row === 1 && set > 9) {
+        const [x0, z0, x1, z1] = rect(s, ta, tb, d, da - 0.5);
+        ground(B, x0, z0, x1, z1, -0.02, LAYER.asphalt, COL.lot);
+        for (let q = ta + 1.5; q < tb - 2; q += 2.7) { const [a, b, c, e] = rect(s, q, q + 0.1, d + 0.6, d + 5.6); ground(B, a, b, c, e, -0.01, LAYER.plain, COL.line); }
+      }
+    }
+    // 建物のあいだ: 木・電柱
+    if (gap > 3 && (row === 1 || R() < 0.5)) tree(B, P(s, tb + gap * (0.3 + R() * 0.4), d + 2 + R() * 10), R, row);
+    t = tb + gap;
+  }
+}
+
+// 窓（面の外へ少し出した四角）。夜はいくつか灯る。row 2 は窓の数を減らす
+function windows(B, x0, x1, y0, y1, z, nz, R, night, o = {}) {
+  // 局所の面: x0..x1 に沿って、y0..y1 の高さに、z の面（法線 nz=±1）
+  const ww = o.w ?? 1.3, wh = o.h ?? 1.5, step = o.step ?? 2.8, fh = o.fh ?? 3.2;
+  for (let y = y0 + (o.sill ?? 0.95); y + wh < y1 - 0.3; y += fh) {
+    for (let x = x0 + (step - ww) / 2 + 0.4; x + ww < x1 - 0.3; x += step) {
+      const lit = night && R() < (o.litP ?? 0.35);
+      const col = lit ? (R() < 0.75 ? COL.winLit : COL.winLit2) : night ? COL.winNight : mixc(COL.winDay, H('#9fb4c4'), R() * 0.5);
+      const zz = z + nz * 0.03;
+      B.emit = lit ? 0.9 + R() * 0.5 : 0;
+      B.box(x, y, Math.min(z, zz), x + ww, y + wh, Math.max(z, zz), LAYER.plain, col, { faces: nz > 0 ? 16 : 32 });
+      B.emit = 0;
+      if (o.frames !== false) B.box(x - 0.06, y - 0.08, Math.min(z, zz), x + ww + 0.06, y, Math.max(z, zz) + 0.0, LAYER.paint, o.frame || COL.frame, { faces: (nz > 0 ? 16 : 32) | 4 });
+    }
+  }
+}
+
+// 四角い建物（店・アパート・事務所・倉庫・道路ぞいの店）。局所: 正面（+Z）がマップを向く
+function block(B, G, s, ta, tb, da, db, kind, R, night, dusk, row) {
+  const c = P(s, (ta + tb) / 2, (da + db) / 2), wdt = tb - ta, dep = db - da, yaw = yawToMap(s);
+  const floors = kind === 'shop' ? 2 + Math.floor(R() * 3) : kind === 'apt' ? 3 + Math.floor(R() * 2) : kind === 'office' ? 3 + Math.floor(R() * 3) : kind === 'warehouse' ? 1 : kind === 'facility' ? 1 + Math.floor(R() * 2) : 1 + (R() < 0.3 ? 1 : 0);
+  const fh = kind === 'warehouse' ? 8 + R() * 3 : 3.3;
+  const h = kind === 'warehouse' ? fh : floors * fh + 0.6 + (row === 2 ? R() * 6 : 0);
+  const mat = kind === 'apt' || (kind === 'shop' && R() < 0.5) ? [LAYER.brick, BRICK[Math.floor(R() * BRICK.length)]]
+    : kind === 'warehouse' ? [LAYER.metal, METAL[Math.floor(R() * METAL.length)]]
+      : kind === 'office' ? [LAYER.concrete, CONC[Math.floor(R() * CONC.length)]]
+        : [LAYER.plaster, PLASTER[Math.floor(R() * PLASTER.length)]];
+  B.setXf(xfYaw(c[0], 0, c[1], yaw));
+  const x0 = -wdt / 2, x1 = wdt / 2, z0 = -dep / 2, z1 = dep / 2;
+  // 本体（裏は見えないので作らない）
+  B.box(x0, -0.06, z0, x1, h, z1, mat[0], mat[1], { faces: 1 | 2 | 4 | 16, uv: 0.5 });
+  // 屋上: 立ち上がり・空調機
+  B.box(x0, h, z1 - 0.25, x1, h + 0.6, z1, mat[0], mulc(mat[1], 0.9), { faces: 4 | 16 | 32 | 1 | 2 });
+  B.box(x0, h, z0, x0 + 0.25, h + 0.6, z1, mat[0], mulc(mat[1], 0.9), { faces: 4 | 2 | 1 });
+  B.box(x1 - 0.25, h, z0, x1, h + 0.6, z1, mat[0], mulc(mat[1], 0.9), { faces: 4 | 1 | 2 });
+  if (row === 1 && kind !== 'warehouse') for (let k = 0; k < 1 + Math.floor(R() * 3); k++) { const ax = x0 + 1.5 + R() * (wdt - 3), az = z0 + 1.5 + R() * (dep - 3); B.box(ax - 0.6, h, az - 0.5, ax + 0.6, h + 0.9, az + 0.5, LAYER.metal, H('#9aa0a6'), { faces: 1 | 2 | 4 | 16 | 32 }); }
+  if (kind === 'warehouse') {
+    // シャッターと小さな窓・低い屋根
+    for (let x = x0 + 2 + R() * 3; x < x1 - 5; x += 8 + R() * 6) { B.box(x, 0, z1, x + 4, 4.2, z1 + 0.04, LAYER.metal, H('#7a7e82'), { faces: 16 }); B.box(x - 0.15, 4.2, z1, x + 4.15, 4.4, z1 + 0.06, LAYER.metal, H('#55595d'), { faces: 16 | 4 | 8 }); }
+    windows(B, x0, x1, fh - 2.3, fh, z1, 1, R, night, { w: 2.2, h: 0.8, step: 6, fh: 99, sill: 0, litP: 0.25, frames: false });
+    B.prismX([[z0, h], [z1, h], [0, h + 1.6]], x0, x1, LAYER.metal, mulc(mat[1], 0.8));
+    if (night && R() < 0.5) { B.emit = 2.5; B.box(x0 + 2, fh - 1.2, z1, x0 + 2.3, fh - 0.9, z1 + 0.3, LAYER.plain, H('#ffd7a0')); B.emit = 0; }
+  } else {
+    const shop = kind === 'shop' || (kind === 'roadside' && R() < 0.6);
+    if (shop) {
+      // 1階: 店のガラス・入口・日よけ・看板（夜は光る）
+      const lit = night || dusk;
+      B.emit = lit ? 0.7 : 0; B.box(x0 + 0.8, 0.3, z1, x1 - 0.8, 2.8, z1 + 0.03, LAYER.plain, lit ? H('#ffe2b0') : H('#4a5a66'), { faces: 16 }); B.emit = 0;
+      B.box(x0 + 0.6, 2.8, z1, x1 - 0.6, 3.0, z1 + 0.06, LAYER.paint, COL.frame, { faces: 16 | 4 | 8 });
+      const ac = AWN[Math.floor(R() * AWN.length)];
+      B.prismX([[z1, 3.05], [z1 + 1.3, 2.75], [z1 + 1.3, 2.6], [z1, 3.3]], x0 + 0.5, x1 - 0.5, LAYER.fabric, ac);
+      B.emit = night ? 1.8 : 0; B.box(-Math.min(3, wdt / 3), 3.4, z1, Math.min(3, wdt / 3), 4.1, z1 + 0.12, LAYER.plain, night ? H(['#ff5a4a', '#4ae0ff', '#ffd24a', '#7dff7a'][Math.floor(R() * 4)]) : H('#e8e2d0'), { faces: 16 | 1 | 2 | 4 }); B.emit = 0;
+      windows(B, x0, x1, fh, h, z1, 1, R, night, { fh, litP: 0.3 });
+    } else if (kind === 'office') {
+      // 横に続く窓の帯
+      for (let f = 0; f < floors; f++) {
+        const y = f * fh + 1.0, lit = night && R() < 0.3;
+        B.emit = lit ? 0.8 : 0;
+        B.box(x0 + 0.4, y, z1, x1 - 0.4, y + 1.7, z1 + 0.03, LAYER.plain, lit ? COL.winLit2 : night ? COL.winNight : H('#5d7488'), { faces: 16 });
+        B.box(x1, y, z0 + 0.4, x1 + 0.03, y + 1.7, z1 - 0.4, LAYER.plain, lit ? COL.winLit2 : night ? COL.winNight : H('#5d7488'), { faces: 1 });
+        B.box(x0 - 0.03, y, z0 + 0.4, x0, y + 1.7, z1 - 0.4, LAYER.plain, night ? COL.winNight : H('#5d7488'), { faces: 2 });
+        B.emit = 0;
+      }
+    } else {
+      windows(B, x0, x1, 0, h, z1, 1, R, night, { fh, litP: kind === 'apt' ? 0.4 : 0.25 });
+      if (row === 1) for (const sx of [-1, 1]) sideWindows(B, sx > 0 ? x1 : x0, sx, z0, z1, h, fh, R, night);
+      // 入口と灯り
+      B.box(-0.8, 0, z1, 0.8, 2.3, z1 + 0.04, LAYER.wood, H('#4a3a2c'), { faces: 16 });
+      if (night) { B.emit = 2.2; B.box(-0.15, 2.5, z1, 0.15, 2.7, z1 + 0.15, LAYER.plain, H('#ffd7a0')); B.emit = 0; }
+    }
+  }
+  B.setXf(null);
+}
+// 横の面（局所 ±X）の窓
+function sideWindows(B, xf, sx, z0, z1, h, fh, R, night) {
+  for (let y = 0.95; y + 1.5 < h - 0.3; y += fh) for (let z = z0 + 1.2; z + 1.3 < z1 - 0.8; z += 3.4) {
+    const lit = night && R() < 0.25;
+    B.emit = lit ? 1.0 : 0;
+    B.box(Math.min(xf, xf + sx * 0.03), y, z, Math.max(xf, xf + sx * 0.03), y + 1.5, z + 1.3, LAYER.plain, lit ? COL.winLit : night ? COL.winNight : COL.winDay, { faces: sx > 0 ? 1 : 2 });
+    B.emit = 0;
+  }
+}
+
+// 住宅（2階建て・切妻の屋根・車庫）
+function house(B, s, ta, tb, da, db, R, night, row) {
+  const c = P(s, (ta + tb) / 2, (da + db) / 2), wdt = tb - ta, dep = db - da, yaw = yawToMap(s);
+  const col = SIDING[Math.floor(R() * SIDING.length)], h = 5.6, rh = 2.2;
+  B.setXf(xfYaw(c[0], 0, c[1], yaw));
+  const x0 = -wdt / 2, x1 = wdt / 2, z0 = -dep / 2, z1 = dep / 2;
+  B.box(x0, -0.06, z0, x1, h, z1, LAYER.siding, col, { faces: 1 | 2 | 16, uv: 0.5 });
+  B.box(x0 - 0.05, -0.06, z0, x1 + 0.05, 0.5, z1 + 0.05, LAYER.concrete, H('#8e8a82'), { faces: 1 | 2 | 16 | 4 });
+  // 屋根（局所 X に沿って押し出す三角）と、ひさし
+  const roofC = H(['#4a4644', '#5a3a32', '#3a4048', '#6a5a4a'][Math.floor(R() * 4)]);
+  B.prismX([[z0 - 0.5, h], [z1 + 0.5, h], [0, h + rh]], x0 - 0.4, x1 + 0.4, LAYER.concrete, roofC, { capCol: col });
+  windows(B, x0, x1 - (wdt > 13 ? 4 : 0), 0.5, h, z1, 1, R, night, { fh: 2.75, step: 3, w: 1.2, h: 1.3, sill: 0.9, litP: 0.45, frame: H('#ebe8e1') });
+  // 玄関と車庫
+  B.box(-0.55, 0.5, z1, 0.55, 2.6, z1 + 0.05, LAYER.wood, H('#5a3a2a'), { faces: 16 });
+  if (night) { B.emit = 2.4; B.box(0.8, 2.3, z1, 1.0, 2.55, z1 + 0.12, LAYER.plain, H('#ffd7a0')); B.emit = 0; }
+  if (wdt > 13) B.box(x1 - 3.6, 0, z1, x1 - 0.6, 2.4, z1 + 0.05, LAYER.siding, H('#e0ddd4'), { faces: 16 });
+  B.setXf(null);
+}
+
+const NOG = new MeshBuilder(); // ガラスを使わない小物の受け皿
+function tree(B, p, R, row) {
+  const sc = 0.8 + R() * 0.6;
+  if (row === 1) { NOG.v.length = 0; NOG.i.length = 0; NOG.n = 0; buildProp(B, NOG, { type: 'tree', x: p[0], y: 0, z: p[1], rot: Math.floor(R() * 4), sx: sc, sy: sc, sz: sc, opt: {}, id: 1 }, null); return; }
+  // 遠くの木は簡単に（幹と葉のかたまり1つ）
+  B.cyl(p[0], p[1], 0, 2.2 * sc, 0.16 * sc, 0.1 * sc, 5, LAYER.wood, COL.trunk, { capT: false });
+  B.loft([{ y: 1.8 * sc, rx: 0.6 * sc, rz: 0.6 * sc, cx: p[0], cz: p[1] }, { y: 3.2 * sc, rx: 1.7 * sc, rz: 1.6 * sc, cx: p[0], cz: p[1] }, { y: 5.0 * sc, rx: 0.4 * sc, rz: 0.4 * sc, cx: p[0], cz: p[1] }], 6, LAYER.leaves, mixc(COL.leaf, COL.leafD, R()), { capTop: true, capBot: true });
+}
+
+// ---- 港: コンテナの列・岸壁・海・ガントリークレーン
+function harbor(B, G, s, t0, t1, R, night) {
+  const dRow = 6;
+  for (let t = t0; t < t1; t += 7.5) {
+    for (let r = 0; r < 4; r++) {
+      if (R() < 0.15) continue;
+      const n = 1 + Math.floor(R() * 3), p = P(s, t + 3.2, dRow + r * 3.1 + 1.2), yaw = yawAlong(s) + Math.PI / 2;
+      for (let k = 0; k < n; k++) container(B, p, yaw, k * 2.6, CONT[Math.floor(R() * CONT.length)]);
+    }
+  }
+  // 岸壁と海
+  const q0 = dRow + 4 * 3.1 + 6;
+  const [x0, z0, x1, z1] = rect(s, t0 - 200, t1 + 200, q0, q0 + 3);
+  B.box(x0, -1.2, z0, x1, 0.0, z1, LAYER.concrete, COL.quay, { faces: 4 | 16 | 32 | 1 | 2, uv: 0.5 });
+  for (let t = t0; t < t1; t += 12) { const p = P(s, t, q0 + 2.4); B.cyl(p[0], p[1], 0, 0.5, 0.18, 0.15, 7, LAYER.metal, H('#2a2b2e')); }
+  const [wx0, wz0, wx1, wz1] = rect(s, t0 - 400, t1 + 400, q0 + 3, q0 + 420);
+  B.emit = night ? 0 : 0.05; ground(B, wx0, wz0, wx1, wz1, -1.0, LAYER.plain, COL.water); B.emit = 0;
+  // ガントリークレーン（岸壁の上）
+  for (const t of [(t0 + t1) / 2 - 30, (t0 + t1) / 2 + 25]) crane(B, P(s, t, q0 + 1), yawAlong(s), night);
+}
+function container(B, p, yaw, y, col) {
+  B.setXf(xfYaw(p[0], y, p[1], yaw));
+  B.box(-3.0, 0, -1.2, 3.0, 2.55, 1.2, LAYER.metal, col, { uv: 0.5, faces: 1 | 2 | 4 | 16 | 32 });
+  for (const x of [-3.0, 3.0]) B.box(x - 0.06, 0, -1.25, x + 0.06, 2.6, 1.25, LAYER.metal, mulc(col, 0.75), { faces: 1 | 2 | 16 | 32 | 4 });
+  B.setXf(null);
+}
+function crane(B, p, yaw, night) {
+  B.setXf(xfYaw(p[0], 0, p[1], yaw));
+  const col = H('#c48a2c');
+  for (const x of [-7, 7]) for (const z of [-4, 4]) B.box(x - 0.4, 0, z - 0.4, x + 0.4, 34, z + 0.4, LAYER.metal, col, { faces: 1 | 2 | 16 | 32 });
+  B.box(-8, 32, -4.6, 8, 34.5, 4.6, LAYER.metal, col);
+  B.box(-1, 31, -40, 1, 33, 26, LAYER.metal, col);
+  B.box(-2.5, 26, -4, 2.5, 31, 2, LAYER.metal, H('#d8d4c8'));
+  if (night) { B.emit = 3; B.box(-0.3, 34.5, -0.3, 0.3, 35.1, 0.3, LAYER.plain, H('#ff3030')); B.emit = 0; }
+  B.setXf(null);
+}
+
+// ---- 地平: 丘か、霧の向こうの街並み
+function horizon(B, Wm, Dm, T, R, night, lite) {
+  const cx = Wm / 2, cz = Dm / 2;
+  if (T.skyline || T.style === 'port') {
+    for (let a = 0; a < Math.PI * 2; a += 0.06 + R() * 0.05) {
+      const r = 170 + R() * 120, x = cx + Math.sin(a) * r, z = cz + Math.cos(a) * r;
+      const w = 14 + R() * 24, h = 14 + R() * (T.style === 'port' ? 18 : 55), yaw = -a;
+      const col = mulc(CONC[Math.floor(R() * CONC.length)], 0.75);
+      B.setXf(xfYaw(x, 0, z, yaw));
+      B.box(-w / 2, -0.1, -w / 2, w / 2, h, w / 2, LAYER.concrete, col, { faces: 1 | 2 | 4 | 16 | 32, uv: 0.25 });
+      if (night) { for (let k = 0; k < 6; k++) { B.emit = 1.2; const yy = 3 + R() * (h - 5), xx = -w / 2 + 1 + R() * (w - 3); B.box(xx, yy, w / 2, xx + 1.4 + R() * 3, yy + 0.9, w / 2 + 0.05, LAYER.plain, R() < 0.7 ? COL.winLit : COL.winLit2, { faces: 16 }); } B.emit = 0; if (h > 45) { B.emit = 3; B.box(-0.4, h, -0.4, 0.4, h + 0.8, 0.4, LAYER.plain, H('#ff3030')); B.emit = 0; } }
+      B.setXf(null);
+    }
+  }
+  if (T.hills) {
+    // 低い丘の連なり（多角形の帯）と、その手前の木の列
+    const N = 40, pts = [];
+    for (let k = 0; k <= N; k++) { const a = k / N * Math.PI * 2; pts.push([a, 300 + Math.sin(a * 3 + 1) * 25 + R() * 20, 14 + Math.sin(a * 5) * 8 + R() * 12]); }
+    const col = night ? H('#1c2420') : H('#4f6a3e');
+    for (let k = 0; k < N; k++) {
+      const [a0, r0, h0] = pts[k], [a1, r1, h1] = pts[k + 1];
+      const p0 = [cx + Math.sin(a0) * r0, cz + Math.cos(a0) * r0], p1 = [cx + Math.sin(a1) * r1, cz + Math.cos(a1) * r1];
+      const q0 = [cx + Math.sin(a0) * (r0 + 60), cz + Math.cos(a0) * (r0 + 60)], q1 = [cx + Math.sin(a1) * (r1 + 60), cz + Math.cos(a1) * (r1 + 60)];
+      const nx = -(p0[0] + p1[0]) / 2 + cx, nz = -(p0[1] + p1[1]) / 2 + cz, nl = Math.hypot(nx, nz) || 1;
+      const hn = [nx / nl * 0.6, 0.8, nz / nl * 0.6];
+      B.quad([p1[0], -0.1, p1[1]], [p0[0], -0.1, p0[1]], [q0[0], h0, q0[1]], [q1[0], h1, q1[1]], hn, [0, 0, 1, 0, 1, 1, 0, 1], LAYER.grass, col);
+      B.quad([p0[0], -0.1, p0[1]], [p1[0], -0.1, p1[1]], [q1[0], h1, q1[1]], [q0[0], h0, q0[1]], hn, [0, 0, 1, 0, 1, 1, 0, 1], LAYER.grass, col);
+    }
+    if (!lite) for (let a = 0; a < Math.PI * 2; a += 0.05) { const r = 150 + R() * 70; tree(B, [cx + Math.sin(a) * r, cz + Math.cos(a) * r], R, 2); }
+  }
+}
+
 @@@@ FILE src/render/people.js text 19352
 // 人の見た目: 骨17本（engine/pose.js と同じ）に部品を付けたローポリの体。頭身は実際の人に近く（約7.5頭身）。
 // 部品は骨のローカル座標（Y=骨の向き）で作る。色は12色の色板（palette）で、服・装備を変える。
@@ -16017,10 +16562,11 @@ function car(B, G, col, van) {
   }
 }
 
-@@@@ FILE src/render/renderer.js text 30621
+@@@@ FILE src/render/renderer.js text 31959
 // 描画の司令塔: 太陽の影 → 本描画(HDR: 空・世界・扉・人・銃・粒子・ガラス) → 一人称 → 光のにじみ → 仕上げ（トーンマップ・暗視・閃光） → FXAA
 import { createGL, tex2D, fbo, depthTex } from './gl.js';
 import { m4, m4mul, m4persp, m4lookAt, m4invert, frustumPlanes, aabbVisible } from './math.js';
+import { buildOutskirts } from './outskirts.js';
 import { makeTextures, TEX, NLAYER, LAYER } from './textures.js';
 import { COMMON, LIGHT, WORLD_VS, WORLD_FS, SKIN_VS, SKIN_FS, SHADOW_VS, SHADOW_SKIN_VS, SHADOW_FS, FS_VS, SKY_FS, FX_VS, FX_FS, DOWN_FS, UP_FS, COMP_FS, FXAA_FS, COPY_FS, MAX_DL } from './shaders.js';
 import { prepareLevel, buildChunk, doorLeafMesh, barricadeMesh, CHUNK } from './level.js';
@@ -16118,6 +16664,9 @@ export class Renderer {
     this.hooks = { opaque: [], shadow: [], transparent: [], viewmodel: [] };
     this._init();
   }
+  // 描き足す処理を登録し、外す関数を返す。場面（タイトル・試合）が変わったら外す
+  // （外さないと、前の場面の人・粒子・手元の銃が描かれ続ける。タイトルの隊員が試合の中に、当たり判定のない動かない人として残っていた）
+  hook(kind, fn) { this.hooks[kind].push(fn); return () => { const L = this.hooks[kind], i = L.indexOf(fn); if (i >= 0) L.splice(i, 1); }; }
   _init() {
     const gl = this.gl;
     const L = COMMON + LIGHT;
@@ -16237,6 +16786,8 @@ export class Renderer {
     }
     // 扉
     this.doorMeshes = w.doors.map(d => ({ leaves: d.leaves.map((lf, li) => makeWorldMesh(gl, doorLeafMesh(ctx, d, li))), bar: makeWorldMesh(gl, barricadeMesh(d)) }));
+    // マップの外まわり（道・隣の建物・遠くの景色）
+    try { const o = buildOutskirts(w, def, { lite: !!(this.q && this.q.budget <= 0.4e6) }); this.outer = { mesh: makeWorldMesh(gl, o.B), glass: makeWorldMesh(gl, o.G), tris: o.B.i.length / 3 }; } catch (e) { console.warn('outskirts', e); this.outer = null; }
     this.roofY = w.NL * LH;
     this.buildMs = performance.now() - t0;
   }
@@ -16284,6 +16835,7 @@ export class Renderer {
     const gl = this.gl;
     for (const ch of this.chunks || []) { delMesh(gl, ch.mesh); delMesh(gl, ch.glass); }
     for (const d of this.doorMeshes || []) { for (const m of d.leaves) delMesh(gl, m); delMesh(gl, d.bar); }
+    if (this.outer) { delMesh(gl, this.outer.mesh); delMesh(gl, this.outer.glass); this.outer = null; }
     for (const t of [this.lgT, this.wmT, this.aoT, this.dlr]) if (t) gl.deleteTexture(t);
     this.chunks = null; this.doorMeshes = null; this.lgT = this.wmT = this.aoT = this.dlr = null;
   }
@@ -16399,6 +16951,7 @@ export class Renderer {
     }
     vis.sort((a, b) => a[0] - b[0]);
     for (const [, ch] of vis) { drawMesh(gl, ch.mesh); this.stats.draws++; this.stats.tris += ch.tris; this.stats.chunks++; }
+    if (this.outer && this.outer.mesh) { if (P.u.uOuter) gl.uniform1f(P.u.uOuter, 1); drawMesh(gl, this.outer.mesh); if (P.u.uOuter) gl.uniform1f(P.u.uOuter, 0); this.stats.draws++; this.stats.tris += this.outer.tris; }
     // 扉
     if (f.doors) this._drawDoors(P, f.doors);
     for (const h of this.hooks.opaque) h(this, f);
@@ -16425,6 +16978,7 @@ export class Renderer {
     this._bindLight(GP, f);
     gl.uniformMatrix4fv(GP.u.uVP, false, this.vp);
     gl.disable(gl.CULL_FACE);
+    if (this.outer && this.outer.glass) { if (GP.u.uOuter) gl.uniform1f(GP.u.uOuter, 1); drawMesh(gl, this.outer.glass); if (GP.u.uOuter) gl.uniform1f(GP.u.uOuter, 0); }
     for (let k = vis.length - 1; k >= 0; k--) { const ch = vis[k][1]; if (ch.glass) { drawMesh(gl, ch.glass); this.stats.draws++; } }
     for (const h of this.hooks.transparent) h(this, f);
     gl.depthMask(true);
@@ -16613,7 +17167,7 @@ export class Renderer {
   }
 }
 
-@@@@ FILE src/render/shaders.js text 19796
+@@@@ FILE src/render/shaders.js text 20131
 // シェーダー。照らし方は全部同じ関数（光の格子＋太陽の影＋動く光＋もや）で、壁・人・銃・扉が同じ明るさになる。
 export const MAX_DL = 8;
 
@@ -16634,7 +17188,7 @@ uniform highp sampler2D uDLR;     // 動く光ごとに、届く部屋（光が�
 uniform vec4 uLGd;                // W1, D1, NLy, NL
 uniform vec4 uMapD;               // W, D, CS, LH
 uniform vec3 uSunDir; uniform vec3 uSunCol; uniform float uShadowOn; uniform mat4 uShadowVP; uniform highp sampler2DShadow uShadow; uniform float uShadowTexel;
-uniform vec3 uSkyCol; uniform float uAmbMin;
+uniform vec3 uSkyCol; uniform float uAmbMin; uniform float uOuter;
 uniform vec4 uDLp[${MAX_DL}]; uniform vec4 uDLc[${MAX_DL}]; uniform vec4 uDLd[${MAX_DL}]; uniform int uDLn;
 uniform vec3 uCam; uniform vec3 uFogCol; uniform float uFogD; uniform float uFogIn; uniform float uTime;
 uniform float uRoofY;
@@ -16716,6 +17270,12 @@ vec3 dynLights(vec3 p, vec3 n, float room){
 }
 // 光とまとめ: 下地の色 alb にかける光（HDR）
 vec3 shade(vec3 p, vec3 n, vec3 alb, float room, float ao, out float outdoor){
+  // マップの外まわり: 空の明るさと太陽だけ（光の格子の外。影は描かない）
+  if (uOuter > 0.5) {
+    outdoor = 1.0;
+    vec3 g0 = uSkyCol * (0.5 + 0.4 * max(n.y, 0.0) + 0.1 * max(-n.y, 0.0));
+    return alb * ((g0 + uAmbMin) * ao + uSunCol * max(dot(n, uSunDir), 0.0) * 0.92);
+  }
   vec2 a;
   vec3 g = gridLight(p, n, a);
   // 屋根の上（光の格子の外）
@@ -17118,7 +17678,7 @@ export function makeTextures() {
 }
 function vnoiseLine(x, y) { return (Math.sin(y * 1.7 + Math.sin(x * 0.05) * 3) * 0.5 + 0.5); }
 
-@@@@ FILE src/render/viewmodel.js text 28874
+@@@@ FILE src/render/viewmodel.js text 28955
 // 一人称の腕と銃: 腰だめ↔ADS（照準の線を目に合わせる）、揺れ（向きの慣性・歩き・呼吸）、撃った跳ね、リロード・ポンプ・持ち替え・ローレディ・ダッシュ・投げ物
 import { MeshBuilder, hex, mulc } from './build.js';
 import { LAYER } from './textures.js';
@@ -17155,8 +17715,9 @@ export class ViewModel {
     this.sleeve = hex('#232c3b'); this.glove = hex('#1c1d20');
     this.nadeMeshes = {};
     this.out = { muzzle: [0, 0, 0], fwd: [0, 0, 1], light: null, eject: [0, 0, 0], right: [1, 0, 0], up: [0, 1, 0] };
-    r.hooks.viewmodel.push((rr, f) => this.draw(f));
+    this._off = [r.hook('viewmodel', (rr, f) => this.draw(f))];
   }
+  dispose() { for (const f of this._off || []) f(); this._off = []; }
   setColors(sleeve, glove) { this.sleeve = sleeve; this.glove = glove; }
   nadeMesh(id) {
     if (this.nadeMeshes[id]) return this.nadeMeshes[id];
@@ -17627,7 +18188,7 @@ export class Book {
 // 爆弾の制限時間（マップで違う）: 「10〜15分」
 function bombMin(M) { const ts = MAP_LIST.filter(id => MAPS[id].missions && MAPS[id].missions.bomb).map(id => MAPS[id].missions.bomb.time || M.time); if (!ts.length) ts.push(M.time); const a = Math.floor(Math.min(...ts) / 60), b = Math.floor(Math.max(...ts) / 60); return a === b ? `${a}分` : `${a}〜${b}分・マップによる`; }
 
-@@@@ FILE src/ui/hud.js text 28950
+@@@@ FILE src/ui/hud.js text 32307
 // HUD（CODモバイル／PUBGモバイル風）: ボタン、ミニマップ、方位、目的、出来事、隊員、体力、弾、字幕、照準、命中、被弾の向き、円形メニュー、HUDの編集
 import { BTN, INFO, ICONS } from './hudlayout.js';
 import { onTap } from './input.js';
@@ -17636,6 +18197,9 @@ import { M } from '../engine/data/materials.js';
 import { WEAPONS } from '../engine/data/weapons.js';
 import { GEAR, LONG } from '../engine/data/equipment.js';
 import { ammoCount } from '../engine/actor.js';
+
+// 移動スティックの既定の場所（左下から。左利きは左右が入れ替わる）
+const STICK_DEF = { name: '移動スティック', ax: 'l', ay: 'b', x: 118, y: 96 };
 
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 const svg = (id) => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[id] || ''}</svg>`;
@@ -17682,7 +18246,9 @@ export class Hud {
     this.mirror = el('div', 'hud-mirror'); r.appendChild(this.mirror);
     // のぞいている間（ミラー・オプティワンド）
     this.peekEl = el('div', 'hud-peek', '<div class="pk-hint">スワイプで見回す・動くと戻る</div><div class="pk-x" data-btn="peekx" role="button">戻る</div>'); r.appendChild(this.peekEl);
-    this.stickEl = el('div', 'hud-stick', '<div class="knob"></div><div class="spr">ダッシュ</div>'); r.appendChild(this.stickEl);
+    this.stickEl = el('div', 'hud-stick', '<div class="knob"></div><div class="spr">ダッシュ</div>'); this.stickEl.dataset.edit = 'stick'; r.appendChild(this.stickEl);
+    // スコア表（対戦）: ボタンかタブで開く
+    this.boardEl = el('div', 'hud-board'); this.boardEl.dataset.btn = 'board'; r.appendChild(this.boardEl);
     this.radialEl = el('div', 'hud-radial'); r.appendChild(this.radialEl);
     // ボタン
     for (const [id, b] of Object.entries(BTN)) {
@@ -17697,6 +18263,7 @@ export class Hud {
     this.editBar = el('div', 'hud-editbar', `<div class="nm">項目を選択</div>
       <label>大きさ <input type="range" min="0.6" max="1.8" step="0.05" data-k="s"></label>
       <label>濃さ <input type="range" min="0.15" max="1" step="0.05" data-k="o"></label>
+      <label class="sprl" hidden>ダッシュの位置 <input type="range" min="1" max="2.4" step="0.05" data-k="spr"></label>
       <button data-a="hide">隠す</button><button data-a="reset1">元に戻す</button><button data-a="resetAll">すべて初期化</button><button data-a="done" class="pri">保存</button>`);
     r.appendChild(this.editBar);
   }
@@ -17723,15 +18290,18 @@ export class Hud {
       const e = this.btn[id], ov = H[id] || {};
       let hide = !!ov.hide;
       if (def.pve && !this.mode.pve) hide = true;
+      if (def.pvpOnly && !this.mode.pvp) hide = true;
       if (def.pvp && !this.mode.drone) hide = true;
-      if (def.opt === 'leftFire' && this.S.leftFire === false && !H[id]) hide = true;
+      // 設定で消したボタン（左の射撃）: 配置を動かしたことがあっても消す（動かすと設定が効かなくなっていた）
+      const offBySetting = def.opt === 'leftFire' && this.S.leftFire === false;
+      if (offBySetting) hide = true;
       if (this.editing) hide = def.pve && !this.mode.pve ? true : false;
       e.classList.toggle('hidden', hide && !this.editing);
       const [x, y] = this.posOf(def, ov);
       const s = (ov.s || 1) * def.s * k;
       const wdt = def.w ? def.w * (ov.s || 1) * k : s;
       e.style.left = (x - wdt / 2) + 'px'; e.style.top = (y - s / 2) + 'px'; e.style.width = wdt + 'px'; e.style.height = s + 'px';
-      e.style.opacity = this.editing && ov.hide ? 0.25 : (ov.o ?? op);
+      e.style.opacity = this.editing && (ov.hide || offBySetting) ? 0.25 : (ov.o ?? op);
       e.style.setProperty('--bs', s + 'px');
     }
     for (const [id, def] of Object.entries(INFO)) {
@@ -17743,42 +18313,76 @@ export class Hud {
       e.classList.toggle('hidden', (!!ov.hide && !this.editing) || (id === 'squad' && !this.mode.pve) || (id === 'minimap' && this.S.minimap === false) || (id === 'subs' && this.S.subtitles === false && !this.editing));
       if (this.editing) e.style.opacity = ov.hide ? 0.25 : 1; else e.style.opacity = '';
     }
-    // スティックの家（固定のとき）
-    const sk = this.S.handed === 'left' ? 'r' : 'l';
-    const [sx, sy] = [sk === 'l' ? this.stage.safe.l + 118 * k : this.stage.w - this.stage.safe.r - 118 * k, this.stage.h - Math.max(this.stage.safe.b, 4) - 96 * k];
-    this.stickHome = { x: sx, y: sy, s: k };
+    // 移動スティック: 位置（固定のとき・待っているときの場所）・大きさ・濃さ・ダッシュの判定位置は HUD の設定（H.stick）
+    const so = H.stick || {};
+    const [sx, sy] = this.posOf(STICK_DEF, so);
+    this.stickHome = { x: sx, y: sy, s: k * (so.s || 1), o: so.o ?? 0.55, spr: so.spr ?? 1.25 };
+    this.stickEl.classList.toggle('sel', this.editing && this.sel === 'stick');
     if (!this.stickActive) this._stickIdle();
+  }
+  // ダッシュの印: スティックの中心から spr×半径 だけ上（指がそこより上へ行くとダッシュ）
+  _sprMark(R) {
+    const h = this.stickHome, m = this.stickEl.lastChild;
+    m.style.top = (R - (h ? h.spr : 1.25) * R) + 'px';
   }
   _stickIdle() {
     const h = this.stickHome; if (!h) return;
-    const k = this.k(), R = 60 * k;
+    const R = 60 * h.s;
     const e = this.stickEl;
     e.style.left = (h.x - R) + 'px'; e.style.top = (h.y - R) + 'px'; e.style.width = e.style.height = (R * 2) + 'px';
     e.classList.remove('act');
-    e.firstChild.style.transform = 'translate(-50%,-50%)';
+    e.classList.toggle('show-spr', !!this.editing || !!this.sprLocked);
+    e.classList.toggle('spr-on', !!this.sprLocked);
+    e.style.opacity = this.editing ? Math.max(0.45, h.o) : h.o;
+    this._sprMark(R);
+    e.firstChild.style.transform = this.sprLocked ? `translate(-50%, calc(-50% - ${R * 0.8}px))` : 'translate(-50%,-50%)';
   }
-  stick(st, dx, dy, spr) {
-    if (!st) { this.stickActive = false; this._stickIdle(); this.stickEl.classList.remove('spr-on'); return; }
+  stick(st, dx, dy, spr, lock) {
+    this.sprLocked = !!lock;
+    if (!st) { this.stickActive = false; this._stickIdle(); if (!lock) this.stickEl.classList.remove('spr-on'); return; }
     this.stickActive = true;
-    const k = this.k(), R = 60 * k;
+    const h = this.stickHome || { s: this.k(), o: 0.55, spr: 1.25 };
+    const R = 60 * h.s;
     const e = this.stickEl;
-    e.classList.add('act');
+    e.classList.add('act'); e.classList.add('show-spr');
+    e.style.opacity = Math.min(1, h.o + 0.45);
     e.style.left = (st.ox - R) + 'px'; e.style.top = (st.oy - R) + 'px'; e.style.width = e.style.height = (R * 2) + 'px';
     e.firstChild.style.transform = `translate(calc(-50% + ${(dx || 0) * R}px), calc(-50% + ${(dy || 0) * R}px))`;
+    this._sprMark(R);
     e.classList.toggle('spr-on', !!spr);
+  }
+
+  // ---- スコア表: d = { title, teams: [{ name, score, cls, rows: [{ name, k, d, a, me, bot, out }] }] } か null
+  board(d) {
+    const e = this.boardEl;
+    if (!d) { if (this._boardKey) { this._boardKey = ''; e.classList.remove('on'); e.innerHTML = ''; } return; }
+    const key = JSON.stringify(d);
+    if (key === this._boardKey) return;
+    this._boardKey = key;
+    const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    let h = `<div class="bd"><div class="bh">${esc(d.title)}<small>タップで閉じる</small></div><div class="bt">`;
+    for (const t of d.teams) {
+      h += `<div class="tm ${t.cls}"><div class="tn"><b>${esc(t.name)}</b><em>${t.score}</em></div><table><tr><th class="nm">名前</th><th>キル</th><th>デス</th><th>アシスト</th><th>K/D</th></tr>`;
+      for (const r of t.rows) h += `<tr class="${r.me ? 'me' : ''}${r.out ? ' out' : ''}"><td class="nm">${esc(r.name)}${r.bot ? '<i>BOT</i>' : ''}</td><td>${r.k}</td><td>${r.d}</td><td>${r.a}</td><td>${r.d ? (r.k / r.d).toFixed(2) : r.k.toFixed(2)}</td></tr>`;
+      h += '</table></div>';
+    }
+    h += '</div></div>';
+    e.innerHTML = h;
+    e.classList.add('on');
   }
 
   // ---- 円形メニュー
   radial(r) {
     const e = this.radialEl;
     if (!r) { e.classList.remove('on'); e.innerHTML = ''; return; }
-    const k = this.k(), R = 92 * k;
+    const rs = this.S.radialScale || 1, k = this.k(), R = 92 * k * rs;
+    r.scale = k * rs;
     e.classList.add('on');
     let cx = r.x, cy = r.y;
     cx = Math.max(R + 40, Math.min(this.stage.w - R - 40, cx)); cy = Math.max(R + 30, Math.min(this.stage.h - R - 30, cy));
     if (r.x !== cx || r.y !== cy) { r.x = cx; r.y = cy; }
     const n = r.items.length;
-    let h = `<div class="rc" style="left:${cx}px;top:${cy}px;width:${R * 2}px;height:${R * 2}px"><div class="mid">${r.title || ''}<small>${r.tapMode ? '選んでタップ／外で取り消し' : '指をずらして離す'}</small></div>`;
+    let h = `<div class="rc" style="left:${cx}px;top:${cy}px;width:${R * 2}px;height:${R * 2}px;--rs:${(k * rs).toFixed(3)}"><div class="mid">${r.title || ''}<small>${r.tapMode ? '選んでタップ／外で取り消し' : '指をずらして離す'}</small></div>`;
     r.items.forEach((it, i) => {
       const a = (i / n) * Math.PI * 2;
       const x = Math.sin(a) * R * 0.86, y = -Math.cos(a) * R * 0.86;
@@ -17856,9 +18460,10 @@ export class Hud {
         } else if (wi && W) {
           const [m, r] = ammoCount(wi);
           am.querySelector('.mode').textContent = (W.modes[wi.mode] === 'auto' ? '連射' : W.modes[wi.mode] === 'burst' ? '3点' : '単発') + (p.ws.st === 'reload' ? '・リロード中' : p.ws.st === 'shell' ? '・装填中' : '');
-          am.querySelector('.cnt').innerHTML = `<b class="${m === 0 ? 'empty' : m <= W.mag * 0.25 ? 'lowa' : ''}">${m}</b><span>/${wi.mags ? wi.mags.length + '本' : r}</span>`;
+          // 対戦は予備が減らない（∞）
+          am.querySelector('.cnt').innerHTML = `<b class="${m === 0 ? 'empty' : m <= W.mag * 0.25 ? 'lowa' : ''}">${m}</b><span>/${v.pvp ? '∞' : wi.mags ? wi.mags.length + '本' : r}</span>`;
           // 弾倉ごとの残り（RoN の弾倉の確認のように）
-          am.querySelector('.mags').innerHTML = wi.mags ? wi.mags.slice().sort((a, b) => b - a).map(n => `<i style="--f:${n / W.mag}"></i>`).join('') : '';
+          am.querySelector('.mags').innerHTML = wi.mags && !v.pvp ? wi.mags.slice().sort((a, b) => b - a).map(n => `<i style="--f:${n / W.mag}"></i>`).join('') : '';
         } else { am.querySelector('.mode').textContent = ''; am.querySelector('.cnt').innerHTML = '<b>-</b>'; am.querySelector('.mags').innerHTML = ''; }
       }
       // 武器の切り替え
@@ -17996,27 +18601,31 @@ export class Hud {
     this.layout();
     const H = settings.hud || (settings.hud = {});
     const bar = this.editBar;
+    const defOf = (id) => id === 'stick' ? STICK_DEF : id.startsWith('i_') ? INFO[id.slice(2)] : BTN[id];
     const pick = (id) => {
       this.sel = id;
       for (const e of this.root.querySelectorAll('.sel')) e.classList.remove('sel');
-      const e = id.startsWith('i_') ? this.info[id.slice(2)] : this.btn[id];
+      const e = id === 'stick' ? this.stickEl : id.startsWith('i_') ? this.info[id.slice(2)] : this.btn[id];
       if (e) e.classList.add('sel');
-      const def = id.startsWith('i_') ? INFO[id.slice(2)] : BTN[id];
+      const def = defOf(id);
       bar.querySelector('.nm').textContent = def ? def.name : id;
       const ov = H[id] || {};
       bar.querySelector('[data-k="s"]').value = ov.s || 1;
-      bar.querySelector('[data-k="o"]').value = ov.o ?? (settings.hudOpacity ?? 0.85);
+      bar.querySelector('[data-k="o"]').value = ov.o ?? (id === 'stick' ? 0.55 : (settings.hudOpacity ?? 0.85));
+      bar.querySelector('[data-k="spr"]').value = ov.spr ?? 1.25;
+      bar.querySelector('.sprl').hidden = id !== 'stick';
+      bar.querySelector('[data-a="hide"]').hidden = id === 'stick';
       bar.querySelector('[data-a="hide"]').textContent = ov.hide ? '表示' : '隠す';
     };
     let drag = null;
     this._editDown = (e) => {
       let t = e.target, id = null;
-      while (t && t !== this.root) { if (t.dataset && t.dataset.info) { id = 'i_' + t.dataset.info; break; } if (t.dataset && t.dataset.btn) { id = t.dataset.btn; break; } if (t === bar) return; t = t.parentNode; }
+      while (t && t !== this.root) { if (t.dataset && t.dataset.edit) { id = t.dataset.edit; break; } if (t.dataset && t.dataset.info) { id = 'i_' + t.dataset.info; break; } if (t.dataset && t.dataset.btn) { id = t.dataset.btn; break; } if (t === bar) return; t = t.parentNode; }
       if (!id) return;
       e.preventDefault(); e.stopPropagation();
       pick(id);
       const [sx, sy] = this.stage.toStage(e.clientX, e.clientY);
-      const def = id.startsWith('i_') ? INFO[id.slice(2)] : BTN[id];
+      const def = defOf(id);
       const ov = H[id] || {};
       drag = { id, sx, sy, x0: ov.x ?? def.x, y0: ov.y ?? def.y, pid: e.pointerId, def };
       try { this.root.setPointerCapture(e.pointerId); } catch (er) { /* なし */ }
@@ -18105,7 +18714,7 @@ export function buildPlan(w, def, s = 4) {
   return { levels, s };
 }
 
-@@@@ FILE src/ui/hudlayout.js text 6900
+@@@@ FILE src/ui/hudlayout.js text 7153
 // HUD のボタンの既定の配置（CODモバイル／PUBGモバイルを参考）。基準は 844×390 の横画面。
 // ax: 'l'|'r'|'c'（左右の基準）、ay: 't'|'b'|'c'。x, y は基準からの距離（中心まで）、s は直径、o は濃さ。
 // 設定の hud[id] = { x, y, s, o, hide } で上書きする（HUD の編集）。
@@ -18128,6 +18737,7 @@ export const BTN = {
   nvg: { name: '暗視装置', ax: 'r', ay: 't', x: 126, y: 92, s: 36, icon: 'nvg' },
   low: { name: 'ローレディ', ax: 'r', ay: 't', x: 258, y: 92, s: 36, icon: 'low' },
   pause: { name: 'メニュー', ax: 'r', ay: 't', x: 30, y: 28, s: 38, icon: 'pause' },
+  board: { name: 'スコア表（対戦）', ax: 'r', ay: 't', x: 76, y: 28, s: 38, icon: 'board', pvpOnly: true },
   drone: { name: 'ドローン', ax: 'r', ay: 't', x: 82, y: 92, s: 40, icon: 'drone', pvp: true },
   wpn1: { name: '主武器', ax: 'c', ay: 'b', x: -64, y: 22, s: 40, w: 120, icon: 'wpn', group: 'wpn' },
   wpn2: { name: '副武器', ax: 'c', ay: 'b', x: 64, y: 22, s: 40, w: 120, icon: 'wpn', group: 'wpn' },
@@ -18144,6 +18754,7 @@ export const INFO = {
   subs: { name: '字幕', ax: 'c', ay: 'b', x: 0, y: 78, s: 30, w: 340 },
 };
 export const ICONS = {
+  board: '<path d="M4 5h16M4 10h16M4 15h16M4 20h16M9 3v19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   expand: '<path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>',
   fire: '<circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2.2" fill="currentColor"/><path d="M12 1v5M12 18v5M1 12h5M18 12h5" stroke="currentColor" stroke-width="2"/>',
   ads: '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 5v4M12 15v4M5 12h4M15 12h4" stroke="currentColor" stroke-width="2"/>',
@@ -18167,7 +18778,7 @@ export const ICONS = {
   wpn: '',
 };
 
-@@@@ FILE src/ui/input.js text 16173
+@@@@ FILE src/ui/input.js text 17085
 // 入力: タッチ（スティック・視点・ボタン、2本指以上の同時操作）、長押し、円形メニュー、ジャイロ、キーボードとマウス
 // タップは pointerup で判定し、続く click は捨てる（iPhoneは2本目の指に click が来ない）
 let lastTapUp = 0;
@@ -18227,6 +18838,7 @@ export class Input {
   reset() {
     this.mx = this.mz = this.lookDX = this.lookDY = 0;
     this.ptr.clear(); this.stick = null; this.hold.clear(); this.edges.length = 0; this.keys.clear();
+    this.sprintArm = false; this.sprintLock = false;
     this.mouseBtn = { l: false, r: false };
     this.radial = null; if (this.onRadial) this.onRadial(null);
     if (this.onStick) this.onStick(null);
@@ -18250,6 +18862,7 @@ export class Input {
         // 時刻は出来事の起きた時（重いこまで処理が遅れても、短く押したのを長押しにしない）
         const p = { kind: 'btn', btn: b, el, x: sx, y: sy, x0: sx, y0: sy, t0: evT(e), tp: performance.now(), moved: 0, long: false };
         this.ptr.set(e.pointerId, p);
+        if (this.sprintLock && b !== 'map' && b !== 'pause') { this.sprintLock = false; this.sprintArm = false; if (this.onStick) this.onStick(null); }
         this.hold.add(b); el.classList.add('down');
         this.edges.push({ b, k: 'down', sub: el.dataset.sub || null });
         if (this.onBtn) this.onBtn(b, 'down', p);
@@ -18264,6 +18877,7 @@ export class Input {
       const leftZone = this.S.handed === 'left' ? sx > this.stage.w * 0.55 : sx < this.stage.w * 0.45;
       const onStick = fixed ? Math.hypot(sx - home.x, sy - home.y) < 95 * (home.s || 1) : leftZone;
       if (onStick && !this.stick) {
+        this.sprintLock = false;
         this.stick = { id: e.pointerId, ox: fixed ? home.x : sx, oy: fixed ? home.y : sy, x: sx, y: sy, fixed: !!fixed };
         this.ptr.set(e.pointerId, { kind: 'stick' });
         if (this.onStick) this.onStick(this.stick, 0, 0);
@@ -18293,7 +18907,12 @@ export class Input {
       const p = this.ptr.get(e.pointerId);
       this.ptr.delete(e.pointerId);
       if (!p) return;
-      if (p.kind === 'stick') { this.stick = null; this.mx = 0; this.mz = 0; this.sprintArm = false; if (this.onStick) this.onStick(null); return; }
+      if (p.kind === 'stick') {
+        // ダッシュの所で離した: 「ダッシュの固定」がオンなら走り続ける（PUBGM・CODM のように。スティックかボタンに触れるとやめる）
+        const lock = !cancel && this.sprintArm && this.S.stickLock === true;
+        this.stick = null; this.mx = 0; this.mz = 0; this.sprintArm = lock; this.sprintLock = lock;
+        if (this.onStick) this.onStick(null, 0, 0, lock, lock); return;
+      }
       if (p.kind === 'radialTap') { if (!cancel) this._radialPick(true); return; }
       if (p.kind !== 'btn') return;
       this.hold.delete(p.btn); p.el.classList.remove('down');
@@ -18347,13 +18966,15 @@ export class Input {
     const st = this.stick;
     st.x = sx; st.y = sy;
     const home = this.getStickHome ? this.getStickHome() : null;
-    const R = 58 * ((home && home.s) || 1);
+    const R = 58 * ((home && home.s) || 1), spr = (home && home.spr) || 1.25;
     let dx = (sx - st.ox) / R, dy = (sy - st.oy) / R;
     const l = Math.hypot(dx, dy);
-    // スティックを上に大きく倒すとダッシュ（CODモバイル）
-    this.sprintArm = this.S.stickSprint !== false && dy < -1.25 && Math.abs(dx) < 0.8;
+    // スティックを上へ押し込む（ダッシュの印より上）とダッシュ（CODM・PUBGM）。作戦・対戦とも
+    this.sprintArm = this.S.stickSprint !== false && dy < -spr && Math.abs(dx) < 0.8;
     if (l > 1) { dx /= l; dy /= l; }
-    if (!st.fixed && l > 1.9) { st.ox = sx - dx * R * 1.9; st.oy = sy - dy * R * 1.9; }
+    // 可変のスティック: 大きく離れたら土台がついてくる（ダッシュの印より外で）
+    const follow = Math.max(1.9, spr + 0.45);
+    if (!st.fixed && l > follow) { st.ox = sx - dx * R * follow; st.oy = sy - dy * R * follow; }
     const dz = 0.1, ll = Math.min(1, l);
     const k = ll < dz ? 0 : (ll - dz) / (1 - dz) / (ll || 1);
     this.mx = dx * k; this.mz = -dy * k;
@@ -18369,7 +18990,7 @@ export class Input {
     const r = this.radial; if (!r) return;
     const dx = sx - r.x, dy = sy - r.y, d = Math.hypot(dx, dy);
     const n = r.items.length;
-    if (d < 34) r.sel = -1;
+    if (d < 34 * Math.max(0.8, r.scale || 1)) r.sel = -1;
     else { let a = Math.atan2(dx, -dy); if (a < 0) a += Math.PI * 2; r.sel = Math.floor((a + Math.PI / n) / (Math.PI * 2 / n)) % n; }
     if (this.onRadial) this.onRadial(r);
   }
@@ -18406,6 +19027,7 @@ export class Input {
   // 1こま分を取り出す
   take() {
     let mx = this.mx, mz = this.mz;
+    if (this.sprintLock) { mx = 0; mz = 1; }
     const K = this.keys;
     if (K.size) {
       const kx = (K.has('KeyD') || K.has('ArrowRight') ? 1 : 0) - (K.has('KeyA') || K.has('ArrowLeft') ? 1 : 0);
@@ -18415,7 +19037,7 @@ export class Input {
     const out = {
       mx, mz, lookDX: this.lookDX, lookDY: this.lookDY, gyroX: this.gyro.x, gyroY: this.gyro.y,
       fire: this.hold.has('fire') || this.hold.has('fireL') || this.mouseBtn.l,
-      sprint: this.sprintArm || K.has('ShiftLeft') || this.hold.has('sprint'),
+      sprint: this.sprintArm || this.sprintLock || K.has('ShiftLeft') || this.hold.has('sprint'),
       hold: this.hold, edges: this.edges.slice(),
       mouse: !!document.pointerLockElement, touch: this.touchUsed,
     };
@@ -18621,7 +19243,7 @@ export function weaponCard(spec, kind) {
     <p class="desc">${esc(W.desc || '')}</p><p class="note">初速 ${W.vel || '-'} m/s · 重さ ${W.kg || '-'} kg</p>`;
 }
 
-@@@@ FILE src/ui/screens.js text 47765
+@@@@ FILE src/ui/screens.js text 49376
 // 画面: 読み込み・タイトル・作戦の準備（マップ・作戦・難易度・人数・突入口）・ブリーフィング・装備・対戦の準備・
 // オンライン（ルームを作る/参加・ロビー）・一時停止・地図（タブレット）・結果・設定・資料室（手順書と資料）
 import { onTap } from './input.js';
@@ -19062,7 +19684,8 @@ export class Screens {
       row('ADS', '照準ボタン', 'adsMode'); ch('adsMode', [['tap', '切替'], ['hold', '長押し'], ['mixed', '両方']]);
       row('リーン', '', 'leanMode'); ch('leanMode', [['toggle', '切替'], ['hold', '長押し']]);
       row('移動スティック', '', 'stickMode'); ch('stickMode', [['float', '可変'], ['fixed', '固定']]);
-      row('スティックでダッシュ', '対戦のみ。上に倒しきる', 'stickSprint'); ch('stickSprint', [[true, 'オン'], [false, 'オフ']]);
+      row('スティックでダッシュ', '上へ押し込む（作戦・対戦とも）', 'stickSprint'); ch('stickSprint', [[true, 'オン'], [false, 'オフ']]);
+      row('ダッシュの固定', 'ダッシュの所で指を離すと走り続ける', 'stickLock'); ch('stickLock', [[false, 'オフ'], [true, 'オン']]);
       row('射撃ボタン（左）', '', 'leftFire'); ch('leftFire', [[true, '表示'], [false, '非表示']]);
       row('射撃ボタンで視点移動', '押したままドラッグ', 'fireLook'); ch('fireLook', [[true, 'オン'], [false, 'オフ']]);
       row('利き手', 'ボタンの左右を反転', 'handed'); ch('handed', [['right', '右'], ['left', '左']]);
@@ -19084,6 +19707,12 @@ export class Screens {
       R.push('<div class="row"><div class="rl"><b>HUDの配置</b><small>ボタン・字幕などの位置・大きさ・濃さ</small></div><div class="rc"><button class="btn small" data-a="editHud">配置を編集</button></div></div>');
       row('全体の濃さ', '', 'hudOpacity'); sl('hudOpacity', 0.2, 1, 0.05, pct);
       row('全体の大きさ', '', 'hudScale'); sl('hudScale', 0.75, 1.3, 0.05, pct);
+      // 移動スティック（位置は「配置を編集」でスティックをドラッグ）
+      const stk = () => { const H = S.hud || (S.hud = {}); return H.stick || (H.stick = {}); };
+      row('移動スティックの大きさ', '位置は「配置を編集」でドラッグ', 'stickS'); binds.push(() => slider(this.stage, body.querySelector('[data-k="stickS"]'), { min: 0.6, max: 1.8, step: 0.05, value: (S.hud && S.hud.stick && S.hud.stick.s) || 1, fmt: pct, label: '移動スティックの大きさ', onInput: (v) => { stk().s = v; save(); } }));
+      row('移動スティックの濃さ', '', 'stickO'); binds.push(() => slider(this.stage, body.querySelector('[data-k="stickO"]'), { min: 0.15, max: 1, step: 0.05, value: (S.hud && S.hud.stick && S.hud.stick.o) ?? 0.55, fmt: pct, label: '移動スティックの濃さ', onInput: (v) => { stk().o = v; save(); } }));
+      row('ダッシュの判定位置', 'スティックの中心からの距離（半径の何倍か）', 'stickSpr'); binds.push(() => slider(this.stage, body.querySelector('[data-k="stickSpr"]'), { min: 1, max: 2.4, step: 0.05, value: (S.hud && S.hud.stick && S.hud.stick.spr) ?? 1.25, fmt: (v) => v.toFixed(2) + '倍', label: 'ダッシュの判定位置', onInput: (v) => { stk().spr = v; save(); } }));
+      row('長押しメニューの大きさ', '命令などの円形メニュー', 'radialScale'); sl('radialScale', 0.8, 1.6, 0.05, pct);
       row('照準', '腰だめ', 'crosshair'); ch('crosshair', [['cross', '十字'], ['dot', '点'], ['none', 'なし']]);
       row('照準の色', '', 'crossColor'); binds.push(() => chips(body.querySelector('[data-k="crossColor"]'), [['#ffffff', '白'], ['#7dff7a', '緑'], ['#ffe14a', '黄'], ['#4ae8ff', '水色'], ['#ff5ad2', '桃']], S.crossColor, (v) => { S.crossColor = v; save(); }, { swatch: true }));
       row('ミニマップ', 'タップで地図', 'minimap'); ch('minimap', [[true, '表示'], [false, '非表示']]);
@@ -19242,7 +19871,7 @@ export class Stage {
   }
 }
 
-@@@@ FILE src/ui/style.css text 37838
+@@@@ FILE src/ui/style.css text 40230
 /* HARD ENTRY — 見た目の決まり（色・枠・書体）。雰囲気より読みやすさを優先。自分の側はいつも青、相手は赤 */
 :root {
   --bg: #07090c; --panel: rgba(12, 16, 22, 0.9); --panel2: rgba(22, 28, 36, 0.92); --line: rgba(255, 255, 255, 0.13); --line2: rgba(255, 255, 255, 0.28);
@@ -19474,10 +20103,12 @@ table.board small { color: var(--dim); font-size: max(11px, .72em); margin-left:
 .hb[data-btn="team"] svg { opacity: 0; }
 .hb[data-btn="fmode"] .lb { bottom: -1.3em; font-size: 11px; }
 .hud-stick { position: absolute; border-radius: 50%; border: 1.5px solid rgba(255,255,255,.28); background: rgba(10,14,20,.18); opacity: .55; transition: opacity .15s; }
-.hud-stick.act { opacity: 1; }
 .hud-stick .knob { position: absolute; left: 50%; top: 50%; width: 42%; height: 42%; border-radius: 50%; background: rgba(255,255,255,.55); transform: translate(-50%,-50%); }
-.hud-stick .spr { position: absolute; left: 50%; top: -26px; transform: translateX(-50%); font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 4px; background: rgba(0,0,0,.5); opacity: 0; }
-.hud-stick.spr-on .spr { opacity: 1; background: var(--accent); color: #111; }
+/* ダッシュの印: 指がここより上へ行くとダッシュ（位置は HUD の設定） */
+.hud-stick .spr { position: absolute; left: 50%; transform: translate(-50%, -50%); font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 4px; background: rgba(0,0,0,.5); border: 1px dashed rgba(255,255,255,.45); white-space: nowrap; opacity: 0; transition: opacity .12s; }
+.hud-stick.show-spr .spr { opacity: .8; }
+.hud-stick.spr-on .spr { opacity: 1; background: var(--accent); color: #111; border-style: solid; border-color: var(--accent2); }
+#hud.editing .hud-stick { pointer-events: auto; touch-action: none; }
 .hud-mm { position: absolute; width: 120px; height: 120px; border-radius: 50%; overflow: hidden; border: 1.5px solid rgba(255,255,255,.35); transform-origin: 50% 50%; pointer-events: auto; touch-action: none; }
 .hud-mm.down { border-color: var(--accent); filter: brightness(1.25); }
 .hud-mm-x { position: absolute; right: 16px; bottom: 16px; width: 18px; height: 18px; border-radius: 50%; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,.85); }
@@ -19576,13 +20207,32 @@ table.board small { color: var(--dim); font-size: max(11px, .72em); margin-left:
 .hud-ammo .mags em.on { opacity: 1; color: var(--accent2); }
 .hud-ammo .cnt b.lname { font-size: 15px; letter-spacing: .02em; }
 .hud-mirror.on { display: block; } .hud-mirror b { color: var(--accent2); margin-right: 8px; } .hud-mirror .bad { color: #ff9a8e; font-weight: 800; }
-.hud-radial { position: absolute; inset: 0; display: none; pointer-events: none; }
-.hud-radial.on { display: block; background: rgba(0,0,0,.25); }
-.hud-radial .rc { position: absolute; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle, rgba(8,12,18,.6) 0, rgba(8,12,18,.85) 100%); border: 1px solid var(--line2); }
-.hud-radial .mid { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); text-align: center; font-size: 12px; font-weight: 800; font-family: var(--f-body); }
-.hud-radial .mid small { display: block; font-size: 11px; color: var(--sub); font-weight: 500; white-space: nowrap; }
-.hud-radial .ri { position: absolute; transform: translate(-50%, -50%); padding: 4px 8px; border-radius: 5px; background: rgba(20,26,34,.92); border: 1px solid var(--line); font-size: 11.5px; font-weight: 700; font-family: var(--f-body); white-space: nowrap; text-align: center; }
-.hud-radial .ri small { display: block; font-size: 11px; color: var(--sub); font-weight: 500; }
+/* スコア表（対戦） */
+.hud-board { position: absolute; inset: 0; display: none; z-index: 25; pointer-events: none; }
+.hud-board.on { display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.35); pointer-events: auto; }
+.hud-board .bd { background: rgba(8,12,18,.94); border: 1px solid var(--line2); border-radius: 8px; padding: 8px 10px 10px; max-width: min(96%, 760px); max-height: 92%; overflow: auto; font-family: var(--f-body); }
+.hud-board .bh { font-weight: 800; font-size: 13px; text-align: center; margin-bottom: 6px; }
+.hud-board .bh small { display: block; font-size: 11px; color: var(--sub); font-weight: 500; }
+.hud-board .bt { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.hud-board .tm { min-width: 260px; flex: 1; }
+.hud-board .tn { display: flex; justify-content: space-between; align-items: baseline; padding: 3px 8px; border-radius: 4px; font-size: 12px; }
+.hud-board .tm.mine .tn { background: rgba(70,140,255,.28); } .hud-board .tm.foe .tn { background: rgba(255,80,70,.26); }
+.hud-board .tn em { font-style: normal; font-weight: 900; font-size: 16px; font-family: var(--f-head); }
+.hud-board table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.hud-board th { font-size: 11px; color: var(--sub); font-weight: 600; padding: 3px 4px; text-align: right; }
+.hud-board td { padding: 4px; text-align: right; border-top: 1px solid rgba(255,255,255,.08); font-variant-numeric: tabular-nums; }
+.hud-board .nm { text-align: left; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hud-board td.nm i { font-style: normal; font-size: 11px; color: var(--sub); margin-left: 5px; }
+.hud-board tr.me td { color: var(--accent2); font-weight: 800; }
+.hud-board tr.out td { opacity: .45; }
+/* 長押しの円形メニューは、ほかのボタン・情報より上に出す */
+.hud-radial { position: absolute; inset: 0; display: none; pointer-events: none; z-index: 30; }
+.hud-radial.on { display: block; background: rgba(0,0,0,.38); }
+.hud-radial .rc { position: absolute; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle, rgba(8,12,18,.86) 0, rgba(8,12,18,.95) 100%); border: 1px solid var(--line2); }
+.hud-radial .mid { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); text-align: center; font-size: max(12px, calc(12px * var(--rs, 1))); font-weight: 800; font-family: var(--f-body); }
+.hud-radial .mid small { display: block; font-size: max(11px, calc(11px * var(--rs, 1))); color: var(--sub); font-weight: 500; white-space: nowrap; }
+.hud-radial .ri { position: absolute; transform: translate(-50%, -50%); padding: calc(4px * var(--rs, 1)) calc(8px * var(--rs, 1)); border-radius: 5px; background: rgba(20,26,34,.96); border: 1px solid var(--line); font-size: max(11.5px, calc(11.5px * var(--rs, 1))); font-weight: 700; font-family: var(--f-body); white-space: nowrap; text-align: center; }
+.hud-radial .ri small { display: block; font-size: max(11px, calc(11px * var(--rs, 1))); color: var(--sub); font-weight: 500; }
 .hud-radial .ri.sel { background: var(--accent); color: #111; border-color: var(--accent2); } .hud-radial .ri.sel small { color: #3b2c0e; }
 .hud-radial .ri.dis { opacity: .35; }
 .hud-editbar { position: absolute; left: 50%; top: calc(var(--st) + 6px); transform: translateX(-50%); display: none; align-items: center; gap: 8px; background: rgba(8,12,18,.95); border: 1px solid var(--line2); border-radius: 8px; padding: 6px 10px; pointer-events: auto; font-family: var(--f-body); font-size: 11px; z-index: 5; white-space: nowrap; }
@@ -21066,11 +21716,11 @@ fs.writeFileSync(path.join(OUT, 'summary.md'), md);
 console.log(`\n${ok}/${results.length} 合格 → test-results/summary.md`);
 process.exit(ok === results.length ? 0 : 1);
 
-@@@@ FILE tests/unit/engine.test.mjs text 17956
+@@@@ FILE tests/unit/engine.test.mjs text 20342
 import { test, ok, eq, near } from '../lib/t.mjs';
 import { createGame, step, dump, load } from '../../src/engine/engine.js';
 import { WEAPONS } from '../../src/engine/data/weapons.js';
-import { eyeOf } from '../../src/engine/combat.js';
+import { eyeOf, killActor as killActorFor } from '../../src/engine/combat.js';
 
 function mk(o = {}) { return createGame({ map: 'training', mode: 'train', seed: 7, team: 1, house: false, ...o }); }
 
@@ -21368,6 +22018,42 @@ test('interact: AI の隊員の拘束も最後まで続く（よそ見で中断�
   let done = null, cancel = null;
   for (let i = 0; i < 260 && !done && !cancel; i++) { const ev = step(G, {}); done = ev.find(e => e.e === 'cuffed'); cancel = ev.find(e => e.e === 'actcancel'); }
   ok(done && b.cuffed && !cancel, 'AI の拘束が終わる ' + (cancel ? cancel.why : ''));
+});
+test('pvp: 対戦では予備の弾倉が減らず、死んでも武器を落とさない', () => {
+  const G = createGame({ map: 'motel', mode: 'tdm', teams: [1, 1], seed: 3 });
+  const S = G.S, p = S.actors.find(a => a.pid === 0), wi = p.inv.w[0], n0 = wi.mags.length;
+  for (let i = 0; i < 200; i++) step(G, {});
+  wi.mag = 3;
+  step(G, { [p.id]: { yaw: p.yaw, pitch: 0, act: [{ a: 'reload', fast: true }] } });
+  for (let i = 0; i < 260; i++) step(G, { [p.id]: { yaw: p.yaw, pitch: 0 } });
+  ok(wi.mag >= WEAPONS[wi.id].mag - 1, '装填された ' + wi.mag);
+  eq(wi.mags.length, n0, '速いリロードでも本数は同じ');
+  ok(wi.mags.every(n => n === WEAPONS[wi.id].mag), '予備はいつも満タン');
+  const foe = S.actors.find(a => a.team !== p.team);
+  const ev = [];
+  killActorFor(S, foe, p, ev);
+  eq(S.items.filter(it => it.kind === 'weapon').length, 0, '武器は床に落ちない');
+});
+test('pve: 作戦では予備の弾倉は減り、容疑者は武器を落とす（証拠）', () => {
+  const G = createGame({ map: 'gasstation', mode: 'pve', mission: 'raid', diff: 'normal', team: 1, seed: 3 });
+  const S = G.S, p = S.actors.find(a => a.pid === 0), wi = p.inv.w[0], n0 = wi.mags.length;
+  for (let i = 0; i < 40; i++) step(G, { [p.id]: { yaw: p.yaw, pitch: 0 } });
+  wi.mag = 3;
+  step(G, { [p.id]: { yaw: p.yaw, pitch: 0, act: [{ a: 'reload', fast: true }] } });
+  for (let i = 0; i < 260; i++) step(G, { [p.id]: { yaw: p.yaw, pitch: 0 } });
+  eq(wi.mags.length, n0 - 1, '速いリロードで1本減る');
+  const sus = S.actors.find(a => a.kind === 'sus' && a.inv.w.some(Boolean));
+  const ev = [];
+  killActorFor(S, sus, p, ev);
+  ok(S.items.some(it => it.kind === 'weapon' && it.from === sus.id), '容疑者の武器が落ちる');
+});
+test('move: ダッシュは作戦でも対戦でもできる（前へ・立って・構えていないとき）', () => {
+  for (const o of [{ map: 'gasstation', mode: 'pve', mission: 'barricade', diff: 'normal', team: 1, seed: 3 }, { map: 'motel', mode: 'tdm', teams: [1, 1], seed: 3 }]) {
+    const G = createGame(o), S = G.S, p = S.actors.find(a => a.pid === 0);
+    for (let i = 0; i < 200; i++) step(G, {});
+    for (let i = 0; i < 40; i++) step(G, { [p.id]: { mx: 0, mz: 1, yaw: p.yaw, pitch: 0, stance: 0, sprint: true } });
+    ok(p.sprint, o.mode + ': 走っている');
+  }
 });
 
 @@@@ FILE tests/unit/run.mjs text 842
