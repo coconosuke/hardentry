@@ -5,6 +5,8 @@ import { makeDoorStates } from '../engine/doors.js';
 import { WEAPONS } from '../engine/data/weapons.js';
 import { ACT_POSE } from '../engine/data/acts.js';
 import { initBars, packBars, applyBarsNet } from '../engine/barricade.js';
+import { mapCams } from '../engine/modes/pvp.js';
+import { MAPS } from '../engine/maps/index.js';
 
 const KSENT = new WeakMap(); // 状態ごとの「最後に送った成績」
 const BSENT = new WeakMap(); // 状態ごとの「最後に送ったバリケード」
@@ -12,7 +14,7 @@ const r2 = (v) => Math.round(v * 100);
 const r3 = (v) => Math.round(v * 1000);
 const isNum = (v) => typeof v === 'number' && isFinite(v);
 // 送る出来事（見た目・音・HUDに要るもの）
-export const NET_EV = new Set(['shot', 'imp', 'blood', 'hit', 'whiz', 'kill', 'down', 'cuffed', 'report', 'evidence', 'bombdone', 'soft', 'glass', 'block', 'reinf', 'door', 'deny', 'nade', 'boom', 'c2', 'flashed', 'stung', 'tase', 'spray', 'reload', 'reloaded', 'shell', 'pumped', 'dry', 'draw', 'fmode', 'lightsw', 'step', 'shout', 'cmd', 'mirror', 'act', 'trap', 'trapset', 'barset', 'c2set', 'barhit', 'barbreak', 'plant', 'disable', 'defpick', 'defdrop', 'spotted', 'drone', 'dronedead', 'phase', 'round', 'roundstart', 'swap', 'respawn', 'matchend', 'end', 'revive', 'bandaged', 'fall', 'throw', 'bounce', 'allbombs', 'trapoff', 'peek', 'peekend', 'launch', 'shieldhit', 'longsel', 'm320sel', 'gearhint', 'gearsel', 'melee', 'meleehit', 'outside', 'zone']);
+export const NET_EV = new Set(['shot', 'imp', 'blood', 'hit', 'whiz', 'kill', 'down', 'cuffed', 'report', 'evidence', 'bombdone', 'soft', 'glass', 'block', 'reinf', 'door', 'deny', 'nade', 'boom', 'c2', 'flashed', 'stung', 'tase', 'spray', 'reload', 'reloaded', 'shell', 'pumped', 'dry', 'draw', 'fmode', 'lightsw', 'step', 'shout', 'cmd', 'mirror', 'act', 'trap', 'trapset', 'barset', 'c2set', 'barhit', 'barbreak', 'plant', 'disable', 'defpick', 'defdrop', 'spotted', 'drone', 'dronedead', 'phase', 'round', 'roundstart', 'swap', 'respawn', 'matchend', 'end', 'revive', 'bandaged', 'fall', 'throw', 'bounce', 'allbombs', 'trapoff', 'peek', 'peekend', 'launch', 'shieldhit', 'longsel', 'm320sel', 'gearhint', 'gearsel', 'melee', 'meleehit', 'outside', 'zone', 'camdead']);
 // 出来事の数を丸める（小数2けた）
 export function packEvent(e) {
   const o = {};
@@ -21,7 +23,9 @@ export function packEvent(e) {
 }
 const FL = { alive: 1, dead: 2, down: 4, cuffed: 8, c1: 16, c2: 32, stun: 64, cower: 128, sprint: 256, ground: 512, light: 1024, nvg: 2048, carry: 4096, reported: 8192, blind: 16384, gas: 32768, spot: 65536, staged: 131072 };
 const SIDE = ['', 'swat', 'sus'];
-function attKey(w) { return w ? [w.id, w.att.sight || 'iron', w.att.muzzle || 'none', w.att.grip || 'none', w.att.light ? 1 : 0, w.am] : null; }
+function attKey(w) { return w ? [w.id, w.att.sight || 'iron', w.att.muzzle || 'none', w.att.grip || 'none', w.att.side || (w.att.light ? 'light' : 'none'), w.am, w.att.mag || 'std', w.att.stock || 'std', w.att.finish || 'blk'] : null; }
+// attKey の配列 → makeWeapon の装備
+function specOf(k) { return k && WEAPONS[k[0]] ? { id: k[0], sight: k[1], muzzle: k[2], grip: k[3], side: k[4], ammo: k[5], mag: k[6], stock: k[7], finish: k[8] } : null; }
 
 // ---- ホスト: 静かな情報（始まり・入り直し・陣営の交代のとき）
 export function packStatic(S) {
@@ -81,6 +85,7 @@ export function packSnap(S, w, events, mePids, withBlocks) {
   // 壊れた壁（ときどき全部）
   if (withBlocks) out.B = Object.keys(S.bdiff).map(k => { const b = +k * 4; return [+k, w.blocks[b], w.blocks[b + 1], w.blocks[b + 2], w.blocks[b + 3]]; });
   out.R = Object.keys(S.reinf || {}).map(Number);
+  if (S.cams && S.cams.length) out.CM = S.cams.map(c => (c.ok ? 1 : 0) | (c.use >= 0 ? 2 : 0));
   return out;
 }
 // 動作の見た目（ほかの人の拘束・作業・ノブ・押す）: 体の動きの種類・進み・手の行き先、拘束されている進み
@@ -98,7 +103,7 @@ function meBlock(a) {
   return {
     hp: Math.round(a.hp * 10) / 10, mh: a.maxHp, ar: [a.armor.pf, a.armor.pb, a.armor.helm], bl: a.bleed > 0 ? 1 : 0, inj: [a.inj.arm, a.inj.leg],
     ws: [a.ws.slot, a.ws.st, r2(a.ws.t || 0), r2(a.ws.rd || 0), a.ws.next ?? -1, a.ws.gear || null],
-    w: a.inv.w.map(w => w ? [w.id, w.mags ? w.mags.slice() : null, w.mag, w.ch, w.res, w.mode, w.lightOn ? 1 : 0, w.am] : null),
+    w: a.inv.w.map(w => w ? [w.id, w.mags ? w.mags.slice() : null, w.mag, w.ch, w.res, w.mode, w.lightOn ? 1 : 0, w.am, w.cap || 0] : null),
     g: a.inv.gear.map(g => [g.id, g.n]), act: a.act ? [a.act.k, r2(a.act.t), r2(a.act.dur), a.act.tgt ? r2(a.act.tgt[0]) : null, a.act.tgt ? r2(a.act.tgt[1]) : 0, a.act.tgt ? r2(a.act.tgt[2]) : 0, a.act.pose || null, a.act.quick ? 1 : 0, a.act.kind || null] : null,
     m3: a.inv.m320 ? [a.inv.m320.sel, a.inv.m320.flash, a.inv.m320.stinger, a.inv.m320.cs] : null, lt: r2(a.ws.lt || 0),
     pk: a.peek ? [a.peek.k, r2(a.peek.x), r2(a.peek.y), r2(a.peek.z), r3(a.peek.yaw0), r2(a.peek.max), a.peek.door, a.peek.fov] : null,
@@ -113,6 +118,7 @@ export class Mirror {
     this.w = w; this.st = st;
     const S = this.S = { v: 0, t: 0, dt: st.dt || 1 / 60, map: st.map, mode: st.mode, pvp: !!st.pvp, rules: st.rules || {}, actors: [], byId: {}, doors: makeDoorStates(w), items: [], nades: [], clouds: [], bullets: [], blasts: [], harms: [], orders: [], shouts: [], mines: [], bdiff: {}, reinf: {}, m: {}, nextId: 1, nextItem: 1, mirror: true };
     initBars(S, w);
+    if (st.pvp && st.mode !== 'tdm' && MAPS[st.map]) { mapCams(w, MAPS[st.map]); S.cams = w._cams.map(() => ({ ok: 1, use: -1 })); }
     this.applyStatic(st);
     this.buf = []; // [{T, at, g}]
   }
@@ -123,7 +129,7 @@ export class Mirror {
     for (const r of st.A) {
       const [id, kind, team, pid, name, seed, h, pvpArmor, vest, helmet, head, prof, squad, slot, w0, w1, long, maxHp] = r;
       let a = keep.get(id);
-      const lo = { primary: w0 && WEAPONS[w0[0]] ? { id: w0[0], sight: w0[1], muzzle: w0[2], grip: w0[3], light: !!w0[4], ammo: w0[5] } : null, secondary: w1 && WEAPONS[w1[0]] ? { id: w1[0], sight: w1[1], muzzle: w1[2], grip: w1[3], light: !!w1[4], ammo: w1[5] } : null, long, vest, helmet, head, plate: 'ceramic' };
+      const lo = { primary: specOf(w0), secondary: specOf(w1), long, vest, helmet, head, plate: 'ceramic' };
       if (!a) {
         a = createActor(S, { kind, team, pid, name, x: 0, z: 0, hp: maxHp || 100, lo, look: { seed } });
         a.id = id;
@@ -206,7 +212,7 @@ export class Mirror {
       ds.ang = ds.ang.map((v, j) => v + ((target[j] ?? 0) - v) * 0.35);
       ds.tgt = target; ds.locked = !!(fl & 1); ds.lockBroken = !!(fl & 2); ds.broken = !!(fl & 4); ds.wedge = fl & 8 ? 1 : 0; ds.bar = fl & 16 ? (bar || 1) : 0; ds.c2 = fl & 32 ? {} : null; ds.trapSeen = !!(fl & 64); ds.trap = fl & 128 ? { armed: true, side: tside || 0 } : null;
     }
-    S.items = (last.I || []).map(([id, kind, x, y, z, yaw, ex]) => kind === 'weapon' ? { id, kind, x: x / 100, y: y / 100, z: z / 100, yaw: yaw / 100, wid: ex && ex[0], w: ex && WEAPONS[ex[0]] ? makeWeapon({ id: ex[0], sight: ex[1], muzzle: ex[2], grip: ex[3], light: !!ex[4] }) : null } : { id, kind, x: x / 100, y: y / 100, z: z / 100, yaw: yaw / 100, ek: ex, ev: kind === 'evidence' });
+    S.items = (last.I || []).map(([id, kind, x, y, z, yaw, ex]) => kind === 'weapon' ? { id, kind, x: x / 100, y: y / 100, z: z / 100, yaw: yaw / 100, wid: ex && ex[0], w: specOf(ex) ? makeWeapon(specOf(ex)) : null } : { id, kind, x: x / 100, y: y / 100, z: z / 100, yaw: yaw / 100, ek: ex, ev: kind === 'evidence' });
     S.nades = (last.N || []).map(([x, y, z, type]) => ({ x: x / 100, y: y / 100, z: z / 100, type }));
     S.clouds = (last.C || []).map(([x, y, z, r, type]) => ({ x: x / 100, y: y / 100, z: z / 100, r: r / 100, type }));
     // 壊れた壁と補強（変わったマスは描き直す）
@@ -228,6 +234,7 @@ export class Mirror {
       for (const [k, b0, b1, b2, b3] of last.B) { const b = k * 4, w = this.w; if (w.blocks[b] !== b0 || w.blocks[b + 1] !== b1 || w.blocks[b + 2] !== b2 || w.blocks[b + 3] !== b3) { w.blocks[b] = b0; w.blocks[b + 1] = b1; w.blocks[b + 2] = b2; w.blocks[b + 3] = b3; S.bdiff[k] = 1; this.changed.push(k); } }
     }
     if (last.R) { const R = {}; for (const k of last.R) { R[k] = 1; if (!S.reinf[k]) this.changed.push(k); } S.reinf = R; }
+    if (last.CM) S.cams = last.CM.map(v => ({ ok: v & 1, use: v & 2 ? 1 : -1 }));
     // 成績（スコア表）
     for (let i = B.length - 1; i >= 0; i--) { const K = B[i].g.K; if (K) { if (K !== this._lastK) { this._lastK = K; for (const [id, k, d, as] of K) { const a = S.byId[id]; if (a && a.stats) { a.stats.k = k; a.stats.d = d; a.stats.a = as; } } } break; } }
     const M = last.M || {}, m = S.m;
@@ -248,7 +255,7 @@ export class Mirror {
       let w = a.inv.w[i];
       if (!w || w.id !== x[0]) w = a.inv.w[i] = makeWeapon({ id: x[0] });
       if (!w) return;
-      w.mags = x[1]; w.mag = x[2]; w.ch = x[3]; w.res = x[4]; w.mode = x[5]; w.lightOn = !!x[6]; w.am = x[7];
+      w.mags = x[1]; w.mag = x[2]; w.ch = x[3]; w.res = x[4]; w.mode = x[5]; w.lightOn = !!x[6]; w.am = x[7]; if (x[8]) w.cap = x[8];
     });
     a.inv.gear = P.g.map(([id, n]) => ({ id, n }));
     a.act = P.act ? { k: P.act[0], t: P.act[1] / 100, dur: P.act[2] / 100, tgt: P.act[3] != null ? [P.act[3] / 100, P.act[4] / 100, P.act[5] / 100] : null, pose: P.act[6] || null, quick: !!P.act[7], kind: P.act[8] || null } : null;

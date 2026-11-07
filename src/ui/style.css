@@ -298,6 +298,7 @@ table.board small { color: var(--dim); font-size: max(11px, .72em); margin-left:
 .hud-reticle { position: absolute; left: 50%; top: 50%; display: none; }
 .hud-reticle.on { display: block; }
 .hud-reticle.on.reddot::before { content: ''; position: absolute; left: -2px; top: -2px; width: 4px; height: 4px; border-radius: 50%; background: #ff3a2a; box-shadow: 0 0 4px #ff3a2a; }
+.hud-reticle.on.srs::before, .hud-reticle.on.sro::before { content: ''; position: absolute; left: -2.5px; top: -2.5px; width: 5px; height: 5px; border-radius: 50%; background: #ff3a2a; box-shadow: 0 0 5px #ff3a2a; }
 .hud-reticle.on.holo::before { content: ''; position: absolute; left: -17px; top: -17px; width: 30px; height: 30px; border-radius: 50%; border: 2px solid rgba(255,70,50,.9); box-shadow: 0 0 3px rgba(255,70,50,.8); }
 .hud-reticle.on.holo::after { content: ''; position: absolute; left: -2px; top: -2px; width: 4px; height: 4px; border-radius: 50%; background: rgba(255,70,50,.95); }
 .hud-reticle.on.iron::before { content: ''; position: absolute; left: -1px; top: -1px; width: 2px; height: 2px; background: rgba(255,255,255,.5); }
@@ -305,6 +306,10 @@ table.board small { color: var(--dim); font-size: max(11px, .72em); margin-left:
 .hud-scope.on { display: block; }
 .hud-scope .ret { position: absolute; left: 50%; top: 50%; width: 60%; height: 1px; background: rgba(0,0,0,.85); transform: translate(-50%, 0); }
 .hud-scope .ret::after { content: ''; position: absolute; left: 50%; top: -120px; width: 1px; height: 240px; background: rgba(0,0,0,.85); }
+.hud-scope .ret::before { content: ''; position: absolute; left: 50%; top: 50%; width: 5px; height: 5px; margin: -2.5px; border-radius: 50%; background: #ff3a2a; box-shadow: 0 0 4px #ff2a1a; z-index: 1; }
+.hud-scope.acog .ret { width: 0; }
+.hud-scope.acog .ret::after { top: 3px; height: 120px; }
+.hud-scope.acog .ret::before { width: 0; height: 0; margin: -9px 0 0 -8px; border-radius: 0; background: none; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 9px solid #ff3a2a; box-shadow: none; filter: drop-shadow(0 0 3px #ff2a1a); }
 .hud-hit { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px; opacity: 0; }
 .hud-hit::before, .hud-hit::after { content: ''; position: absolute; left: 50%; top: 50%; width: 26px; height: 2px; margin: -1px -13px; background: #fff; transform: rotate(45deg); box-shadow: 0 0 2px #000; }
 .hud-hit::after { transform: rotate(-45deg); }

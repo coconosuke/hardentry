@@ -22,6 +22,7 @@ export const BTN = {
   low: { name: 'ローレディ', ax: 'r', ay: 't', x: 258, y: 92, s: 36, icon: 'low' },
   pause: { name: 'メニュー', ax: 'r', ay: 't', x: 30, y: 28, s: 38, icon: 'pause' },
   drone: { name: 'ドローン', ax: 'r', ay: 't', x: 82, y: 92, s: 40, icon: 'drone', pvp: true },
+  cams: { name: '監視カメラ（対戦の防衛側）', ax: 'r', ay: 't', x: 82, y: 140, s: 40, icon: 'cams', pvp: true },
   zone: { name: '出現地点（攻撃側の準備中）', ax: 'c', ay: 't', x: 0, y: 98, s: 34, w: 190, icon: 'zone', pvp: true },
   wpn1: { name: '主武器', ax: 'c', ay: 'b', x: -64, y: 22, s: 40, w: 120, icon: 'wpn', group: 'wpn' },
   wpn2: { name: '副武器', ax: 'c', ay: 'b', x: 64, y: 22, s: 40, w: 120, icon: 'wpn', group: 'wpn' },
@@ -38,6 +39,7 @@ export const INFO = {
   subs: { name: '字幕', ax: 'c', ay: 'b', x: 0, y: 78, s: 30, w: 340 },
 };
 export const ICONS = {
+  cams: '<path d="M3 8l12-3 2 6-12 3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="15.2" cy="9.2" r="1.3" fill="currentColor"/><path d="M8 13l1 4H5M17 9l4-1v4l-4 1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
   melee: '<path d="M5 19l9-9M14 10l2-6 4 4-6 2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 17.5l3 3" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M17 15l2.5 1M15.5 18l1.5 2M19.5 12l2 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
   zone: '<path d="M12 22s7-7.2 7-12.5A7 7 0 0 0 5 9.5C5 14.8 12 22 12 22z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="9.5" r="2.6" fill="currentColor"/>',
   board: '<path d="M4 5h16M4 10h16M4 15h16M4 20h16M9 3v19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',

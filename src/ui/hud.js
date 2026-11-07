@@ -220,7 +220,9 @@ export class Hud {
       this.cross.classList.toggle('dot', this.S.crosshair === 'dot');
     }
     this.reticle.className = 'hud-reticle' + (optic && ads > 0.85 && !optic.scope ? ' on ' + optic.kind : '');
-    this.scope.classList.toggle('on', !!(optic && optic.scope && ads > 0.92));
+    // 倍率スコープ: 銃の像と同じ所（構え 0.8）で切り替える
+    const sk = optic && optic.scope && ads > 0.8 ? 'hud-scope on ' + optic.kind : 'hud-scope';
+    if (this.cache.scope !== sk) { this.cache.scope = sk; this.scope.className = sk; }
     // 体力・防具
     if (p) {
       const hp = Math.max(0, Math.round(p.hp)), max = p.maxHp || 100;
@@ -275,9 +277,9 @@ export class Hud {
           const [m, r] = ammoCount(wi);
           am.querySelector('.mode').textContent = (W.modes[wi.mode] === 'auto' ? '連射' : W.modes[wi.mode] === 'burst' ? '3点' : '単発') + (p.ws.st === 'reload' ? '・リロード中' : p.ws.st === 'shell' ? '・装填中' : '');
           // 対戦は予備が減らない（∞）
-          am.querySelector('.cnt').innerHTML = `<b class="${m === 0 ? 'empty' : m <= W.mag * 0.25 ? 'lowa' : ''}">${m}</b><span>/${v.pvp ? '∞' : wi.mags ? wi.mags.length + '本' : r}</span>`;
+          am.querySelector('.cnt').innerHTML = `<b class="${m === 0 ? 'empty' : m <= (wi.cap || W.mag) * 0.25 ? 'lowa' : ''}">${m}</b><span>/${v.pvp ? '∞' : wi.mags ? wi.mags.length + '本' : r}</span>`;
           // 弾倉ごとの残り（RoN の弾倉の確認のように）
-          am.querySelector('.mags').innerHTML = wi.mags && !v.pvp ? wi.mags.slice().sort((a, b) => b - a).map(n => `<i style="--f:${n / W.mag}"></i>`).join('') : '';
+          am.querySelector('.mags').innerHTML = wi.mags && !v.pvp ? wi.mags.slice().sort((a, b) => b - a).map(n => `<i style="--f:${n / (wi.cap || W.mag)}"></i>`).join('') : '';
         } else { am.querySelector('.mode').textContent = ''; am.querySelector('.cnt').innerHTML = '<b>-</b>'; am.querySelector('.mags').innerHTML = ''; }
       }
       // 武器の切り替え
@@ -296,7 +298,7 @@ export class Hud {
       this._flag('ads', v.adsOn); this._flag('crouch', p.stance >= 1); this._flag('leanL', v.leanL); this._flag('leanR', v.leanR);
       this._flag('light', !!(wi && wi.lightOn)); this._flag('low', v.lowOn); this._flag('nvg', !!v.nvgOn);
       this.btn.nvg.classList.toggle('dis', !v.hasNvg);
-      this.btn.light.classList.toggle('dis', !(wi && wi.att && wi.att.light));
+      this.btn.light.classList.toggle('dis', !(wi && wi.att && (wi.att.light || wi.att.laser)));
       const m320 = p.ws.slot === 3 && p.inv.long === 'm320';
       this.btn.fmode.querySelector('.lb').textContent = m320 ? '弾種' : W ? (W.modes[wi.mode] === 'auto' ? 'AUTO' : 'SEMI') : '';
       this.btn.fmode.classList.toggle('dis', !m320 && !(W && W.modes.length > 1));
@@ -314,6 +316,7 @@ export class Hud {
       const tk = v.team || 'gold';
       if (this.cache.team !== tk) { this.cache.team = tk; this.btn.team.style.color = TEAMCOL[tk]; this.btn.team.querySelector('.lb').textContent = TEAMJA[tk]; this.btn.cmd.style.color = TEAMCOL[tk]; }
       this.btn.drone.classList.toggle('hidden', !v.droneOK && !this.editing);
+      if (this.btn.cams) { this.btn.cams.classList.toggle('hidden', !v.camsOK && !this.editing); this.btn.cams.classList.toggle('on', v.camOn === true); }
       if (this.btn.zone) {
         this.btn.zone.classList.toggle('hidden', !v.zoneOK && !this.editing);
         const zl = v.zoneOK ? '出現: ' + (v.zoneLabel || '') : '出現地点';

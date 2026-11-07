@@ -4,7 +4,7 @@ import { createActor, makeInventory, makeArmor } from '../actor.js';
 import { PVP_LOADOUTS } from '../data/npc.js';
 import { MAPS } from '../maps/index.js';
 import { rnd, rndShuffle, rndPick, hrand } from '../rng.js';
-import { CS, LH, groundAt, nearestFloor, los, pushOut, levelOfY, inMap } from '../world.js';
+import { CS, LH, groundAt, nearestFloor, los, pushOut, levelOfY, inMap, C, isWallish } from '../world.js';
 import { PVP_ARMOR } from '../move.js';
 import { cellPos } from './spawn.js';
 import { makeDoorStates } from '../doors.js';
@@ -49,6 +49,8 @@ export function makePvpMode(kind) {
       const m = S.m;
       if (m.over) return;
       const el = sec(S, m.phaseT);
+      // 見ている人が倒れた・死んだカメラは「使用中」をやめる
+      if (S.cams) for (const c of S.cams) if (c.use >= 0) { const u = S.byId[c.use]; if (!u || !u.alive || u.down) c.use = -1; }
       // 段階: 始まり（3秒）→ 準備（攻守のモード）→ 行動
       if (m.phase === 'pre' && el >= 3) {
         m.phase = kind === 'tdm' ? 'action' : 'prep'; m.phaseT = S.t; ev.push({ e: 'phase', p: m.phase });
@@ -109,6 +111,8 @@ export function makePvpMode(kind) {
     // モードの動作: ドローンを出す・出現地点を選ぶ
     act(S, w, a, ac, ev) {
       if (ac.a === 'drone') { deployDrone(S, w, a, ev); return true; }
+      if (ac.a === 'camuse') { camUse(S, w, a, ac.i, ev); return true; }
+      if (ac.a === 'campin') { camPin(S, w, a, ac.i, ac.yaw, ac.pitch, ev); return true; }
       if (ac.a === 'zone') {
         const zs = attackZones(w, MAPS[S.map]);
         if (a.team === S.m.att && (S.m.phase === 'pre' || S.m.phase === 'prep') && Number.isInteger(ac.z) && ac.z >= 0 && ac.z < zs.length) { a.zone = ac.z; ev.push({ e: 'zone', id: a.id, z: ac.z }); }
@@ -133,6 +137,8 @@ function startRound(S, w, first) {
     S.actors = S.actors.filter(a => !a.isDrone);
     initBars(S, w);
   }
+  // 監視カメラ（攻守のモード）: ラウンドごとに元どおり
+  S.cams = m.kind !== 'tdm' ? mapCams(w, def).map(() => ({ ok: 1, use: -1 })) : [];
   // 対戦では扉に鍵はかけない（R6 と同じ。ふさぐのはバリケード・補強で）
   for (const ds of S.doors) { ds.locked = false; ds.lockBroken = false; }
   m.phase = 'pre'; m.phaseT = S.t; m.defuser = { planted: false, disabled: false, t: 0 }; m.intel = {};
@@ -223,10 +229,13 @@ function resetFighter(S, w, a, pt, side) {
   a.spawnAt = [a.x, a.z];
   a.vx = a.vz = a.vy = 0; a.alive = true; a.dead = false; a.down = false; a.dbno = 0; a.dbnoCount = 0; a.cuffed = false; a.comply = 0;
   a.stun = a.flash = a.gas = a.tased = a.deaf = a.supp = a.bleed = 0; a.flinch = 0; a.act = null; a.carry = null; a.st = 0; a.stance = 0; a.vault = null;
+  a.lean = 0; a.ads = 0; a.low = 0; a.adsOn = false; a.lowOn = false; a.sprint = false; a.peek = null; a.melee = null; a.gest = null; a.outT = 0; a.outSeen = false; a.spot = 0;
   a.inj = { arm: 0, leg: 0, head: 0 };
-  const A = PVP_ARMOR[a.pvpArmor] || PVP_ARMOR.medium;
-  a.hp = a.maxHp = A.hp;
+  // 装備は陣営ごと（防護の重さも、選んだ陣営の物）
   const lo = Object.assign({}, PVP_LOADOUTS[side], a.pvpLo && a.pvpLo[side] ? a.pvpLo[side] : {});
+  a.pvpArmor = PVP_ARMOR[lo.armor] ? lo.armor : 'medium';
+  const A = PVP_ARMOR[a.pvpArmor];
+  a.hp = a.maxHp = A.hp;
   a.inv = makeInventory({ primary: lo.primary, secondary: lo.secondary, gear: lo.gear, long: 'none' });
   a.armor = makeArmor({ vest: 'heavy', plate: 'kevlar', helmet: A.hp >= 110 ? 'helmet' : 'none' });
   a.ws = { slot: a.inv.w[0] ? 0 : 1, next: -1, st: 'draw', t: 0.4, cd: 0, trigWas: false, rp: 0, ry: 0, bloom: 0, shots: 0, lastShot: -99, rk: null, rd: 0, gear: -1, pumpNeed: false, barrel: 0 };
@@ -348,7 +357,7 @@ function deployAttackers(S, w, ev) {
   }
 }
 // 防衛側と建物の外: 準備中は外へ出られない。行動中に外へ出ると、2.5秒で攻撃側に居場所が知られる（出ている間ずっと）
-export const OUT_GRACE = 2.5;
+export const OUT_GRACE = 2.0; // シージと同じ2秒
 export function isOutside(w, a) {
   const L = levelOfY(a.y + 0.2), i = Math.floor(a.x / CS), j = Math.floor(a.z / CS);
   if (!inMap(w, i, j) || L >= w.NL) return true;
@@ -376,6 +385,88 @@ function outdoorRules(S, w, dt, ev) {
       } else { a.outT = 0; a.outSeen = false; }
     }
   }
+}
+
+// ---- 監視カメラ（シージ）: 建物の外の壁（攻撃側の出現地点の方）と、目標の部屋の角。防衛側はいつでも見られ、
+// 見つけた相手に印をつけられる。弾1発・近接・爆発で壊れる。使われている間は赤い光が強くなる（攻撃側にも分かる）
+export function mapCams(w, def) {
+  if (w._cams) return w._cams;
+  const out = [];
+  const far = (x, z, L) => out.every(c => c.L !== L || Math.hypot(c.x - x, c.z - z) > 6);
+  // 外: 出現地点のいちばん近くの外壁（外に面した壁の外の面）
+  for (const z of attackZones(w, def)) {
+    let best = null, bd = 1e9;
+    const ci = Math.floor(z.x / CS), cj = Math.floor(z.z / CS), R = 70;
+    for (let j = Math.max(1, cj - R); j < Math.min(w.D - 1, cj + R); j++) for (let i = Math.max(1, ci - R); i < Math.min(w.W - 1, ci + R); i++) {
+      const k = w.idx(0, i, j);
+      if (w.cell[k] !== C.WALL || w.indoor[k] !== 2) continue;
+      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        if (w.cell[w.idx(0, i + di, j + dj)] !== C.OUT || !inside(w, 0, i - di, j - dj)) continue;
+        const x = (i + 0.5) * CS + di * (w.thick[k] / 2 + 0.07), zz = (j + 0.5) * CS + dj * (w.thick[k] / 2 + 0.07);
+        const d = Math.hypot(x - z.x, zz - z.z);
+        if (d >= bd || d < 4 || !far(x, zz, 0)) continue;
+        if (!los(w, x + di * 0.2, 2.4, zz + dj * 0.2, z.x, 1.4, z.z, null)) continue;
+        bd = d; best = { x, y: 2.45, z: zz, L: 0, nx: di, nz: dj, tx: z.x, tz: z.z };
+      }
+    }
+    if (best) {
+      let yaw = Math.atan2(best.tx - best.x, best.tz - best.z), n = Math.atan2(best.nx, best.nz), d = Math.atan2(Math.sin(yaw - n), Math.cos(yaw - n));
+      d = Math.max(-1.0, Math.min(1.0, d));
+      out.push({ x: best.x, y: best.y, z: best.z, L: 0, yaw0: n + d, pitch0: -0.22, out: 1, nx: best.nx, nz: best.nz });
+    }
+  }
+  // 中: 目標の部屋の、部屋をいちばん広く見渡せる角
+  for (const s of (def.spawn.sites || [])) {
+    const L = s.L || 0, room = w.roomAt[w.idx(L, Math.floor(s.x), Math.floor(s.z))];
+    if (room < 0) continue;
+    const r = w.rooms[room], base = L * LH;
+    const cells = r.cells, sample = [];
+    for (let q = 0; q < 16 && cells.length; q++) sample.push(cells[Math.floor((q + 0.5) * cells.length / 16)]);
+    let best = null, bv = -1;
+    for (const [i, j] of [[r.x0, r.z0], [r.x1, r.z0], [r.x0, r.z1], [r.x1, r.z1]]) {
+      if (w.roomAt[w.idx(L, i, j)] !== room) continue;
+      const x = (i + 0.5) * CS + (i === r.x0 ? -0.1 : 0.1), zz = (j + 0.5) * CS + (j === r.z0 ? -0.1 : 0.1);
+      let v = 0;
+      for (const k of sample) { const kk = k - L * w.W * w.D, ii = kk % w.W, jj = Math.floor(kk / w.W); if (los(w, x, base + 2.4, zz, (ii + 0.5) * CS, base + 1.1, (jj + 0.5) * CS, null)) v++; }
+      if (v > bv && far(x, zz, L)) { bv = v; best = { x, z: zz }; }
+    }
+    if (best) out.push({ x: best.x, y: base + 2.45, z: best.z, L, yaw0: Math.atan2(r.cx - best.x, r.cz - best.z), pitch0: -0.42, out: 0 });
+  }
+  w._cams = out;
+  return out;
+}
+function inside(w, L, i, j) { const t = w.cell[w.idx(L, i, j)]; return t === C.FLOOR || (t === C.STAIR && w.indoor[w.idx(L, i, j)] === 1); }
+export const CAM_YAW = 1.05, CAM_PITCH = [-0.95, 0.25];
+function camUse(S, w, a, i, ev) {
+  if (!S.cams) return;
+  for (const c of S.cams) if (c.use === a.id) c.use = -1;
+  if (i == null || i < 0) return;
+  const c = S.cams[i];
+  if (!c || !c.ok || a.team !== S.m.def || !a.alive || a.down) return;
+  c.use = a.id;
+}
+// カメラ越しに印をつける: 向けた方向（±0.2）の相手で、カメラから見える人
+function camPin(S, w, a, i, yaw, pitch, ev) {
+  const c = S.cams && S.cams[i], K = w._cams && w._cams[i];
+  if (!c || !c.ok || !K || a.team !== S.m.def || !a.alive) return;
+  for (const b of S.actors) {
+    if (b.team === a.team || !b.alive) continue;
+    const dx = b.x - K.x, dy = b.y + 1.1 - K.y, dz = b.z - K.z, dist = Math.hypot(dx, dz);
+    if (dist > 30) continue;
+    const ang = Math.abs(Math.atan2(Math.sin(Math.atan2(dx, dz) - yaw), Math.cos(Math.atan2(dx, dz) - yaw)));
+    if (ang > 0.22 || Math.abs(Math.atan2(dy, dist) - pitch) > 0.35) continue;
+    if (!los(w, K.x, K.y, K.z, b.x, b.y + 1.1, b.z, S.doors)) continue;
+    if (!b.spot || b.spot < 4) ev.push({ e: 'spotted', id: b.id, by: a.id, cam: i });
+    b.spot = 6; b.spotTeam = a.team;
+  }
+}
+// カメラを壊す（弾・近接・爆発）
+export function breakCam(S, i, by, ev) {
+  const c = S.cams && S.cams[i];
+  if (!c || !c.ok) return false;
+  c.ok = 0; c.use = -1;
+  ev.push({ e: 'camdead', i, by });
+  return true;
 }
 
 // ---- ドローン（準備中の偵察）

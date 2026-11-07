@@ -4,7 +4,7 @@ import { navCell, cellCenter, buildNav, roomGraph } from './nav.js';
 import { eyeOf } from '../combat.js';
 import { curW, curWeapon, ammoCount } from '../actor.js';
 import { hrand } from '../rng.js';
-import { CS, LH, NB, C, levelOfY } from '../world.js';
+import { CS, LH, NB, C, levelOfY, los } from '../world.js';
 import { M } from '../data/materials.js';
 import { isOpen, isClosed, sideOf } from '../doors.js';
 import { doorOps, reachOK } from '../interact.js';
@@ -59,9 +59,19 @@ export function thinkBot(S, w, a, dt, ctx) {
     return inp;
   }
   ai.engId = null;
+  // 攻撃側: 見えた監視カメラを撃つ（シージ）
+  if (m.kind && m.kind !== 'tdm' && a.team === m.att && m.phase === 'action' && S.cams && w._cams && a.ws.st === 'ready') {
+    if (ai.camT == null || S.t - ai.camT > 20) {
+      ai.camT = S.t; ai.camTgt = -1;
+      const e = eyeOf(S, a);
+      for (let i = 0; i < S.cams.length; i++) { const K = w._cams[i]; if (!S.cams[i].ok || !K || Math.hypot(K.x - a.x, K.z - a.z) > 22) continue; if (los(w, e[0], e[1], e[2], K.x, K.y, K.z, S.doors)) { ai.camTgt = i; break; } }
+    }
+    const K = ai.camTgt >= 0 && S.cams[ai.camTgt] && S.cams[ai.camTgt].ok ? w._cams[ai.camTgt] : null;
+    if (K) { const off = aimAt(S, a, inp, K.x, K.y, K.z, sk, dt, { id: -100 - ai.camTgt }); trigger(S, a, inp, sk, off < 0.03); inp.ads = true; return inp; }
+  }
   // 弾が少なければ安全なうちにリロード
   const wi = curWeapon(a), W = curW(a);
-  if (wi && W) { const [mag] = ammoCount(wi); if (mag < Math.max(1, W.mag * 0.4) && a.ws.st === 'ready') pushAct(inp, { a: 'reload' }); }
+  if (wi && W) { const [mag] = ammoCount(wi); if (mag < Math.max(1, (wi.cap || W.mag) * 0.4) && a.ws.st === 'ready') pushAct(inp, { a: 'reload' }); }
   // モードの目的
   if (m.kind === 'bomb') return bombThink(S, w, a, inp, dt, ctx, sk);
   if (m.kind === 'elim' && a.team === m.def) return m.phase === 'prep' ? defendPrep(S, w, a, inp, dt, ctx) : elimDefThink(S, w, a, inp, dt, ctx);

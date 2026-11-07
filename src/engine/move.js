@@ -2,7 +2,8 @@
 import { groundAt, pushOut, raycast, STEP, CS, LH, levelOfY, cellType, C, leafEnd } from './world.js';
 import { OPEN_ANG, isOpen } from './doors.js';
 import { KNEEL_ACT } from './data/acts.js';
-import { curW, bodyHeight } from './actor.js';
+import { curW, bodyHeight, curWeapon } from './actor.js';
+import { attMods } from './weapon.js';
 import { PLATE, LONG } from './data/equipment.js';
 import { FLOORS } from './data/materials.js';
 
@@ -19,7 +20,7 @@ export function maxSpeed(S, a, inp) {
   const st = Math.round(a.st);
   let v = st === 0 ? SPEED.walk : st === 1 ? SPEED.crouch : SPEED.prone;
   const W = curW(a);
-  if (W) v *= W.move;
+  if (W) v *= W.move * attMods(curWeapon(a)).move; // ドラム弾倉は重く、縮めた銃床は少し軽い
   if (a.inv.long && LONG[a.inv.long] && LONG[a.inv.long].move) v *= LONG[a.inv.long].move;
   if (a.lowOn && a.ads < 0.2 && st < 2) v *= 1 + (SPEED.low - 1) * a.low;
   if (a.ads > 0.3) v *= 1 - (1 - SPEED.ads) * a.ads;
@@ -37,7 +38,7 @@ export function maxSpeed(S, a, inp) {
 }
 
 function accelOf(S, a) {
-  let ac = 7.0;
+  let ac = 9.0; // 歩き出しは約0.27秒で全速（重さは残しつつ、指に遅れない）
   if (!S.pvp && a.armor.vest !== 'none') { const P = PLATE[a.armor.plate]; const n = a.armor.vest === 'heavy' ? 2 : 1; ac *= 1 - (P ? P.accel : 0) * n * 0.6; }
   return ac;
 }

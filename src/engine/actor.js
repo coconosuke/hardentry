@@ -1,5 +1,5 @@
 // 人（隊員・容疑者・市民・ボット・プレイヤー）。状態は関数を含まないデータだけ。
-import { WEAPONS, attachOptions } from './data/weapons.js';
+import { WEAPONS, attachOptions, capOf, ATTACH } from './data/weapons.js';
 import { PLATE, HELMET, GEAR, LONG } from './data/equipment.js';
 
 export const KIND = { SWAT: 'swat', SUS: 'sus', CIV: 'civ', BOT: 'bot' };
@@ -11,14 +11,22 @@ export function makeWeapon(o) {
   const am = o.ammo && W.ammo.includes(o.ammo) ? o.ammo : W.ammo[0];
   // 付けられないアタッチメントは外す（通信で来た装備も同じ）
   const ao = attachOptions(o.id);
-  const okA = (k, v, d) => (v && ao[k] && ao[k].includes(v) ? v : d);
-  const w = { id: o.id, att: { sight: okA('sight', o.sight, 'iron'), muzzle: W.integral ? W.integral : okA('muzzle', o.muzzle, 'none'), grip: okA('grip', o.grip, 'none'), light: o.light !== false }, am, mode: 0, lightOn: false };
-  if (W.tube || W.breakAction) { w.mag = W.mag; w.ch = W.chamber ? 1 : 0; w.res = W.spare; w.mags = null; }
-  else { w.mag = W.mag; w.ch = W.chamber ? 1 : 0; w.mags = []; for (let i = 0; i < (o.spare ?? W.spare); i++) w.mags.push(W.mag); w.res = 0; }
+  const okA = (k, v, d) => (v && ao[k] && ao[k].includes(v) ? v : (ao[k] && ao[k].length ? (ao[k].includes(d) ? d : ao[k][0]) : d));
+  // ライト・レーザーの枠: 古い装備（light: true/false）からも作る
+  const side0 = o.side != null ? o.side : (o.light === false ? 'none' : 'light');
+  const att = { sight: okA('sight', o.sight, 'iron'), muzzle: W.integral ? W.integral : okA('muzzle', o.muzzle, 'none'), grip: okA('grip', o.grip, 'none'), side: okA('side', side0, 'none'), mag: okA('mag', o.mag, 'std'), stock: okA('stock', o.stock, 'std'), finish: okA('finish', o.finish, 'blk') };
+  const sd = ATTACH.side[att.side] || {};
+  att.light = !!sd.light; att.laser = sd.laser || null;
+  const cap = capOf(o.id, att.mag);
+  const w = { id: o.id, att, am, mode: 0, lightOn: false, cap };
+  if (W.tube || W.breakAction) { w.mag = cap; w.ch = W.chamber ? 1 : 0; w.res = W.spare; w.mags = null; }
+  else { w.mag = cap; w.ch = W.chamber ? 1 : 0; w.mags = []; for (let i = 0; i < (o.spare ?? W.spare); i++) w.mags.push(cap); w.res = 0; }
   w.spare0 = w.mags ? w.mags.length : w.res;
   return w;
 }
 
+// 装弾数（弾倉のアタッチメント込み）
+export function magCap(wi) { return wi ? (wi.cap || (WEAPONS[wi.id] ? WEAPONS[wi.id].mag : 0)) : 0; }
 // 装備の定義から持ち物を作る
 export function makeInventory(lo) {
   const inv = {

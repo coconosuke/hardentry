@@ -29,6 +29,7 @@ export class FX {
     };
     this.pb = mk(MAXP); this.db = mk(MAXD);
     this.tracers = [];
+    this.beams = []; // レーザー（このこまだけ）
     this.flashes = []; // 一瞬の光（銃口・爆発）: 動く光の一覧へ
     this.blood = true;
     this.amount = 1; this.shells = true; // エフェクトの量（設定）・薬莢
@@ -91,6 +92,8 @@ export class FX {
     if (!this.shells) return;
     this.add({ x, y, z, vx, vy, vz, life: 1.6, s0: big ? 0.016 : 0.011, s1: big ? 0.016 : 0.011, c: [0.75, 0.55, 0.22, 1], sh: SH.square, g: 9.8, lit: true, bounce: true, shell: true });
   }
+  // レーザー: 細い光の線と、当たった所の点（毎こま入れ直す）
+  beam(x0, y0, z0, x1, y1, z1, col, dot) { this.beams.push({ x0, y0, z0, x1, y1, z1, col, dot }); }
   tracer(x0, y0, z0, x1, y1, z1, col) { this.tracers.push({ x0, y0, z0, x1, y1, z1, col: col || [9, 5, 2], t: 0 }); }
   smoke(x, y, z, r, col = [0.75, 0.75, 0.75], a = 0.4, life = 3) {
     this.add({ x: x + this.rs(r * 0.4), y: y + this.rs(r * 0.2), z: z + this.rs(r * 0.4), vx: this.rs(0.15), vy: 0.08 + this.rnd() * 0.1, vz: this.rs(0.15), life: life * (0.7 + this.rnd() * 0.6), s0: r * 0.5, s1: r * 1.1, c: [col[0], col[1], col[2], a], sh: SH.soft, g: 0, lit: true, drag: 0.6 });
@@ -210,6 +213,18 @@ export class FX {
       const q = { x: (t.x0 + t.x1) / 2, y: (t.y0 + t.y1) / 2, z: (t.z0 + t.z1) / 2, dir: [t.x1 - t.x0, t.y1 - t.y0, t.z1 - t.z0], t: 0, life: 1, s0: 0.012, s1: 0.012, c: [t.col[0], t.col[1], t.col[2], 1], sh: SH.streak, add: true, stretch: Math.hypot(t.x1 - t.x0, t.y1 - t.y0, t.z1 - t.z0) / 2 };
       put(q, nB++);
     }
+    // レーザー（細い線は薄く、点は明るく）
+    for (const b of this.beams) {
+      if (nB >= MAXP - 2) break;
+      const L = Math.hypot(b.x1 - b.x0, b.y1 - b.y0, b.z1 - b.z0);
+      if (L > 0.05) put({ x: (b.x0 + b.x1) / 2, y: (b.y0 + b.y1) / 2, z: (b.z0 + b.z1) / 2, dir: [b.x1 - b.x0, b.y1 - b.y0, b.z1 - b.z0], t: 0, life: 1, s0: 0.0032, s1: 0.0032, c: [b.col[0] * 0.22, b.col[1] * 0.22, b.col[2] * 0.22, 1], sh: SH.streak, add: true, stretch: L / 2 }, nB++);
+      if (b.dot) {
+        const d = Math.hypot(b.x1 - r.camPos[0], b.y1 - r.camPos[1], b.z1 - r.camPos[2]);
+        const s0 = Math.max(0.012, d * 0.0035);
+        put({ x: b.x1, y: b.y1, z: b.z1, t: 0, life: 1, s0, s1: s0, c: [b.col[0], b.col[1], b.col[2], 1], sh: SH.soft, add: true }, nB++);
+      }
+    }
+    this.beams.length = 0;
     if (nB) {
       gl.bindBuffer(gl.ARRAY_BUFFER, this.pb.vb); gl.bufferSubData(gl.ARRAY_BUFFER, 0, v, 0, nB * 4 * FV);
       gl.bindVertexArray(this.pb.vao);

@@ -10,7 +10,7 @@ import { WEAPONS } from '../engine/data/weapons.js';
 import { GEAR, LONG } from '../engine/data/equipment.js';
 import { MAPS } from '../engine/maps/index.js';
 import { MISSIONS } from '../engine/data/missions.js';
-import { M } from '../engine/data/materials.js';
+import { M, MATS } from '../engine/data/materials.js';
 import { ActorView, roomOf } from '../render/actors.js';
 import { FX } from '../render/fx.js';
 import { ViewModel } from '../render/viewmodel.js';
@@ -99,12 +99,15 @@ export class Match {
       if (waiting) { this.acc -= step0; n++; continue; }
       const inputs = { [this.p.id]: cmd, ...(this.droneId != null ? { [this.droneId]: this._droneCmd(inp) } : {}) };
       if (hostNet) this.netInputs(inputs);
+      this._savePrev();
       const e = step(this.G, inputs);
       for (const x of e) ev.push(x);
       this.acc -= step0; n++;
       if (this.S.m && this.S.m.phase === 'end') break;
     }
     if (n === 4) this.acc = 0;
+    // 描くのは「1ステップ前とこのステップの間」（こまの速さとエンジンの 60 回/秒 がずれても、動きがカクつかない）
+    this._alpha = Math.max(0, Math.min(1, this.acc / step0));
     if (hostNet) this.netAfterSteps(ev);
     this._events(ev);
     this._render(dt, inp);
@@ -137,6 +140,12 @@ export class Match {
     const gy = st.gyro || 'off';
     if (gy === 'always' || (gy === 'ads' && ads > 0.5)) { const g = (st.gyroSens || 1) * DEG * (ads > 0.5 ? 0.7 : 1); dx -= inp.gyroX * g * (st.gyroInvX ? -1 : 1); dy -= inp.gyroY * g * (st.gyroInvY ? -1 : 1); }
     if (this.droneId != null) { const d = this.S.byId[this.droneId]; if (d && d.alive) { this.dyaw = (this.dyaw ?? d.yaw) - dx; this.dpitch = clamp((this.dpitch ?? 0) - dy * (st.invertY ? -1 : 1), -0.6, 0.6); return; } }
+    // 監視カメラ: 向きは据え付けの向きから左右 60°・上下の範囲だけ
+    if (this.camView != null) {
+      const K = mapCams(this.w, this.def)[this.camView];
+      if (K) { let d = this.camYaw - dx * 0.8 - K.yaw0; d = Math.atan2(Math.sin(d), Math.cos(d)); this.camYaw = K.yaw0 + clamp(d, -CAM_YAW, CAM_YAW); this.camPitch = clamp(this.camPitch - dy * 0.8 * (st.invertY ? -1 : 1), CAM_PITCH[0], CAM_PITCH[1]); }
+      return;
+    }
     // のぞいている（ミラー・オプティワンド）: 見回すのはカメラだけ。体は動かない
     if (p.peek) { const mx = p.peek.max || 1; this.pkYaw = clamp(this.pkYaw - dx * 0.8, -mx, mx); this.pkPitch = clamp(this.pkPitch - dy * 0.8 * (st.invertY ? -1 : 1), -0.55, 0.7); return; }
     this.yaw -= dx;
@@ -185,21 +194,23 @@ export class Match {
           if (e.mouse) { this.adsOn = k === 'down'; break; }
           if (mode === 'hold') { if (k === 'down') this.adsOn = true; else if (k !== 'long') this.adsOn = false; }
           // 切替: 離したら切り替える（長めに押しても。重いこまで短押しが長押しに見えても切り替わる）
-          else if (mode === 'tap') { if (k === 'tap' || k === 'longup') this.adsOn = !this.adsOn; }
+          // 切替: 押した瞬間に切り替える（離すのを待たない）
+          else if (mode === 'tap') { if (k === 'down') this.adsOn = !this.adsOn; }
           else { if (k === 'down') { this._adsWas = this.adsOn; this.adsOn = true; } else if (k === 'tap') this.adsOn = !this._adsWas; else if (k === 'up' || k === 'longup') this.adsOn = false; }
           break;
         }
-        case 'reload': if (k === 'tap') this.acts.push({ a: 'reload' }); else if (k === 'long') this.acts.push({ a: 'reload', fast: true }); break;
-        case 'crouch': if (k === 'tap') this.stance = this.stance === 1 ? 0 : 1; else if (k === 'long') this.stance = this.stance === 2 ? 1 : 2; break;
-        case 'prone': if (k === 'tap' || k === 'longup') this.stance = this.stance === 2 ? 0 : 2; break;
-        case 'vault': if (k === 'tap' || k === 'down' && e.key) this.acts.push({ a: 'vault' }); break;
+        // 押した瞬間に反応する（長押しの動作はそのあとで上書き）
+        case 'reload': if (k === 'down') this.acts.push({ a: 'reload' }); else if (k === 'long' || (k === 'longup' && e.key)) this.acts.push({ a: 'reload', fast: true }); break;
+        case 'crouch': if (k === 'down') { this._stWas = this.stance; this.stance = this.stance === 0 ? 1 : this.stance === 1 ? 0 : 1; } else if (k === 'long' && !e.key) this.stance = this._stWas === 2 ? 0 : 2; break;
+        case 'prone': if (k === 'down') this.stance = this.stance === 2 ? 0 : 2; break;
+        case 'vault': if (k === 'down') this.acts.push({ a: 'vault' }); break;
         case 'leanL': case 'leanR': {
           const s = b === 'leanL' ? -1 : 1;
           if ((st.leanMode || 'toggle') === 'hold' || e.key) { if (k === 'down') this.leanSide = s; else if (k !== 'long' && this.leanSide === s) this.leanSide = 0; }
-          else if (k === 'tap' || k === 'longup') this.leanSide = this.leanSide === s ? 0 : s;
+          else if (k === 'down') this.leanSide = this.leanSide === s ? 0 : s;
           break;
         }
-        case 'shout': if (k === 'tap' || k === 'long' || (k === 'down' && e.key)) { if (!e.key || k === 'down') this.acts.push({ a: 'shout', line: this._shoutLine() }); } break;
+        case 'shout': if (k === 'down') this.acts.push({ a: 'shout', line: this._shoutLine() }); break;
         case 'peekx': if (k === 'tap' || k === 'down') this._peekQuit(); break;
         case 'use':
           if (p.peek) { if (k === 'tap' || (k === 'down' && e.key)) this._peekQuit(); break; }
@@ -207,22 +218,23 @@ export class Match {
           else if (k === 'long') this._useMenu(e);
           break;
         case 'cmd': if (this.S.pvp) break; if (k === 'tap') this._cmdDefault(); else if (k === 'long') this._cmdMenu(e); break;
-        case 'team': if (k === 'tap') { if (this.S.pvp) this.boardOn = !this.boardOn; else this.team = TEAMS[(TEAMS.indexOf(this.team) + 1) % 3]; } break;
-        case 'board': if (k === 'tap' || k === 'longup') this.boardOn = !this.boardOn; break;
+        case 'team': if (k === 'down') { if (this.S.pvp) this.boardOn = !this.boardOn; else this.team = TEAMS[(TEAMS.indexOf(this.team) + 1) % 3]; } break;
+        case 'board': if (k === 'down') this.boardOn = !this.boardOn; break;
         case 'gear':
           if (k === 'tap') { if (p.ws.slot === 2) this.acts.push({ a: 'switch', slot: p.ws.prev >= 0 ? p.ws.prev : 0 }); else if (this.gearSel) this.acts.push({ a: 'gear', id: this.gearSel }); }
           else if (k === 'long') this._gearMenu(e);
           break;
-        case 'wpn1': if (k === 'tap' || k === 'down' && e.key) this.acts.push({ a: 'switch', slot: 0 }); break;
-        case 'wpn2': if (k === 'tap' || k === 'down' && e.key) this.acts.push({ a: 'switch', slot: 1 }); break;
-        case 'fmode': if (k === 'tap') this.acts.push({ a: 'mode' }); break;
-        case 'light': if (k === 'tap') this.acts.push({ a: 'light' }); break;
-        case 'nvg': if (k === 'tap' && p.armor.head === 'nvg') { this.nvgOn = !this.nvgOn; p.nvgOn = this.nvgOn; this.au.sfx('nvg', null, { vol: 0.5 }); } break;
-        case 'low': if (k === 'tap') this.lowOn = !this.lowOn; break;
+        case 'wpn1': if (k === 'down' || (k === 'tap' && e.wheel)) this.acts.push({ a: 'switch', slot: 0 }); break;
+        case 'wpn2': if (k === 'down' || (k === 'tap' && e.wheel)) this.acts.push({ a: 'switch', slot: 1 }); break;
+        case 'fmode': if (k === 'down') this.acts.push({ a: 'mode' }); break;
+        case 'light': if (k === 'down') this.acts.push({ a: 'light' }); break;
+        case 'nvg': if (k === 'down' && p.armor.head === 'nvg') { this.nvgOn = !this.nvgOn; p.nvgOn = this.nvgOn; this.au.sfx('nvg', null, { vol: 0.5 }); } break;
+        case 'low': if (k === 'down') this.lowOn = !this.lowOn; break;
         case 'map': if (k === 'tap' || (k === 'longup' && !e.key)) this.app.openTablet(); break;
         case 'pause': if (k === 'tap' || (k === 'down' && e.key)) this.app.pauseGame(); break;
-        case 'drone': if (k === 'tap') this._droneToggle(); break;
-        case 'zone': if (k === 'tap') this._zoneNext(); break;
+        case 'drone': if (k === 'down') this._droneToggle(); break;
+        case 'zone': if (k === 'down') this._zoneNext(); break;
+        case 'cams': if (k === 'down') this._camNext(); else if (k === 'long') this._camExit(); break;
         case 'melee': if (k === 'down' && this.droneId == null) this.acts.push({ a: 'melee' }); break;
         case 'radial': if (k === 'pick' && e.item && e.item.go) e.item.go(); break;
       }
@@ -243,6 +255,15 @@ export class Match {
       act: this.acts.length ? this.acts.splice(0) : null, power: 0.75,
     };
     if (this.droneId != null) { cmd.mx = 0; cmd.mz = 0; cmd.fire = false; }
+    if (this.camView != null) {
+      const S = this.S;
+      if (!p.alive || p.down || !S.cams || !S.cams[this.camView] || !S.cams[this.camView].ok) { if (S.cams && S.cams[this.camView] && !S.cams[this.camView].ok) this.hud.showBanner('カメラが壊された', 1300, 'bad'); this.camView = null; if (p.alive) cmd.act = (cmd.act || []).concat([{ a: 'camuse', i: -1 }]); }
+      else if (Math.hypot(cmd.mx, cmd.mz) > 0.5) this._camExit();
+      else {
+        if (cmd.fire && (this._pinT == null || this.time - this._pinT > 0.5)) { this._pinT = this.time; cmd.act = (cmd.act || []).concat([{ a: 'campin', i: this.camView, yaw: this.camYaw, pitch: this.camPitch }]); }
+        cmd.mx = 0; cmd.mz = 0; cmd.fire = false; cmd.ads = false;
+      }
+    }
     // のぞいている間: 撃つ・動くとやめる
     if (p.peek) { if (cmd.fire || Math.hypot(cmd.mx, cmd.mz) > 0.3) this._peekQuit(); cmd.fire = false; cmd.ads = false; }
     // しゃがみの状態を体に合わせる（伏せられないなど）
@@ -400,6 +421,21 @@ export class Match {
     if (mine) { this.droneId = mine.id; this.dyaw = mine.yaw; this.dpitch = 0; this.au.sfx('drone', null); return; }
     this.acts.push({ a: 'drone' });
   }
+  // 監視カメラ（対戦の防衛側）: 押すたびに次のカメラ、最後の次（か長押し・移動）で戻る
+  _camNext() {
+    const S = this.S, m = S.m || {}, p = this.p;
+    if (!S.pvp || m.kind === 'tdm' || p.team !== m.def || !p.alive || p.down || !S.cams || !S.cams.length) return;
+    const n = S.cams.length;
+    let i = this.camView == null ? (this._camLast ?? -1) : this.camView;
+    for (let q = 0; q < n; q++) { i++; if (i >= n) { if (this.camView != null) return this._camExit(); i = 0; } if (S.cams[i].ok) break; if (q === n - 1) i = -1; }
+    if (i < 0 || !S.cams[i] || !S.cams[i].ok) { this.hud.showBanner('使えるカメラがない', 1200); this.au.ui('deny'); return; }
+    const K = mapCams(this.w, this.def)[i];
+    this.camView = i; this._camLast = i; this.camYaw = K.yaw0; this.camPitch = K.pitch0;
+    this.droneId = null; this.adsOn = false;
+    this.acts.push({ a: 'camuse', i });
+    this.au.sfx('drone', null, { vol: 0.4 });
+  }
+  _camExit() { if (this.camView == null) return; this.camView = null; this.acts.push({ a: 'camuse', i: -1 }); this.au.sfx('ui_back'); }
   // 出現地点（対戦の攻撃側・準備中）: 押すたびに次の地点
   _zoneNext() {
     const S = this.S, m = S.m || {};
@@ -527,13 +563,14 @@ export class Match {
         case 'spotted': if (S.byId[e.by] && S.byId[e.by].team === p.team) au.ui('spot'); break;
         case 'drone': if (e.owner === me) { this.droneId = e.id; this.dyaw = p.yaw; this.dpitch = 0; au.sfx('drone', null); } break;
         case 'dronedead': if (e.id === this.droneId) { this.droneId = null; hud.showBanner('ドローンが壊された', 1500, 'bad'); } break;
+        case 'camdead': if (e.x != null) { fx.impact && fx.impact(e.x, e.y, e.z, 0, 0, 0, M.METAL); au.sfx('impMetal', [e.x, e.y, e.z], { vol: 0.8 }); } if (e.by === me) hud.feed('監視カメラを壊した', 'mine'); break;
         // 防衛側が建物の外に出た（シージ）: 攻撃側には居場所、本人には警告
         case 'outside': { const a = S.byId[e.id]; if (!a) break; if (e.id === me) { hud.showBanner('建物の外 ― 居場所が知られた', 1800, 'bad'); au.ui('deny'); } else if (S.m && p.team === S.m.att) { hud.showBanner(`防衛側が外に出た（${a.name || ''}）`, 1600, 'warn'); au.ui('spot'); } break; }
         case 'phase': if (e.p === 'prep') hud.showBanner(S.m && p.team === S.m.att ? '準備フェーズ<br><small>ドローンで偵察・出現地点を選ぶ</small>' : '準備フェーズ<br><small>補強・バリケード（建物の外には出られない）</small>', 2600); else if (e.p === 'action') { hud.showBanner('行動開始', 1600, 'warn'); au.ui('go'); this.droneId = null; } break;
         case 'round': { const win = e.win; const mine = win === p.team; hud.showBanner(win < 0 ? '引き分け' : (mine ? 'ラウンド勝利' : 'ラウンド敗北') + `<br><small>${whyName(e.why)} ・ ${e.wins[p.team]} - ${e.wins[1 - p.team]}</small>`, 4000, win < 0 ? '' : mine ? 'ok' : 'bad'); au.ui(mine ? 'win' : 'lose'); break; }
-        case 'roundstart': this.fx.clear(); this.r.rebuildCells(Object.keys(this._lastBdiff || {}).map(Number).concat(this._allBroken()), S); this._lastBdiff = {}; this.adsOn = false; this.stance = 0; this.leanSide = 0; this.r.setMap(this.w, this.def, S); { const st = S.m && S.m.sites && e.site >= 0 ? S.m.sites[e.site] : null; hud.showBanner(`ラウンド ${e.round}` + (st ? `　目標: ${st.name}` : ''), 2400); } break;
+        case 'roundstart': this.dead = false; this.spec = null; this._resetControls(); this.yaw = p.yaw; this.pitch = 0; this.av.hidden.add(me); this.fx.clear(); this.r.rebuildCells(Object.keys(this._lastBdiff || {}).map(Number).concat(this._allBroken()), S); this._lastBdiff = {}; this.r.setMap(this.w, this.def, S); { const st = S.m && S.m.sites && e.site >= 0 ? S.m.sites[e.site] : null; hud.showBanner(`ラウンド ${e.round}` + (st ? `　目標: ${st.name}` : ''), 2400); } break;
         case 'swap': hud.feed('攻守交代', 'warn'); break;
-        case 'respawn': if (e.id === me) { this.dead = false; this.spec = null; this.yaw = p.yaw; this.pitch = 0; this.droneId = null; this.av.hidden.add(me); if (e.zone == null) hud.hideBanner(); } break;
+        case 'respawn': if (e.id === me) { this.dead = false; this.spec = null; this.yaw = p.yaw; this.pitch = 0; this._resetControls(); this.av.hidden.add(me); if (e.zone == null) hud.hideBanner(); } break;
         case 'matchend': { const mine = e.win === p.team; hud.showBanner(e.win < 0 ? '引き分け' : mine ? '勝利' : '敗北', 0, mine ? 'ok' : 'bad'); au.ui(mine ? 'win' : 'lose'); break; }
         case 'end': hud.showBanner(e.res === 'fail' ? '作戦失敗' : e.res === 'abort' ? '撤収' : '作戦完了', 0, e.res === 'fail' ? 'bad' : 'ok'); au.ui(e.res === 'fail' ? 'lose' : 'win'); break;
         case 'revive': hud.feed(`${nm(S.byId[e.by])} が ${nm(S.byId[e.id])} を起こした`, 'ok'); break;
@@ -575,20 +612,51 @@ export class Match {
     const voice = a ? (a.kind === 'swat' ? (a === this.p ? 'p' : 'o' + ((a.ai && a.ai.slot) || 0)) : a.kind === 'sus' ? 's' + (a.id % 3) : 'c' + (a.id % 3)) : 'toc';
     this.au.voice(line, idx, voice, a && a !== this.p ? [a.x, a.y + 1.6, a.z] : null, { radio: !a || who === 'TOC' || (a.kind === 'swat' && a !== this.p && Math.hypot(a.x - this.p.x, a.z - this.p.z) > 12) });
   }
+  // 倒れた・復帰した・ラウンドが変わった: 押しっぱなしの状態（リーン・しゃがみ・ADS・ローレディ・ダッシュの固定・カメラ）を戻す
+  _resetControls() {
+    this.adsOn = false; this.leanSide = 0; this.stance = 0; this.lowOn = false;
+    this.camView = null; this.droneId = null; this.pkEnd = false;
+    const inp = this.app.input; if (inp) { inp.sprintLock = false; inp.sprintArm = false; if (inp.onStick) inp.onStick(null); if (inp.radial) inp.closeRadial(); }
+    if (this.p) { this.p.lean = 0; this.p.ads = 0; this.p.low = 0; }
+  }
   _onDeath() {
     this.dead = true;
-    this.adsOn = false;
+    this._resetControls();
     this.hud.showBanner(this.S.pvp ? (this.S.m.kind === 'tdm' ? 'KIA — 4秒後に復帰' : 'KIA — 観戦中') : 'KIA — 観戦中', 3000, 'bad');
     this.au.deafen(1.5);
   }
 
+  // ステップの前の位置（描くときの補間に使う）
+  _savePrev() {
+    const P = this._prev || (this._prev = new Map());
+    for (const a of this.S.actors) { let q = P.get(a.id); if (!q) P.set(a.id, q = [0, 0, 0]); q[0] = a.x; q[1] = a.y; q[2] = a.z; }
+  }
+  // 補間した位置へ一時的に動かす（戻すのは _unlerp）
+  _lerpActors() {
+    const P = this._prev, k = 1 - (this._alpha ?? 1);
+    if (!P || k <= 0.001) return null;
+    const keep = [];
+    for (const a of this.S.actors) {
+      const q = P.get(a.id); if (!q) continue;
+      const dx = q[0] - a.x, dy = q[1] - a.y, dz = q[2] - a.z;
+      if (dx * dx + dy * dy + dz * dz > 1) continue; // 飛んだ（出現・乗り越えの始まり）
+      keep.push(a, a.x, a.y, a.z);
+      a.x += dx * k; a.y += dy * k; a.z += dz * k;
+    }
+    return keep;
+  }
+  _unlerp(keep) { if (!keep) return; for (let i = 0; i < keep.length; i += 4) { const a = keep[i]; a.x = keep[i + 1]; a.y = keep[i + 2]; a.z = keep[i + 3]; } }
   // ---- カメラと描画
   _render(dt, inp) {
     const S = this.S, p = this.p, r = this.r, st = this.app.settings;
     let cam;
     const drone = this.droneId != null ? S.byId[this.droneId] : null;
     if (this._hidDrone != null && this._hidDrone !== this.droneId) { this.av.hidden.delete(this._hidDrone); this._hidDrone = null; }
-    if (drone && drone.alive) {
+    const CK = this.camView != null ? mapCams(this.w, this.def)[this.camView] : null;
+    if (CK) {
+      cam = { x: CK.x + Math.sin(this.camYaw) * 0.12, y: CK.y - 0.03, z: CK.z + Math.cos(this.camYaw) * 0.12, yaw: this.camYaw, pitch: this.camPitch, roll: 0, fov: 74 * DEG };
+      this.av.hidden.delete(p.id);
+    } else if (drone && drone.alive) {
       cam = { x: drone.x, y: drone.y + 0.14, z: drone.z, yaw: drone.yaw, pitch: drone.pitch, roll: 0, fov: 70 * DEG };
       this.av.hidden.delete(p.id); this.av.hidden.add(drone.id); this._hidDrone = drone.id;
     } else if (p.peek && p.alive && !(p.down && !S.pvp)) {
@@ -606,7 +674,12 @@ export class Match {
       }
       this.av.hidden.delete(p.id);
     } else if (p.alive && !(p.down && !S.pvp)) {
-      const e = eyeOf(S, p);
+      const e0 = eyeOf(S, p), q = this._prev && this._prev.get(p.id), kk = 1 - (this._alpha ?? 1);
+      // 目の位置もステップの間を補間（大きく飛んだときはそのまま）
+      const e = q && kk > 0.001 && Math.hypot(q[0] - p.x, q[2] - p.z) < 1 ? [e0[0] + (q[0] - p.x) * kk, e0[1] + (q[1] - p.y) * kk, e0[2] + (q[2] - p.z) * kk] : e0;
+      // 向きは指の動きをすぐ映す（エンジンのステップを待たない）。体が勝手に向く状態（テーザー・拘束）だけは体の向き
+      const lookFree = !p.tased && !p.cuffed && !p.vault;
+      const cyaw = lookFree ? this.yaw : p.yaw, cpitch = lookFree ? Math.max(-1.45, Math.min(1.45, this.pitch)) : p.pitch;
       const W = curW(p), wi = curWeapon(p);
       const zoom = wi ? attMods(wi).zoom : 1;
       const fov0 = vfovOf(st.hfov);
@@ -617,8 +690,8 @@ export class Match {
       const t = this.time;
       cam = {
         x: e[0], y: e[1], z: e[2],
-        yaw: p.yaw + (p.ws.ry * DEG) + Math.sin(t * 37) * 0.012 * sh + p.flinch * 0.03 * Math.sin(t * 23),
-        pitch: p.pitch + (p.ws.rp * DEG) + Math.sin(t * 41) * 0.012 * sh + p.flinch * 0.04,
+        yaw: cyaw + (p.ws.ry * DEG) + Math.sin(t * 37) * 0.012 * sh + p.flinch * 0.03 * Math.sin(t * 23),
+        pitch: cpitch + (p.ws.rp * DEG) + Math.sin(t * 41) * 0.012 * sh + p.flinch * 0.04,
         roll: p.lean * 0.16 + Math.sin(t * 29) * 0.01 * sh,
         fov: 2 * Math.atan(Math.tan(fov0 / 2) / z),
       };
@@ -649,9 +722,12 @@ export class Match {
       this.au.setEnv(this._ind);
       this.au.ambience(true, this._ind);
     }
-    // 人と効果
+    // 人と効果（ステップの間を補間した位置で）
+    const keep = this._lerpActors();
     this.av.prepare(S, this.w);
-    const fp = !this.dead && p.alive && !(p.down && !S.pvp) && !(drone && drone.alive) && !p.peek && !this.debugCam;
+    this._unlerp(keep);
+    this.av.hideCam = this.camView; // 見ているカメラ自身は描かない
+    const fp = !this.dead && p.alive && !(p.down && !S.pvp) && !(drone && drone.alive) && this.camView == null && !p.peek && !this.debugCam;
     if (fp) this.vm.update(p, cam, dt); else this.vm.on = false;
     // 曳光弾
     for (const b of S.bullets) {
@@ -667,12 +743,13 @@ export class Match {
       for (const c of S.clouds || []) { const R = c.r || 1; const a = Math.random() * 6.28, d = Math.random() * R; this.fx.smoke(c.x + Math.cos(a) * d, c.y + 0.3 + Math.random() * 0.8, c.z + Math.sin(a) * d, Math.max(0.6, R * 0.6), c.type === 'pepper' ? [0.9, 0.75, 0.6] : [0.88, 0.88, 0.84], 0.32, 3.5); }
     }
     this.fx.update(dt);
+    this._lasers(fp, cam);
     // 動く光: 自分と隊員のライト、銃口・爆発
     const lights = [];
     const roomsFor = (x, y, z, R) => this._lightRooms(x, y, z, R);
     if (fp && this.vm.out.light) { const o = this.vm.out.light, f = this.vm.out.fwd; lights.push({ x: o[0] + f[0] * 0.05, y: o[1], z: o[2] + f[2] * 0.05, r: 22, col: [5.5, 5.2, 4.6], spot: { dx: f[0], dy: f[1], dz: f[2], cos: Math.cos(0.42) }, rooms: roomsFor(o[0], o[1], o[2], 22) }); }
     for (const e2 of this.av.list) {
-      if (e2.drone || !e2.gun || !e2.gun.wi || !e2.gun.wi.lightOn || lights.length >= 6) continue;
+      if (e2.drone || !e2.gun || !e2.gun.wi || !e2.gun.wi.lightOn || !e2.gun.wi.att.light || lights.length >= 6) continue;
       const g = e2.gun.f, gm = gunModel(e2.gun.wi.id, e2.gun.wi.att);
       const lp = gm && gm.pts.lightPt ? gm.pts.lightPt : [0, 0, 0.3];
       const x = g.p[0] + g.l[0] * lp[0] + g.u[0] * lp[1] + g.f[0] * lp[2], y = g.p[1] + g.l[1] * lp[0] + g.u[1] * lp[1] + g.f[1] * lp[2], z = g.p[2] + g.l[2] * lp[0] + g.u[2] * lp[1] + g.f[2] * lp[2];
@@ -704,6 +781,57 @@ export class Match {
       ambMin: nvg ? 0.02 : 0,
     });
     if (this.intro > 0) { this.intro -= dt; this.app.fade(Math.max(0, this.intro / 1.2)); if (this.intro <= 0) this.app.fade(0); }
+  }
+  // レーザー: 赤は誰にでも見える。赤外線は暗視装置を着けているときだけ見える
+  // 自分の点は弾の向き（反動込み）の先、ほかの人は銃の向きの先
+  _lasers(fp, cam) {
+    const S = this.S, p = this.p, fx = this.fx;
+    const nvg = !!(this.nvgOn && fp);
+    const RED = [10, 0.35, 0.22], IR = [6, 6, 6];
+    const opt = this._lzOpt || (this._lzOpt = { stopOpaque: true, out: [], seenProp: new Set(), seenDoor: new Set() });
+    const hitAt = (ox, oy, oz, dx, dy, dz, skip) => {
+      const hits = raycast(this.w, ox, oy, oz, dx, dy, dz, 60, S.doors, opt);
+      let t = 60;
+      for (const h of hits) { const m = MATS[h.mat]; if (m && m.see) continue; t = h.t0; break; }
+      // 人: 立った円柱（しゃがみ・伏せで低く）
+      const A = dx * dx + dz * dz;
+      if (A > 1e-6) for (const a of S.actors) {
+        if (a === skip || a.isDrone || !a.alive || a.staged) continue;
+        const fx0 = ox - a.x, fz0 = oz - a.z, B = 2 * (fx0 * dx + fz0 * dz), C = fx0 * fx0 + fz0 * fz0 - 0.05;
+        const disc = B * B - 4 * A * C; if (disc < 0) continue;
+        const t0 = (-B - Math.sqrt(disc)) / (2 * A);
+        if (t0 < 0.05 || t0 >= t) continue;
+        const y = oy + dy * t0, top = a.y + (a.h || 1.8) * (a.stance === 2 ? 0.3 : a.stance === 1 ? 0.68 : 1);
+        if (y >= a.y && y <= top) t = t0;
+      }
+      return t;
+    };
+    // 自分
+    if (fp && p.laser && this.vm.out.laser && (p.laser === 'red' || nvg)) {
+      const yaw = this.yaw + p.ws.ry * DEG, pitch = Math.max(-1.45, Math.min(1.45, this.pitch)) + p.ws.rp * DEG;
+      const cp = Math.cos(pitch), dx = Math.sin(yaw) * cp, dy = Math.sin(pitch), dz = Math.cos(yaw) * cp;
+      const t = hitAt(cam.x, cam.y, cam.z, dx, dy, dz, p);
+      const hx = cam.x + dx * t, hy = cam.y + dy * t, hz = cam.z + dz * t;
+      // 線は銃の少し先から（一人称の銃は別の画角で描くので、根元は見せない）
+      const o = this.vm.out.laser, f = this.vm.out.fwd;
+      const sx = o[0] + f[0] * 0.35, sy = o[1] + f[1] * 0.35, sz = o[2] + f[2] * 0.35;
+      fx.beam(sx, sy, sz, hx, hy, hz, p.laser === 'ir' ? IR : RED, true);
+    }
+    // ほかの人（近い順に少しだけ）
+    let n = 0;
+    for (const e2 of this.av.list) {
+      if (n >= 8 || e2.drone || !e2.gun || !e2.gun.wi || !e2.gun.wi.lightOn || !e2.gun.wi.att.laser) continue;
+      const kind = e2.gun.wi.att.laser;
+      if (kind === 'ir' && !nvg) continue;
+      if (Math.hypot(e2.x - cam.x, e2.z - cam.z) > 45) continue;
+      const g = e2.gun.f, gm = gunModel(e2.gun.wi.id, e2.gun.wi.att);
+      const lp = gm && gm.pts.laserPt ? gm.pts.laserPt : [0, 0, 0.3];
+      const ox = g.p[0] + g.l[0] * lp[0] + g.u[0] * lp[1] + g.f[0] * lp[2], oy = g.p[1] + g.l[1] * lp[0] + g.u[1] * lp[1] + g.f[1] * lp[2], oz = g.p[2] + g.l[2] * lp[0] + g.u[2] * lp[1] + g.f[2] * lp[2];
+      const L = Math.hypot(g.f[0], g.f[1], g.f[2]) || 1, dx = g.f[0] / L, dy = g.f[1] / L, dz = g.f[2] / L;
+      const t = hitAt(ox, oy, oz, dx, dy, dz, e2.a);
+      fx.beam(ox, oy, oz, ox + dx * t, oy + dy * t, oz + dz * t, kind === 'ir' ? IR : RED, true);
+      n++;
+    }
   }
   // カメラのまわり（5×5マス、床のマスだけ）の焼いた明るさの平均
   _localBright(cam) {
@@ -765,16 +893,18 @@ export class Match {
       cmdLabel: '命令', mmZoom: this.mmZoom,
       droneOK: S.pvp && S.m.kind !== 'tdm' && p.team === S.m.att && (S.m.phase === 'prep' ? !!p.staged : S.m.phase === 'action' && p.alive && !p.down) && ((p.dronesLeft ?? 2) > 0 || S.actors.some(d => d.isDrone && d.owner === p.id && d.alive)),
       zoneOK: S.pvp && S.m.kind !== 'tdm' && p.team === S.m.att && (S.m.phase === 'pre' || S.m.phase === 'prep'),
+      camsOK: S.pvp && S.m.kind !== 'tdm' && p.team === S.m.def && p.alive && !p.down && (S.m.phase === 'prep' || S.m.phase === 'action') && !!(S.cams && S.cams.some(c => c.ok)), camOn: this.camView != null,
     };
     if (v.zoneOK) { const zs = attackZones(this.w, this.def); v.zoneLabel = (zs[p.zone ?? 0] || zs[0] || {}).name || ''; if (zs.length < 2) v.zoneOK = false; }
     if (wi) { const g = gunModel(wi.id, wi.att); if (g && g.pts.optic) v.optic = g.pts.optic; }
-    if (this.droneId != null) v.hideCross = true;
+    if (this.droneId != null || this.camView != null) v.hideCross = true;
     // 案内
     let prompt = '';
     if (c) prompt = `${ctxName(c, S)}: ${OP_NAME[c.def.op] || c.def.op}` + (c.def.far ? (c.def.why === 'block' ? '（間に物がある）' : '（近づく）') : c.ops.length > 1 ? '（長押し: メニュー）' : '');
     if (p.act) { v.prog = Math.min(1, p.act.t / p.act.dur); v.progLabel = OP_NAME[p.act.k] || ''; prompt = ''; }
     if (this.droneId != null) prompt = S.m && S.m.phase === 'prep' && p.staged ? 'ドローン ― 射撃: 敵にマーク／乗り越え: ジャンプ（準備が終わると出現地点に出る）' : 'ドローン ― 射撃: マーク／乗り越え: ジャンプ／ドローン: 戻る';
     else if (p.staged) prompt = '準備中 ― ドローンで偵察できる' + (v.zoneOK ? '（出現地点のボタンで出る場所を選ぶ）' : '');
+    if (this.camView != null) prompt = `監視カメラ ${this.camView + 1}/${(S.cams || []).length} ― 射撃: 印をつける／カメラ: 次（長押し・動く: 戻る）`;
     // 防衛側が建物の外にいる: 2.5秒で居場所が知られる
     if (S.pvp && S.m && S.m.kind !== 'tdm' && p.team === S.m.def && (p.outT || 0) > 0 && p.alive) prompt = (p.outT >= OUT_GRACE ? '建物の外 ― 攻撃側に居場所が見えている' : `建物の外 ― あと${Math.max(0, OUT_GRACE - p.outT).toFixed(1)}秒で居場所が知られる`);
     // 手に持った特殊装備の使い方
@@ -872,7 +1002,7 @@ export class Match {
   saveState() { if (this.done) return null; try { return { dump: dump(this.G), cam: { yaw: this.yaw, pitch: this.pitch }, o: this.o }; } catch (e) { return null; } }
 }
 import { endMission } from '../engine/modes/pve.js';
-import { attackZones, OUT_GRACE } from '../engine/modes/pvp.js';
+import { attackZones, OUT_GRACE, mapCams, CAM_YAW, CAM_PITCH } from '../engine/modes/pvp.js';
 import { netMixin } from './netgame.js';
 netMixin(Match);
 function import_end(S) { endMission(S, S.m.softDone ? 'done' : 'abort', 'player', []); }

@@ -145,8 +145,8 @@ export class Input {
       }
       const dur = evT(e) - p.t0;
       // 押している間に長押しを判定できなかった（こまが遅れ続けた）けれど長く押していた: 離した時に長押しとして扱う
-      if (!cancel && !p.long && dur >= LONG && p.moved <= 22) { p.long = true; this.edges.push({ b: p.btn, k: 'long', pid: e.pointerId, x: p.x0, y: p.y0, sub: p.el.dataset.sub || null }); }
-      const k = cancel ? 'cancel' : p.long ? 'longup' : (dur < LONG && p.moved < 22 ? 'tap' : 'up');
+      if (!cancel && !p.long && dur >= LONG && p.moved <= 36) { p.long = true; this.edges.push({ b: p.btn, k: 'long', pid: e.pointerId, x: p.x0, y: p.y0, sub: p.el.dataset.sub || null }); }
+      const k = cancel ? 'cancel' : p.long ? 'longup' : (dur < LONG && p.moved < 36 ? 'tap' : 'up');
       this.edges.push({ b: p.btn, k, sub: p.el.dataset.sub || null, dur });
       if (this.onBtn) this.onBtn(p.btn, k, p);
     };
@@ -179,7 +179,7 @@ export class Input {
     a.addEventListener('mousedown', (e) => { if (!this.enabled || !document.pointerLockElement) return; if (e.button === 0) this.mouseBtn.l = true; if (e.button === 2) { this.mouseBtn.r = true; this.edges.push({ b: 'ads', k: 'down', mouse: true }); } });
     window.addEventListener('mouseup', (e) => { if (e.button === 0) this.mouseBtn.l = false; if (e.button === 2) { this.mouseBtn.r = false; if (this.enabled) this.edges.push({ b: 'ads', k: 'up', mouse: true }); } });
     a.addEventListener('contextmenu', (e) => e.preventDefault());
-    a.addEventListener('wheel', (e) => { if (this.enabled && document.pointerLockElement) this.edges.push({ b: e.deltaY > 0 ? 'wpn2' : 'wpn1', k: 'tap' }); }, { passive: true });
+    a.addEventListener('wheel', (e) => { if (this.enabled && document.pointerLockElement) this.edges.push({ b: e.deltaY > 0 ? 'wpn2' : 'wpn1', k: 'tap', wheel: true }); }, { passive: true });
   }
   _stickMove(sx, sy) {
     const st = this.stick;
@@ -266,11 +266,12 @@ export class Input {
     // （遅れている間に指を離した出来事が待っているかもしれない。離していれば短押し）
     const now = performance.now();
     // 1こまだけ待つ（遅いこまが続くときは次のこまで判定する）
-    const hitch = this._lastTake != null && now - this._lastTake > 250 && !this._hitchSkip;
-    this._hitchSkip = hitch;
+    // こまが遅れた（150ms 以上あいた）ときは長押しを決めない: たまっていた「離した」がまだ届いていないかもしれない。
+    // 長く押していたなら、離したときに長押しとして扱う（短く押したのが遅いこまのせいで長押しにならないように）
+    const hitch = this._lastTake != null && now - this._lastTake > 150;
     this._lastTake = now;
     for (const [pid, p] of this.ptr) {
-      if (p.kind !== 'btn' || p.long || p.moved > 22 || hitch) continue;
+      if (p.kind !== 'btn' || p.long || p.moved > 36 || hitch) continue;
       // 長押しは「押したのを受け取ってから」の時間で（受け取りが遅れたぶんで長押しにしない）
       if (now - (p.tp ?? p.t0) >= LONG) { p.long = true; out.edges.push({ b: p.btn, k: 'long', pid, x: p.x0, y: p.y0, sub: p.el.dataset.sub || null }); }
     }

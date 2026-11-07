@@ -317,20 +317,19 @@ try {
     await tapAt(await btn('wpn1'), 34);
     rec('操作', '副武器のボタンで持ち替える', slot === 1, `持っている武器 ${slot}`);
   }
-  // ボタンは指を離したときに1回だけ（ライト）
+  // ボタンは押した瞬間に1回だけ（ライト）
   {
     await page.waitForFunction(() => window.__app.game.p.ws.st === 'ready' && window.__app.game.p.ws.slot === 0, null, { timeout: 15000 }).catch(() => {});
     const lt0 = await page.evaluate(() => !!window.__app.game.p.light);
     const hasLight = await page.evaluate(() => { const p = window.__app.game.p, wi = p.inv.w[p.ws.slot]; return !!(wi && wi.att && wi.att.light); });
     const lb = await btn('light');
     await touch('touchStart', [{ x: lb.x, y: lb.y, id: 35 }]);
-    await page.waitForTimeout(140);
+    await page.waitForFunction((v) => !!window.__app.game.p.light !== v, lt0, { timeout: 15000 }).catch(() => {});
     const mid = await page.evaluate(() => !!window.__app.game.p.light);
     await touch('touchEnd', []);
-    await page.waitForFunction((v) => !!window.__app.game.p.light !== v, lt0, { timeout: 15000 }).catch(() => {});
     await page.waitForTimeout(800);
     const lt1 = await page.evaluate(() => !!window.__app.game.p.light);
-    rec('タップ', 'ライトのボタンは離したときに1回だけ切り替わる', hasLight && mid === lt0 && lt1 === !lt0, `ライト付き:${hasLight} ${lt0} → 押している間 ${mid} → ${lt1}`);
+    rec('タップ', 'ライトのボタンは押した瞬間に1回だけ切り替わる（離しても戻らない）', hasLight && mid === !lt0 && lt1 === mid, `ライト付き:${hasLight} ${lt0} → 押している間 ${mid} → 離した後 ${lt1}`);
   }
   // HUDの配置の編集: 「すべて初期化」は2回押す・「元に戻す」は選んだ項目だけ戻す
   {

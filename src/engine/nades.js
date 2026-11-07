@@ -1,7 +1,7 @@
 // 投げ物と爆発: 閃光・スティンガー・CSガス・罠（破片）・C2・壁用の爆破薬。ガスの雲。
 import { raycast, los, CS, LH, levelOfY, NB } from './world.js';
 import { hrand } from './rng.js';
-import { eyeOf, hurt, killActor, pvpDamage, damageBlock, breakGlass, downActor } from './combat.js';
+import { eyeOf, hurt, killActor, pvpDamage, damageBlock, breakGlass, downActor, breakCamAt } from './combat.js';
 import { M, MATS } from './data/materials.js';
 import { blastBars } from './barricade.js';
 
@@ -152,6 +152,8 @@ export function stepBlasts(S, w, dt, ev) {
       }
       if (a.ai && a.ai.morale != null) a.ai.morale -= 0.4 * k;
     }
+    // 監視カメラ: 2m 以内は壊れる
+    if (S.cams && w._cams) for (let ci = 0; ci < S.cams.length; ci++) { const K = w._cams[ci]; if (K && S.cams[ci].ok && Math.hypot(K.x - b.x, K.y - b.y, K.z - b.z) < 2.0) breakCamAt(S, ci, b.by ?? -1, ev, K.x, K.y, K.z); }
     // バリケード: 爆発のまわりの板を吹き飛ばす（破片・罠 1.7m、C2 2.4m、壁の爆破薬 2.0m）
     blastBars(S, w, b.x, b.y, b.z, b.kind === 'c2' ? 2.4 : b.kind === 'frame' ? 2.0 : 1.7, ev, b.by ?? -1);
     // 壁（石膏・木）を壊す

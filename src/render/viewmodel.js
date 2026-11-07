@@ -79,6 +79,8 @@ export class ViewModel {
     const shieldUp = a.inv.long === 'shield' && ws.slot === 1 && !a.vault && ws.st !== 'holster';
     const P = gm ? gm.g.pts : { sightY: 0.05, eyeZ: -0.3, muzzle: 0.3, gripR: [0, -0.08, -0.05], gripL: [0, -0.04, 0.2] };
     const pistol = !!P.pistol;
+    // 倍率スコープをのぞいている: 銃（筒とレンズのふた）は描かず、HUD のスコープの像に任せる（筒の中から見ると視界がふさがれていた）
+    this.scoped = !!(P.optic && P.optic.scope && a.ads > 0.8);
     // 状態の重み
     const ads = sm(a.ads), low = sm(a.low), spr = a.sprint ? 1 : 0;
     this.sprK = lerp(this.sprK || 0, spr, 1 - Math.exp(-dt * 10));
@@ -178,7 +180,8 @@ export class ViewModel {
     const camP = (x, y, z) => [cx + R[0] * x + U[0] * y + F[0] * z, cy + R[1] * x + U[1] * y + F[1] * z, cz + R[2] * x + U[2] * y + F[2] * z];
     this.out.muzzle = toW([0, 0, P.muzzle]); this.out.fwd = gF; this.out.right = gR; this.out.up = gU;
     this.out.eject = toW([-0.02, 0.025, 0.02]);
-    this.out.light = P.lightPt && wi && wi.lightOn ? toW(P.lightPt) : null;
+    this.out.light = P.lightPt && wi && wi.lightOn && wi.att.light ? toW(P.lightPt) : null;
+    this.out.laser = P.laserPt && wi && wi.lightOn && wi.att.laser ? toW(P.laserPt) : null;
     // 盾: 画面の左下。ADSでは下げて、拳銃の照準の邪魔にならないように
     this.shieldOn = shieldUp;
     let shieldHand = null;
@@ -372,7 +375,7 @@ export class ViewModel {
   }
 
   draw(f) {
-    if (!this.on || f.hideVM) return;
+    if (!this.on || f.hideVM || this.scoped) return;
     const r = this.r, gl = this.gl, P = r.P.world;
     r._bindLight(P, f);
     gl.uniformMatrix4fv(P.u.uVP, false, r.vmVP);

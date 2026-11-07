@@ -122,10 +122,18 @@ function stepBullet(S, w, b, dt, ev) {
     // 防弾盾（前から当たったときだけ）
     if (a._shieldF && a.alive) { const t = rayShield(b.x, b.y, b.z, dx, dy, dz, segL, a._shieldF); if (t >= 0) hits.push({ t0: t, t1: t + 0.03, kind: 'shield', a }); }
   }
+  // 監視カメラ（対戦）: 1発で壊れる
+  if (S.cams && S.cams.length && w._cams) for (let i = 0; i < S.cams.length; i++) {
+    const c = S.cams[i], K = w._cams[i];
+    if (!c.ok || !K) continue;
+    const t = raySphere(b.x, b.y, b.z, dx, dy, dz, segL, K.x, K.y, K.z, 0.11);
+    if (t >= 0) hits.push({ t0: t, t1: t + 0.05, kind: 'cam', i });
+  }
   hits.sort((p, q) => p.t0 - q.t0);
   for (const h of hits) {
     if (h.t0 > segL) break;
     const hx = b.x + dx * h.t0, hy = b.y + dy * h.t0, hz = b.z + dz * h.t0;
+    if (h.kind === 'cam') { breakCamAt(S, h.i, b.owner, ev, hx, hy, hz); b.pen -= 40; b.k = Math.max(0.05, b.pen / b.pen0); if (b.pen <= 0) return false; continue; }
     if (h.kind === 'shield') {
       const a = h.a, sf = a._shieldF;
       const am = AMMO[b.cal] && AMMO[b.cal][b.am];
@@ -408,6 +416,18 @@ function meleeHit(S, w, a, ev) {
       if (t >= 0 && t < bt) { bt = t; best = { b, t, part: c.part }; }
     }
   }
+  // 監視カメラ（手の届く高さなら殴って壊せる）
+  if (S.cams && w._cams) for (let i = 0; i < S.cams.length; i++) {
+    const K = w._cams[i];
+    if (!S.cams[i].ok || !K) continue;
+    const t = raySphere(eye[0], eye[1], eye[2], dx, dy, dz, R, K.x, K.y, K.z, 0.2);
+    if (t >= 0 && t < bt) { bt = t; best = { cam: i, t }; }
+  }
+  if (best && best.cam != null) {
+    const hits0 = raycast(w, eye[0], eye[1], eye[2], dx, dy, dz, best.t, S.doors, _rcM);
+    if (!hits0.some(h => !(h.kind === 'slab' && h.ny > 0.5) && h.mat !== M.GLASSBROKEN && h.t0 < best.t - 0.05)) { breakCamAt(S, best.cam, a.id, ev, eye[0] + dx * best.t, eye[1] + dy * best.t, eye[2] + dz * best.t); ev.push({ e: 'meleehit', id: a.id, k: 'cam' }); return; }
+    best = null; bt = R;
+  }
   // 物（壁・扉・バリケード・ガラス・家具）
   const hits = raycast(w, eye[0], eye[1], eye[2], dx, dy, dz, R, S.doors, _rcM);
   let wh = null;
@@ -443,6 +463,14 @@ function meleeHit(S, w, a, ev) {
   hurt(S, w, b, MELEE.pve, 'chest', a, null, dx, dz, ev, 'melee');
 }
 
+// 監視カメラを壊す（弾・近接・爆発）
+export function breakCamAt(S, i, by, ev, x, y, z) {
+  const c = S.cams && S.cams[i];
+  if (!c || !c.ok) return false;
+  c.ok = 0; c.use = -1;
+  ev.push({ e: 'camdead', i, by, x, y, z });
+  return true;
+}
 function killDrone(S, a, by, ev) {
   if (!a.alive) return;
   a.alive = false; a.dead = true;
@@ -464,6 +492,8 @@ function applyPvP(S, w, a, b, shooter, W, part, hx, hy, hz, dx, dy, dz, dist, ev
   else if (part === 'neck') d *= 1.2;
   ev.push({ e: 'blood', x: hx, y: hy, z: hz, dx, dy, dz, n: Math.min(4, 1 + d / 25), id: a.id });
   a.flinch = Math.max(a.flinch, Math.min(1, 1 - Math.exp(-d / 30)));
+  // レディオアノットの味つけ: 腕を撃たれると狙いがぶれ、脚を撃たれると遅くなる（そのラウンドの間。作戦より軽め）
+  if (part === 'arm') a.inj.arm = 1; else if (part === 'leg') a.inj.leg = Math.min(2, (a.inj.leg || 0) + 1);
   ev.push({ e: 'hit', id: a.id, by: b.owner, part, d: Math.min(d, a.hp + (a.down ? 20 : 0)), x: hx, y: hy, z: hz, hs: head });
   pvpDamage(S, a, d, shooter, part, dx, dz, ev, head ? 'head' : 'bullet');
 }

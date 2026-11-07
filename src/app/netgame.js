@@ -115,6 +115,8 @@ export function netMixin(Match) {
       const dc = this.droneId != null ? this._droneCmd(inp) : null;
       if (dc && this.droneId != null) sess.setInput({ mx: r2(dc.mx), mz: r2(dc.mz), y: r4(dc.yaw), p: r4(dc.pitch), f: dc.fire ? 1 : 0, j: dc.jump ? 1 : 0, s: cmd.stance, dr: 1 });
       else sess.setInput({ mx: r2(cmd.mx), mz: r2(cmd.mz), y: r4(cmd.yaw), p: r4(cmd.pitch), f: cmd.fire ? 1 : 0, a: cmd.ads ? 1 : 0, l: cmd.low ? 1 : 0, s: cmd.stance, ln: cmd.lean, sp: cmd.sprint ? 1 : 0, pw: cmd.power });
+      // 描くときの補間用（ステップの前の自分の位置）
+      { const P = this._prev || (this._prev = new Map()); let q = P.get(me.id); if (!q) P.set(me.id, q = [0, 0, 0]); q[0] = me.x; q[1] = me.y; q[2] = me.z; }
       if (me.alive && !me.down && !me.cuffed) {
         me._inp = { ...cmd, act: null };
         try { moveActor(S, this.w, me, me._inp, S.dt, ev); stepWeapon(S, this.w, me, me.melee ? { ...me._inp, fire: false, ads: false } : me._inp, S.dt, ev); } catch (e) { console.warn('predict', e); }
@@ -125,6 +127,7 @@ export function netMixin(Match) {
       this.acc -= S.dt; n++;
     }
     if (n === 4) this.acc = 0;
+    this._alpha = Math.max(0, Math.min(1, this.acc / S.dt));
     // 出来事: 手元の分＋ホストの分（自分の銃の音などは手元の分を使う）
     const hostEv = sess.takeEvents().filter(e => !(LOCAL_EV.has(e.e) && e.id === me.id));
     this._events(ev.filter(e => LOCAL_EV.has(e.e)).concat(hostEv));

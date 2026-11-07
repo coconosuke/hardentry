@@ -29,7 +29,7 @@ export default {
     if (S.t % 30 === 0) for (const a of S.actors) {
       if (a.kind !== 'swat' || !a.alive) continue;
       if (a.z / 0.5 < 58 && a.x / 0.5 < 19) {
-        for (const wi of a.inv.w) { if (!wi) continue; const W = WEAPONS[wi.id]; if (wi.mags) { for (let i = 0; i < wi.mags.length; i++) wi.mags[i] = W.mag; while (wi.mags.length < W.spare) wi.mags.push(W.mag); } else wi.res = W.spare; }
+        for (const wi of a.inv.w) { if (!wi) continue; const W = WEAPONS[wi.id]; if (wi.mags) { const cap = wi.cap || W.mag; for (let i = 0; i < wi.mags.length; i++) wi.mags[i] = cap; while (wi.mags.length < W.spare) wi.mags.push(cap); } else wi.res = W.spare; }
         for (const g of a.inv.gear) g.n = Math.max(g.n, 2);
       }
     }

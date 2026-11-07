@@ -90,6 +90,7 @@ export class ActorView {
     }
     this.items = S.items.filter(it => !it.gone);
     this.nades = S.nades || [];
+    this.cams = S.cams && S.cams.length && w._cams ? { K: w._cams, st: S.cams } : null;
   }
   // 飛んでいる投げ物（閃光・スティンガー・CS）
   nadeMesh(type) {
@@ -184,8 +185,37 @@ export class ActorView {
       gl.uniform1f(W.u.uRoomOverride, Math.max(0, roomOf(r.w0, n.x, n.y + 0.2, n.z)));
       drawMesh(gl, m);
     }
+    // 監視カメラ（壁に据え付け。使われている間は赤い光が強い）
+    if (this.cams) for (let i = 0; i < this.cams.K.length; i++) {
+      const K = this.cams.K[i], st = this.cams.st[i];
+      if (!K || !st || this.hideCam === i) continue;
+      if (!aabbVisible(r.planes, K.x - 0.3, K.y - 0.3, K.z - 0.3, K.x + 0.3, K.y + 0.3, K.z + 0.3)) continue;
+      const m = this._camMesh(st.ok ? (st.use >= 0 ? 2 : 1) : 0);
+      const c = Math.cos(K.yaw0), s = Math.sin(K.yaw0), M = this.M;
+      M[0] = c; M[1] = 0; M[2] = -s; M[3] = 0; M[4] = 0; M[5] = 1; M[6] = 0; M[7] = 0; M[8] = s; M[9] = 0; M[10] = c; M[11] = 0;
+      M[12] = K.x; M[13] = K.y; M[14] = K.z; M[15] = 1;
+      gl.uniformMatrix4fv(W.u.uModel, false, M);
+      gl.uniform1f(W.u.uRoomOverride, Math.max(0, roomOf(r.w0, K.x, K.y - 1, K.z)));
+      drawMesh(gl, m); r.stats.draws++;
+    }
     gl.uniform1f(W.u.uRoomOverride, -1);
     gl.uniformMatrix4fv(W.u.uModel, false, r.ident);
+  }
+  // 監視カメラの形: 0 壊れた（台だけ）・1 待機（暗い赤）・2 使われている（明るい赤）。ローカル: Z が前（据え付けの向き）
+  _camMesh(kind) {
+    this._cm = this._cm || {};
+    if (this._cm[kind]) return this._cm[kind];
+    const B = new MeshBuilder(), body = hex('#d9dad6'), dark = hex('#1a1c1f');
+    B.box(-0.035, 0.02, -0.17, 0.035, 0.1, -0.11, LAYER.metal, mulc(body, 0.8)); // 壁の台
+    B.box(-0.012, 0.0, -0.14, 0.012, 0.03, -0.02, LAYER.metal, mulc(body, 0.7)); // 腕
+    if (kind) {
+      B.bbox(-0.055, -0.06, -0.05, 0.055, 0.035, 0.13, 0.012, LAYER.metal, body);
+      B.box(-0.038, -0.045, 0.13, 0.038, 0.025, 0.145, LAYER.plain, dark);
+      B.emit = 1; B.box(0.026, 0.015, 0.145, 0.04, 0.029, 0.15, LAYER.plain, kind === 2 ? [3.2, 0.25, 0.15] : [0.7, 0.06, 0.04]); B.emit = 0;
+    } else {
+      B.box(-0.03, -0.05, -0.04, 0.04, 0.02, 0.06, LAYER.metal, mulc(body, 0.45));
+    }
+    return (this._cm[kind] = makeWorldMesh(this.gl, B));
   }
   // 偵察ドローン（シージの二輪の車）: 黒い胴、左右の太い車輪、前にカメラと青い光
   _drone(W, a) {
