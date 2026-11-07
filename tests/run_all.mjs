@@ -74,7 +74,7 @@ try {
     rows.push(`${id}: 到達${r.stats.reach}%${r.errors.length ? ' ✗' + r.errors.length : ''}${r.warn.length ? ' △' + r.warn.length : ''}`);
     rec('マップ', `${MAPS[id].name}: 家具・出現位置・扉・明かりに誤りがなく、どこへでも歩いて行ける`, !r.errors.length && r.stats.reach >= 100, r.errors.slice(0, 2).concat(r.warn.slice(0, 2)).join(' / ') || `${r.stats.rooms}部屋・扉${r.stats.doors}・家具${r.stats.props}・到達${r.stats.reach}%`);
   }
-  rec('マップ', 'マップの数: 作戦用6（対戦でも使える）＋対戦用2＋訓練場', PVE_MAPS.length === 6 && PVP_MAPS.length === 8 && PVP_MAPS.filter(m => MAPS[m].pvpOnly).length === 2 && !!MAPS.training, `作戦 ${PVE_MAPS.length}・対戦 ${PVP_MAPS.length}（うち対戦用 ${PVP_MAPS.filter(m => MAPS[m].pvpOnly).length}）`);
+  rec('マップ', 'マップの数: 作戦用7（対戦でも使える）＋対戦用2＋訓練場', PVE_MAPS.length === 7 && PVP_MAPS.length === 9 && PVP_MAPS.filter(m => MAPS[m].pvpOnly).length === 2 && !!MAPS.training, `作戦 ${PVE_MAPS.length}・対戦 ${PVP_MAPS.length}（うち対戦用 ${PVP_MAPS.filter(m => MAPS[m].pvpOnly).length}）`);
 } catch (e) { rec('マップ', 'マップの点検', false, e.message.slice(0, 200)); }
 
 // ---------------- 4 音（数値の検査）
@@ -206,9 +206,14 @@ try {
     // スクロールが落ち着いてから、指を置く所が本当にスライダーの溝か確かめて測る（遅い環境で位置がずれていた）
     await page.waitForTimeout(500);
     let sl2 = null;
-    for (let tr = 0; tr < 5 && !sl2; tr++) {
-      sl2 = await page.evaluate(() => { const t = document.querySelector('.screen.settings [data-k="bright"] .track'); const r = t.getBoundingClientRect(); const o = { x: r.left + r.width / 2, y0: r.top + 6, y1: r.bottom - 6, v: window.__app.settings.bright }; const h = document.elementFromPoint(o.x, o.y0); return h && t.contains(h) ? o : null; });
-      if (!sl2) await page.waitForTimeout(400);
+    for (let tr = 0; tr < 8 && !sl2; tr++) {
+      sl2 = await page.evaluate((tr) => {
+        const t = document.querySelector('.screen.settings [data-k="bright"] .track');
+        if (tr >= 3) { window.__app.stage.layout(); t.scrollIntoView({ block: 'center' }); } // 画面の大きさの変更が遅れて届いた・スクロールがずれた
+        const r = t.getBoundingClientRect(); const o = { x: r.left + r.width / 2, y0: r.top + 6, y1: r.bottom - 6, v: window.__app.settings.bright };
+        const h = document.elementFromPoint(o.x, o.y0); return h && t.contains(h) ? o : null;
+      }, tr);
+      if (!sl2) await page.waitForTimeout(500);
     }
     if (!sl2) sl2 = await page.evaluate(() => { const r = document.querySelector('.screen.settings [data-k="bright"] .track').getBoundingClientRect(); return { x: r.left + r.width / 2, y0: r.top + 6, y1: r.bottom - 6, v: window.__app.settings.bright }; });
     await touch('touchStart', [{ x: sl2.x, y: sl2.y0, id: 2 }]);
@@ -217,7 +222,7 @@ try {
     await page.waitForFunction((v) => window.__app.settings.bright > v + 0.3, sl.v, { timeout: 5000 }).catch(() => {});
     const bright = await page.evaluate(() => window.__app.settings.bright);
     let why = '';
-    if (!(bright > sl.v + 0.3)) { why = ' ' + await page.evaluate(([x, y]) => { const e = document.elementFromPoint(x, y); return 'hit=' + (e ? (e.className || e.tagName) + '<' + (e.parentElement && e.parentElement.className) : 'null') + ' scr=' + window.__app.screens.cur + ' mode=' + window.__app.mode; }, [sl2.x, sl2.y0]); await shot('回した画面-スライダー'); }
+    if (!(bright > sl.v + 0.3)) { why = ' ' + await page.evaluate(([x, y]) => { const e = document.elementFromPoint(x, y); return 'hit=' + (e ? (e.className || e.tagName) + '<' + (e.parentElement && e.parentElement.className) : 'null') + ` at ${Math.round(x)},${Math.round(y)} view ${innerWidth}x${innerHeight}` + ' scr=' + window.__app.screens.cur + ' mode=' + window.__app.mode; }, [sl2.x, sl2.y0]); await shot('回した画面-スライダー'); }
     rec('回した画面', 'スライダーが指の向きどおりに動く', bright > sl.v + 0.3, `明るさ ${sl.v} → ${bright}${why}`);
     await page.evaluate((v) => { window.__app.settings.bright = v; window.__app.applySettings(); }, sl.v);
   }
@@ -552,6 +557,8 @@ if (!NONET) {
         rec('オンライン', `${kind === 'pve' ? '協力' : '対戦'}: ルームを作り、コードで入ってロビーにそろう`, true, `コード ${code}`);
         await H.page.screenshot({ path: path.join(SHOTS, `オンライン-${kind}-ロビー.png`) });
         if (kind === 'pvp') await H.page.evaluate(() => { const S = window.__app.net.sess; S.setCfg({ ...S.cfg, mode: 'tdm', map: 'motel', teams: [1, 1] }); const g = S.roster.find(r => !r.host); S.setTeam(g.cid, 1); });
+        // 2画面を同時に描くので、画質を下げてこまを速くする（入力が1.5秒より古いとホストは捨てる）
+        for (const P of [H.page, G.page]) await P.evaluate(() => { const a = window.__app; a.settings.quality = 'low'; if (a.applySettings) a.applySettings(); });
         await H.page.evaluate(() => window.__app.hostStart());
         await H.page.waitForFunction(() => window.__app.mode === 'game', null, { timeout: 120000 });
         await G.page.waitForFunction(() => window.__app.mode === 'game', null, { timeout: 120000 });
@@ -563,7 +570,8 @@ if (!NONET) {
         // 前が開けている向きへ（出現した所の前が塀や壁のこともある）
         await G.page.evaluate(() => { const g = window.__app.game, w = g.w, p = g.p, PL = Math.max(0, Math.floor((p.y + 0.3) / 3)); let best = 0, bd = -1; for (let k = 0; k < 16; k++) { const yw = k * Math.PI / 8; let d = 0; for (let s = 0.3; s <= 3; s += 0.25) { const x = p.x + Math.sin(yw) * s, z = p.z + Math.cos(yw) * s, i = Math.floor(x / 0.5), j = Math.floor(z / 0.5); if (i < 0 || j < 0 || i >= w.W || j >= w.D) break; const k2 = w.idx(PL, i, j), t = w.cell[k2]; if (t !== 1 && t !== 2) break; if ((w.propNear.get(k2) || []).some(pid => { const q = w.props[pid]; return q && q.solid && q.alive !== false && q.boxes.some(b => b[4] > 0.3 && x > b[0] - 0.35 && x < b[3] + 0.35 && z > b[2] - 0.35 && z < b[5] + 0.35); })) break; d = s; } if (d > bd) { bd = d; best = yw; } } g.yaw = best; });
         await G.page.keyboard.down('KeyW'); await G.page.waitForTimeout(8000); await G.page.keyboard.up('KeyW');
-        await G.page.evaluate(async () => { const a = window.__app; a.input.hold.add('fire'); await new Promise(r => setTimeout(r, 1200)); a.input.hold.delete('fire'); });
+        // 射撃: ソフトウェア描画の2画面では1こまが1秒を超えることがあり、短く押すと送る前に離してしまう。3秒押し続ける
+        await G.page.evaluate(async () => { const a = window.__app; a.input.hold.add('fire'); await new Promise(r => setTimeout(r, 3000)); a.input.hold.delete('fire'); });
         await new Promise(r => setTimeout(r, 4000));
         const after = await H.page.evaluate(() => { const g = window.__app.game; const b = g.S.actors.find(a => a.pid === 1); return b ? { x: b.x, z: b.z, sh: b.stats.sh } : null; });
         const gs = await G.page.evaluate(() => { const g = window.__app.game; return { n: g.S.actors.length, me: g.p ? g.p.id : -1, err: window.__app._lastErr || null }; });

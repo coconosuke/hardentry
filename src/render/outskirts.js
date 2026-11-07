@@ -35,6 +35,7 @@ const THEMES = {
   office: { style: 'city', bld: 'office', ground: 'grass', skyline: true },
   club: { style: 'city', bld: 'warehouse', ground: 'lot', skyline: true },
   port: { style: 'port', bld: 'warehouse', ground: 'lot', water: 'N' },
+  manor: { style: 'suburb', bld: 'house', ground: 'grass', hills: true, water: 'N', lake: true },
 };
 
 function rng(seed) { let s = seed >>> 0 || 1; return () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
@@ -102,10 +103,12 @@ export function buildOutskirts(w, def, o = {}) {
 
   // ---- 1) 遠くまでの地面（マップの外の4枚）。少し低くして、境の地面の続き（下の apron）と重ならないように
   const E = 390, gy = -0.06, [gl, gc] = GL[T.ground] || GL.grass;
-  ground(B, -E, -E, Wm + E, 0, gy, gl, gc);
-  ground(B, -E, Dm, Wm + E, Dm + E, gy, gl, gc);
-  ground(B, -E, 0, 0, Dm, gy, gl, gc);
-  ground(B, Wm, 0, Wm + E, Dm, gy, gl, gc);
+  // 水のある辺（港の海・湖）は、その向こうを地面でふさがない（水面は harbor / lakeShore が描く）
+  const wN = T.water === 'N', wS = T.water === 'S', wW = T.water === 'W', wE = T.water === 'E';
+  if (!wN) ground(B, -E, -E, Wm + E, 0, gy, gl, gc);
+  if (!wS) ground(B, -E, Dm, Wm + E, Dm + E, gy, gl, gc);
+  if (!wW) ground(B, -E, 0, 0, Dm, gy, gl, gc);
+  if (!wE) ground(B, Wm, 0, Wm + E, Dm, gy, gl, gc);
 
   // 道の寸法（境からの距離）
   const AP = 2.4;                       // 境の地面の続き
@@ -157,7 +160,7 @@ export function buildOutskirts(w, def, o = {}) {
     }
     // ---- 5) 隣の建物の列（街・住宅街・道路ぞい・港）
     const t0 = NS ? -60 : 0, t1 = NS ? s.len + 60 : s.len;
-    if (T.water && s.id === T.water) { harbor(B, G, s, t0 - 60, t1 + 60, R, night); continue; }
+    if (T.water && s.id === T.water) { (T.lake ? lakeShore : harbor)(B, G, s, t0 - 60, t1 + 60, R, night); continue; }
     rowOfBuildings(B, G, s, t0, t1, s.dRow, T, R, night, dusk, 1);
     // 2列目（遠く。細部を減らす）。東西は辺の長さだけ（角は南北の列が受け持つ）
     if (!o.lite) rowOfBuildings(B, G, s, NS ? t0 - 40 : -5, NS ? t1 + 40 : s.len + 5, s.dRow + 34 + R() * 8, T, R, night, dusk, 2);
@@ -405,6 +408,28 @@ function tree(B, p, R, row) {
   B.loft([{ y: 1.8 * sc, rx: 0.6 * sc, rz: 0.6 * sc, cx: p[0], cz: p[1] }, { y: 3.2 * sc, rx: 1.7 * sc, rz: 1.6 * sc, cx: p[0], cz: p[1] }, { y: 5.0 * sc, rx: 0.4 * sc, rz: 0.4 * sc, cx: p[0], cz: p[1] }], 6, LAYER.leaves, mixc(COL.leaf, COL.leafD, R()), { capTop: true, capBot: true });
 }
 
+// ---- 湖の岸（屋敷の裏）: 草の土手・岸の岩・木の桟橋とボート小屋・水面・向こう岸の林
+function lakeShore(B, G, s, t0, t1, R, night) {
+  const q0 = 5; // 境から水際まで
+  { const [x0, z0, x1, z1] = rect(s, t0 - 200, t1 + 200, 0, q0); ground(B, x0, z0, x1, z1, -0.02, LAYER.grass, COL.grassD); }
+  // 水際の岩と葦
+  for (let t = t0; t < t1; t += 2.2 + R() * 2.5) {
+    const p = P(s, t, q0 - 0.4 + R() * 0.8), r = 0.25 + R() * 0.5;
+    B.box(p[0] - r, -0.3, p[1] - r * 0.8, p[0] + r, 0.12 + R() * 0.25, p[1] + r * 0.8, LAYER.concrete, mixc(H('#6f6a62'), H('#8a857c'), R()), { uv: 0.5 });
+    if (R() < 0.5) { const q = P(s, t + 0.8, q0 - 1.2); B.cyl(q[0], q[1], -0.02, 0.9 + R() * 0.5, 0.05, 0.02, 4, LAYER.leaves, mixc(COL.leaf, COL.field, R())); }
+  }
+  // 岸の木
+  for (let t = t0 + 4; t < t1; t += 9 + R() * 8) tree(B, P(s, t, 3 + R() * 7), R, 1);
+  // 木の桟橋（真ん中あたりから水の上へ）とボート小屋
+  const tc = (t0 + t1) / 2 + 8, yaw = yawToMap(s);
+  { const [x0, z0, x1, z1] = rect(s, tc - 1.1, tc + 1.1, q0 - 2, q0 + 16); B.box(x0, 0.0, z0, x1, 0.18, z1, LAYER.wood, COL.wood, { uv: 0.5 }); }
+  for (let d = q0; d <= q0 + 16; d += 4) for (const o of [-1.0, 1.0]) { const p = P(s, tc + o, d); B.cyl(p[0], p[1], -1.2, 0.5, 0.09, 0.09, 6, LAYER.wood, mulc(COL.wood, 0.8)); }
+  { const p = P(s, tc - 9, q0 + 2.2); B.setXf(xfYaw(p[0], 0, p[1], yaw)); B.box(-3, 0, -2.5, 3, 2.6, 2.5, LAYER.siding, H('#7a5c44'), { uv: 0.5, faces: 1 | 2 | 4 | 16 | 32 }); B.box(-3.3, 2.6, -2.8, 3.3, 2.9, 2.8, LAYER.wood, COL.roof, { uv: 0.5 }); if (night) { B.emit = 2; B.box(-0.6, 1.2, 2.5, 0.6, 1.9, 2.55, LAYER.plain, COL.winLit); B.emit = 0; } B.setXf(null); }
+  // 水面と向こう岸の林（遠く）
+  const [wx0, wz0, wx1, wz1] = rect(s, t0 - 400, t1 + 400, q0, q0 + 420);
+  B.emit = night ? 0.12 : 0.05; ground(B, wx0, wz0, wx1, wz1, -0.35, LAYER.plain, night ? H('#22394a') : COL.water); B.emit = 0;
+  for (let t = t0 - 160; t < t1 + 160; t += 6 + R() * 6) tree(B, P(s, t, q0 + 150 + R() * 30), R, 2);
+}
 // ---- 港: コンテナの列・岸壁・海・ガントリークレーン
 function harbor(B, G, s, t0, t1, R, night) {
   const dRow = 6;
@@ -415,8 +440,9 @@ function harbor(B, G, s, t0, t1, R, night) {
       for (let k = 0; k < n; k++) container(B, p, yaw, k * 2.6, CONT[Math.floor(R() * CONT.length)]);
     }
   }
-  // 岸壁と海
+  // 岸壁と海（岸壁までの地面は舗装）
   const q0 = dRow + 4 * 3.1 + 6;
+  { const [x0, z0, x1, z1] = rect(s, t0 - 200, t1 + 200, 0, q0); ground(B, x0, z0, x1, z1, -0.06, LAYER.asphalt, COL.lot); }
   const [x0, z0, x1, z1] = rect(s, t0 - 200, t1 + 200, q0, q0 + 3);
   B.box(x0, -1.2, z0, x1, 0.0, z1, LAYER.concrete, COL.quay, { faces: 4 | 16 | 32 | 1 | 2, uv: 0.5 });
   for (let t = t0; t < t1; t += 12) { const p = P(s, t, q0 + 2.4); B.cyl(p[0], p[1], 0, 0.5, 0.18, 0.15, 7, LAYER.metal, H('#2a2b2e')); }

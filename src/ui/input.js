@@ -268,7 +268,11 @@ export class Input {
     // 1こまだけ待つ（遅いこまが続くときは次のこまで判定する）
     // こまが遅れた（150ms 以上あいた）ときは長押しを決めない: たまっていた「離した」がまだ届いていないかもしれない。
     // 長く押していたなら、離したときに長押しとして扱う（短く押したのが遅いこまのせいで長押しにならないように）
-    const hitch = this._lastTake != null && now - this._lastTake > 150;
+    // ただし、ずっと遅い端末（いつも150ms以上あく）では、いつもの間隔の2.2倍を超えたときだけ「遅れ」とみなす（でないと長押しが離すまで決まらない）
+    const gap = this._lastTake != null ? now - this._lastTake : 0;
+    const avg = this._avgGap ?? gap;
+    const hitch = this._lastTake != null && gap > 150 && gap > 2.2 * avg;
+    this._avgGap = gap > 2000 ? avg : avg * 0.85 + gap * 0.15; // 一時停止などの長い空きは平均に入れない
     this._lastTake = now;
     for (const [pid, p] of this.ptr) {
       if (p.kind !== 'btn' || p.long || p.moved > 36 || hitch) continue;
