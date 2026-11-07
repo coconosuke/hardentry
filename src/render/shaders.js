@@ -364,7 +364,7 @@ void main(){
   if (uDamage > 0.0) { float e = smoothstep(0.1, 0.7, r2) * uDamage; m = mix(m, vec3(0.45, 0.02, 0.01), e * 0.7); }
   if (uGas > 0.0) { m = mix(m, m * vec3(1.05, 0.95, 0.75) + vec3(0.06, 0.05, 0.0), uGas * 0.6); }
   // 煙の中: 灰色に覆われる（明るさは少し残す）
-  if (uSmoke > 0.0) { m = mix(m, vec3(0.42, 0.43, 0.45) * (0.55 + 0.6 * dot(m, vec3(0.3333))), clamp(uSmoke, 0.0, 0.97)); }
+  if (uSmoke > 0.0) { m = mix(m, vec3(0.42, 0.43, 0.45) * (0.82 + 0.22 * dot(m, vec3(0.3333))), clamp(uSmoke, 0.0, 0.97)); }
   m = mix(m, vec3(1.0), clamp(uFlashW, 0.0, 1.0));
   // ディザ
   m += (hash12(vUV * 1000.0 + uTime2) - 0.5) / 255.0;

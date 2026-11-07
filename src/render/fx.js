@@ -98,6 +98,10 @@ export class FX {
   smoke(x, y, z, r, col = [0.75, 0.75, 0.75], a = 0.4, life = 3) {
     this.add({ x: x + this.rs(r * 0.4), y: y + this.rs(r * 0.2), z: z + this.rs(r * 0.4), vx: this.rs(0.15), vy: 0.08 + this.rnd() * 0.1, vz: this.rs(0.15), life: life * (0.7 + this.rnd() * 0.6), s0: r * 0.5, s1: r * 1.1, c: [col[0], col[1], col[2], a], sh: SH.soft, g: 0, lit: true, drag: 0.6 });
   }
+  // 発煙弾の煙の粒（大きく濃い）。カメラが粒の中に入ったら描かない（画面いっぱいの粒を何枚も重ねると重い。中は画面の後処理で灰色にする）
+  smokeWall(x, y, z, r, col, a, life) {
+    this.add({ x: x + this.rs(r * 0.3), y: y + this.rs(r * 0.15), z: z + this.rs(r * 0.3), vx: this.rs(0.08), vy: 0.03 + this.rnd() * 0.05, vz: this.rs(0.08), life: life * (0.75 + this.rnd() * 0.5), s0: r * 0.7, s1: r * 1.05, c: [col[0], col[1], col[2], a], sh: SH.soft, g: 0, lit: true, drag: 0.8, cull: true });
+  }
   explosion(x, y, z, r, kind) {
     const big = kind === 'c2' || kind === 'frame' || kind === 'frag';
     this.add({ x, y, z, vx: 0, vy: 0, vz: 0, life: 0.12, s0: r * 0.35, s1: r * 0.6, c: [20, 14, 8, 1], add: true, sh: SH.soft });
@@ -204,7 +208,9 @@ export class FX {
       w(3, q.x - ax + bx, q.y - ay + by, q.z - az + bz, -1, 1);
     };
     // 不透明に近いもの（アルファ）を先に、光るもの（加算）を後に
-    for (const q of this.p) if (!q.add) put(q, nA++);
+    // 煙の壁の粒: カメラが粒の中（大きさの1.3倍より近い）なら描かない
+    const near = (q) => { if (!q.cull) return false; const s = q.s0 + (q.s1 - q.s0) * (q.t / q.life); return Math.hypot(q.x - cam[0], q.y - cam[1], q.z - cam[2]) < s * 1.3; };
+    for (const q of this.p) if (!q.add && !near(q)) put(q, nA++);
     let nB = nA;
     for (const q of this.p) if (q.add) put(q, nB++);
     // 曳光弾

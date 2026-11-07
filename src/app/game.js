@@ -751,7 +751,7 @@ export class Match {
       for (const c of S.clouds || []) {
         if (c.type !== 'smoke') continue;
         const R = Math.max(0.4, c.r || 1);
-        for (let q = 0; q < 2; q++) { const a = Math.random() * 6.28, d = Math.sqrt(Math.random()) * R * 0.8, h = (Math.random() * 2 - 1) * R * 0.5; this.fx.smoke(c.x + Math.cos(a) * d, c.y + h - 0.2, c.z + Math.sin(a) * d, Math.max(0.6, R * 0.6), [0.6, 0.61, 0.62], 0.7, 3.2); }
+        for (let q = 0; q < 2; q++) { const a = Math.random() * 6.28, d = Math.sqrt(Math.random()) * R * 0.7, h = (Math.random() * 2 - 1) * R * 0.45; this.fx.smokeWall(c.x + Math.cos(a) * d, c.y + h - 0.2, c.z + Math.sin(a) * d, Math.max(0.6, R * 0.62), [0.58, 0.59, 0.6], 0.9, 3.6); }
       }
     }
     this.fx.update(dt);

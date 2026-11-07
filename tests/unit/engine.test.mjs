@@ -455,3 +455,30 @@ test('melee: 近接は3回でバリケードを壊す（穴の所を殴っても
   for (let i = 0; i < 30; i++) step(T, { [q.id]: { yaw: 0, pitch: 0, act: i === 0 ? [{ a: 'melee' }] : null } });
   eq(fh - foe.hp, 50, '対戦の近接は50');
 });
+test('smoke: 発煙弾の煙の向こうは AI から見えない（煙が消えると見える）。煙に害はない', async () => {
+  const { visibility } = await import('../../src/engine/ai/common.js');
+  const G = createGame({ map: 'bank', mode: 'tdm', teams: [1, 1], roster: [{ pid: 0, name: 'P', team: 0 }], seed: 3 });
+  const { S } = G;
+  const a = S.actors.find(x => x.team === 0 && !x.isDrone), b = S.actors.find(x => x.team === 1 && !x.isDrone);
+  // 外の開けた所（銀行の正面の通り）で 12m 離して向かい合わせる
+  a.x = 14; a.z = 31; a.y = 0; b.x = 26; b.z = 31; b.y = 0; a.yaw = Math.PI / 2; b.yaw = -Math.PI / 2; a.stance = b.stance = 0; a.st = b.st = 0;
+  a._capT = b._capT = -1;
+  for (const x of S.actors) if (x.ai) x.ai = null; // 動かないように
+  const v0 = visibility(S, G.w, a, b);
+  ok(v0 > 0, `煙がなければ見える ${v0}`);
+  S.clouds.push({ x: 20, y: 1.1, z: 31, r: 3.2, max: 3.2, t: 16, type: 'smoke', L: 0 });
+  eq(visibility(S, G.w, a, b), 0, '煙の玉ごしは見えない');
+  const hp = b.hp;
+  for (let i = 0; i < 60; i++) step(G, {});
+  ok(b.hp >= hp && !(b.gas > 0), '煙は害がない');
+  S.clouds.length = 0;
+  a.x = 14; a.z = 31; a.y = 0; b.x = 26; b.z = 31; b.y = 0; a.yaw = Math.PI / 2; a.stance = b.stance = 0; a.st = b.st = 0; a._capT = b._capT = -1;
+  ok(visibility(S, G.w, a, b) > 0, '煙が消えるとまた見える');
+  // 投げると煙の雲ができる
+  const me = S.actors.find(x => x.pid === 0);
+  me.inv.gear = [{ id: 'smoke', n: 1 }];
+  let made = false;
+  for (let i = 0; i < 60 * 6 && S.m.phase !== 'action'; i++) step(G, {});
+  for (let i = 0; i < 60 * 5 && !made; i++) { step(G, { [me.id]: { yaw: me.yaw, pitch: -0.2, act: i === 0 ? [{ a: 'gear', id: 'smoke' }] : null, fire: i > 60 && i < 64 } }); made = S.clouds.some(c => c.type === 'smoke'); }
+  ok(made, '投げると煙の雲ができる');
+});
