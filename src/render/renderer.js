@@ -600,6 +600,7 @@ export class Renderer {
     gl.uniform1f(C.u.uTime2, this.time);
     gl.uniform1f(C.u.uSat, p.sat ?? 1.08);
     if (C.u.uPeek) gl.uniform1f(C.u.uPeek, p.peek || 0);
+    if (C.u.uSmoke) gl.uniform1f(C.u.uSmoke, p.smoke || 0);
     gl.uniform1f(C.u.uBlur, p.blur || 0);
     gl.uniform2f(C.u.uTexel2, 1 / W, 1 / H);
     gl.drawArrays(gl.TRIANGLES, 0, 3);

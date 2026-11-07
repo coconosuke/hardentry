@@ -97,11 +97,32 @@ function detonate(S, w, n, ev) {
     }
   } else if (n.type === 'cs') {
     S.clouds.push({ x: n.x, y: n.y, z: n.z, r: 0.5, max: 4.6, t: 20, type: 'cs', L: levelOfY(n.y) });
+  } else if (n.type === 'smoke') {
+    // 煙: 床から立ちのぼって半径 3.2m の玉になる（目の高さを覆うよう、中心は床から 1.1m）
+    S.clouds.push({ x: n.x, y: n.y + 1.1, z: n.z, r: 0.4, max: 3.2, t: 16, type: 'smoke', L: levelOfY(n.y) });
   } else if (n.type === 'frag') {
     S.blasts.push({ x: n.x, y: n.y + 0.2, z: n.z, r: 5, dmg: 150, kind: 'frag', by: n.by, t: 0 });
   }
 }
 
+// 煙がさえぎる度合い（0..1）: 2点の間の線が煙の玉の中を通るか（中心に近いほど濃い）
+export function smokeBetween(S, ax, ay, az, bx, by, bz) {
+  const cl = S.clouds; if (!cl || !cl.length) return 0;
+  let best = 0;
+  const dx = bx - ax, dy = by - ay, dz = bz - az, L2 = dx * dx + dy * dy + dz * dz;
+  for (const c of cl) {
+    if (c.type !== 'smoke' || c.r < 0.8) continue;
+    let t = L2 > 1e-6 ? ((c.x - ax) * dx + (c.y - ay) * dy + (c.z - az) * dz) / L2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    const px = ax + dx * t - c.x, py = ay + dy * t - c.y, pz = az + dz * t - c.z;
+    const d = Math.hypot(px, py * 1.4, pz), R = c.r * 0.92;
+    if (d >= R) continue;
+    const k = Math.min(1, (R - d) / Math.max(0.3, R * 0.35));
+    if (k > best) best = k;
+    if (best >= 1) break;
+  }
+  return best;
+}
 // ガスの雲: 広がって薄れる。中の人（マスクなし）に効く
 export function stepClouds(S, w, dt, ev) {
   for (let i = S.clouds.length - 1; i >= 0; i--) {
@@ -109,6 +130,7 @@ export function stepClouds(S, w, dt, ev) {
     c.t -= dt;
     c.r = Math.min(c.max, c.r + dt * 1.6);
     if (c.t <= 0) { S.clouds.splice(i, 1); continue; }
+    if (c.type === 'smoke') { if (c.t < 3) c.r = Math.max(0.1, c.max * c.t / 3); continue; } // 煙は害がない（終わりは薄れて縮む）
     if (S.t % 6 !== 0) continue;
     for (const a of S.actors) {
       if (!a.alive || a.isDrone) continue;

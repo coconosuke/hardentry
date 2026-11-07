@@ -309,7 +309,7 @@ void main(){
 }`;
 export const COMP_FS = `
 uniform sampler2D uSrc; uniform sampler2D uBloom; uniform float uBloomK; uniform float uExposure; uniform float uVig;
-uniform float uNVG; uniform float uFlashW; uniform float uDamage; uniform float uSupp; uniform float uGas; uniform float uTime2; uniform float uSat; uniform float uBlur; uniform vec2 uTexel2; uniform float uPeek;
+uniform float uNVG; uniform float uFlashW; uniform float uDamage; uniform float uSupp; uniform float uGas; uniform float uTime2; uniform float uSat; uniform float uBlur; uniform vec2 uTexel2; uniform float uPeek; uniform float uSmoke;
 in vec2 vUV; layout(location=0) out vec4 oCol;
 vec3 aces(vec3 x){ return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0); }
 void main(){
@@ -363,6 +363,8 @@ void main(){
   if (uSupp > 0.0) { float e = smoothstep(0.05, 0.6, r2) * uSupp; m = mix(m, vec3(dot(m, vec3(0.33))) * 0.55, e * 0.8); }
   if (uDamage > 0.0) { float e = smoothstep(0.1, 0.7, r2) * uDamage; m = mix(m, vec3(0.45, 0.02, 0.01), e * 0.7); }
   if (uGas > 0.0) { m = mix(m, m * vec3(1.05, 0.95, 0.75) + vec3(0.06, 0.05, 0.0), uGas * 0.6); }
+  // 煙の中: 灰色に覆われる（明るさは少し残す）
+  if (uSmoke > 0.0) { m = mix(m, vec3(0.42, 0.43, 0.45) * (0.55 + 0.6 * dot(m, vec3(0.3333))), clamp(uSmoke, 0.0, 0.97)); }
   m = mix(m, vec3(1.0), clamp(uFlashW, 0.0, 1.0));
   // ディザ
   m += (hash12(vUV * 1000.0 + uTime2) - 0.5) / 255.0;

@@ -50,7 +50,9 @@ export class AudioSys {
     this.comp.threshold.value = -10; this.comp.knee.value = 6; this.comp.ratio.value = 5; this.comp.attack.value = 0.002; this.comp.release.value = 0.2;
     // 耳が遠くなる（閃光・爆発）ためのローパス
     this.muf = c.createBiquadFilter(); this.muf.type = 'lowpass'; this.muf.frequency.value = 20000; this.muf.Q.value = 0.5;
-    this.master.connect(this.muf); this.muf.connect(this.comp); this.comp.connect(c.destination);
+    // 体力が少ない・倒れた直後: まわりの音を少しこもらせる（画面の音と BGM はそのまま）
+    this.hurtF = c.createBiquadFilter(); this.hurtF.type = 'lowpass'; this.hurtF.frequency.value = 20000; this.hurtF.Q.value = 0.4;
+    this.master.connect(this.hurtF); this.hurtF.connect(this.muf); this.muf.connect(this.comp); this.comp.connect(c.destination);
     this.bus = {};
     for (const k of ['bgm', 'sfx', 'voice', 'ui']) { const g = c.createGain(); g.connect(k === 'ui' || k === 'bgm' ? this.comp : this.master); this.bus[k] = g; }
     // 残響: 屋内（短く濃い）と屋外（長く、こだま）
@@ -248,6 +250,14 @@ export class AudioSys {
     const d = this._dist(pos);
     return this.play(null, { buffer: this.voiceBuf[S], offset: clip[0], dur: clip[1], pos: o.radio ? null : pos, bus: 'voice', vol: (o.vol ?? 1) * (o.radio ? 0.85 : 1), verb: o.radio ? 0 : 0.45, radio: !!o.radio, hrtf: pos && d < 15, ref: 3, roll: 0.9, delay: pos && !o.radio ? d / 343 : 0 });
   }
+  // こもり 0..1（1で約2.4kHzより上が落ちる）
+  setHurt(k) {
+    if (!this.ctx || !this.hurtF) return;
+    const f = k > 0.01 ? 20000 * Math.pow(0.12, Math.min(1, k)) : 20000;
+    if (Math.abs(f - (this._hurtF || 20000)) < 60) return;
+    this._hurtF = f;
+    this.hurtF.frequency.setTargetAtTime(f, this.ctx.currentTime, 0.25);
+  }
   // 閃光や爆発で耳が遠くなる（sec 秒で戻る）＋耳鳴り
   deafen(sec) {
     if (!this.ctx) return;
@@ -290,7 +300,7 @@ export class AudioSys {
     return cur;
   }
   loopVol(name, v, t = 0.3) { const h = this.loops[name]; if (h && this.ctx) h.gain.gain.setTargetAtTime(v, this.ctx.currentTime, t); }
-  stopAll() { for (const k of Object.keys(this.loops)) this.loop(k, false, { fade: 0.2 }); if (this.ctx) { this.muf.frequency.cancelScheduledValues(this.ctx.currentTime); this.muf.frequency.setTargetAtTime(20000, this.ctx.currentTime, 0.05); } }
+  stopAll() { for (const k of Object.keys(this.loops)) this.loop(k, false, { fade: 0.2 }); if (this.ctx) { this.muf.frequency.cancelScheduledValues(this.ctx.currentTime); this.muf.frequency.setTargetAtTime(20000, this.ctx.currentTime, 0.05); this.setHurt(0); } }
   // 画面が裏に回ったら止める
   suspend() { this.suspended = true; if (this.ctx && this.ctx.state === 'running') this.ctx.suspend(); }
   resume() { this.suspended = false; if (this.ctx && this.ctx.state !== 'running') this.ctx.resume(); }

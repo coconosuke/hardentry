@@ -3,6 +3,7 @@ import { occluded, CS, LH, levelOfY, groundAt, leafEnd } from '../world.js';
 import { reachOK } from '../interact.js';
 import { findPath, smoothPath, navCell, cellCenter, buildNav, leafCells } from './nav.js';
 import { eyeOf } from '../combat.js';
+import { smokeBetween } from '../nades.js';
 import { curW, curWeapon, ammoCount } from '../actor.js';
 import { hrand, rnd } from '../rng.js';
 import { isOpen, isClosed, sideOf } from '../doors.js';
@@ -59,6 +60,9 @@ export function visibility(S, w, a, b, opt = {}) {
     const hy = b.y + (b.st > 1.5 ? 0.45 : b.st > 0.5 ? 1.15 : 1.65);
     if (occluded(w, e[0], e[1], e[2], bx, hy, bz, S.doors, true)) return 0;
   }
+  // 煙（発煙弾）の向こうは見えない
+  const sm = smokeBetween(S, e[0], e[1], e[2], bx, by, bz);
+  if (sm >= 0.98) return 0;
   // 明るさ: 暗いと見えにくい（ライトや暗視があれば別）
   let L = Math.min(1, brightCell(w, bx, b.y + 1, bz) * 2.2);
   if (b.light) L = Math.max(L, 0.95); // 自分のライトで目立つ
@@ -73,6 +77,7 @@ export function visibility(S, w, a, b, opt = {}) {
   v *= ang < 0.5 ? 1 : 0.7;
   if (a.flash > 0.4) v *= 0.05;
   if (a.gas > 0 && !(a.armor && a.armor.head === 'gasmask')) v *= 0.6;
+  if (sm > 0) v *= 1 - sm;
   return Math.min(1, v);
 }
 

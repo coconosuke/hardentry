@@ -5,6 +5,7 @@ import { curWeapon, curW, ammoCount } from '../engine/actor.js';
 import { contextOf, OP_NAME, doorOps, personOps } from '../engine/interact.js';
 import { spreadDeg, attMods } from '../engine/weapon.js';
 import { raycast, CS, LH, levelOfY, los } from '../engine/world.js';
+import { smokeBetween } from '../engine/nades.js';
 import { sideOf, isOpen } from '../engine/doors.js';
 import { WEAPONS } from '../engine/data/weapons.js';
 import { GEAR, LONG } from '../engine/data/equipment.js';
@@ -69,7 +70,7 @@ export class Match {
     this.au.playMusic(this.S.pvp ? 'pvp' : this.S.mode === 'pve' ? 'op' : 'menu', { fade: 3, vol: this.S.pvp ? 0.55 : this.S.mode === 'pve' ? 0.6 : 0.35 });
     if (!o.dump && !this.S.pvp && this.S.mode === 'pve') setTimeout(() => this._say(null, 'toc_start', false, 'TOC'), 900);
   }
-  destroy() { this.r.clearMap(); this.fx.clear(); this.av.dispose(); this.fx.dispose(); this.vm.dispose(); this.au.occluder = null; this.au.ambience(false); this.au.stopMusic(1.5); }
+  destroy() { this.r.clearMap(); this.fx.clear(); this.av.dispose(); this.fx.dispose(); this.vm.dispose(); this.au.occluder = null; this.au.ambience(false); this.au.stopMusic(1.5); this.au.loop('heart', false, { fade: 0.3 }); this.au.setHurt(0); }
   rebind(r) {
     if (r) { if (this.av) { this.av.dispose(); this.fx.dispose(); this.vm.dispose(); } this.r = r; this.av = new ActorView(r); this.fx = new FX(r); this.vm = new ViewModel(r, this.av); this.fx.blood = this.app.settings.blood !== false; { const g = gfxOf(this.app.settings); this.fx.amount = { low: 0.5, normal: 1, high: 1.5 }[g.fx] || 1; this.fx.shells = g.shells !== false; } this.av.hidden.add(this.p.id); this.vm.setColors(this.av.look(this.p).pal.slice(3, 6), [0.02, 0.02, 0.025]); this.fx.onClink = (x, y, z) => this.au.sfx('shell', [x, y, z], { vol: 0.35 }); }
     this.r.setMap(this.w, this.def, this.S);
@@ -468,6 +469,7 @@ export class Match {
           if (a === p && this.vm.on) { mz = this.vm.out.muzzle; fx.muzzle(mz[0], mz[1], mz[2], this.vm.out.fwd[0], this.vm.out.fwd[1], this.vm.out.fwd[2], W.cat === 'pistol' ? 0.7 : 1, e.supp); const ej = this.vm.out.eject, r = this.vm.out.right; if (W.cat !== 'shotgun' && !W.revolver) fx.shell(ej[0], ej[1], ej[2], -r[0] * 1.6 + this.vm.out.up[0], 1.4, -r[2] * 1.6 + this.vm.out.up[2], W.cal === '762x51' || W.cal === '762x39'); }
           else { const g = this._gunFrame(a); if (g) { const L = gunModel(e.wid, (curWeapon(a) || {}).att || {}); const ml = L ? L.len : 0.4; mz = [g.p[0] + g.f[0] * ml, g.p[1] + g.f[1] * ml, g.p[2] + g.f[2] * ml]; fx.muzzle(mz[0], mz[1], mz[2], g.f[0], g.f[1], g.f[2], 1, e.supp); } else mz = [e.x, e.y + 1.4, e.z]; }
           au.gun(e.wid, a === p ? null : mz, { supp: e.supp, local: a === p, n: e.n });
+          { const d = a === p ? 0 : Math.hypot(a.x - this.cam.x, a.z - this.cam.z); this._heatUp(a === p ? 0.1 : (e.supp ? 0.12 : 0.3) * Math.max(0, 1 - d / 45)); }
           break;
         }
         case 'imp': if (!e.exit) { fx.impact(e.x, e.y, e.z, e.nx, e.ny, e.nz, e.m); if (Math.hypot(e.x - this.cam.x, e.z - this.cam.z) < 25) au.sfx(impSound(e.m), [e.x, e.y, e.z], { vol: 0.5 }); } else fx.impact(e.x, e.y, e.z, e.nx, e.ny, e.nz, e.m); break;
@@ -485,7 +487,7 @@ export class Match {
           if (e.id === me) {
             const src = S.byId[e.by];
             if (src) hud.damageFrom(Math.atan2(src.x - p.x, src.z - p.z));
-            this.dmgK = Math.min(1, this.dmgK + (e.d || 10) / 40); this.shake = Math.min(1, this.shake + (e.d || 10) / 60);
+            this.dmgK = Math.min(1, this.dmgK + (e.d || 10) / 40); this.shake = Math.min(1, this.shake + (e.d || 10) / 60); this._heatUp(0.5);
             au.sfx(e.blocked ? 'plateHit' : 'fleshHit', null, { vol: 0.9 });
           } else if (a && Math.hypot(a.x - this.cam.x, a.z - this.cam.z) < 30) au.sfx(e.blocked ? 'plateHit' : 'fleshHit', [e.x, e.y, e.z], { vol: 0.5 });
           break;
@@ -493,7 +495,7 @@ export class Match {
         // 近接: 振る音、当たった物の音（体・バリケードはそれぞれの出来事で）
         case 'melee': { const a = S.byId[e.id]; au.sfx('throw', e.id === me || !a ? null : [a.x, a.y + 1.3, a.z], { vol: e.id === me ? 0.75 : 0.55, rate: 1.3 }); break; }
         case 'meleehit': if ((e.k === 'wall' || e.k === 'door') && e.x != null) { au.sfx(impSound(e.m), [e.x, e.y, e.z], { vol: 1 }); fx.impact && fx.impact(e.x, e.y, e.z, 0, 0, 0, e.m); } if (e.id === me && e.k !== 'air') this.shake = Math.min(1, this.shake + 0.3); break;
-        case 'whiz': if (e.id === me) { this.suppK = Math.min(1, this.suppK + e.k * 0.5); au.sfx('whiz', null, { vol: 0.4 + e.k * 0.5, rate: 0.9 + Math.random() * 0.2 }); } break;
+        case 'whiz': if (e.id === me) { this._heatUp(0.35); this.suppK = Math.min(1, this.suppK + e.k * 0.5); au.sfx('whiz', null, { vol: 0.4 + e.k * 0.5, rate: 0.9 + Math.random() * 0.2 }); } break;
         case 'kill': {
           const v = S.byId[e.id], k = S.byId[e.by];
           if (v && !v.isDrone) hud.feed(feedKill(k, v, e, p), k === p ? 'mine' : '');
@@ -527,8 +529,8 @@ export class Match {
           break;
         }
         case 'deny': if (e.id === me) { const why = { locked: '鍵がかかっている', wedged: 'ウェッジで開かない', barred: 'バリケード', nogear: '残数なし', nodet: '起爆対象なし', open: '開いている', broken: '破損', needdoor: '閉じた扉を見て使う', nolong: '特殊装備なし', noammo: '弾がない', far: '手が届かない（近づく）', blocked: '間に物・人があって届かない', prepout: '準備中は建物の外に出られない' }[e.why]; if (why) hud.showBanner(why, 1400); au.ui('deny'); } break;
-        case 'nade': { if (e.type === 'cs') { for (let i = 0; i < 8; i++) fx.smoke(e.x, e.y + 0.4, e.z, 1.2, [0.85, 0.85, 0.8], 0.5, 6); au.sfx('gasPop', [e.x, e.y, e.z]); } else { fx.explosion(e.x, e.y, e.z, 3, e.type === 'flash' ? 'flash' : 'stinger'); au.sfx(e.type === 'flash' ? 'flashbang' : 'stinger', [e.x, e.y, e.z]); } const d = Math.hypot(e.x - this.cam.x, e.z - this.cam.z); this.shake = Math.max(this.shake, Math.max(0, 1 - d / 10) * 0.6); break; }
-        case 'boom': case 'c2': { fx.explosion(e.x, e.y, e.z, e.r || 3, e.kind || 'c2'); au.sfx('explosion', [e.x, e.y, e.z], { vol: 1.2 }); const d = Math.hypot(e.x - this.cam.x, e.z - this.cam.z); this.shake = Math.max(this.shake, Math.max(0, 1 - d / 18)); break; }
+        case 'nade': { if (e.type === 'smoke') { for (let i = 0; i < 6; i++) fx.smoke(e.x, e.y + 0.5, e.z, 0.9, [0.62, 0.63, 0.64], 0.6, 3); au.sfx('gasPop', [e.x, e.y, e.z], { rate: 0.8 }); break; } if (e.type === 'cs') { for (let i = 0; i < 8; i++) fx.smoke(e.x, e.y + 0.4, e.z, 1.2, [0.85, 0.85, 0.8], 0.5, 6); au.sfx('gasPop', [e.x, e.y, e.z]); } else { fx.explosion(e.x, e.y, e.z, 3, e.type === 'flash' ? 'flash' : 'stinger'); au.sfx(e.type === 'flash' ? 'flashbang' : 'stinger', [e.x, e.y, e.z]); } const d = Math.hypot(e.x - this.cam.x, e.z - this.cam.z); this.shake = Math.max(this.shake, Math.max(0, 1 - d / 10) * 0.6); break; }
+        case 'boom': case 'c2': { fx.explosion(e.x, e.y, e.z, e.r || 3, e.kind || 'c2'); au.sfx('explosion', [e.x, e.y, e.z], { vol: 1.2 }); const d = Math.hypot(e.x - this.cam.x, e.z - this.cam.z); this.shake = Math.max(this.shake, Math.max(0, 1 - d / 18)); this._heatUp(0.5 * Math.max(0, 1 - d / 40)); break; }
         case 'flashed': if (e.id === me) { this.flashW = Math.max(this.flashW, Math.min(1, 0.4 + e.k * 1.2)); au.deafen(2 + 4 * e.k); } break;
         case 'stung': if (e.id === me) { this.shake = 1; this.blurK = Math.max(this.blurK, 0.8); } break;
         case 'tase': au.sfx('taser', S.byId[e.id] ? [S.byId[e.id].x, S.byId[e.id].y + 1, S.byId[e.id].z] : null); break;
@@ -620,7 +622,7 @@ export class Match {
     if (this.p) { this.p.lean = 0; this.p.ads = 0; this.p.low = 0; }
   }
   _onDeath() {
-    this.dead = true;
+    this.dead = true; this.deathK = 1;
     this._resetControls();
     this.hud.showBanner(this.S.pvp ? (this.S.m.kind === 'tdm' ? 'KIA — 4秒後に復帰' : 'KIA — 観戦中') : 'KIA — 観戦中', 3000, 'bad');
     this.au.deafen(1.5);
@@ -740,10 +742,21 @@ export class Match {
     this._cloudT = (this._cloudT || 0) + dt;
     if (this._cloudT > 0.25) {
       this._cloudT = 0;
-      for (const c of S.clouds || []) { const R = c.r || 1; const a = Math.random() * 6.28, d = Math.random() * R; this.fx.smoke(c.x + Math.cos(a) * d, c.y + 0.3 + Math.random() * 0.8, c.z + Math.sin(a) * d, Math.max(0.6, R * 0.6), c.type === 'pepper' ? [0.9, 0.75, 0.6] : [0.88, 0.88, 0.84], 0.32, 3.5); }
+      for (const c of S.clouds || []) { if (c.type === 'smoke') continue; const R = c.r || 1; const a = Math.random() * 6.28, d = Math.random() * R; this.fx.smoke(c.x + Math.cos(a) * d, c.y + 0.3 + Math.random() * 0.8, c.z + Math.sin(a) * d, Math.max(0.6, R * 0.6), c.type === 'pepper' ? [0.9, 0.75, 0.6] : [0.88, 0.88, 0.84], 0.32, 3.5); }
+    }
+    // 発煙弾の煙: 大きく濃い粒を絶えず足して、玉の形の壁にする
+    this._smokeT = (this._smokeT || 0) + dt;
+    if (this._smokeT > 0.08) {
+      this._smokeT = 0;
+      for (const c of S.clouds || []) {
+        if (c.type !== 'smoke') continue;
+        const R = Math.max(0.4, c.r || 1);
+        for (let q = 0; q < 2; q++) { const a = Math.random() * 6.28, d = Math.sqrt(Math.random()) * R * 0.8, h = (Math.random() * 2 - 1) * R * 0.5; this.fx.smoke(c.x + Math.cos(a) * d, c.y + h - 0.2, c.z + Math.sin(a) * d, Math.max(0.6, R * 0.6), [0.6, 0.61, 0.62], 0.7, 3.2); }
+      }
     }
     this.fx.update(dt);
     this._lasers(fp, cam);
+    this._tension(dt);
     // 動く光: 自分と隊員のライト、銃口・爆発
     const lights = [];
     const roomsFor = (x, y, z, R) => this._lightRooms(x, y, z, R);
@@ -771,16 +784,62 @@ export class Match {
     const gas = p.gas > 0 && p.armor.head !== 'gasmask' ? Math.min(1, p.gas / 4) : 0;
     const flash = Math.max(this.flashW, p.flash > 0 ? Math.min(1, p.flash / 3) : 0);
     const nvg = this.nvgOn && fp;
+    // 煙の中にいる（カメラが煙の玉の中）
+    let smk = 0;
+    for (const c of S.clouds || []) { if (c.type !== 'smoke' || c.r < 0.6) continue; const d = Math.hypot(cam.x - c.x, (cam.y - c.y) * 1.4, cam.z - c.z); if (d < c.r) smk = Math.max(smk, Math.min(0.95, (c.r - d) / Math.max(0.4, c.r * 0.45))); }
     const lowHp = p.alive && p.hp < p.maxHp * 0.3 ? 0.35 : 0;
     // 部屋（一人称の光の届き方）
     const room = roomOf(this.w, cam.x, cam.y - 1, cam.z);
     r.render({
       cam, doors: S.doors, lights, dt,
-      post: { exposure: this.exposure * (st.bright || 1), nvg: nvg && !p.peek, flash, damage: Math.max(this.dmgK * 0.8, lowHp), supp: this.suppK * 0.8, gas, blur: Math.max(this.blurK, gas * 0.5, p.stun > 0 ? 0.4 : 0, flash * 0.6), vig: p.peek ? 0.15 : (st.vignette === false ? 0.08 : 0.32), sat: st.sat ?? 1.08, peek: p.peek ? (p.peek.k === 'mirror' ? 2 : 1) : 0 },
+      post: { smoke: smk, exposure: this.exposure * (st.bright || 1), nvg: nvg && !p.peek, flash, damage: Math.max(this.dmgK * 0.8, lowHp), supp: this.suppK * 0.8, gas, blur: Math.max(this.blurK, gas * 0.5, p.stun > 0 ? 0.4 : 0, flash * 0.6), vig: (p.peek ? 0.15 : (st.vignette === false ? 0.08 : 0.32)) + 0.22 * (this.hpK || 0), sat: (st.sat ?? 1.08) * (1 - 0.45 * (this.hpK || 0)) * (1 - 0.7 * (this.deathK || 0)), peek: p.peek ? (p.peek.k === 'mirror' ? 2 : 1) : 0 },
       vm: fp ? { fov: (st.vmFov || 54) * DEG, room } : null, shadows: st.shadows !== 'off' && st.quality !== 'low',
       ambMin: nvg ? 0.02 : 0,
     });
     if (this.intro > 0) { this.intro -= dt; this.app.fade(Math.max(0, this.intro / 1.2)); if (this.intro <= 0) this.app.fade(0); }
+  }
+  // 撃ち合いの熱（0..1）: 近くの銃声・かすめた弾・当たった・爆発で上がり、14秒ほどで冷める
+  _heatUp(k) { this.heat = Math.min(1, (this.heat || 0) + k); }
+  // 緊張と重さ（毎こま）: 体力が少ない・最後の1人・撃ち合い → 心音・音のこもり・色・BGM の大きさ・準備の終わりの秒読み
+  _tension(dt) {
+    const S = this.S, p = this.p, m = S.m || {}, au = this.au;
+    const alive = p.alive && !this.dead;
+    const frac = (p.hp || 0) / (p.maxHp || 100);
+    const hpK = alive ? Math.max(0, Math.min(1, (0.4 - frac) / 0.3)) : 0; // 体力40%から下で増え、10%で最大
+    this.hpK = hpK;
+    this.deathK = Math.max(0, (this.deathK || 0) - dt / 2.5);
+    this.heat = Math.max(0, (this.heat || 0) - dt / 14);
+    // 最後の1人（攻守のモードの行動中。味方が全員倒れ、相手が残っている）
+    let clutch = false;
+    if (S.pvp && m.kind !== 'tdm' && m.phase === 'action' && alive && !p.down) {
+      let mates = 0, foes = 0;
+      for (const a of S.actors) { if (a.isDrone || !a.alive || a.down || a.staged) continue; if (a.team === p.team) mates++; else foes++; }
+      clutch = mates === 1 && foes >= 1;
+      if (clutch && !this.clutch) this.hud.showBanner(foes > 1 ? `最後の1人<br><small>相手は${foes}人</small>` : '最後の1人<br><small>1対1</small>', 2200, 'warn');
+    }
+    this.clutch = clutch;
+    // 心音（速さは体力で）
+    const hv = Math.max(hpK * 0.55, clutch ? 0.2 : 0);
+    if (hv > 0.02) { au.loop('heart', true, { vol: hv, fadeIn: 0.6 }); au.loopVol('heart', hv, 0.4); const h = au.loops && au.loops.heart; if (h && h.src) h.src.playbackRate.value = 1 + 0.45 * hpK + (clutch ? 0.12 : 0); }
+    else au.loop('heart', false, { fade: 0.8 });
+    au.setHurt(Math.max(hpK * 0.5, this.deathK * 0.9));
+    // BGM: 作戦は静かな時に小さく、撃ち合いで大きく。対戦は行動中ほとんど鳴らさず（足音を聞く）、最後の1人・解除装置・残り30秒で上げる
+    const el = (S.t - (m.phaseT || 0)) * S.dt;
+    let k;
+    if (S.pvp) {
+      if (m.kind === 'tdm') k = Math.max(0.3, this.heat * 0.85);
+      else if (m.phase === 'action') {
+        const planted = m.defuser && m.defuser.planted && !m.defuser.disabled, late = m.roundTime && m.roundTime - el < 30;
+        k = Math.max(0.12, this.heat * 0.45, clutch ? 0.9 : 0, planted ? 1 : 0, late ? 0.65 : 0);
+      } else k = m.phase === 'post' ? 0.8 : 0.5;
+    } else k = S.mode === 'pve' ? 0.3 + 0.7 * this.heat : 1;
+    const mv = (S.pvp ? 0.55 : S.mode === 'pve' ? 0.6 : 0.35) * k;
+    // （BGM の読み込みが遅れて既定の大きさで鳴り始めても合わせるよう、2秒ごとにも送る）
+    this._mvT = (this._mvT || 0) - dt;
+    if (Math.abs(mv - (this._mv ?? -1)) > 0.03 || this._mvT <= 0) { this._mv = mv; this._mvT = 2; au.musicVol(mv, 2.4); }
+    // 準備の終わり（攻守のモード）: 3・2・1 の音
+    if (S.pvp && m.phase === 'prep' && m.prepTime) { const s = Math.ceil(m.prepTime - el); if (s >= 1 && s <= 3 && s !== this._cdS) { this._cdS = s; au.ui('tick'); } }
+    else this._cdS = null;
   }
   // レーザー: 赤は誰にでも見える。赤外線は暗視装置を着けているときだけ見える
   // 自分の点は弾の向き（反動込み）の先、ほかの人は銃の向きの先
@@ -952,7 +1011,7 @@ export class Match {
     const c = this._vc[k];
     if (c && this.time - c.t < 0.25) return c.v;
     const e = this.cam;
-    const v = !!e && Math.hypot(a.x - e.x, a.z - e.z) < 30 && los(this.w, e.x, e.y, e.z, a.x, a.y + 1.2, a.z, this.S.doors);
+    const v = !!e && Math.hypot(a.x - e.x, a.z - e.z) < 30 && los(this.w, e.x, e.y, e.z, a.x, a.y + 1.2, a.z, this.S.doors) && smokeBetween(this.S, e.x, e.y, e.z, a.x, a.y + 1.2, a.z) < 0.9;
     this._vc[k] = { t: this.time, v };
     return v;
   }

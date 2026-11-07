@@ -290,6 +290,7 @@ class App {
     if (!this.game || this.game.done) return;
     if (this.game.intro > 0) { this.game.intro = 0; this.fade(0); }
     this.paused = !this.game.net; this.mode = 'pause';
+    this.audio.loop('heart', false, { fade: 0.3 }); this.audio.setHurt(0);
     this.input.enabled = false; this.input.reset();
     if (document.pointerLockElement) { try { document.exitPointerLock(); } catch (e) { /* なし */ } }
     this.hud.show(false);
@@ -327,7 +328,7 @@ class App {
     this.fade(0);
     this._releaseWake();
     if (document.pointerLockElement) { try { document.exitPointerLock(); } catch (e) { /* なし */ } }
-    this.audio.ambience(false);
+    this.audio.ambience(false); this.audio.loop('heart', false, { fade: 0.5 }); this.audio.setHurt(0);
     this.screens.reset('result', res);
   }
   quitToTitle() { remove('run'); this.toTitle(); }

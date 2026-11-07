@@ -219,6 +219,14 @@ function ambIn(sr, seed) { const r = rng(seed), out = buf(sr, 4.0), n = out.leng
 function loopify(x, sr) { const L = S(sr, 0.25), n = x.length; for (let i = 0; i < L; i++) { const t = i / L; x[i] = x[i] * t + x[n - L + i] * (1 - t); } return x.subarray(0, n - L); }
 
 // 名前 → [作り方, 何種類]
+// 心音（どくん・どくん）。くり返して鳴らす
+function heart(sr, seed) {
+  const r = rng(seed), n = S(sr, 0.86), out = new Float32Array(n);
+  mixInto(out, thump(sr, r, 64, 40, 0.17, 1), 0, 1);
+  mixInto(out, thump(sr, r, 56, 36, 0.19, 0.72), S(sr, 0.25), 1);
+  lp(out, 180, sr);
+  return fadeEdges(normalize(out, 0.9), sr, 0.002, 0.03);
+}
 export const SFX = {
   // 銃（近い）
   ...Object.fromEntries(Object.keys(GUNS).map(k => [k, [(sr, i) => gunNear(sr, 1000 + i * 17 + k.length * 3 + k.charCodeAt(1), k), 3]])),
@@ -247,14 +255,14 @@ export const SFX = {
   cuffs: [(sr, i) => cuffs(sr, 900 + i), 1], cuffsStart: [(sr, i) => cloth(sr, 910 + i, 0.35, 1800), 1], mirror: [(sr, i) => cloth(sr, 920 + i, 0.3, 3200), 1], act: [(sr, i) => cloth(sr, 930 + i, 0.25, 2400), 2],
   bandage: [(sr, i) => bandage(sr, 940 + i), 1], spray: [(sr, i) => sprayS(sr, 950 + i), 1], nvg: [(sr, i) => nvgWhine(sr, 960 + i), 1], drone: [(sr, i) => droneLoop(sr, 970 + i), 1],
   ring: [(sr) => ring(sr), 1], radioOn: [(sr, i) => radioClick(sr, 980 + i, true), 2], radioOff: [(sr, i) => radioClick(sr, 990 + i, false), 2],
-  beep: [(sr) => beep(sr, 1900, 0.07, 0.45), 1],
+  beep: [(sr) => beep(sr, 1900, 0.07, 0.45), 1], heart: [(sr, i) => heart(sr, 1010 + i), 1],
   // 画面の音
   ui_tap: [(sr) => tones(sr, [[1400, 0, 0.035]], 0.3), 1], ui_back: [(sr) => tones(sr, [[900, 0, 0.04], [700, 0.04, 0.05]], 0.3), 1], ui_deny: [(sr) => tones(sr, [[300, 0, 0.09], [240, 0.09, 0.12]], 0.4), 1],
   ui_ok: [(sr) => tones(sr, [[880, 0, 0.08], [1320, 0.08, 0.14]], 0.4), 1], ui_cmd: [(sr) => tones(sr, [[1200, 0, 0.04], [1600, 0.05, 0.05]], 0.3), 1],
   ui_hit: [(sr) => tones(sr, [[2600, 0, 0.03]], 0.35), 1], ui_hitArmor: [(sr) => tones(sr, [[1500, 0, 0.04, 1], [3000, 0, 0.04, 0.4]], 0.35), 1], ui_kill: [(sr) => tones(sr, [[2200, 0, 0.05], [3300, 0.04, 0.07]], 0.4), 1],
   ui_alarm: [(sr) => tones(sr, [[1000, 0, 0.15], [700, 0.18, 0.15], [1000, 0.36, 0.15], [700, 0.54, 0.15]], 0.45), 1], ui_spot: [(sr) => tones(sr, [[1800, 0, 0.05], [1800, 0.08, 0.05]], 0.3), 1],
   ui_go: [(sr) => tones(sr, [[660, 0, 0.12], [990, 0.12, 0.2]], 0.45), 1], ui_win: [(sr) => tones(sr, [[523, 0, 0.18], [659, 0.15, 0.18], [784, 0.3, 0.4]], 0.5), 1], ui_lose: [(sr) => tones(sr, [[392, 0, 0.25], [330, 0.22, 0.25], [262, 0.44, 0.5]], 0.5), 1],
-  ui_pickup: [(sr) => tones(sr, [[1000, 0, 0.05], [1500, 0.05, 0.07]], 0.35), 1],
+  ui_pickup: [(sr) => tones(sr, [[1000, 0, 0.05], [1500, 0.05, 0.07]], 0.35), 1], ui_tick: [(sr) => tones(sr, [[1250, 0, 0.06]], 0.35), 1],
   amb_out: [(sr) => ambOut(sr, 1), 1], amb_in: [(sr) => ambIn(sr, 2), 1],
 };
 export function renderSfx(name, i, sr) { const d = SFX[name]; if (!d) return new Float32Array(1); return d[0](sr, i); }
