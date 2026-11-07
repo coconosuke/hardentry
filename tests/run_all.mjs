@@ -165,7 +165,9 @@ try {
   const shot = (n) => page.screenshot({ path: path.join(SHOTS, n + '.png') });
   const cdp = await ctx.newCDPSession(page);
   const touch = (type, pts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts });
-  const tapAt = async (p, id = 90) => { await touch('touchStart', [{ x: p.x, y: p.y, id }]); await page.waitForTimeout(60); await touch('touchEnd', []); await page.waitForTimeout(250); };
+  // タップ: 押す・離すを 60ms あけて送る（受け取りを待たない）。描画が遅い環境では、押したのを受け取るまで次を送らないと
+  // 1こま（ソフトウェア描画で約1秒）押していたことになり、短く押したのが長押しになる
+  const tapAt = async (p, id = 90) => { const a = touch('touchStart', [{ x: p.x, y: p.y, id }]); await new Promise(r => setTimeout(r, 60)); const b = touch('touchEnd', []); await Promise.all([a, b]); await page.waitForTimeout(250); };
   const holdAt = async (p, ms, id = 91) => { await touch('touchStart', [{ x: p.x, y: p.y, id }]); await page.waitForTimeout(ms); await touch('touchEnd', []); await page.waitForTimeout(250); };
   const center = (sel) => page.evaluate((s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }, sel);
   const waitGame = async () => {
