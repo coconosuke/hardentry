@@ -225,6 +225,9 @@ table.board small { color: var(--dim); font-size: max(11px, .72em); margin-left:
 .hb.hb-wpn { border-radius: 6px; background: rgba(10,14,20,.55); border-width: 1px; padding: 0 8px; }
 .hb.hb-wpn .lb { position: static; transform: none; font-size: 11.5px; max-width: 100%; }
 .hb.hb-wpn.cur { border-color: var(--accent); background: rgba(242,179,61,.25); }
+.hb[data-btn="zone"] { border-radius: 8px; flex-direction: row; gap: 6px; padding: 0 10px; background: rgba(10,14,20,.62); border-color: rgba(242,179,61,.85); }
+.hb[data-btn="zone"] svg { width: auto; height: 60%; flex: none; }
+.hb[data-btn="zone"] .lb { position: static; transform: none; font-size: 12px; max-width: 100%; color: #ffe2a8; }
 .hb[data-btn="team"] .lb { bottom: auto; top: 50%; transform: translate(-50%, -50%); font-size: 11px; color: inherit; }
 .hb[data-btn="team"] svg { opacity: 0; }
 .hb[data-btn="fmode"] .lb { bottom: -1.3em; font-size: 11px; }
@@ -247,6 +250,8 @@ table.board small { color: var(--dim); font-size: max(11px, .72em); margin-left:
 .hud-compass-in em { position: absolute; left: 50%; bottom: -1px; transform: translateX(-50%); font-size: 11px; font-style: normal; color: var(--accent2); display: none; }
 .hud-compass-tick { position: absolute; left: 50%; bottom: 0; width: 2px; height: 6px; margin-left: -1px; background: var(--accent2); }
 .hud-obj { position: absolute; width: 300px; display: flex; justify-content: center; }
+.hud-obj[data-btn] { pointer-events: auto; cursor: pointer; touch-action: none; }
+.hud-obj[data-btn].down .sc { background: rgba(242,179,61,.35); }
 .hud-obj .ob { background: rgba(8,12,18,.6); border-radius: 4px; padding: 3px 10px; font-size: 11px; text-align: center; white-space: nowrap; }
 .hud-obj .ob b { color: var(--accent2); margin-right: 8px; } .hud-obj .ob span { color: #e8edf2; font-family: var(--f-body); }
 .hud-obj .sc { display: flex; align-items: center; gap: 8px; background: rgba(8,12,18,.6); border-radius: 4px; padding: 2px 6px; }

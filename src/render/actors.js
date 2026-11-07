@@ -7,7 +7,7 @@ import { poseInput } from '../engine/combat.js';
 import { curWeapon } from '../engine/actor.js';
 import { CS, LH } from '../engine/world.js';
 import { aabbVisible } from './math.js';
-import { MeshBuilder, hex } from './build.js';
+import { MeshBuilder, hex, mulc } from './build.js';
 import { LAYER } from './textures.js';
 
 function vaoSkin(gl, v, i) {
@@ -71,7 +71,7 @@ export class ActorView {
   prepare(S, w, opts = {}) {
     this.list.length = 0;
     for (const a of S.actors) {
-      if (a.isDrone) { this.list.push({ drone: true, a }); continue; }
+      if (a.isDrone) { if (a.alive && !this.hidden.has(a.id)) this.list.push({ drone: true, a, x: a.x, y: a.y, z: a.z }); continue; }
       if (this.hidden.has(a.id)) continue;
       if (!a.alive && !a.dead) continue;
       const res = computePose(poseInput(a, this.pi), this.bones);
@@ -187,7 +187,27 @@ export class ActorView {
     gl.uniform1f(W.u.uRoomOverride, -1);
     gl.uniformMatrix4fv(W.u.uModel, false, r.ident);
   }
-  _drone(W, a) { /* PvP のドローン（あとで） */ }
+  // 偵察ドローン（シージの二輪の車）: 黒い胴、左右の太い車輪、前にカメラと青い光
+  _drone(W, a) {
+    const r = this.r, gl = this.gl;
+    if (!aabbVisible(r.planes, a.x - 0.4, a.y - 0.1, a.z - 0.4, a.x + 0.4, a.y + 0.5, a.z + 0.4)) return;
+    if (!this._dm) {
+      const B = new MeshBuilder(), body = hex('#2a2c2e'), tire = hex('#141516'), cam = hex('#0c0d10');
+      B.bbox(-0.075, 0.03, -0.1, 0.075, 0.1, 0.1, 0.012, LAYER.metal, body);
+      B.box(-0.03, 0.1, -0.04, 0.03, 0.13, 0.05, LAYER.metal, mulc(body, 1.2));
+      for (const sx of [-1, 1]) B.tube([sx * 0.078, 0.075, 0], [sx * 0.135, 0.075, 0], 0.075, 0.075, 12, LAYER.plain, tire, { caps: true });
+      B.box(-0.025, 0.06, 0.1, 0.025, 0.09, 0.115, LAYER.plain, cam);
+      B.emit = 1; B.box(-0.008, 0.066, 0.115, 0.008, 0.084, 0.12, LAYER.plain, [0.25, 0.6, 2.4]); B.emit = 0;
+      this._dm = makeWorldMesh(gl, B);
+    }
+    const c = Math.cos(a.yaw), s = Math.sin(a.yaw), M = this.M;
+    M[0] = c; M[1] = 0; M[2] = -s; M[3] = 0; M[4] = 0; M[5] = 1; M[6] = 0; M[7] = 0; M[8] = s; M[9] = 0; M[10] = c; M[11] = 0;
+    M[12] = a.x; M[13] = a.y; M[14] = a.z; M[15] = 1;
+    gl.uniformMatrix4fv(W.u.uModel, false, M);
+    gl.uniform1f(W.u.uRoomOverride, Math.max(0, roomOf(r.w0, a.x, a.y + 0.2, a.z)));
+    drawMesh(gl, this._dm);
+    r.stats.draws++;
+  }
   // 結束バンドの形（X: 手首から手首へ 0.1m を ±0.05、輪は手首のまわり）
   zipMesh() {
     if (this._zip) return this._zip;

@@ -10,6 +10,7 @@ export const SPEED = { walk: 2.4, crouch: 1.2, prone: 0.45, low: 1.2, ads: 0.7, 
 export const RADIUS = 0.28;
 const _po = [0, 0, 0];
 const _rc = { out: [], seenProp: new Set(), seenDoor: new Set() };
+const _rcV = { out: [], seenProp: new Set(), seenDoor: new Set(), barSolid: true }; // 乗り越え: バリケードは穴があっても板全体が当たり
 
 // PvPの防具の重さ（R6の3段階）
 export const PVP_ARMOR = { light: { hp: 100, speed: 1.08 }, medium: { hp: 110, speed: 1.0 }, heavy: { hp: 125, speed: 0.9 } };
@@ -165,7 +166,7 @@ export function tryVault(S, w, a) {
   if (a.vault || a.st > 1.2 || a.down || a.comply || a.cuffed || !a.ground) return false;
   const fx = Math.sin(a.yaw), fz = Math.cos(a.yaw);
   // 前に物があるか（腰の高さ）
-  const hitAt = (hh, dist) => { const hs = raycast(w, a.x, a.y + hh, a.z, fx, 0, fz, dist, S.doors, _rc); for (const x of hs) { if (x.kind === 'slab' || x.kind === 'stair') continue; return x; } return null; };
+  const hitAt = (hh, dist) => { const hs = raycast(w, a.x, a.y + hh, a.z, fx, 0, fz, dist, S.doors, _rcV); for (const x of hs) { if (x.kind === 'slab' || x.kind === 'stair') continue; return x; } return null; };
   const low = hitAt(0.5, 1.0);
   if (!low) return false;
   // てっぺんを探す
@@ -206,9 +207,9 @@ function stepVault(S, w, a, dt) {
 export function separateActors(S, w) {
   const A = S.actors;
   for (let i = 0; i < A.length; i++) {
-    const a = A[i]; if (a.dead || a.vault || a.isDrone) continue;
+    const a = A[i]; if (a.dead || a.vault || a.isDrone || a.staged) continue;
     for (let j = i + 1; j < A.length; j++) {
-      const b = A[j]; if (b.dead || b.vault || b.isDrone) continue;
+      const b = A[j]; if (b.dead || b.vault || b.isDrone || b.staged) continue;
       if (Math.abs(a.y - b.y) > 1.4) continue;
       const dx = b.x - a.x, dz = b.z - a.z, d2 = dx * dx + dz * dz, R = RADIUS * 2 - 0.04;
       if (d2 >= R * R || d2 < 1e-8) continue;

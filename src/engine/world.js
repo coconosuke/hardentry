@@ -218,9 +218,74 @@ export function compileMap(def) {
   for (const p of (def.props || [])) addProp(w, p);
   // 10) 部屋（床のつながり。扉・開口・窓で区切る）
   buildRooms(w, def);
+  // 11) バリケードの枠（扉・外に面した窓とガラスの壁）
+  buildBarSlots(w);
   w.layers = NL;
   return w;
 }
+
+// ---- バリケードの枠（シージ式）。板は「列×段」の小さなかけらに分かれる（状態は S.bars、ここは形だけ）
+// 扉: 枠いっぱい、床から22cm上（ドローンは下を通れる）〜2.04m。窓: 腰の高さ〜2.1m（3マス＝1.5mまでずつ）。
+// 外に面したガラスの壁: 床〜2.1m（壊れたら歩いて通れる）。部屋どうしの間の窓はガラスのまま。
+function buildBarSlots(w) {
+  w.bars = []; w.barAt = new Int16Array(w.N).fill(-1);
+  const T = (L, i, j) => cellType(w, L, i, j);
+  const inside = (L, i, j) => { const t = T(L, i, j); return t === C.FLOOR || (t === C.STAIR && w.indoor[w.idx(L, i, j)] === 1); };
+  const add = (s) => {
+    s.id = w.bars.length; s.N = s.cols * s.rows;
+    const h = s.th / 2;
+    s.box = s.axis === 0 ? [s.a0, s.c - h, s.a1, s.c + h] : [s.c - h, s.a0, s.c + h, s.a1];
+    s.cx = s.axis === 0 ? (s.a0 + s.a1) / 2 : s.c; s.cz = s.axis === 0 ? s.c : (s.a0 + s.a1) / 2;
+    s.nx = s.axis === 0 ? 0 : 1; s.nz = s.axis === 0 ? 1 : 0;
+    // 中の側の部屋（明かり）: 窓は屋内の側、扉は法線の側（なければ反対）
+    const roomAt = (sg) => { const x = s.cx + s.nx * sg * 0.5, z = s.cz + s.nz * sg * 0.5, i = Math.floor(x / CS), j = Math.floor(z / CS); return inMap(w, i, j) ? w.roomAt[w.idx(s.L, i, j)] : -1; };
+    s.room = s.out ? roomAt(-s.out) : (roomAt(1) >= 0 ? roomAt(1) : roomAt(-1));
+    for (const k of s.cells) w.barAt[k] = s.id;
+    w.bars.push(s);
+    return s;
+  };
+  for (const d of w.doors) {
+    const base = d.L * LH;
+    d.bar = add({ kind: 'door', did: d.id, L: d.L, axis: d.axis, a0: d.a0, a1: d.a1, c: d.c, th: 0.06, y0: base + 0.22, y1: base + 2.04, cols: d.n * 2, rows: 6, walk: true, cells: d.cells.slice() }).id;
+  }
+  const seen = new Uint8Array(w.N);
+  for (let L = 0; L < w.NL; L++) for (let j = 0; j < w.D; j++) for (let i = 0; i < w.W; i++) {
+    const k = w.idx(L, i, j), t = w.cell[k];
+    if ((t !== C.WINDOW && t !== C.GLASSWALL) || seen[k]) continue;
+    const axis = isWallish(T(L, i - 1, j)) || isWallish(T(L, i + 1, j)) ? 0 : 1;
+    const run = [];
+    for (let n = 0; ; n++) {
+      const ii = axis === 0 ? i + n : i, jj = axis === 0 ? j : j + n;
+      if (T(L, ii, jj) !== t) break;
+      const kk = w.idx(L, ii, jj);
+      if (seen[kk]) break;
+      seen[kk] = 1; run.push(kk);
+    }
+    const n = run.length, mid = Math.floor(n / 2);
+    const mi = axis === 0 ? i + mid : i, mj = axis === 0 ? j : j + mid;
+    const inA = axis === 0 ? inside(L, mi, mj - 1) : inside(L, mi - 1, mj), inB = axis === 0 ? inside(L, mi, mj + 1) : inside(L, mi + 1, mj);
+    if (inA === inB) continue; // 部屋どうしの間（または屋内に面していない）
+    const base = L * LH, glassWall = t === C.GLASSWALL;
+    const parts = Math.ceil(n / 3);
+    let off = 0;
+    for (let p = 0; p < parts; p++) {
+      const len = Math.round((n - off) / (parts - p));
+      const a0 = ((axis === 0 ? i : j) + off) * CS;
+      add({ kind: glassWall ? 'gw' : 'win', L, axis, a0, a1: a0 + len * CS, c: ((axis === 0 ? j : i) + 0.5) * CS, th: 0.06,
+        y0: base + (glassWall ? 0.02 : BH), y1: base + 3 * BH, cols: len * 2, rows: glassWall ? 7 : 6, walk: glassWall, out: inA ? 1 : -1, cells: run.slice(off, off + len) });
+      off += len;
+    }
+  }
+}
+// 板の面の点 → かけらの番号（範囲の外は -1）
+export function barPiece(s, x, y, z) {
+  const along = s.axis === 0 ? x : z;
+  const u = (along - s.a0) / (s.a1 - s.a0), v = (y - s.y0) / (s.y1 - s.y0);
+  if (!(u >= 0 && u < 1 && v >= 0 && v < 1)) return -1;
+  return Math.floor(v * s.rows) * s.cols + Math.floor(u * s.cols);
+}
+// そのかけらが残っているか（st.h: かけらごとの残り '0'..'2' の文字列。空ならバリケードなし）
+export function barHas(st, pc) { return !!(st && st.h && pc >= 0 && st.h.charCodeAt(pc) > 48); }
 
 function isIndoorWallLine(w, L, i, j, T, idx) {
   // 壁の線をたどって、どこかで屋内に面していれば建物の壁（天井まで）
@@ -427,11 +492,17 @@ export function pushOut(w, x, z, y0, y1, r, doorsState, ignoreProp = -1, out = [
             const r2 = circleSeg(px, pz, r + 0.025, lf.hx, lf.hz, ex, ez);
             if (r2) { px += r2[0]; pz += r2[1]; hit = 1; if (pass) pm = Math.max(pm, Math.abs(r2[0]) + Math.abs(r2[1])); }
           }
-          // バリケード
-          if (ds.bar > 0) {
-            const bx = barricadeBox(d);
-            const r2 = circleBox(px, pz, r, bx[0], bx[1], bx[2], bx[3]);
-            if (r2) { px += r2[0]; pz += r2[1]; hit = 1; if (pass) pm = Math.max(pm, Math.abs(r2[0]) + Math.abs(r2[1])); }
+        }
+        // バリケード（扉・ガラスの壁の枠。崩れるまでは穴があっても通れない。床から22cmのすき間はドローンが通る）
+        const bars = doorsState && doorsState.bars;
+        if (bars) {
+          const si = w.barAt[k];
+          if (si >= 0) {
+            const s = w.bars[si], st = bars[si];
+            if (s.walk && st && st.h && !(s.y1 <= y0 || s.y0 >= y1)) {
+              const r2 = circleBox(px, pz, r, s.box[0], s.box[1], s.box[2], s.box[3]);
+              if (r2) { px += r2[0]; pz += r2[1]; hit = 1; if (pass) pm = Math.max(pm, Math.abs(r2[0]) + Math.abs(r2[1])); }
+            }
           }
         }
       }
@@ -484,10 +555,11 @@ function circleSeg(px, pz, r, ax, az, bx, bz) {
 // ---- 光線（弾・視線）----
 // 当たった物を近い順に返す: {t0, t1, kind:'block'|'slab'|'prop'|'door'|'stair'|'bar', mat, k, q, id, nx, ny, nz}
 // opt.stopOpaque: 視線用（最初の見えない物で止める）、opt.max: 距離
-const _seenP = new Set(), _seenD = new Set();
+const _seenP = new Set(), _seenD = new Set(), _seenB = new Set();
 export function raycast(w, ox, oy, oz, dx, dy, dz, max, doorsState, opt = {}) {
   const hits = opt.out || [];
   hits.length = 0;
+  const seenBar = opt.seenBar || _seenB; seenBar.clear();
   let i = Math.floor(ox / CS), j = Math.floor(oz / CS);
   const stepI = dx > 0 ? 1 : -1, stepJ = dz > 0 ? 1 : -1;
   const tdI = dx !== 0 ? Math.abs(CS / dx) : Infinity, tdJ = dz !== 0 ? Math.abs(CS / dz) : Infinity;
@@ -563,10 +635,20 @@ export function raycast(w, ox, oy, oz, dx, dy, dz, max, doorsState, opt = {}) {
           const r = raySlabSeg(ox, oy, oz, dx, dy, dz, lf.hx, lf.hz, ex, ez, 0.045, base, base + 2.06);
           if (r && r[1] > 0 && r[0] < stopAt) hits.push({ t0: Math.max(0, r[0]), t1: r[1], kind: 'door', mat: d.mat, id: did, leaf: li, nx: r[2], ny: 0, nz: r[3], L });
         }
-        if (ds.bar > 0) {
-          const bx = barricadeBox(d);
-          const r = rayBox(ox, oy, oz, dx, dy, dz, bx[0], base, bx[1], bx[2], base + 2.1, bx[3]);
-          if (r && r[1] > 0 && r[0] < stopAt) hits.push({ t0: Math.max(0, r[0]), t1: r[1], kind: 'bar', mat: M.BARRICADE, id: did, nx: r[2], ny: r[3], nz: r[4], L });
+      }
+      // バリケード: 当たった所のかけらが残っていれば当たり（穴は抜ける）。opt.barSolid なら穴があっても板全体を当たりにする（乗り越え・手の届き）
+      const bars = doorsState && doorsState.bars;
+      const si = bars ? w.barAt[k] : -1;
+      if (si >= 0 && !seenBar.has(si)) {
+        seenBar.add(si);
+        const st = bars[si];
+        if (st && st.h) {
+          const s = w.bars[si];
+          const r = rayBox(ox, oy, oz, dx, dy, dz, s.box[0], s.y0, s.box[1], s.box[2], s.y1, s.box[3]);
+          if (r && r[1] > 0 && r[0] < stopAt) {
+            const tm = (Math.max(0, r[0]) + r[1]) / 2, pc = barPiece(s, ox + dx * tm, oy + dy * tm, oz + dz * tm);
+            if (opt.barSolid || barHas(st, pc)) hits.push({ t0: Math.max(0, r[0]), t1: r[1], kind: 'bar', mat: M.BARRICADE, id: s.kind === 'door' ? s.did : -1, bar: si, pc, nx: r[2], ny: r[3], nz: r[4], L });
+          }
         }
       }
     }
@@ -727,11 +809,16 @@ export function occluded(w, ax, ay, az, bx, by, bz, doorsState = null, props = t
         }
       }
       if (doorsState) {
+        // バリケード: 通る所のかけらが残っていれば見えない（穴からは見える）
+        const bars = doorsState.bars, si = bars ? w.barAt[k] : -1;
+        if (si >= 0 && bars[si] && bars[si].h) {
+          const s = w.bars[si], r = segBoxT(ax, ay, az, dx, dy, dz, t, tN, s.box[0], s.y0, s.box[1], s.box[2], s.y1, s.box[3]);
+          if (r) { const tm = (r[0] + r[1]) / 2; if (barHas(bars[si], barPiece(s, ax + dx * tm, ay + dy * tm, az + dz * tm))) return true; }
+        }
         const dn = w.doorNear.get(k);
         if (dn) for (const did of dn) {
           const ds = doorsState[did], d = w.doors[did];
           if (!ds || ds.broken || d.L !== Lv) continue;
-          if (ds.bar > 0) return true;
           for (let li = 0; li < d.leaves.length; li++) {
             const lf = d.leaves[li], [ex, ez] = leafEnd(lf, ds.ang[li]);
             if (segSeg2(ax, az, ax + dx * maxT, az + dz * maxT, lf.hx, lf.hz, ex, ez)) {
@@ -749,6 +836,14 @@ export function occluded(w, ax, ay, az, bx, by, bz, doorsState = null, props = t
     if (tmI < tmJ) { tmI += tdI; i += stepI; } else { tmJ += tdJ; j += stepJ; }
   }
   return false;
+}
+// 線の区間 [t0, t1] と箱が重なる区間（なければ null）
+function segBoxT(ox, oy, oz, dx, dy, dz, t0, t1, x0, y0, z0, x1, y1, z1) {
+  let tmin = t0, tmax = t1;
+  if (Math.abs(dx) < 1e-12) { if (ox < x0 || ox > x1) return null; } else { let a = (x0 - ox) / dx, b = (x1 - ox) / dx; if (a > b) { const q = a; a = b; b = q; } if (a > tmin) tmin = a; if (b < tmax) tmax = b; if (tmin > tmax) return null; }
+  if (Math.abs(dy) < 1e-12) { if (oy < y0 || oy > y1) return null; } else { let a = (y0 - oy) / dy, b = (y1 - oy) / dy; if (a > b) { const q = a; a = b; b = q; } if (a > tmin) tmin = a; if (b < tmax) tmax = b; if (tmin > tmax) return null; }
+  if (Math.abs(dz) < 1e-12) { if (oz < z0 || oz > z1) return null; } else { let a = (z0 - oz) / dz, b = (z1 - oz) / dz; if (a > b) { const q = a; a = b; b = q; } if (a > tmin) tmin = a; if (b < tmax) tmax = b; if (tmin > tmax) return null; }
+  return [tmin, tmax];
 }
 function segBox(ox, oy, oz, dx, dy, dz, t0, t1, x0, y0, z0, x1, y1, z1) {
   let tmin = t0, tmax = t1;

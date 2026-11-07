@@ -107,6 +107,12 @@ export class FX {
   glassBreak(x, y, z, along) {
     for (let i = 0; i < 18; i++) this.add({ x: x + this.rs(0.25), y: y + this.rnd() * 1.3, z: z + this.rs(0.25), vx: this.rs(1.4), vy: this.rnd() * 0.8, vz: this.rs(1.4), life: 1.2, s0: 0.03, s1: 0.02, c: [0.75, 0.88, 0.95, 0.85], sh: SH.square, g: 9.8, lit: true, bounce: true });
   }
+  // 板の木っ端（バリケード）: big = 殴った・崩れた（細長い板切れが多く、木の粉）
+  splinter(x, y, z, big, w0 = 0.5) {
+    const n = big ? 22 : 5;
+    for (let i = 0; i < n; i++) { const t = this.rnd(); this.add({ x: x + this.rs(w0), y: y + this.rs(big ? 0.35 : 0.06), z: z + this.rs(w0), vx: this.rs(big ? 2.6 : 1.4), vy: this.rnd() * (big ? 2.2 : 1.2), vz: this.rs(big ? 2.6 : 1.4), life: 1.6, s0: (big ? 0.05 : 0.025) + t * 0.05, s1: 0.03, c: [0.52 + t * 0.12, 0.38 + t * 0.08, 0.24, 1], sh: SH.square, g: 9.8, lit: true, bounce: true }); }
+    for (let i = 0; i < (big ? 6 : 1); i++) this.smoke(x, y, z, big ? 0.6 : 0.25, [0.62, 0.52, 0.4], 0.4, big ? 2.2 : 1.2);
+  }
   debris(x, y, z, col) {
     for (let i = 0; i < 14; i++) this.add({ x: x + this.rs(0.25), y: y + this.rs(0.3), z: z + this.rs(0.25), vx: this.rs(2), vy: this.rnd() * 2, vz: this.rs(2), life: 1.4, s0: 0.035 + this.rnd() * 0.04, s1: 0.03, c: [col[0], col[1], col[2], 1], sh: SH.square, g: 9.8, lit: true, bounce: true });
     for (let i = 0; i < 4; i++) this.smoke(x, y, z, 0.5, [col[0] * 1.2, col[1] * 1.2, col[2] * 1.2], 0.45, 1.8);

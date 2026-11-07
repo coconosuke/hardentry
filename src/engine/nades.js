@@ -3,6 +3,7 @@ import { raycast, los, CS, LH, levelOfY, NB } from './world.js';
 import { hrand } from './rng.js';
 import { eyeOf, hurt, killActor, pvpDamage, damageBlock, breakGlass, downActor } from './combat.js';
 import { M, MATS } from './data/materials.js';
+import { blastBars } from './barricade.js';
 
 const _rc = { out: [], seenProp: new Set(), seenDoor: new Set() };
 
@@ -151,6 +152,8 @@ export function stepBlasts(S, w, dt, ev) {
       }
       if (a.ai && a.ai.morale != null) a.ai.morale -= 0.4 * k;
     }
+    // バリケード: 爆発のまわりの板を吹き飛ばす（破片・罠 1.7m、C2 2.4m、壁の爆破薬 2.0m）
+    blastBars(S, w, b.x, b.y, b.z, b.kind === 'c2' ? 2.4 : b.kind === 'frame' ? 2.0 : 1.7, ev, b.by ?? -1);
     // 壁（石膏・木）を壊す
     if (b.kind === 'c2' || b.kind === 'frame' || b.kind === 'frag') {
       const R = b.kind === 'frame' ? 1.4 : b.kind === 'c2' ? 0.9 : 0.6;

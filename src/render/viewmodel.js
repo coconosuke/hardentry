@@ -124,6 +124,13 @@ export class ViewModel {
     if ((a.stats.sh || 0) !== this.shotN) { this.shotN = a.stats.sh || 0; this.rollSign = (this.shotN % 2 ? 1 : -1); }
     const kick = W ? W.rc.kick : 1;
     pz -= 0.022 * fk * kick * (1 - 0.45 * ads); pitch += (pistol ? 0.09 : L3 === 'm320' ? 0.16 : 0.028) * fk * kick; roll += 0.018 * fk * (this.rollSign || 1);
+    // 近接（銃床で殴る）: 少し引いて、銃を横へ倒しながら前へ突き出す
+    if (a.melee) {
+      const t = a.melee.t;
+      const e1 = bell(clamp(t / 0.16, 0, 1)) * (t < 0.16 ? 1 : 0), e2 = t >= 0.1 ? bell(clamp((t - 0.1) / 0.42, 0, 1)) : 0;
+      pz -= 0.05 * e1; px += 0.03 * e1; yaw += 0.25 * e1;
+      px -= 0.11 * e2; pz += 0.11 * e2; py += 0.035 * e2; yaw -= 0.95 * e2; roll += 0.55 * e2; pitch += 0.12 * e2;
+    }
     // 破城槌を振る・散弾で撃つ
     if (ownAct) {
       const t = clamp(a.act.t / Math.max(0.05, a.act.dur), 0, 1);

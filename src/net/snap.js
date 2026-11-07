@@ -4,20 +4,22 @@ import { createActor, makeWeapon } from '../engine/actor.js';
 import { makeDoorStates } from '../engine/doors.js';
 import { WEAPONS } from '../engine/data/weapons.js';
 import { ACT_POSE } from '../engine/data/acts.js';
+import { initBars, packBars, applyBarsNet } from '../engine/barricade.js';
 
 const KSENT = new WeakMap(); // 状態ごとの「最後に送った成績」
+const BSENT = new WeakMap(); // 状態ごとの「最後に送ったバリケード」
 const r2 = (v) => Math.round(v * 100);
 const r3 = (v) => Math.round(v * 1000);
 const isNum = (v) => typeof v === 'number' && isFinite(v);
 // 送る出来事（見た目・音・HUDに要るもの）
-export const NET_EV = new Set(['shot', 'imp', 'blood', 'hit', 'whiz', 'kill', 'down', 'cuffed', 'report', 'evidence', 'bombdone', 'soft', 'glass', 'block', 'reinf', 'door', 'deny', 'nade', 'boom', 'c2', 'flashed', 'stung', 'tase', 'spray', 'reload', 'reloaded', 'shell', 'pumped', 'dry', 'draw', 'fmode', 'lightsw', 'step', 'shout', 'cmd', 'mirror', 'act', 'trap', 'trapset', 'barset', 'c2set', 'barhit', 'barbreak', 'plant', 'disable', 'defpick', 'defdrop', 'spotted', 'drone', 'dronedead', 'phase', 'round', 'roundstart', 'swap', 'respawn', 'matchend', 'end', 'revive', 'bandaged', 'fall', 'throw', 'bounce', 'allbombs', 'trapoff', 'peek', 'peekend', 'launch', 'shieldhit', 'longsel', 'm320sel', 'gearhint', 'gearsel']);
+export const NET_EV = new Set(['shot', 'imp', 'blood', 'hit', 'whiz', 'kill', 'down', 'cuffed', 'report', 'evidence', 'bombdone', 'soft', 'glass', 'block', 'reinf', 'door', 'deny', 'nade', 'boom', 'c2', 'flashed', 'stung', 'tase', 'spray', 'reload', 'reloaded', 'shell', 'pumped', 'dry', 'draw', 'fmode', 'lightsw', 'step', 'shout', 'cmd', 'mirror', 'act', 'trap', 'trapset', 'barset', 'c2set', 'barhit', 'barbreak', 'plant', 'disable', 'defpick', 'defdrop', 'spotted', 'drone', 'dronedead', 'phase', 'round', 'roundstart', 'swap', 'respawn', 'matchend', 'end', 'revive', 'bandaged', 'fall', 'throw', 'bounce', 'allbombs', 'trapoff', 'peek', 'peekend', 'launch', 'shieldhit', 'longsel', 'm320sel', 'gearhint', 'gearsel', 'melee', 'meleehit', 'outside', 'zone']);
 // 出来事の数を丸める（小数2けた）
 export function packEvent(e) {
   const o = {};
   for (const k in e) { const v = e[k]; if (k === 's') continue; o[k] = isNum(v) && !Number.isInteger(v) ? Math.round(v * 100) / 100 : v; }
   return o;
 }
-const FL = { alive: 1, dead: 2, down: 4, cuffed: 8, c1: 16, c2: 32, stun: 64, cower: 128, sprint: 256, ground: 512, light: 1024, nvg: 2048, carry: 4096, reported: 8192, blind: 16384, gas: 32768, spot: 65536 };
+const FL = { alive: 1, dead: 2, down: 4, cuffed: 8, c1: 16, c2: 32, stun: 64, cower: 128, sprint: 256, ground: 512, light: 1024, nvg: 2048, carry: 4096, reported: 8192, blind: 16384, gas: 32768, spot: 65536, staged: 131072 };
 const SIDE = ['', 'swat', 'sus'];
 function attKey(w) { return w ? [w.id, w.att.sight || 'iron', w.att.muzzle || 'none', w.att.grip || 'none', w.att.light ? 1 : 0, w.am] : null; }
 
@@ -40,7 +42,7 @@ export function packSnap(S, w, events, mePids, withBlocks) {
     if (a.sprint) f |= FL.sprint; if (a.ground) f |= FL.ground;
     const wi = a.inv.w[a.ws.slot] || null;
     if (wi && wi.lightOn) f |= FL.light; if (a.nvgOn) f |= FL.nvg; if (a.carry === 'defuser') f |= FL.carry; if (a.reported) f |= FL.reported;
-    if (a.flash > 0.4) f |= FL.blind; if (a.gas > 0) f |= FL.gas; if (a.spot > 0) f |= FL.spot;
+    if (a.flash > 0.4) f |= FL.blind; if (a.gas > 0) f |= FL.gas; if (a.spot > 0) f |= FL.spot; if (a.staged) f |= FL.staged;
     const rel = a.ws.st === 'reload' && a.ws.rd ? Math.round((1 - a.ws.t / a.ws.rd) * 100) : -1;
     A.push([a.id, r2(a.x), r2(a.y), r2(a.z), r3(a.yaw), r3(a.pitch + (a.ws.rp || 0) * Math.PI / 180), r2(a.st), r2(a.lean), r2(a.mvx || 0), r2(a.mvz || 0), r2(a.phase || 0), r2(a.ads || 0), r2(a.low || 0), f, r2(a.stateT || 0), r2(a.fallYaw || 0), rel, r2(a.fireK || 0), r2(a.throwT || 0), a.ws.slot, Math.round(100 * a.hp / (a.maxHp || 100)), r2(a.spd || 0), SIDE.indexOf(a.pvpSide || ''), a.spotTeam ?? -1, a._lookV || 0, ...actRow(a)]);
   }
@@ -68,6 +70,14 @@ export function packSnap(S, w, events, mePids, withBlocks) {
     if (st.fresh > 0 || st.n >= 10) { st.fresh = Math.max(0, st.fresh - 1); st.n = 0; out.K = K; }
     KSENT.set(S, st);
   }
+  // バリケード（変わった枠だけ）: 変わってから20回は毎回、ほかは30回に1回
+  if (S.bars) {
+    const st = BSENT.get(S) || { v: -1, n: 0, fresh: 0 };
+    st.n++;
+    if (S.barV !== st.v) { st.v = S.barV; st.fresh = 20; }
+    if (st.fresh > 0 || st.n >= 30) { st.fresh = Math.max(0, st.fresh - 1); st.n = 0; out.BR = packBars(S); }
+    BSENT.set(S, st);
+  }
   // 壊れた壁（ときどき全部）
   if (withBlocks) out.B = Object.keys(S.bdiff).map(k => { const b = +k * 4; return [+k, w.blocks[b], w.blocks[b + 1], w.blocks[b + 2], w.blocks[b + 3]]; });
   out.R = Object.keys(S.reinf || {}).map(Number);
@@ -93,6 +103,7 @@ function meBlock(a) {
     m3: a.inv.m320 ? [a.inv.m320.sel, a.inv.m320.flash, a.inv.m320.stinger, a.inv.m320.cs] : null, lt: r2(a.ws.lt || 0),
     pk: a.peek ? [a.peek.k, r2(a.peek.x), r2(a.peek.y), r2(a.peek.z), r3(a.peek.yaw0), r2(a.peek.max), a.peek.door, a.peek.fov] : null,
     st: a.stance, db: a.dbno ? Math.round(a.dbno * 10) / 10 : 0, sp: a.spawnProt > 0 ? 1 : 0, s: [a.stats.k, a.stats.d, a.stats.a, a.stats.sh, a.stats.hi], dr: a.dronesLeft ?? null,
+    zn: a.zone ?? null, ot: a.outT ? Math.round(a.outT * 10) / 10 : 0,
   };
 }
 
@@ -101,6 +112,7 @@ export class Mirror {
   constructor(w, st) {
     this.w = w; this.st = st;
     const S = this.S = { v: 0, t: 0, dt: st.dt || 1 / 60, map: st.map, mode: st.mode, pvp: !!st.pvp, rules: st.rules || {}, actors: [], byId: {}, doors: makeDoorStates(w), items: [], nades: [], clouds: [], bullets: [], blasts: [], harms: [], orders: [], shouts: [], mines: [], bdiff: {}, reinf: {}, m: {}, nextId: 1, nextItem: 1, mirror: true };
+    initBars(S, w);
     this.applyStatic(st);
     this.buf = []; // [{T, at, g}]
   }
@@ -147,6 +159,8 @@ export class Mirror {
     const k = a1.T > a0.T ? Math.max(0, Math.min(1, (renderT - a0.T) / (a1.T - a0.T))) : 1;
     const m0 = new Map(a0.g.A.map(r => [r[0], r]));
     S.t = Math.round(last.T / S.dt);
+    // ドローン（ホストで後から作られる）: いちばん新しい写しにあれば、小さな人として足す
+    for (const r of last.A) if (r[6] === -1 && !S.byId[r[0]]) { const a = { id: r[0], kind: 'drone', isDrone: true, team: r[9], owner: r[8], pid: null, x: r[1] / 100, y: r[2] / 100, z: r[3] / 100, yaw: r[4] / 1000, pitch: 0, alive: !!r[7], dead: false, h: 0.2, inv: { w: [], gear: [] }, ws: { slot: 0 }, stats: {} }; S.actors.push(a); S.byId[a.id] = a; }
     for (const r1 of a1.g.A) {
       const a = S.byId[r1[0]];
       if (!a) continue;
@@ -159,7 +173,7 @@ export class Mirror {
       a.comply = f & FL.c2 ? 2 : f & FL.c1 ? 1 : 0; a.stun = f & FL.stun ? 0.5 : 0; a.tased = 0;
       if (a.ai) a.ai.cower = !!(f & FL.cower);
       a.sprint = !!(f & FL.sprint); a.ground = !!(f & FL.ground); a.nvgOn = !!(f & FL.nvg); a.carry = f & FL.carry ? 'defuser' : null; a.reported = !!(f & FL.reported);
-      a.flash = f & FL.blind ? 1 : 0; a.gas = f & FL.gas ? 1 : 0; a.spot = f & FL.spot ? 1 : 0; a.spotTeam = r1[23];
+      a.flash = f & FL.blind ? 1 : 0; a.gas = f & FL.gas ? 1 : 0; a.spot = f & FL.spot ? 1 : 0; a.spotTeam = r1[23]; a.staged = !!(f & FL.staged);
       const side = SIDE[r1[22]] || undefined;
       if (side !== a.pvpSide || r1[24] !== a._lookV) { a.pvpSide = side; a._lookV = r1[24]; }
       if (a.id !== meId) {
@@ -197,6 +211,18 @@ export class Mirror {
     S.clouds = (last.C || []).map(([x, y, z, r, type]) => ({ x: x / 100, y: y / 100, z: z / 100, r: r / 100, type }));
     // 壊れた壁と補強（変わったマスは描き直す）
     this.changed = this.changed || [];
+    // 新しいラウンド（対戦）: ホストと同じく、壊れた壁・補強・バリケードを初めに戻す
+    const rd = last.M ? last.M.rd : null;
+    if (S.pvp && rd != null && this._rd != null && rd !== this._rd) {
+      const w = this.w;
+      for (const k of Object.keys(S.bdiff)) { const b = +k * 4; for (let q = 0; q < 4; q++) w.blocks[b + q] = w.blocks0[b + q]; this.changed.push(+k); }
+      S.bdiff = {}; S.reinf = {};
+      initBars(S, w);
+      this._lastB = null; this._lastBR = null;
+    }
+    if (rd != null) this._rd = rd;
+    // バリケード（いちばん新しい表）
+    for (let i = B.length - 1; i >= 0; i--) { const BR = B[i].g.BR; if (BR) { if (BR !== this._lastBR) { this._lastBR = BR; applyBarsNet(S, this.w, BR); } break; } }
     if (last.B && last !== this._lastB) {
       this._lastB = last;
       for (const [k, b0, b1, b2, b3] of last.B) { const b = k * 4, w = this.w; if (w.blocks[b] !== b0 || w.blocks[b + 1] !== b1 || w.blocks[b + 2] !== b2 || w.blocks[b + 3] !== b3) { w.blocks[b] = b0; w.blocks[b + 1] = b1; w.blocks[b + 2] = b2; w.blocks[b + 3] = b3; S.bdiff[k] = 1; this.changed.push(k); } }
@@ -228,6 +254,7 @@ export class Mirror {
     a.act = P.act ? { k: P.act[0], t: P.act[1] / 100, dur: P.act[2] / 100, tgt: P.act[3] != null ? [P.act[3] / 100, P.act[4] / 100, P.act[5] / 100] : null, pose: P.act[6] || null, quick: !!P.act[7], kind: P.act[8] || null } : null;
     a.dbno = P.db; a.spawnProt = P.sp; a.stats.k = P.s[0]; a.stats.d = P.s[1]; a.stats.a = P.s[2]; a.stats.sh = P.s[3]; a.stats.hi = P.s[4];
     if (P.dr != null) a.dronesLeft = P.dr;
+    a.zone = P.zn ?? a.zone; a.outT = P.ot || 0;
     if (P.m3) a.inv.m320 = { sel: P.m3[0], flash: P.m3[1], stinger: P.m3[2], cs: P.m3[3] };
     a.ws.lt = (P.lt || 0) / 100; if (a.ws.lt > 0 && !(a.ws.rd > 0)) a.ws.rd = 2.6;
     a.peek = P.pk ? { k: P.pk[0], x: P.pk[1] / 100, y: P.pk[2] / 100, z: P.pk[3] / 100, yaw0: P.pk[4] / 1000, max: P.pk[5] / 100, door: P.pk[6], fov: P.pk[7] } : null;

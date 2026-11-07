@@ -1,6 +1,7 @@
 // 扉: 開ける（向こうへ押す）・少し開ける・閉める・蹴る・ピッキング・ウェッジ・C2・破城槌・ブリーチングショットガン・ミラー・罠・バリケード
 import { leafEnd, CS, LH, pushOut } from './world.js';
 import { hrand } from './rng.js';
+import { placeBar, clearBar, bashBar } from './barricade.js';
 
 export const OPEN_ANG = 1.62;   // 約93°
 export const PEEK_ANG = 0.3;    // 約17°
@@ -50,13 +51,14 @@ export function doorOp(S, w, a, did, op, ev, opt = {}) {
   }
   if (op === 'close') {
     if (ds.broken) return { ok: false, why: 'broken' };
+    if (ds.bar > 0) return { ok: false, why: 'barred' };
     for (let li = 0; li < d.leaves.length; li++) { ds.tgt[li] = 0; ds.spd[li] = 2.2; }
     ev.push({ e: 'door', d: did, k: 'close', id: a.id, loud: 0.35 });
     return { ok: true };
   }
   if (op === 'kick') {
     if (ds.broken) return { ok: false };
-    if (ds.bar > 0) { ds.bar = Math.max(0, ds.bar - 20); ev.push({ e: ds.bar > 0 ? 'barhit' : 'barbreak', d: did, id: a.id }); return { ok: true }; }
+    if (ds.bar > 0) { bashBar(S, w, d.bar, d.L * LH + 0.5, ev, a.id); return { ok: true }; }
     ds.kicks++;
     let opens = true;
     if (ds.wedge) opens = false;
@@ -73,7 +75,7 @@ export function doorOp(S, w, a, did, op, ev, opt = {}) {
   if (op === 'ram') {
     if (ds.broken) return { ok: false };
     ds.lockBroken = true; ds.locked = false; ds.wedge = 0;
-    if (ds.bar > 0) { ds.bar = 0; ev.push({ e: 'barbreak', d: did, id: a.id }); }
+    if (ds.bar > 0) clearBar(S, w, d.bar, ev, 'fall', a.id);
     for (let li = 0; li < d.leaves.length; li++) { ds.tgt[li] = awayAngle(d, li, side, OPEN_ANG + 0.1); ds.spd[li] = 10; }
     ev.push({ e: 'door', d: did, k: 'ram', id: a.id, loud: 1.0 });
     if (ds.trap && ds.trap.armed) triggerTrap(S, w, did, a, ev);
@@ -84,6 +86,7 @@ export function doorOp(S, w, a, did, op, ev, opt = {}) {
   if (op === 'breach') {
     if (ds.broken) return { ok: false };
     ds.lockBroken = true; ds.locked = false; ds.wedge = 0;
+    if (ds.bar > 0) clearBar(S, w, d.bar, ev, 'fall', a.id);
     if (ds.trap) { ds.trap = null; ev.push({ e: 'trapoff', d: did }); }
     for (let li = 0; li < d.leaves.length; li++) { ds.tgt[li] = awayAngle(d, li, side, 0.9); ds.spd[li] = 6; }
     ev.push({ e: 'door', d: did, k: 'breach', id: a.id, loud: 1.0 });
@@ -95,8 +98,14 @@ export function doorOp(S, w, a, did, op, ev, opt = {}) {
   if (op === 'unwedge') { ds.wedge = 0; ev.push({ e: 'door', d: did, k: 'unwedge', id: a.id, loud: 0.1 }); return { ok: true }; }
   if (op === 'disarm') { if (ds.trap) { ds.trap = null; ev.push({ e: 'trapoff', d: did, id: a.id }); } return { ok: true }; }
   if (op === 'c2') { ds.c2 = { owner: a.id, side, t: S.t }; ev.push({ e: 'c2set', d: did, id: a.id }); return { ok: true }; }
-  if (op === 'bar') { if (!isClosed(ds) && !ds.broken) { for (let li = 0; li < d.leaves.length; li++) { ds.tgt[li] = 0; ds.ang[li] = 0; } } ds.bar = 60; ev.push({ e: 'barset', d: did, id: a.id }); return { ok: true }; }
-  if (op === 'unbar') { ds.bar = 0; ev.push({ e: 'barbreak', d: did, id: a.id, pry: 1 }); return { ok: true }; }
+  // バリケード（シージ式）: 扉は置く人の側へ開けきって、枠に板を打つ。外すと枠は空く（扉は開いたまま）
+  if (op === 'bar') {
+    if (!ds.broken) for (let li = 0; li < d.leaves.length; li++) { ds.tgt[li] = ds.ang[li] = awayAngle(d, li, -side, OPEN_ANG); }
+    ds.wedge = 0; ds.open = true;
+    placeBar(S, w, d.bar, ev, a.id);
+    return { ok: true };
+  }
+  if (op === 'unbar') { clearBar(S, w, d.bar, ev, 'pry', a.id); return { ok: true }; }
   if (op === 'trap') { ds.trap = { armed: true, team: a.team, by: a.id, side: sideOf(d, a.x, a.z) }; ev.push({ e: 'trapset', d: did, id: a.id }); return { ok: true }; }
   return { ok: false, why: 'op' };
 }
@@ -140,7 +149,7 @@ export function stepDoors(S, w, dt, ev) {
       const [ex, ez] = leafEnd(lf, nxt);
       let blocked = null;
       for (const a of S.actors) {
-        if (a.dead || a.isDrone || Math.abs(a.y - d.L * LH) > 1.2) continue;
+        if (a.dead || a.isDrone || a.staged || Math.abs(a.y - d.L * LH) > 1.2) continue;
         if (Math.hypot(a.x - lf.hx, a.z - lf.hz) > lf.len + 0.35) continue;
         if (segDist(a.x, a.z, lf.hx, lf.hz, ex, ez) < 0.27) { blocked = a; break; }
       }
@@ -183,7 +192,8 @@ export function detonateC2(S, w, did, ev) {
   const d = w.doors[did], ds = S.doors[did];
   if (!ds || !ds.c2) return false;
   const c2 = ds.c2; ds.c2 = null;
-  ds.broken = true; ds.wedge = 0; ds.locked = false; ds.lockBroken = true; ds.bar = 0;
+  ds.broken = true; ds.wedge = 0; ds.locked = false; ds.lockBroken = true;
+  if (ds.bar > 0) clearBar(S, w, d.bar, ev, 'fall', c2.owner);
   if (ds.trap) { ds.trap = null; }
   ev.push({ e: 'c2', d: did, x: d.cx, y: d.L * LH + 1.0, z: d.cz, by: c2.owner });
   const side = -c2.side;

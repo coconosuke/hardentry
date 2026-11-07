@@ -162,7 +162,7 @@ export class Input {
       const k = e.code;
       if (this.keys.has(k)) return;
       this.keys.add(k);
-      const map = { KeyR: 'reload', KeyC: 'crouch', KeyZ: 'prone', KeyQ: 'leanL', KeyE: 'leanR', KeyF: 'shout', KeyV: 'use', KeyG: 'gear', KeyX: 'fmode', KeyT: 'light', KeyN: 'nvg', KeyB: 'low', KeyM: 'map', Escape: 'pause', KeyP: 'pause', Space: 'vault', Digit1: 'wpn1', Digit2: 'wpn2', Digit3: 'gear', KeyH: 'cmd', Tab: 'team', KeyK: 'drone' };
+      const map = { KeyR: 'reload', KeyC: 'crouch', KeyZ: 'prone', KeyQ: 'leanL', KeyE: 'leanR', KeyF: 'shout', KeyV: 'use', KeyG: 'gear', KeyX: 'fmode', KeyT: 'light', KeyN: 'nvg', KeyB: 'low', KeyM: 'map', Escape: 'pause', KeyP: 'pause', Space: 'vault', Digit1: 'wpn1', Digit2: 'wpn2', Digit3: 'gear', KeyH: 'cmd', Tab: 'team', KeyK: 'drone', KeyY: 'melee' };
       const b = map[k];
       if (b) { e.preventDefault(); this.edges.push({ b, k: 'down', key: true }); this._keyT = this._keyT || {}; this._keyT[k] = performance.now(); }
     });
@@ -170,7 +170,7 @@ export class Input {
       const k = e.code;
       this.keys.delete(k);
       if (!this.enabled) return;
-      const map = { KeyR: 'reload', KeyC: 'crouch', KeyZ: 'prone', KeyQ: 'leanL', KeyE: 'leanR', KeyF: 'shout', KeyV: 'use', KeyG: 'gear', KeyX: 'fmode', KeyT: 'light', KeyN: 'nvg', KeyB: 'low', KeyM: 'map', Escape: 'pause', KeyP: 'pause', Space: 'vault', Digit1: 'wpn1', Digit2: 'wpn2', Digit3: 'gear', KeyH: 'cmd', Tab: 'team', KeyK: 'drone' };
+      const map = { KeyR: 'reload', KeyC: 'crouch', KeyZ: 'prone', KeyQ: 'leanL', KeyE: 'leanR', KeyF: 'shout', KeyV: 'use', KeyG: 'gear', KeyX: 'fmode', KeyT: 'light', KeyN: 'nvg', KeyB: 'low', KeyM: 'map', Escape: 'pause', KeyP: 'pause', Space: 'vault', Digit1: 'wpn1', Digit2: 'wpn2', Digit3: 'gear', KeyH: 'cmd', Tab: 'team', KeyK: 'drone', KeyY: 'melee' };
       const b = map[k];
       if (b) { const dur = performance.now() - ((this._keyT && this._keyT[k]) || 0); this.edges.push({ b, k: dur > LONG ? 'longup' : 'tap', key: true, dur }); }
     });

@@ -336,3 +336,122 @@ test('move: ダッシュは作戦でも対戦でもできる（前へ・立っ�
     ok(p.sprint, o.mode + ': 走っている');
   }
 });
+
+// ---- バリケード（シージ式）と攻守のモード
+import { raycast as rcB, los as losB, pushOut as poB } from '../../src/engine/world.js';
+import { hitBar, bashBar, placeBar } from '../../src/engine/barricade.js';
+import { isOutside, OUT_GRACE } from '../../src/engine/modes/pvp.js';
+import { doorOp as doorOpB } from '../../src/engine/doors.js';
+function winSlot(w) { return w.bars.find(s => s.kind === 'win' && s.cols >= 4); }
+function across(s, d = 1.5) { const m = (s.a0 + s.a1) / 2, y = (s.y0 + s.y1) / 2; return s.axis === 0 ? { a: [m, y, s.c - d], b: [m, y, s.c + d], dir: [0, 0, 1] } : { a: [s.c - d, y, m], b: [s.c + d, y, m], dir: [1, 0, 0] }; }
+test('barricade: 外に面した窓は最初から板（TDM はガラスのまま）。弾2発で穴が開いて見通せ、殴る3回で崩れる', () => {
+  const T = createGame({ map: 'bank', mode: 'tdm', teams: [1, 1], seed: 3 });
+  eq(T.S.bars.filter(b => b.h).length, 0, 'TDM: 板なし');
+  const G = createGame({ map: 'bank', mode: 'pve', mission: 'barricade', team: 1, seed: 3 });
+  const { S, w } = G, s = winSlot(w);
+  ok(S.bars[s.id].h.length === s.N && w.bars.filter(x => x.kind !== 'door').every(x => S.bars[x.id].h), '作戦: 外の窓はすべて板');
+  const k = s.cells[0];
+  eq(w.blocks[k * 4 + 1], 0, 'ガラスは外してある');
+  const L = across(s);
+  ok(!losB(w, ...L.a, ...L.b, S.doors), '板があると見えない');
+  const h = rcB(w, ...L.a, ...L.dir, 3, S.doors, {}).find(x => x.kind === 'bar');
+  ok(h && h.bar === s.id, '弾は板に当たる');
+  const ev = [];
+  hitBar(S, w, s.id, h.pc, 1, ev);
+  ok(!losB(w, ...L.a, ...L.b, S.doors), '1発ではまだ穴はない');
+  hitBar(S, w, s.id, h.pc, 1, ev);
+  ok(losB(w, ...L.a, ...L.b, S.doors), '2発で穴: 見通せる');
+  ok(ev.some(e => e.e === 'barhit' && e.cut), '削れた音と木っ端');
+  bashBar(S, w, s.id, s.y0 + 0.1, ev, -1); bashBar(S, w, s.id, s.y0 + 0.1, ev, -1);
+  ok(S.bars[s.id].h, '2回ではまだ残る');
+  bashBar(S, w, s.id, s.y0 + 0.1, ev, -1);
+  eq(S.bars[s.id].h, '', '3回で崩れる');
+  ok(ev.some(e => e.e === 'barbreak'), '崩れた出来事');
+  const G2 = load(dump(G));
+  eq(G2.S.bars[s.id].h, '', '保存して読み込んでも同じ');
+  eq(G2.w.blocks[k * 4 + 1], 0, '読み込んでもガラスはない');
+});
+test('barricade: 扉のバリケードは人を止め、床すれすれのドローンは下を通す。崩れると通れる', () => {
+  const G = createGame({ map: 'bank', mode: 'bomb', teams: [1, 1], seed: 3 });
+  const { S, w } = G, d = w.doors.find(x => !x.double), s = w.bars[d.bar];
+  const def = S.actors.find(a => a.team === S.m.def);
+  def.x = d.cx + d.nx * 0.8; def.z = d.cz + d.nz * 0.8;
+  doorOpB(S, w, def, d.id, 'bar', []);
+  eq(S.doors[d.id].bar, 1, '扉の状態にも出る');
+  const px = d.cx + d.nx * 0.2, pz = d.cz + d.nz * 0.2, base = d.L * 3;
+  const o1 = poB(w, px, pz, base + 0.36, base + 1.8, 0.25, S.doors);
+  ok(o1[2] && Math.hypot(o1[0], o1[1]) > 0.02, '人は押し戻される');
+  const o2 = poB(w, d.cx, d.cz, base + 0.02, base + 0.18, 0.14, S.doors);
+  ok(!(o2[2] && Math.hypot(o2[0], o2[1]) > 0.05 && Math.abs((o2[0]) * d.nx + (o2[1]) * d.nz) > 0.05), 'ドローン（床から18cmまで）は扉の線で押し戻されない');
+  const ev = [];
+  for (let i = 0; i < 3; i++) bashBar(S, w, s.id, base + 1, ev, -1);
+  eq(S.doors[d.id].bar, 0, '3回殴ると崩れる');
+  const o3 = poB(w, px, pz, base + 0.36, base + 1.8, 0.25, S.doors);
+  ok(!(o3[2] && Math.abs(o3[0] * d.nx + o3[1] * d.nz) > 0.05), '崩れたら通れる');
+});
+test('pvp: 攻守のモードでは攻撃側は準備のあいだ出てこず（人はドローン）、行動開始で選んだ出現地点に出る', () => {
+  const G = createGame({ map: 'bank', mode: 'bomb', teams: [2, 2], roster: [{ pid: 0, name: 'P', team: 0 }], seed: 2 });
+  const S = G.S, me = S.actors.find(a => a.pid === 0);
+  ok(me.staged && !me.alive, '最初は出ていない');
+  let evs = [];
+  for (let i = 0; i < 60 * 4; i++) evs.push(...step(G, { [me.id]: { yaw: me.yaw, pitch: 0, act: i === 5 ? [{ a: 'zone', z: 2 }] : null } }));
+  eq(S.m.phase, 'prep', '準備中');
+  ok(evs.some(e => e.e === 'drone' && e.owner === me.id), '準備の始めにドローン');
+  eq(me.zone, 2, '出現地点を選べる');
+  const atk = S.actors.filter(a => a.team === S.m.att && !a.isDrone);
+  ok(atk.every(a => !a.alive && a.staged), '攻撃側は誰も出ていない（撃たれない）');
+  for (let i = 0; i < 60 * 46; i++) step(G, {});
+  eq(S.m.phase, 'action', '行動開始');
+  ok(me.alive && !me.staged, '出てきた');
+  ok(atk.some(a => a.carry === 'defuser'), '解除装置は持ったまま');
+});
+test('pvp: 防衛側は準備中は建物の外に出られず、行動中に外へ出ると2.5秒で居場所が知られる', () => {
+  const G = createGame({ map: 'bank', mode: 'elim', teams: [1, 1], roster: [{ pid: 0, name: 'P', team: 1 }], seed: 2 });
+  const { S, w } = G, me = S.actors.find(a => a.pid === 0);
+  for (let i = 0; i < 60 * 5; i++) step(G, {});
+  eq(S.m.phase, 'prep', '殲滅戦にも準備がある');
+  eq(me.team, S.m.def, '防衛側');
+  ok(!isOutside(w, me), '中にいる');
+  // 外のマスへ置いてみる
+  let out = null;
+  for (let j = 0; j < w.D && !out; j++) for (let i = 0; i < w.W; i++) { const k = w.idx(0, i, j); if (w.cell[k] === 2 && Math.hypot((i + 0.5) * 0.5 - me.x, (j + 0.5) * 0.5 - me.z) < 30) { out = [(i + 0.5) * 0.5, (j + 0.5) * 0.5]; break; } }
+  const x0 = me.x, z0 = me.z;
+  me.x = out[0]; me.z = out[1];
+  step(G, {});
+  ok(Math.hypot(me.x - x0, me.z - z0) < 0.5, '準備中は中へ戻される');
+  for (let i = 0; i < 60 * 30; i++) step(G, {});
+  eq(S.m.phase, 'action', '行動中');
+  for (const b of S.actors) if (b.team === S.m.att) b.ai = null; // 撃たれないように相手を止める
+  me.x = out[0]; me.z = out[1]; me.vx = me.vz = 0;
+  let seen = false;
+  for (let i = 0; i < Math.round(60 * (OUT_GRACE + 0.5)); i++) { const ev = step(G, { [me.id]: { yaw: me.yaw, pitch: 0 } }); if (ev.some(e => e.e === 'outside' && e.id === me.id)) seen = true; if (!me.alive) break; }
+  ok(seen && me.spot > 0 && me.spotTeam === S.m.att, '外に出て2.5秒で知られる');
+});
+test('melee: 近接は3回でバリケードを壊す（穴の所を殴っても残りの段が落ちる）。対戦は50、作戦は怯ませて交戦規定に記録', () => {
+  const G = createGame({ map: 'suburb', mode: 'pve', mission: 'barricade', team: 1, seed: 3 });
+  const { S, w } = G, p = S.actors.find(a => a.pid === 0);
+  for (const b of S.actors) if (b !== p) b.ai = null;
+  const s = w.bars.find(x => x.kind === 'win' && x.L === 0);
+  p.x = s.cx + s.nx * s.out * 0.75; p.z = s.cz + s.nz * s.out * 0.75; p.y = 0; p.vx = p.vz = 0;
+  const yaw = Math.atan2(s.cx - p.x, s.cz - p.z);
+  let n = 0;
+  for (let i = 0; i < 160; i++) { const ev = step(G, { [p.id]: { yaw, pitch: 0, act: i % 40 === 0 ? [{ a: 'melee' }] : null } }); n += ev.filter(e => e.e === 'meleehit' && e.k === 'bar').length; if (!S.bars[s.id].h) break; }
+  eq(S.bars[s.id].h, '', '窓のバリケードが壊れた');
+  eq(n, 3, '3回で');
+  // 作戦: 容疑者を殴る
+  const sus = S.byId[S.m.sus[0]];
+  p.x = s.cx + s.nx * s.out * 2.5; p.z = s.cz + s.nz * s.out * 2.5; p.vx = p.vz = 0;
+  sus.x = p.x + Math.sin(yaw) * 0.9; sus.z = p.z + Math.cos(yaw) * 0.9; sus.y = 0; sus.vx = sus.vz = 0;
+  const hp0 = sus.hp;
+  for (let i = 0; i < 60; i++) step(G, { [p.id]: { yaw, pitch: 0, act: i === 40 ? [{ a: 'melee' }] : null } });
+  ok(sus.hp < hp0 && sus.stun > 1, '怯んだ（拘束できる）');
+  ok(S.harms.some(h => h.how === 'melee' && h.tgt === sus.id), '交戦規定の記録');
+  // 対戦
+  const T = createGame({ map: 'bank', mode: 'tdm', teams: [1, 1], roster: [{ pid: 0, name: 'P', team: 0 }], seed: 3 });
+  for (let i = 0; i < 60 * 4; i++) step(T, {});
+  const q = T.S.actors.find(a => a.pid === 0), foe = T.S.actors.find(a => a.team === 1);
+  foe.ai = null; foe.spawnProt = 0; q.x = 3.25; q.z = 3.25; q.y = 0; foe.x = 3.25; foe.z = 4.2; foe.y = 0; q.vx = q.vz = foe.vx = foe.vz = 0;
+  const fh = foe.hp;
+  for (let i = 0; i < 30; i++) step(T, { [q.id]: { yaw: 0, pitch: 0, act: i === 0 ? [{ a: 'melee' }] : null } });
+  eq(fh - foe.hp, 50, '対戦の近接は50');
+});

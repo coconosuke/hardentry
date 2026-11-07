@@ -222,6 +222,8 @@ export class Match {
         case 'map': if (k === 'tap' || (k === 'longup' && !e.key)) this.app.openTablet(); break;
         case 'pause': if (k === 'tap' || (k === 'down' && e.key)) this.app.pauseGame(); break;
         case 'drone': if (k === 'tap') this._droneToggle(); break;
+        case 'zone': if (k === 'tap') this._zoneNext(); break;
+        case 'melee': if (k === 'down' && this.droneId == null) this.acts.push({ a: 'melee' }); break;
         case 'radial': if (k === 'pick' && e.item && e.item.go) e.item.go(); break;
       }
     }
@@ -393,11 +395,27 @@ export class Match {
   // ---- ドローン（対戦の攻撃側）
   _droneToggle() {
     if (this.droneId != null) { this.droneId = null; this.au.sfx('ui_back'); return; }
+    // 自分のドローンがまだ動いていれば乗り移る（なければ新しく出す）
+    const mine = this.S.actors.find(d => d.isDrone && d.owner === this.p.id && d.alive);
+    if (mine) { this.droneId = mine.id; this.dyaw = mine.yaw; this.dpitch = 0; this.au.sfx('drone', null); return; }
     this.acts.push({ a: 'drone' });
+  }
+  // 出現地点（対戦の攻撃側・準備中）: 押すたびに次の地点
+  _zoneNext() {
+    const S = this.S, m = S.m || {};
+    if (!S.pvp || m.kind === 'tdm' || this.p.team !== m.att || (m.phase !== 'pre' && m.phase !== 'prep')) return;
+    const zs = attackZones(this.w, this.def);
+    if (zs.length < 2) return;
+    const z = ((this.p.zone ?? 0) + 1) % zs.length;
+    this.p.zone = z;
+    this.acts.push({ a: 'zone', z });
+    this.au.ui('tap');
+    this.hud.showBanner('出現地点: ' + zs[z].name, 1200);
   }
   _droneCmd(inp) {
     const d = this.S.byId[this.droneId];
-    if (!d || !d.alive) { this.droneId = null; return {}; }
+    if (!d) return {}; // ゲスト: まだ写しに来ていない
+    if (!d.alive) { this.droneId = null; return {}; }
     return { mx: inp.mx, mz: inp.mz, yaw: this.dyaw ?? d.yaw, pitch: this.dpitch ?? 0, fire: inp.fire, jump: inp.hold.has('vault') };
   }
 
@@ -436,6 +454,9 @@ export class Match {
           } else if (a && Math.hypot(a.x - this.cam.x, a.z - this.cam.z) < 30) au.sfx(e.blocked ? 'plateHit' : 'fleshHit', [e.x, e.y, e.z], { vol: 0.5 });
           break;
         }
+        // 近接: 振る音、当たった物の音（体・バリケードはそれぞれの出来事で）
+        case 'melee': { const a = S.byId[e.id]; au.sfx('throw', e.id === me || !a ? null : [a.x, a.y + 1.3, a.z], { vol: e.id === me ? 0.75 : 0.55, rate: 1.3 }); break; }
+        case 'meleehit': if ((e.k === 'wall' || e.k === 'door') && e.x != null) { au.sfx(impSound(e.m), [e.x, e.y, e.z], { vol: 1 }); fx.impact && fx.impact(e.x, e.y, e.z, 0, 0, 0, e.m); } if (e.id === me && e.k !== 'air') this.shake = Math.min(1, this.shake + 0.3); break;
         case 'whiz': if (e.id === me) { this.suppK = Math.min(1, this.suppK + e.k * 0.5); au.sfx('whiz', null, { vol: 0.4 + e.k * 0.5, rate: 0.9 + Math.random() * 0.2 }); } break;
         case 'kill': {
           const v = S.byId[e.id], k = S.byId[e.by];
@@ -469,7 +490,7 @@ export class Match {
           if (e.k === 'locked' && e.id !== me && S.byId[e.id] && S.byId[e.id].kind === 'swat') this._say(S.byId[e.id], 'swat_locked');
           break;
         }
-        case 'deny': if (e.id === me) { const why = { locked: '鍵がかかっている', wedged: 'ウェッジで開かない', barred: 'バリケード', nogear: '残数なし', nodet: '起爆対象なし', open: '開いている', broken: '破損', needdoor: '閉じた扉を見て使う', nolong: '特殊装備なし', noammo: '弾がない', far: '手が届かない（近づく）', blocked: '間に物・人があって届かない' }[e.why]; if (why) hud.showBanner(why, 1400); au.ui('deny'); } break;
+        case 'deny': if (e.id === me) { const why = { locked: '鍵がかかっている', wedged: 'ウェッジで開かない', barred: 'バリケード', nogear: '残数なし', nodet: '起爆対象なし', open: '開いている', broken: '破損', needdoor: '閉じた扉を見て使う', nolong: '特殊装備なし', noammo: '弾がない', far: '手が届かない（近づく）', blocked: '間に物・人があって届かない', prepout: '準備中は建物の外に出られない' }[e.why]; if (why) hud.showBanner(why, 1400); au.ui('deny'); } break;
         case 'nade': { if (e.type === 'cs') { for (let i = 0; i < 8; i++) fx.smoke(e.x, e.y + 0.4, e.z, 1.2, [0.85, 0.85, 0.8], 0.5, 6); au.sfx('gasPop', [e.x, e.y, e.z]); } else { fx.explosion(e.x, e.y, e.z, 3, e.type === 'flash' ? 'flash' : 'stinger'); au.sfx(e.type === 'flash' ? 'flashbang' : 'stinger', [e.x, e.y, e.z]); } const d = Math.hypot(e.x - this.cam.x, e.z - this.cam.z); this.shake = Math.max(this.shake, Math.max(0, 1 - d / 10) * 0.6); break; }
         case 'boom': case 'c2': { fx.explosion(e.x, e.y, e.z, e.r || 3, e.kind || 'c2'); au.sfx('explosion', [e.x, e.y, e.z], { vol: 1.2 }); const d = Math.hypot(e.x - this.cam.x, e.z - this.cam.z); this.shake = Math.max(this.shake, Math.max(0, 1 - d / 18)); break; }
         case 'flashed': if (e.id === me) { this.flashW = Math.max(this.flashW, Math.min(1, 0.4 + e.k * 1.2)); au.deafen(2 + 4 * e.k); } break;
@@ -494,8 +515,11 @@ export class Match {
         case 'mirror': if (e.id === me || (S.byId[e.id] && S.byId[e.id].kind === 'swat')) { hud.showMirror(mirrorHTML(e, S)); if (e.id !== me) this._say(S.byId[e.id], e.seen.length ? (e.seen.some(s => s.kind === 'sus') ? 'swat_mirror_sus' : 'swat_mirror_civ') : 'swat_mirror_clear'); } break;
         case 'act': if (e.id === me) { const k = e.k; au.sfx(k === 'restrain' ? 'cuffsStart' : k === 'mirror' ? 'mirror' : k === 'plant' || k === 'defuse' || k === 'bombdefuse' ? 'beep' : 'act', null, { vol: 0.5 }); } break;
         case 'trap': au.sfx('explosion', null); break;
-        case 'trapset': case 'barset': case 'c2set': au.sfx(e.e === 'barset' ? 'barricade' : 'act', null, { vol: 0.6 }); break;
-        case 'barhit': case 'barbreak': { const d = this.w.doors[e.d]; au.sfx(e.e === 'barbreak' ? 'barBreak' : 'woodHit', d ? [d.cx, d.L * LH + 1, d.cz] : null); break; }
+        case 'trapset': case 'c2set': au.sfx('act', null, { vol: 0.6 }); break;
+        // バリケード: 打つ音・殴る／崩れる音（遠くまで聞こえる）・弾で削れた木っ端
+        case 'barset': au.sfx('barricade', e.x != null ? [e.x, e.y, e.z] : null, { vol: e.id === me ? 0.6 : 1 }); break;
+        case 'barhit': if (e.x != null) { if (e.big) { fx.splinter(e.x, e.y, e.z, true); au.sfx('barBreak', [e.x, e.y, e.z], { vol: 0.8 }); } else if (e.cut) { fx.splinter(e.x, e.y, e.z, false); au.sfx('woodHit', [e.x, e.y, e.z], { vol: 0.7 }); } } break;
+        case 'barbreak': if (e.x != null) { if (!e.pry) fx.splinter(e.x, e.y, e.z, true, 0.7); au.sfx(e.pry ? 'woodHit' : 'barBreak', [e.x, e.y, e.z]); } break;
         case 'plant': hud.feed('解除装置を設置した', 'warn'); hud.showBanner('解除装置を設置！', 2500, 'warn'); au.ui('alarm'); break;
         case 'disable': hud.feed('解除装置を外した', 'ok'); break;
         case 'defpick': if (e.id === me) hud.showBanner('解除装置を拾った', 1500); break;
@@ -503,11 +527,13 @@ export class Match {
         case 'spotted': if (S.byId[e.by] && S.byId[e.by].team === p.team) au.ui('spot'); break;
         case 'drone': if (e.owner === me) { this.droneId = e.id; this.dyaw = p.yaw; this.dpitch = 0; au.sfx('drone', null); } break;
         case 'dronedead': if (e.id === this.droneId) { this.droneId = null; hud.showBanner('ドローンが壊された', 1500, 'bad'); } break;
-        case 'phase': if (e.p === 'prep') hud.showBanner('準備フェーズ', 2000); else if (e.p === 'action') { hud.showBanner('行動開始', 1600, 'warn'); au.ui('go'); this.droneId = null; } break;
+        // 防衛側が建物の外に出た（シージ）: 攻撃側には居場所、本人には警告
+        case 'outside': { const a = S.byId[e.id]; if (!a) break; if (e.id === me) { hud.showBanner('建物の外 ― 居場所が知られた', 1800, 'bad'); au.ui('deny'); } else if (S.m && p.team === S.m.att) { hud.showBanner(`防衛側が外に出た（${a.name || ''}）`, 1600, 'warn'); au.ui('spot'); } break; }
+        case 'phase': if (e.p === 'prep') hud.showBanner(S.m && p.team === S.m.att ? '準備フェーズ<br><small>ドローンで偵察・出現地点を選ぶ</small>' : '準備フェーズ<br><small>補強・バリケード（建物の外には出られない）</small>', 2600); else if (e.p === 'action') { hud.showBanner('行動開始', 1600, 'warn'); au.ui('go'); this.droneId = null; } break;
         case 'round': { const win = e.win; const mine = win === p.team; hud.showBanner(win < 0 ? '引き分け' : (mine ? 'ラウンド勝利' : 'ラウンド敗北') + `<br><small>${whyName(e.why)} ・ ${e.wins[p.team]} - ${e.wins[1 - p.team]}</small>`, 4000, win < 0 ? '' : mine ? 'ok' : 'bad'); au.ui(mine ? 'win' : 'lose'); break; }
         case 'roundstart': this.fx.clear(); this.r.rebuildCells(Object.keys(this._lastBdiff || {}).map(Number).concat(this._allBroken()), S); this._lastBdiff = {}; this.adsOn = false; this.stance = 0; this.leanSide = 0; this.r.setMap(this.w, this.def, S); { const st = S.m && S.m.sites && e.site >= 0 ? S.m.sites[e.site] : null; hud.showBanner(`ラウンド ${e.round}` + (st ? `　目標: ${st.name}` : ''), 2400); } break;
         case 'swap': hud.feed('攻守交代', 'warn'); break;
-        case 'respawn': if (e.id === me) { this.dead = false; this.spec = null; this.yaw = p.yaw; this.pitch = 0; this.av.hidden.add(me); hud.hideBanner(); } break;
+        case 'respawn': if (e.id === me) { this.dead = false; this.spec = null; this.yaw = p.yaw; this.pitch = 0; this.droneId = null; this.av.hidden.add(me); if (e.zone == null) hud.hideBanner(); } break;
         case 'matchend': { const mine = e.win === p.team; hud.showBanner(e.win < 0 ? '引き分け' : mine ? '勝利' : '敗北', 0, mine ? 'ok' : 'bad'); au.ui(mine ? 'win' : 'lose'); break; }
         case 'end': hud.showBanner(e.res === 'fail' ? '作戦失敗' : e.res === 'abort' ? '撤収' : '作戦完了', 0, e.res === 'fail' ? 'bad' : 'ok'); au.ui(e.res === 'fail' ? 'lose' : 'win'); break;
         case 'revive': hud.feed(`${nm(S.byId[e.by])} が ${nm(S.byId[e.id])} を起こした`, 'ok'); break;
@@ -561,14 +587,24 @@ export class Match {
     const S = this.S, p = this.p, r = this.r, st = this.app.settings;
     let cam;
     const drone = this.droneId != null ? S.byId[this.droneId] : null;
+    if (this._hidDrone != null && this._hidDrone !== this.droneId) { this.av.hidden.delete(this._hidDrone); this._hidDrone = null; }
     if (drone && drone.alive) {
       cam = { x: drone.x, y: drone.y + 0.14, z: drone.z, yaw: drone.yaw, pitch: drone.pitch, roll: 0, fov: 70 * DEG };
-      this.av.hidden.delete(p.id);
+      this.av.hidden.delete(p.id); this.av.hidden.add(drone.id); this._hidDrone = drone.id;
     } else if (p.peek && p.alive && !(p.down && !S.pvp)) {
       // ミラー・オプティワンドの視点（扉の下・角の先）
       const pk = p.peek;
       cam = { x: pk.x, y: pk.y, z: pk.z, yaw: pk.yaw0 + this.pkYaw, pitch: this.pkPitch, roll: 0, fov: (pk.fov || 70) * DEG };
       if (!this.av.hidden.has(p.id)) this.av.hidden.add(p.id);
+    } else if (p.staged) {
+      // 準備中（攻撃側・体はまだ出ていない）: 味方のドローン、なければ出現地点から建物を見る
+      const td = S.actors.find(d => d.isDrone && d.alive && d.team === p.team);
+      if (td) { cam = { x: td.x, y: td.y + 0.14, z: td.z, yaw: td.yaw, pitch: td.pitch || 0, roll: 0, fov: 70 * DEG }; this.av.hidden.add(td.id); this._hidDrone = td.id; }
+      else {
+        const zs = attackZones(this.w, this.def), z = zs[p.zone ?? 0] || zs[0], tx = this.w.W * CS / 2, tz = this.w.D * CS / 2;
+        cam = { x: z.x, y: 2.6, z: z.z, yaw: Math.atan2(tx - z.x, tz - z.z), pitch: -0.1, roll: 0, fov: 62 * DEG };
+      }
+      this.av.hidden.delete(p.id);
     } else if (p.alive && !(p.down && !S.pvp)) {
       const e = eyeOf(S, p);
       const W = curW(p), wi = curWeapon(p);
@@ -727,15 +763,20 @@ export class Match {
       optic: null, canVault: true,
       ctxLabel: c ? (c.def.far ? (c.def.why === 'block' ? '回り込む' : '近づく') : (OP_NAME[c.def.op] || c.def.op)) : '',
       cmdLabel: '命令', mmZoom: this.mmZoom,
-      droneOK: S.pvp && S.m.kind === 'bomb' && S.m.phase === 'prep' && p.team === S.m.att,
+      droneOK: S.pvp && S.m.kind !== 'tdm' && p.team === S.m.att && (S.m.phase === 'prep' ? !!p.staged : S.m.phase === 'action' && p.alive && !p.down) && ((p.dronesLeft ?? 2) > 0 || S.actors.some(d => d.isDrone && d.owner === p.id && d.alive)),
+      zoneOK: S.pvp && S.m.kind !== 'tdm' && p.team === S.m.att && (S.m.phase === 'pre' || S.m.phase === 'prep'),
     };
+    if (v.zoneOK) { const zs = attackZones(this.w, this.def); v.zoneLabel = (zs[p.zone ?? 0] || zs[0] || {}).name || ''; if (zs.length < 2) v.zoneOK = false; }
     if (wi) { const g = gunModel(wi.id, wi.att); if (g && g.pts.optic) v.optic = g.pts.optic; }
     if (this.droneId != null) v.hideCross = true;
     // 案内
     let prompt = '';
     if (c) prompt = `${ctxName(c, S)}: ${OP_NAME[c.def.op] || c.def.op}` + (c.def.far ? (c.def.why === 'block' ? '（間に物がある）' : '（近づく）') : c.ops.length > 1 ? '（長押し: メニュー）' : '');
     if (p.act) { v.prog = Math.min(1, p.act.t / p.act.dur); v.progLabel = OP_NAME[p.act.k] || ''; prompt = ''; }
-    if (this.droneId != null) prompt = 'ドローン ― 射撃: マーク／乗り越え: ジャンプ／ドローン: 戻る';
+    if (this.droneId != null) prompt = S.m && S.m.phase === 'prep' && p.staged ? 'ドローン ― 射撃: 敵にマーク／乗り越え: ジャンプ（準備が終わると出現地点に出る）' : 'ドローン ― 射撃: マーク／乗り越え: ジャンプ／ドローン: 戻る';
+    else if (p.staged) prompt = '準備中 ― ドローンで偵察できる' + (v.zoneOK ? '（出現地点のボタンで出る場所を選ぶ）' : '');
+    // 防衛側が建物の外にいる: 2.5秒で居場所が知られる
+    if (S.pvp && S.m && S.m.kind !== 'tdm' && p.team === S.m.def && (p.outT || 0) > 0 && p.alive) prompt = (p.outT >= OUT_GRACE ? '建物の外 ― 攻撃側に居場所が見えている' : `建物の外 ― あと${Math.max(0, OUT_GRACE - p.outT).toFixed(1)}秒で居場所が知られる`);
     // 手に持った特殊装備の使い方
     if (!p.act && p.ws.slot === 3 && !p.peek && p.ws.st !== 'holster') {
       const L = p.inv.long, door = c && c.k === 'door';
@@ -791,7 +832,7 @@ export class Match {
     const MODE = { tdm: 'チームデスマッチ', elim: '殲滅戦', bomb: '爆弾' };
     const sideName = (t) => { const a = S.actors.find(x => x.team === t && !x.isDrone); return a && a.pvpSide === 'swat' ? 'SWAT' : a && a.pvpSide === 'sus' ? '立てこもり犯' : 'チーム' + (t + 1); };
     const score = (t) => m.kind === 'tdm' ? (m.score || [0, 0])[t] : (m.wins || [0, 0])[t];
-    const rows = (t) => S.actors.filter(a => !a.isDrone && a.team === t).map(a => ({ name: a.name || '?', k: a.stats.k, d: a.stats.d, a: a.stats.a, me: a === p, bot: a.pid == null, out: m.kind !== 'tdm' && (!a.alive || a.down) })).sort((x, y) => (y.k * 2 + y.a) - (x.k * 2 + x.a) || x.d - y.d);
+    const rows = (t) => S.actors.filter(a => !a.isDrone && a.team === t).map(a => ({ name: a.name || '?', k: a.stats.k, d: a.stats.d, a: a.stats.a, me: a === p, bot: a.pid == null, out: m.kind !== 'tdm' && !a.staged && (!a.alive || a.down) })).sort((x, y) => (y.k * 2 + y.a) - (x.k * 2 + x.a) || x.d - y.d);
     const mine = p.team, foe = 1 - p.team;
     const sub = m.kind === 'tdm' ? `目標 ${m.limit} キル` : `ラウンド ${m.round || 1}・先に ${m.winsNeeded} 勝`;
     return { title: `${MODE[m.kind] || '対戦'}　${sub}`, teams: [{ name: sideName(mine) + '（味方）', score: score(mine), cls: 'mine', rows: rows(mine) }, { name: sideName(foe), score: score(foe), cls: 'foe', rows: rows(foe) }] };
@@ -831,6 +872,7 @@ export class Match {
   saveState() { if (this.done) return null; try { return { dump: dump(this.G), cam: { yaw: this.yaw, pitch: this.pitch }, o: this.o }; } catch (e) { return null; } }
 }
 import { endMission } from '../engine/modes/pve.js';
+import { attackZones, OUT_GRACE } from '../engine/modes/pvp.js';
 import { netMixin } from './netgame.js';
 netMixin(Match);
 function import_end(S) { endMission(S, S.m.softDone ? 'done' : 'abort', 'player', []); }
@@ -839,10 +881,10 @@ function fmtT(s) { s = Math.max(0, Math.ceil(s)); return `${Math.floor(s / 60)}:
 function nm(a) { return a ? (a.pid != null ? a.name : a.kind === 'sus' ? '容疑者' : a.kind === 'civ' ? '市民' : a.name) : '?'; }
 function feedKill(k, v, e, p) {
   const kn = k ? nm(k) : '?', vn = nm(v);
-  const wpn = k && curWeapon(k) ? WEAPONS[curWeapon(k).id].name : e.kind === 'bleed' ? '出血' : e.kind === 'blast' ? '爆発' : '';
+  const wpn = e.kind === 'melee' ? '近接' : k && curWeapon(k) ? WEAPONS[curWeapon(k).id].name : e.kind === 'bleed' ? '出血' : e.kind === 'blast' ? '爆発' : '';
   return `<b class="${k && k.team === p.team ? 'ally' : 'enemy'}">${kn}</b> <i>${wpn}${e.hs ? '・頭' : ''}</i> <b class="${v.team === p.team ? 'ally' : 'enemy'}">${vn}</b>`;
 }
-function ctxName(c, S) { return c.k === 'door' ? '扉' : c.k === 'person' ? (S.byId[c.id] ? (S.byId[c.id].kind === 'sus' ? '容疑者' : S.byId[c.id].kind === 'civ' ? '市民' : '隊員') : '人') : c.k === 'item' ? '物' : c.k === 'bomb' ? '爆弾' : c.k === 'site' ? '爆弾の場所' : c.k === 'wall' ? '壁' : ''; }
+function ctxName(c, S) { return c.k === 'bar' ? (c.ops && c.ops[0] && c.ops[0].op === 'bar' ? '窓' : 'バリケード') : c.k === 'door' ? (S.doors[c.id] && S.doors[c.id].bar > 0 ? 'バリケード' : '扉') : c.k === 'person' ? (S.byId[c.id] ? (S.byId[c.id].kind === 'sus' ? '容疑者' : S.byId[c.id].kind === 'civ' ? '市民' : '隊員') : '人') : c.k === 'item' ? '物' : c.k === 'bomb' ? '爆弾' : c.k === 'site' ? '爆弾の場所' : c.k === 'wall' ? '壁' : ''; }
 export function cmdName(c, stage) {
   return ({ move: '移動', hold: '待機', cover: '援護', fallin: '集合', stack: 'スタック', breach: stage === 'clear' ? '確保' : stage === 'enter' ? '突入中' : stage === 'nade' ? '投げ物' : stage === 'open' ? '開ける' : '突入', mirror: 'ミラー', wedge: 'ウェッジ', unwedge: 'ウェッジを外す', disarm: '罠の解除', pick: 'ピッキング', restrain: '拘束', deploy: '投入', search: '捜索して確保' })[c] || c;
 }

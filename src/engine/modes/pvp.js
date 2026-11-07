@@ -4,10 +4,11 @@ import { createActor, makeInventory, makeArmor } from '../actor.js';
 import { PVP_LOADOUTS } from '../data/npc.js';
 import { MAPS } from '../maps/index.js';
 import { rnd, rndShuffle, rndPick, hrand } from '../rng.js';
-import { CS, LH, groundAt, nearestFloor, los, pushOut } from '../world.js';
+import { CS, LH, groundAt, nearestFloor, los, pushOut, levelOfY, inMap } from '../world.js';
 import { PVP_ARMOR } from '../move.js';
 import { cellPos } from './spawn.js';
 import { makeDoorStates } from '../doors.js';
+import { initBars } from '../barricade.js';
 import { WEAPONS } from '../data/weapons.js';
 
 const sec = (S, t0) => (S.t - t0) * S.dt;
@@ -25,7 +26,7 @@ export function makePvpMode(kind) {
       const sizes = o.teams || [4, 4];
       const m = S.m = {
         kind, phase: 'pre', phaseT: S.t, round: 1, wins: [0, 0], score: [0, 0], att: 0, def: 1, swapped: false,
-        winsNeeded: R.wins ?? 3, roundTime: R.roundTime ?? (kind === 'bomb' ? 180 : 150), prepTime: R.prepTime ?? 45, limit: R.limit ?? Math.max(...sizes) * 10, timeLimit: R.time ?? 480,
+        winsNeeded: R.wins ?? 3, roundTime: R.roundTime ?? (kind === 'bomb' ? 180 : 150), prepTime: R.prepTime ?? (kind === 'bomb' ? 45 : 30), limit: R.limit ?? Math.max(...sizes) * 10, timeLimit: R.time ?? 480,
         respawn: [], sites: [], defuser: null, reinfLeft: 0, intel: {}, log: [], over: false, sizes, mvp: null,
       };
       // 名簿: プレイヤー＋ボット
@@ -48,20 +49,24 @@ export function makePvpMode(kind) {
       const m = S.m;
       if (m.over) return;
       const el = sec(S, m.phaseT);
-      // 段階
-      if (m.phase === 'pre' && el >= (kind === 'tdm' ? 3 : 3)) { m.phase = kind === 'bomb' ? 'prep' : 'action'; m.phaseT = S.t; ev.push({ e: 'phase', p: m.phase }); }
-      else if (m.phase === 'prep' && el >= m.prepTime) { m.phase = 'action'; m.phaseT = S.t; ev.push({ e: 'phase', p: 'action' }); for (const a of S.actors) if (a.isDrone) killDroneQuiet(S, a); }
-      // 準備中は攻撃側は出られない（ドローンだけ）
-      if (m.phase === 'pre' || (m.phase === 'prep')) {
-        for (const a of S.actors) if (!a.isDrone && a.team === m.att && kind === 'bomb' && a.spawnAt) { if (Math.hypot(a.x - a.spawnAt[0], a.z - a.spawnAt[1]) > 4) { const k = 4 / Math.hypot(a.x - a.spawnAt[0], a.z - a.spawnAt[1]); a.x = a.spawnAt[0] + (a.x - a.spawnAt[0]) * k; a.z = a.spawnAt[1] + (a.z - a.spawnAt[1]) * k; } }
-        if (m.phase === 'pre') for (const a of S.actors) if (!a.isDrone && a.spawnAt) { a.x = a.spawnAt[0]; a.z = a.spawnAt[1]; a.vx = a.vz = 0; }
+      // 段階: 始まり（3秒）→ 準備（攻守のモード）→ 行動
+      if (m.phase === 'pre' && el >= 3) {
+        m.phase = kind === 'tdm' ? 'action' : 'prep'; m.phaseT = S.t; ev.push({ e: 'phase', p: m.phase });
+        // 攻撃側（人）は準備のあいだドローンで偵察する（体は出現地点の外。シージと同じ）
+        if (m.phase === 'prep') for (const a of S.actors) if (a.staged && a.pid != null) deployDrone(S, w, a, ev);
+      } else if (m.phase === 'prep' && el >= m.prepTime) {
+        m.phase = 'action'; m.phaseT = S.t; ev.push({ e: 'phase', p: 'action' });
+        deployAttackers(S, w, ev);
       }
+      if (m.phase === 'pre') for (const a of S.actors) if (!a.isDrone && a.spawnAt && !a.staged) { a.x = a.spawnAt[0]; a.z = a.spawnAt[1]; a.vx = a.vz = 0; }
+      if (kind !== 'tdm') outdoorRules(S, w, dt, ev);
       if (kind === 'tdm') return stepTdm(S, w, dt, ev, el);
       if (m.phase === 'post') { if (el > 4.5) nextRound(S, w, ev); return; }
       if (m.phase !== 'action' && m.phase !== 'prep') return;
       // 殲滅・爆弾の判定
-      const alive = [0, 1].map(t => S.actors.filter(a => !a.isDrone && a.team === t && a.alive && !a.down).length);
-      const any = [0, 1].map(t => S.actors.filter(a => !a.isDrone && a.team === t && a.alive).length);
+      // 準備中で出てきていない攻撃側も数える
+      const alive = [0, 1].map(t => S.actors.filter(a => !a.isDrone && a.team === t && ((a.alive && !a.down) || a.staged)).length);
+      const any = [0, 1].map(t => S.actors.filter(a => !a.isDrone && a.team === t && (a.alive || a.staged)).length);
       if (kind === 'elim') {
         if (alive[0] === 0 || alive[1] === 0) return roundWin(S, w, ev, alive[0] === 0 && alive[1] === 0 ? -1 : alive[0] === 0 ? 1 : 0, 'elim');
         if (m.phase === 'action' && el >= m.roundTime) return roundWin(S, w, ev, alive[0] > alive[1] ? 0 : alive[1] > alive[0] ? 1 : -1, 'time');
@@ -101,6 +106,16 @@ export function makePvpMode(kind) {
       return true;
     },
     stepDrone(S, w, a, inp, dt, ev) { stepDrone(S, w, a, inp, dt, ev); },
+    // モードの動作: ドローンを出す・出現地点を選ぶ
+    act(S, w, a, ac, ev) {
+      if (ac.a === 'drone') { deployDrone(S, w, a, ev); return true; }
+      if (ac.a === 'zone') {
+        const zs = attackZones(w, MAPS[S.map]);
+        if (a.team === S.m.att && (S.m.phase === 'pre' || S.m.phase === 'prep') && Number.isInteger(ac.z) && ac.z >= 0 && ac.z < zs.length) { a.zone = ac.z; ev.push({ e: 'zone', id: a.id, z: ac.z }); }
+        return true;
+      }
+      return false;
+    },
   };
 }
 
@@ -116,6 +131,7 @@ function startRound(S, w, first) {
     S.items.length = 0; S.nades.length = 0; S.clouds.length = 0; S.blasts.length = 0; S.bullets.length = 0; S.mines = [];
     S.reinf = {};
     S.actors = S.actors.filter(a => !a.isDrone);
+    initBars(S, w);
   }
   // 対戦では扉に鍵はかけない（R6 と同じ。ふさぐのはバリケード・補強で）
   for (const ds of S.doors) { ds.locked = false; ds.lockBroken = false; }
@@ -123,8 +139,11 @@ function startRound(S, w, first) {
   // 爆弾: このラウンドの目標は1か所（R6 と同じく、守る側は1つの目標を全員で守る。2か所が離れたマップで守りが2つに割れないように）
   m.target = m.kind === 'bomb' && m.sites && m.sites.length ? Math.floor(hrand(S.seed + (m.round || 1) * 7, 7, 220) * m.sites.length) : null;
   m.reinfLeft = Math.min(10, 2 * S.actors.filter(a => a.team === m.def).length);
-  // 陣営の見た目: 攻撃側（またはチーム0）が SWAT
-  const sideOf = (t) => m.kind === 'bomb' ? (t === m.att ? 'swat' : 'sus') : ((t === 0) !== !!m.swapped ? 'swat' : 'sus');
+  // 陣営の見た目: 攻撃側（TDM はチーム0）が SWAT
+  const sideOf = (t) => m.kind !== 'tdm' ? (t === m.att ? 'swat' : 'sus') : ((t === 0) !== !!m.swapped ? 'swat' : 'sus');
+  // 殲滅戦も守る場所を1つ（ボットの準備の目安。爆弾と同じ選び方）
+  if (m.kind === 'elim' && m.sites && m.sites.length) m.target = Math.floor(hrand(S.seed + (m.round || 1) * 7, 7, 220) * m.sites.length);
+  const zones = m.kind !== 'tdm' ? attackZones(w, def) : null;
   const spawnA = (def.spawn.pvp && def.spawn.pvp.a) || def.spawn.swat.map(s => [s.x, s.z, s.L || 0]);
   const spawnB = (def.spawn.pvp && def.spawn.pvp.b) || (def.spawn.sus || []);
   const used = new Set();
@@ -140,6 +159,15 @@ function startRound(S, w, first) {
       spreadOut(S, w, a, placed);
       continue;
     }
+    // 攻撃側: 準備が終わるまで出てこない（ドローンだけ）。出現地点は準備中に選べる（ボットは目標に近い所が多め）
+    if (zones && side === 'swat') {
+      if (a.pid == null || a.zone == null || a.zone >= zones.length) a.zone = pickZone(S, w, a, zones);
+      const z = zones[a.zone];
+      resetFighter(S, w, a, z.pts[a.slotIdx % z.pts.length], side);
+      a.alive = false; a.staged = true; a.dronesLeft = 2; a.drone = null;
+      continue;
+    }
+    a.staged = false;
     const list = (side === 'swat') ? spawnA : spawnB;
     let pt = null;
     for (let tries = 0; tries < list.length; tries++) { const c = list[(a.slotIdx + tries * 3 + (m.round * 5)) % list.length]; const key = c.join(','); if (!used.has(key)) { used.add(key); pt = c; break; } }
@@ -221,10 +249,10 @@ function nextRound(S, w, ev) {
   const m = S.m;
   m.round++;
   const W = m.winsNeeded;
-  if (m.kind === 'bomb') {
+  if (m.kind !== 'tdm') {
     // 攻守交代: (勝利数−1) ラウンドのあと、延長（両方 W−1）では毎ラウンド
     const ot = m.wins[0] === W - 1 && m.wins[1] === W - 1;
-    if (m.round === W || (ot && m.round > W)) { const t = m.att; m.att = m.def; m.def = t; ev.push({ e: 'swap' }); }
+    if (m.round === W || (ot && m.round > W)) { const t = m.att; m.att = m.def; m.def = t; m.swapped = !m.swapped; ev.push({ e: 'swap' }); }
   } else {
     if (m.round === W) { m.swapped = !m.swapped; ev.push({ e: 'swap' }); }
   }
@@ -272,11 +300,94 @@ function pickSpawn(S, w, a) {
   return best;
 }
 
+// ---- 攻撃側の出現地点（シージのように、準備中に選ぶ）: マップの攻撃側の点を、近いものどうしでまとめる
+export function attackZones(w, def) {
+  if (w._zones) return w._zones;
+  const pts = (def.spawn.pvp && def.spawn.pvp.a) || def.spawn.swat.map(s => [s.x, s.z, s.L || 0]);
+  const Z = [];
+  for (const p of pts) {
+    let z = Z.find(q => Math.hypot(q.pts[0][0] - p[0], q.pts[0][1] - p[1]) <= 16 && (q.pts[0][2] || 0) === (p[2] || 0));
+    if (!z) Z.push(z = { pts: [] });
+    z.pts.push(p);
+  }
+  const cx = w.W / 2, cz = w.D / 2, used = {};
+  Z.forEach((z, i) => {
+    const mx = z.pts.reduce((s, p) => s + p[0], 0) / z.pts.length, mz = z.pts.reduce((s, p) => s + p[1], 0) / z.pts.length;
+    const dir = Math.abs(mx - cx) * w.D > Math.abs(mz - cz) * w.W ? (mx > cx ? '東' : '西') : (mz > cz ? '南' : '北');
+    used[dir] = (used[dir] || 0) + 1;
+    z.id = i; z.x = (mx + 0.5) * CS; z.z = (mz + 0.5) * CS; z.dir = dir;
+    z.name = dir + '側' + (i === 0 ? '（正面）' : '');
+  });
+  for (const z of Z) if (used[z.dir] > 1 && z.id !== 0) z.name = z.dir + '側' + (Z.filter(q => q.dir === z.dir && q.id <= z.id).length);
+  w._zones = Z;
+  return Z;
+}
+// ボットの出現地点: 目標に近い所を多めに（ほかは散らす）
+function pickZone(S, w, a, zones) {
+  const m = S.m, site = m.sites && m.target != null ? m.sites[m.target] : null;
+  const r = a.pid != null ? 0 : hrand(a.id, (m.round || 1) * 13, 223); // 人は目標にいちばん近い所から（あとで選び直せる）
+  if (site && r < 0.6) {
+    let best = 0, bd = 1e9;
+    zones.forEach((z, i) => { const d = Math.hypot(z.x - site.x, z.z - site.z); if (d < bd) { bd = d; best = i; } });
+    return best;
+  }
+  return Math.floor(hrand(a.id, (m.round || 1) * 17, 224) * zones.length) % zones.length;
+}
+// 準備が終わった: 攻撃側が選んだ出現地点に出てくる（解除装置は持ったまま）
+function deployAttackers(S, w, ev) {
+  const zones = attackZones(w, MAPS[S.map]);
+  const placed = [];
+  for (const a of S.actors) {
+    if (!a.staged) continue;
+    const z = zones[a.zone] || zones[0];
+    const carry = a.carry, left = a.dronesLeft;
+    resetFighter(S, w, a, z.pts[a.slotIdx % z.pts.length], 'swat');
+    a.carry = carry; a.dronesLeft = left; a.staged = false;
+    spreadOut(S, w, a, placed);
+    ev.push({ e: 'respawn', id: a.id, zone: a.zone });
+  }
+}
+// 防衛側と建物の外: 準備中は外へ出られない。行動中に外へ出ると、2.5秒で攻撃側に居場所が知られる（出ている間ずっと）
+export const OUT_GRACE = 2.5;
+export function isOutside(w, a) {
+  const L = levelOfY(a.y + 0.2), i = Math.floor(a.x / CS), j = Math.floor(a.z / CS);
+  if (!inMap(w, i, j) || L >= w.NL) return true;
+  return w.indoor[w.idx(L, i, j)] === 0;
+}
+function outdoorRules(S, w, dt, ev) {
+  const m = S.m;
+  for (const a of S.actors) {
+    if (a.isDrone || a.team !== m.def || !a.alive) continue;
+    const out = isOutside(w, a);
+    if (m.phase === 'pre' || m.phase === 'prep') {
+      if (out && a._inPos) {
+        a.x = a._inPos[0]; a.z = a._inPos[1]; a.y = a._inPos[2]; a.vx = a.vz = 0; a.vault = null;
+        if (a._denyOutT == null || S.t - a._denyOutT > 90) { a._denyOutT = S.t; ev.push({ e: 'deny', id: a.id, why: 'prepout' }); }
+      } else if (!out) a._inPos = [a.x, a.z, a.y];
+      a.outT = 0;
+    } else if (m.phase === 'action') {
+      if (out) {
+        a.outT = (a.outT || 0) + dt;
+        if (a.outT >= OUT_GRACE) {
+          if (!a.outSeen) { a.outSeen = true; ev.push({ e: 'outside', id: a.id, team: a.team }); }
+          a.spot = Math.max(a.spot || 0, 1.0); a.spotTeam = m.att;
+          if (S.t % 15 === 0) { const intel = m.intel || (m.intel = {}); intel[m.att] = { x: a.x, y: a.y, z: a.z, t: S.t, id: a.id }; }
+        }
+      } else { a.outT = 0; a.outSeen = false; }
+    }
+  }
+}
+
 // ---- ドローン（準備中の偵察）
 export function deployDrone(S, w, a, ev) {
   const m = S.m;
-  if (!m || m.kind !== 'bomb' || a.team !== m.att || a.dronesLeft === 0) return null;
+  if (!m || m.kind === 'tdm' || a.team !== m.att || a.isDrone) return null;
   if (a.dronesLeft == null) a.dronesLeft = 2;
+  if (a.dronesLeft <= 0) return null;
+  // 準備中は出現地点から（体は出ていない）。行動中は自分の足元から（立っていて、倒れていないとき）
+  if (m.phase === 'prep' ? !a.staged : (m.phase !== 'action' || !a.alive || a.down || a.act)) return null;
+  // まだ動いている自分のドローンがあれば、新しくは出さない
+  if (S.actors.some(d => d.isDrone && d.owner === a.id && d.alive)) return null;
   a.dronesLeft--;
   const d = createActor(S, { kind: 'drone', team: a.team, pid: a.pid, x: a.x + Math.sin(a.yaw) * 0.6, y: a.y, z: a.z + Math.cos(a.yaw) * 0.6, yaw: a.yaw, hp: 1 });
   d.isDrone = true; d.owner = a.id; d.h = 0.2; d.jumpT = 0;

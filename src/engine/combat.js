@@ -8,6 +8,7 @@ import { computePose, hitCapsules, rayCapsule, POSE_LEN, NBONE } from './pose.js
 import { holdOf, poseState } from './actor.js';
 import { ACT_POSE } from './data/acts.js';
 import { hrand } from './rng.js';
+import { hitBar, bashBar } from './barricade.js';
 
 const G = 9.81;
 // モードのきまり（engine が入れる）: canDown(S, a)
@@ -159,7 +160,7 @@ function stepBullet(S, w, b, dt, ev) {
     // 割れる物
     if (h.mat === M.GLASS) { breakGlass(S, w, h, ev); b.pen -= 30; b.k = Math.max(0.05, b.pen / b.pen0); continue; }
     if (h.mat === M.GLASSBROKEN) continue;
-    if (h.kind === 'bar') { damageBarricade(S, w, h.id, b.pellet ? 3 : 1, ev); }
+    if (h.kind === 'bar') hitBar(S, w, h.bar, h.pc, b.pellet ? 2 : 1, ev, { x: hx, y: hy, z: hz, by: b.owner });
     if (h.kind === 'block' && mat.hp > 0 && b.pellet && b.dist < 6) { damageBlock(S, w, h.k, h.q, 8, ev); }
     const thick = Math.min(1.5, Math.max(0.01, h.t1 - h.t0));
     const cost = h.kind === 'slab' || h.kind === 'stair' ? 1e9 : mat.pen * thick;
@@ -219,14 +220,6 @@ export function damageBlock(S, w, k, q, dmg, ev) {
   S.bdiff[k] = 1;
   ev.push({ e: 'block', k, q, m });
   return true;
-}
-
-export function damageBarricade(S, w, did, dmg, ev) {
-  const ds = S.doors[did];
-  if (!ds || ds.bar <= 0) return;
-  ds.bar -= dmg;
-  if (ds.bar <= 0) { ds.bar = 0; ev.push({ e: 'barbreak', d: did }); }
-  else ev.push({ e: 'barhit', d: did });
 }
 
 // ---- ダメージ ----
@@ -371,6 +364,83 @@ export function dropWeapon(S, a, ev) {
   }
   if (a.kind === 'sus' || a.kind === 'civ') { a.inv.w = [null, null]; a.ws.slot = -1; }
   ev.push({ e: 'drop', id: a.id });
+}
+
+// ---- 近接（銃床で殴る。シージと同じく、バリケードは3回で壊れる）
+// 押して 0.16 秒で当たり、0.6 秒で次を振れる。届くのは目から 1.35m。
+// 対戦: 胴に 50（3回で倒れる）と大きなよろめき。作戦: 容疑者・市民は 18 と 2.2 秒の怯み（拘束できる）、士気が下がる。
+//   従っている人・市民を殴ると交戦規定の違反（非致死の力）。味方はよろめくだけ
+export const MELEE = { hit: 0.16, dur: 0.6, reach: 1.35, pvp: 50, pve: 18 };
+const _rcM = { out: [], seenProp: new Set(), seenDoor: new Set(), barSolid: true }; // バリケードは穴の所を殴っても板に当たる（残っている段を落とす）
+export function startMelee(S, w, a, ev) {
+  if (!a.alive || a.down || a.cuffed || a.comply || a.act || a.melee || a.vault || a.peek || a.isDrone) return false;
+  const ws = a.ws;
+  if (ws.st === 'reload' || ws.st === 'shell' || ws.st === 'pump') { ws.st = 'ready'; ws.t = 0; } // 近接はリロードを止める（弾は入らない）
+  a.melee = { t: 0, hit: false };
+  const eye = eyeOf(S, a), cp = Math.cos(a.pitch);
+  a.gest = { k: 'push', t: 0, dur: 0.42, tgt: [eye[0] + Math.sin(a.yaw) * cp * 0.75, eye[1] + Math.sin(a.pitch) * 0.75 - 0.15, eye[2] + Math.cos(a.yaw) * cp * 0.75] };
+  ev.push({ e: 'melee', id: a.id });
+  return true;
+}
+export function stepMelee(S, w, a, dt, ev) {
+  const m = a.melee;
+  if (!m) return;
+  if (!a.alive || a.down || a.cuffed) { a.melee = null; return; }
+  m.t += dt;
+  if (!m.hit && m.t >= MELEE.hit) { m.hit = true; meleeHit(S, w, a, ev); }
+  if (m.t >= MELEE.dur) a.melee = null;
+}
+function meleeHit(S, w, a, ev) {
+  const eye = eyeOf(S, a), cp = Math.cos(a.pitch);
+  const dx = Math.sin(a.yaw) * cp, dy = Math.sin(a.pitch), dz = Math.cos(a.yaw) * cp, R = MELEE.reach;
+  // 人（体の当たりを少し太らせて）とドローン
+  let best = null, bt = R;
+  for (const b of S.actors) {
+    if (b === a || !b.alive) continue;
+    if (Math.hypot(b.x - a.x, b.z - a.z) > R + 0.8 || Math.abs(b.y - a.y) > 2) continue;
+    if (b.isDrone) {
+      const cx = b.x - eye[0], cy = b.y + 0.08 - eye[1], cz = b.z - eye[2], t = cx * dx + cy * dy + cz * dz;
+      if (t > 0 && t < bt && Math.hypot(cx - dx * t, cy - dy * t, cz - dz * t) < 0.22) { bt = t; best = { b, t, part: 'drone' }; }
+      continue;
+    }
+    for (const c of capsOf(S, b)) {
+      const t = rayCapsule(eye[0], eye[1], eye[2], dx, dy, dz, R, c.a, c.b, c.r + 0.12);
+      if (t >= 0 && t < bt) { bt = t; best = { b, t, part: c.part }; }
+    }
+  }
+  // 物（壁・扉・バリケード・ガラス・家具）
+  const hits = raycast(w, eye[0], eye[1], eye[2], dx, dy, dz, R, S.doors, _rcM);
+  let wh = null;
+  for (const h of hits) { if (h.kind === 'slab' && h.ny > 0.5) continue; if (h.mat === M.GLASSBROKEN) continue; wh = h; break; }
+  if (wh && wh.t0 < bt) {
+    const x = eye[0] + dx * wh.t0, y = eye[1] + dy * wh.t0, z = eye[2] + dz * wh.t0;
+    if (wh.kind === 'bar') bashBar(S, w, wh.bar, y, ev, a.id);
+    else if (wh.mat === M.GLASS) breakGlass(S, w, wh, ev);
+    ev.push({ e: 'meleehit', id: a.id, k: wh.kind === 'bar' ? 'bar' : wh.kind === 'door' ? 'door' : 'wall', m: wh.mat, x, y, z });
+    if (wh.kind === 'door') ev.push({ e: 'door', d: wh.id, k: 'knock', id: a.id, loud: 0.45 });
+    return;
+  }
+  if (!best) { ev.push({ e: 'meleehit', id: a.id, k: 'air' }); return; }
+  const b = best.b, x = eye[0] + dx * best.t, y = eye[1] + dy * best.t, z = eye[2] + dz * best.t;
+  if (best.part === 'drone') { killDrone(S, b, a.id, ev); ev.push({ e: 'meleehit', id: a.id, k: 'drone', x, y, z }); return; }
+  ev.push({ e: 'meleehit', id: a.id, k: 'body', tgt: b.id, x, y, z });
+  b.flinch = Math.max(b.flinch || 0, 0.8);
+  // 押されて少し下がる
+  b.vx = (b.vx || 0) + dx * 1.6; b.vz = (b.vz || 0) + dz * 1.6;
+  if (S.pvp) {
+    if (b.team === a.team && !S.rules.ff) return;
+    if (b.spawnProt > 0) return;
+    b.stun = Math.max(b.stun, 0.35);
+    ev.push({ e: 'hit', id: b.id, by: a.id, part: 'chest', d: Math.min(MELEE.pvp, b.hp + (b.down ? 20 : 0)), x, y, z, hs: false, melee: 1 });
+    pvpDamage(S, b, MELEE.pvp, a, 'chest', dx, dz, ev, 'melee');
+    return;
+  }
+  if (b.kind === 'swat') return; // 味方はよろめくだけ
+  b.stun = Math.max(b.stun, 2.2);
+  if (b.ai && b.ai.morale != null) b.ai.morale -= 0.4;
+  ev.push({ e: 'hit', id: b.id, by: a.id, part: 'chest', d: MELEE.pve, x, y, z, hs: false, melee: 1 });
+  S.harms.push({ t: S.t, by: a.id, tgt: b.id, how: 'melee', d: MELEE.pve, part: 'chest', kind: b.kind, threat: b.ai ? (S.t - (b.ai.threatT ?? -1e9)) * S.dt < 2 : false, warned: b.ai ? b.ai.warned || 0 : 0, armed: !!(b.inv.w[0] || b.inv.w[1]), comply: b.comply, cuffed: b.cuffed, down: b.down });
+  hurt(S, w, b, MELEE.pve, 'chest', a, null, dx, dz, ev, 'melee');
 }
 
 function killDrone(S, a, by, ev) {

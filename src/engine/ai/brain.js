@@ -61,6 +61,9 @@ export function collectNoise(S, ev) {
       case 'launch': { const a = S.byId[e.id]; if (a) H.push({ x: a.x, y: a.y + 1.4, z: a.z, k: 'shot', loud: 0.9, id: e.id, team: a.team }); break; }
       case 'shieldhit': H.push({ x: e.x, y: e.y, z: e.z, k: 'shot', loud: 0.5, id: e.id, team: S.byId[e.id] ? S.byId[e.id].team : -1 }); break;
       case 'glass': break;
+      // バリケードを殴る・崩す音は遠くまで届く（シージと同じく、どこから来るかが分かる）。弾で削る音は小さい
+      case 'barhit': if (e.big) { const a = S.byId[e.by ?? -1]; H.push({ x: e.x, y: e.y - 1, z: e.z, k: 'breach', loud: 1.1, id: e.by ?? -1, team: a ? a.team : -1 }); } break;
+      case 'barbreak': if (!e.pry) { const a = S.byId[e.id]; H.push({ x: e.x, y: e.y - 1, z: e.z, k: 'breach', loud: 1.3, id: e.id, team: a ? a.team : -1 }); } break;
       case 'shout': H.push({ x: e.x, y: e.y - 1.6, z: e.z, k: 'shout', loud: 0.8, id: e.id, team: S.byId[e.id] ? S.byId[e.id].team : -1 }); break;
     }
   }

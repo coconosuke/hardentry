@@ -38,7 +38,7 @@ export function spreadDeg(S, a, W, wi) {
 // 1ステップ。inp: { fire, ads, low } と act の配列（reload/switch/mode/light）
 export function stepWeapon(S, w, a, inp, dt, ev) {
   const ws = a.ws;
-  if (a.dead || a.cuffed || (a.down && !S.pvp)) { ws.trigWas = !!inp.fire; return; }
+  if (!a.alive || a.dead || a.cuffed || (a.down && !S.pvp)) { ws.trigWas = !!inp.fire; return; }
   if (ws.cd > 0) ws.cd -= dt;
   // 反動の戻り（撃ち続けている間は弱く）
   const W = curW(a), wi = curWeapon(a);

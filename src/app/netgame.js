@@ -8,9 +8,9 @@ import { doAction } from '../engine/interact.js';
 import { setSalt } from '../engine/rng.js';
 
 // 手元でも先に行う動作（ホストにも送る）
-const LOCAL_ACTS = new Set(['switch', 'reload', 'mode', 'light']);
+const LOCAL_ACTS = new Set(['switch', 'reload', 'mode', 'light', 'melee']);
 // ゲストが手元で出す出来事（ホストから来た同じものは捨てる）
-const LOCAL_EV = new Set(['shot', 'reload', 'reloaded', 'shell', 'pumped', 'dry', 'draw', 'fmode', 'lightsw', 'step', 'holster']);
+const LOCAL_EV = new Set(['shot', 'reload', 'reloaded', 'shell', 'pumped', 'dry', 'draw', 'fmode', 'lightsw', 'step', 'holster', 'melee']);
 
 export function netMixin(Match) {
   const P = Match.prototype;
@@ -25,7 +25,16 @@ export function netMixin(Match) {
   P.staticVer = function () { const m = this.S.m || {}; return (m.round || 0) * 10 + (m.swapped ? 1 : 0); };
   P.netInputs = function (inputs) {
     const sess = this.net.sess;
-    for (const [pid, id] of Object.entries(this.mePids)) { const a = this.S.byId[id]; if (a) inputs[id] = sess.remoteInput(+pid, a); }
+    for (const [pid, id] of Object.entries(this.mePids)) {
+      const a = this.S.byId[id]; if (!a) continue;
+      const inp = sess.remoteInput(+pid, a);
+      // ゲストがドローンを動かしている: 入力はドローンへ、体はその場で止める
+      if (inp.dr) {
+        const d = this.S.actors.find(x => x.isDrone && x.owner === a.id && x.alive);
+        if (d) { inputs[d.id] = { mx: inp.mx, mz: inp.mz, yaw: inp.yaw, pitch: inp.pitch, fire: inp.fire, jump: inp.jump }; inputs[id] = { ...inp, mx: 0, mz: 0, fire: false, ads: false, sprint: false, yaw: a.yaw, pitch: a.pitch }; continue; }
+      }
+      inputs[id] = inp;
+    }
     return inputs;
   };
   P.netAfterSteps = function (ev) {
@@ -103,12 +112,16 @@ export function netMixin(Match) {
       const cmd = this._command(inp);
       // 動作: ホストへ送る（手元でも先にやるものだけ実行）
       if (cmd.act) for (const ac of cmd.act) { sess.pushAct(ac); if (LOCAL_ACTS.has(ac.a)) { try { doAction(S, this.w, me, ac, ev); } catch (e) { /* なし */ } } }
-      sess.setInput({ mx: r2(cmd.mx), mz: r2(cmd.mz), y: r4(cmd.yaw), p: r4(cmd.pitch), f: cmd.fire ? 1 : 0, a: cmd.ads ? 1 : 0, l: cmd.low ? 1 : 0, s: cmd.stance, ln: cmd.lean, sp: cmd.sprint ? 1 : 0, pw: cmd.power });
+      const dc = this.droneId != null ? this._droneCmd(inp) : null;
+      if (dc && this.droneId != null) sess.setInput({ mx: r2(dc.mx), mz: r2(dc.mz), y: r4(dc.yaw), p: r4(dc.pitch), f: dc.fire ? 1 : 0, j: dc.jump ? 1 : 0, s: cmd.stance, dr: 1 });
+      else sess.setInput({ mx: r2(cmd.mx), mz: r2(cmd.mz), y: r4(cmd.yaw), p: r4(cmd.pitch), f: cmd.fire ? 1 : 0, a: cmd.ads ? 1 : 0, l: cmd.low ? 1 : 0, s: cmd.stance, ln: cmd.lean, sp: cmd.sprint ? 1 : 0, pw: cmd.power });
       if (me.alive && !me.down && !me.cuffed) {
         me._inp = { ...cmd, act: null };
-        try { moveActor(S, this.w, me, me._inp, S.dt, ev); stepWeapon(S, this.w, me, me._inp, S.dt, ev); } catch (e) { console.warn('predict', e); }
+        try { moveActor(S, this.w, me, me._inp, S.dt, ev); stepWeapon(S, this.w, me, me.melee ? { ...me._inp, fire: false, ads: false } : me._inp, S.dt, ev); } catch (e) { console.warn('predict', e); }
       }
       S.bullets.length = 0;
+      // 近接の振り（見た目だけ。当たりはホスト）
+      if (me.melee) { me.melee.t += S.dt; if (me.melee.t >= 0.6) me.melee = null; }
       this.acc -= S.dt; n++;
     }
     if (n === 4) this.acc = 0;

@@ -5,7 +5,7 @@ import { rngNew, rnd, setSalt } from './rng.js';
 import { COMPAT } from './data/version.js';
 import { moveActor, separateActors, tryVault } from './move.js';
 import { stepWeapon } from './weapon.js';
-import { stepBullets, hooks } from './combat.js';
+import { stepBullets, hooks, stepMelee } from './combat.js';
 import { makeDoorStates, stepDoors } from './doors.js';
 import { stepNades, stepClouds, stepBlasts } from './nades.js';
 import { stepActs, doAction } from './interact.js';
@@ -14,6 +14,7 @@ import { MAPS } from './maps/index.js';
 import { MODES } from './modes/index.js';
 import { thinkAll, collectNoise } from './ai/brain.js';
 import { bakeLight, HS } from './light.js';
+import { initBars, barGlass, linkBars } from './barricade.js';
 
 const worldCache = new Map();
 // マップの組み立ては重いので1回だけ。試合ごとに壊れる物（ブロック）だけ写す
@@ -70,6 +71,7 @@ export function createGame(o) {
   const mod = MODES[o.mode];
   if (!mod) throw new Error('モードがない: ' + o.mode);
   setSalt(S.seed);
+  initBars(S, w);
   mod.init(S, w, o);
   reindex(S);
   return api;
@@ -97,6 +99,7 @@ export function step(G, inputs = {}) {
     a._inp = inp;
     if (inp.act) for (const ac of inp.act) {
       if (ac.a === 'vault') tryVault(S, w, a);
+      else if (mod.act && mod.act(S, w, a, ac, ev)) { /* モードの動作（ドローン・出現地点） */ }
       else doAction(S, w, a, ac, ev);
     }
   }
@@ -107,7 +110,9 @@ export function step(G, inputs = {}) {
     if (a.isDrone) { if (mod.stepDrone) mod.stepDrone(S, w, a, a.pid != null ? inputs[a.id] : null, dt, ev); continue; }
     const inp = a._inp;
     moveActor(S, w, a, inp, dt, ev);
-    stepWeapon(S, w, a, inp, dt, ev);
+    // 近接で振っている間は撃てず、構えられない
+    stepWeapon(S, w, a, a.melee ? { ...inp, fire: false, ads: false } : inp, dt, ev);
+    if (a.melee) stepMelee(S, w, a, dt, ev);
   }
   separateActors(S, w);
   stepActs(S, w, dt, ev);
@@ -154,6 +159,8 @@ export function load(o) {
   if (!o || o.v !== COMPAT) throw new Error('互換番号が違うセーブ');
   const w = instWorld(o.map);
   const S = JSON.parse(JSON.stringify(o));
+  if (S.bars) barGlass(S, w); else initBars(S, w);
+  linkBars(S);
   for (const [k, b0, b1, b2, b3, h0, h1, h2, h3] of (S.blocksDiff || [])) { const b = k * 4; w.blocks[b] = b0; w.blocks[b + 1] = b1; w.blocks[b + 2] = b2; w.blocks[b + 3] = b3; w.bhp[b] = h0; w.bhp[b + 1] = h1; w.bhp[b + 2] = h2; w.bhp[b + 3] = h3; }
   delete S.blocksDiff;
   reindex(S);

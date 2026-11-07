@@ -56,7 +56,7 @@ export class Hud {
     // のぞいている間（ミラー・オプティワンド）
     this.peekEl = el('div', 'hud-peek', '<div class="pk-hint">スワイプで見回す・動くと戻る</div><div class="pk-x" data-btn="peekx" role="button">戻る</div>'); r.appendChild(this.peekEl);
     this.stickEl = el('div', 'hud-stick', '<div class="knob"></div><div class="spr">ダッシュ</div>'); this.stickEl.dataset.edit = 'stick'; r.appendChild(this.stickEl);
-    // スコア表（対戦）: ボタンかタブで開く
+    // スコア表（対戦）: 画面上部のスコアをタップ（PC は Tab）で開く。表をタップで閉じる
     this.boardEl = el('div', 'hud-board'); this.boardEl.dataset.btn = 'board'; r.appendChild(this.boardEl);
     this.radialEl = el('div', 'hud-radial'); r.appendChild(this.radialEl);
     // ボタン
@@ -77,7 +77,12 @@ export class Hud {
     r.appendChild(this.editBar);
   }
   setSettings(s) { this.S = s; this.root.style.setProperty('--subbg', String(s.subBg ?? 0.42)); this.layout(); }
-  setMode(m) { this.mode = m; this.layout(); }
+  setMode(m) {
+    this.mode = m;
+    // 対戦: 画面上部のスコア（目的の欄）をタップするとスコア表（専用のボタンはない）
+    if (this.info.obj) { if (m && m.pvp) { this.info.obj.dataset.btn = 'board'; this.info.obj.setAttribute('role', 'button'); this.info.obj.setAttribute('aria-label', 'スコア表を開く'); } else { delete this.info.obj.dataset.btn; this.info.obj.removeAttribute('role'); } }
+    this.layout();
+  }
   show(on) { this.on = on; this.root.classList.toggle('on', on); }
 
   k() { return Math.max(0.8, Math.min(1.35, this.stage.h / 390)) * (this.S.hudScale || 1); }
@@ -309,6 +314,11 @@ export class Hud {
       const tk = v.team || 'gold';
       if (this.cache.team !== tk) { this.cache.team = tk; this.btn.team.style.color = TEAMCOL[tk]; this.btn.team.querySelector('.lb').textContent = TEAMJA[tk]; this.btn.cmd.style.color = TEAMCOL[tk]; }
       this.btn.drone.classList.toggle('hidden', !v.droneOK && !this.editing);
+      if (this.btn.zone) {
+        this.btn.zone.classList.toggle('hidden', !v.zoneOK && !this.editing);
+        const zl = v.zoneOK ? '出現: ' + (v.zoneLabel || '') : '出現地点';
+        if (this.cache.zone !== zl) { this.cache.zone = zl; this.btn.zone.querySelector('.lb').textContent = zl; }
+      }
     }
     // 案内の文字
     const pr = v.prompt || '';

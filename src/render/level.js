@@ -850,6 +850,27 @@ export function doorLeafMesh(ctx, d, li) {
 }
 
 // バリケード（板を打ちつけた扉）: 扉の開口の幅で、扉の手前に
+// バリケードの板（シージ式）: かけらごとの箱。h はかけらの残り（'0' なし・'1' 傷んだ・'2' そのまま）。世界の座標で作る
+export function barPanelMesh(s, h) {
+  const B = new MeshBuilder();
+  const wood = hex('#9a7550');
+  const cw = (s.a1 - s.a0) / s.cols, rh = (s.y1 - s.y0) / s.rows, t0 = -s.th / 2, t1 = s.th / 2;
+  for (let r = 0; r < s.rows; r++) {
+    const tone = 0.74 + ((r * 7 + s.id * 3) % 5) * 0.07;
+    const sh = (((r * 5 + s.id) % 3) - 1) * 0.008; // 板ごとに少し前後にずらす
+    for (let c = 0; c < s.cols; c++) {
+      const v = h.charCodeAt(r * s.cols + c) - 48;
+      if (!(v > 0)) continue;
+      const hurt = v < 2, ins = hurt ? 0.025 : 0;
+      const u0 = s.a0 + c * cw - (c === 0 ? 0.03 : 0) + (hurt ? 0.01 : 0), u1 = s.a0 + (c + 1) * cw + (c === s.cols - 1 ? 0.03 : 0) - (hurt ? 0.01 : 0);
+      const y0 = s.y0 + r * rh + 0.012 + ins, y1 = s.y0 + (r + 1) * rh - 0.012 - ins * 0.5;
+      const col = mulc(wood, tone * (hurt ? 0.66 : 1));
+      if (s.axis === 0) B.box(u0, y0, s.c + t0 + sh, u1, y1, s.c + t1 + sh, LAYER.wood, col);
+      else B.box(s.c + t0 + sh, y0, u0, s.c + t1 + sh, y1, u1, LAYER.wood, col);
+    }
+  }
+  return B;
+}
 export function barricadeMesh(d) {
   const B = new MeshBuilder();
   const w0 = d.a1 - d.a0;

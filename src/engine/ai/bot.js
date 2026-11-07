@@ -53,6 +53,8 @@ export function thinkBot(S, w, a, dt, ctx) {
       if (hrand(a.id, ph, 204) < 0.55) inp.mx = side * 0.7;
       if (td > 14 && hrand(a.id, ph, 205) < 0.4) inp.stance = 1;
     }
+    // すぐそば（1.25m）: リロード中・弾切れか、ときどき銃床で殴る
+    if (td < 1.25 && !a.melee && !a.act) { const wi0 = curWeapon(a); if (a.ws.st === 'reload' || (wi0 && ammoCount(wi0)[0] === 0) || hrand(a.id, Math.floor(S.t / 20), 206) < 0.25) pushAct(inp, { a: 'melee' }); }
     ai.lastEnemy = [tgt.x, tgt.y, tgt.z];
     return inp;
   }
@@ -62,7 +64,25 @@ export function thinkBot(S, w, a, dt, ctx) {
   if (wi && W) { const [mag] = ammoCount(wi); if (mag < Math.max(1, W.mag * 0.4) && a.ws.st === 'ready') pushAct(inp, { a: 'reload' }); }
   // モードの目的
   if (m.kind === 'bomb') return bombThink(S, w, a, inp, dt, ctx, sk);
+  if (m.kind === 'elim' && a.team === m.def) return m.phase === 'prep' ? defendPrep(S, w, a, inp, dt, ctx) : elimDefThink(S, w, a, inp, dt, ctx);
   return huntThink(S, w, a, inp, dt, ctx, m.kind === 'elim');
+}
+// 殲滅戦の防衛: 建物の中で守りの部屋のまわりを固め、聞こえた・見えた所が建物の中なら慎重に寄る（外へは出ない。出ると居場所が知られる）
+function elimDefThink(S, w, a, inp, dt, ctx) {
+  const m = S.m, site = m.sites && m.sites[m.target ?? 0];
+  const intel = m.intel && m.intel[a.team];
+  const inside = (x, y, z) => { const L = levelOfY(y + 0.2), i = Math.floor(x / CS), j = Math.floor(z / CS); return i >= 0 && j >= 0 && i < w.W && j < w.D && L < w.NL && w.indoor[w.idx(L, i, j)] > 0; };
+  const h = hearNearest(S, w, a, 30, (x) => (x.k === 'shot' || x.k === 'breach' || x.k === 'step') && x.team !== a.team && x.team >= 0);
+  let goal = null;
+  if (intel && sec(S, intel.t) < 8 && inside(intel.x, intel.y, intel.z)) goal = [intel.x, intel.y, intel.z];
+  else if (h && inside(h.x, h.y, h.z) && hrand(a.id, Math.floor(S.t / 120), 213) < 0.5) goal = [h.x, h.y, h.z];
+  if (goal) {
+    const r = goTo(S, w, a, inp, goal[0], goal[1], goal[2], { speed: 0.7, r: 2.5, unlock: true });
+    if (r !== 'moving') { inp.yaw = turnToward(a.yaw, yawTo(goal[0] - a.x, goal[2] - a.z), 4 * dt); inp.ads = true; }
+    return inp;
+  }
+  if (site) return holdNear(S, w, a, inp, dt, site.x, site.y, site.z, 6);
+  return huntThink(S, w, a, inp, dt, ctx, true);
 }
 function bodyHead(b) { return b.down ? 0.3 : b.st > 1.5 ? 0.42 : b.st > 0.5 ? 1.1 : 1.62; }
 

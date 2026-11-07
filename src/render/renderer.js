@@ -4,7 +4,7 @@ import { m4, m4mul, m4persp, m4lookAt, m4invert, frustumPlanes, aabbVisible } fr
 import { buildOutskirts } from './outskirts.js';
 import { makeTextures, TEX, NLAYER, LAYER } from './textures.js';
 import { COMMON, LIGHT, WORLD_VS, WORLD_FS, SKIN_VS, SKIN_FS, SHADOW_VS, SHADOW_SKIN_VS, SHADOW_FS, FS_VS, SKY_FS, FX_VS, FX_FS, DOWN_FS, UP_FS, COMP_FS, FXAA_FS, COPY_FS, MAX_DL } from './shaders.js';
-import { prepareLevel, buildChunk, doorLeafMesh, barricadeMesh, CHUNK } from './level.js';
+import { prepareLevel, buildChunk, doorLeafMesh, barPanelMesh, CHUNK } from './level.js';
 import { WV, MeshBuilder, hex } from './build.js';
 import { bakeLight } from '../engine/light.js';
 import { CS, LH, CEIL, NB } from '../engine/world.js';
@@ -220,7 +220,8 @@ export class Renderer {
       this.chunks.push(ch);
     }
     // 扉
-    this.doorMeshes = w.doors.map(d => ({ leaves: d.leaves.map((lf, li) => makeWorldMesh(gl, doorLeafMesh(ctx, d, li))), bar: makeWorldMesh(gl, barricadeMesh(d)) }));
+    this.doorMeshes = w.doors.map(d => ({ leaves: d.leaves.map((lf, li) => makeWorldMesh(gl, doorLeafMesh(ctx, d, li))) }));
+    this.barMeshes = [];
     // マップの外まわり（道・隣の建物・遠くの景色）
     try { const o = buildOutskirts(w, def, { lite: !!(this.q && this.q.budget <= 0.4e6) }); this.outer = { mesh: makeWorldMesh(gl, o.B), glass: makeWorldMesh(gl, o.G), tris: o.B.i.length / 3 }; } catch (e) { console.warn('outskirts', e); this.outer = null; }
     this.roofY = w.NL * LH;
@@ -269,7 +270,9 @@ export class Renderer {
   clearMap() {
     const gl = this.gl;
     for (const ch of this.chunks || []) { delMesh(gl, ch.mesh); delMesh(gl, ch.glass); }
-    for (const d of this.doorMeshes || []) { for (const m of d.leaves) delMesh(gl, m); delMesh(gl, d.bar); }
+    for (const d of this.doorMeshes || []) { for (const m of d.leaves) delMesh(gl, m); }
+    for (const b of this.barMeshes || []) if (b) delMesh(gl, b.mesh);
+    this.barMeshes = null;
     if (this.outer) { delMesh(gl, this.outer.mesh); delMesh(gl, this.outer.glass); this.outer = null; }
     for (const t of [this.lgT, this.wmT, this.aoT, this.dlr]) if (t) gl.deleteTexture(t);
     this.chunks = null; this.doorMeshes = null; this.lgT = this.wmT = this.aoT = this.dlr = null;
@@ -388,7 +391,7 @@ export class Renderer {
     for (const [, ch] of vis) { drawMesh(gl, ch.mesh); this.stats.draws++; this.stats.tris += ch.tris; this.stats.chunks++; }
     if (this.outer && this.outer.mesh) { if (P.u.uOuter) gl.uniform1f(P.u.uOuter, 1); drawMesh(gl, this.outer.mesh); if (P.u.uOuter) gl.uniform1f(P.u.uOuter, 0); this.stats.draws++; this.stats.tris += this.outer.tris; }
     // 扉
-    if (f.doors) this._drawDoors(P, f.doors);
+    if (f.doors) { this._drawDoors(P, f.doors); this._drawBars(P, f.doors.bars); }
     for (const h of this.hooks.opaque) h(this, f);
     // 空（奥の深さ1で、まだ何も描いていない所だけ）
     gl.disable(gl.CULL_FACE);
@@ -465,17 +468,26 @@ export class Renderer {
         gl.uniformMatrix4fv(P.u.uModel, false, M);
         drawMesh(gl, tm); this.stats.draws++;
       }
-      if (ds.bar > 0 && dm.bar) {
-        // バリケードは扉の手前（防衛側）に。axis 0: X にそって
-        const side = -1;
-        if (d.axis === 0) { M.set([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, d.a0, base, d.c + side * (d.th / 2 + 0.04), 1]); }
-        else { M.set([0, 0, 1, 0, 0, 1, 0, 0, -1, 0, 0, 0, d.c + side * (d.th / 2 + 0.04), base, d.a0, 1]); }
-        gl.uniformMatrix4fv(P.u.uModel, false, M);
-        drawMesh(gl, dm.bar); this.stats.draws++;
-      }
     }
     gl.uniform1f(P.u.uRoomOverride, -1);
     gl.uniformMatrix4fv(P.u.uModel, false, this.ident);
+  }
+  // バリケード（扉・窓）: かけらが変わったら、その枠だけ作り直す
+  _drawBars(P, bars) {
+    const gl = this.gl, w = this.w0;
+    if (!bars || !w.bars || !this.barMeshes) return;
+    for (let i = 0; i < w.bars.length; i++) {
+      const st = bars[i];
+      if (!st || !st.h) continue;
+      const s = w.bars[i];
+      if (!aabbVisible(this.planes, s.box[0] - 0.1, s.y0, s.box[1] - 0.1, s.box[2] + 0.1, s.y1, s.box[3] + 0.1)) continue;
+      let bm = this.barMeshes[i];
+      if (!bm || bm.h !== st.h) { if (bm) delMesh(gl, bm.mesh); bm = this.barMeshes[i] = { h: st.h, mesh: makeWorldMesh(gl, barPanelMesh(s, st.h)) }; }
+      if (!bm.mesh) continue;
+      gl.uniform1f(P.u.uRoomOverride, Math.max(0, s.room));
+      drawMesh(gl, bm.mesh); this.stats.draws++;
+    }
+    gl.uniform1f(P.u.uRoomOverride, -1);
   }
 
   // 罠の形（扉の幅と壁の厚さごと）。ローカル: X=扉にそって 0..幅、Z=罠の側。
