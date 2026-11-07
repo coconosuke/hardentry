@@ -203,8 +203,14 @@ try {
   await page.waitForTimeout(300);
   {
     const sl = await page.evaluate(() => { const t = document.querySelector('.screen.settings [data-k="bright"] .track'); t.scrollIntoView({ block: 'center' }); const r = t.getBoundingClientRect(); return { x: r.left + r.width / 2, y0: r.top + 6, y1: r.bottom - 6, v: window.__app.settings.bright }; });
-    await page.evaluate(() => { const t = document.querySelector('.screen.settings [data-k="bright"] .track'); const r = t.getBoundingClientRect(); window.__tr = r; });
-    const sl2 = await page.evaluate(() => { const r = document.querySelector('.screen.settings [data-k="bright"] .track').getBoundingClientRect(); return { x: r.left + r.width / 2, y0: r.top + 6, y1: r.bottom - 6, v: window.__app.settings.bright }; });
+    // スクロールが落ち着いてから、指を置く所が本当にスライダーの溝か確かめて測る（遅い環境で位置がずれていた）
+    await page.waitForTimeout(500);
+    let sl2 = null;
+    for (let tr = 0; tr < 5 && !sl2; tr++) {
+      sl2 = await page.evaluate(() => { const t = document.querySelector('.screen.settings [data-k="bright"] .track'); const r = t.getBoundingClientRect(); const o = { x: r.left + r.width / 2, y0: r.top + 6, y1: r.bottom - 6, v: window.__app.settings.bright }; const h = document.elementFromPoint(o.x, o.y0); return h && t.contains(h) ? o : null; });
+      if (!sl2) await page.waitForTimeout(400);
+    }
+    if (!sl2) sl2 = await page.evaluate(() => { const r = document.querySelector('.screen.settings [data-k="bright"] .track').getBoundingClientRect(); return { x: r.left + r.width / 2, y0: r.top + 6, y1: r.bottom - 6, v: window.__app.settings.bright }; });
     await touch('touchStart', [{ x: sl2.x, y: sl2.y0, id: 2 }]);
     for (let k = 1; k <= 6; k++) await touch('touchMove', [{ x: sl2.x, y: sl2.y0 + (sl2.y1 - sl2.y0) * k / 6, id: 2 }]);
     await touch('touchEnd', []);
