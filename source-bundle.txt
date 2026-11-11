@@ -1,8 +1,8 @@
-HARD ENTRY ソース一式（2026-11-11T21:36:11.585Z）
+HARD ENTRY ソース一式（2026-11-11T22:21:04.946Z）
 復元: node tools/unbundle.mjs source-bundle.txt <出力先>
 （tools/unbundle.mjs がない場合は、下の "@@@@ FILE " の区切りごとにファイルへ書き出す。base64 と書かれたものはデコードする）
 
-@@@@ FILE DESIGN.md text 67376
+@@@@ FILE DESIGN.md text 69503
 # HARD ENTRY（仮タイトル）設計メモ
 
 ## 文脈が消えたら最初に読む
@@ -46,6 +46,7 @@ HARD ENTRY ソース一式（2026-11-11T21:36:11.585Z）
 - 2026-11-07 19:38 近接攻撃。シージと同じで近接3回でバリケードを壊す（人へのダメージと作戦での扱いは任せる）。19:40 スコア表はボタンをやめ、画面上部のスコアをタップで開く。19:58 倍率スコープを覗くと何も見えない → 直す。20:01 リーンしたまま復活するとリーンから始まる → 直す、細かなバグを洗い出して直す（11-08 00:38 に同じ文を再送。公開が止まっていたため）。
 - 2026-11-12 00:41 「続きから」（既存マップの拡張・作り込みと、シージの要素の追加）。00:45 オブジェクトの配置が悪く、扉や窓の前にあったり、遊びやすさ・ゲーム性の妨げになっている物がある。
 - 2026-11-12 05:52 乗り越えは2階以上の窓でも使えるように。高さの条件さえ満たしていれば、どの物でも乗り越えられるように。落下ダメージをほどよく入れてバランスを取る。（00:45〜01:33 の作業＝全マップの置き物の直し・飛び降りと落下の下地・テストは保存されていたが、報告の前に止まっていた。05:52 以降に続きとして仕上げた）
+- 2026-11-12 06:53 乗り越えのボタンの表記はいらない（→ 文字と色の変化を消した）。
 
 ## 約束（仕様・数値）— 必ず守る。守れなくなったら先に言う
 - 仮に決めて伝えたこと（15:20 送信）: ゲーム名「HARD ENTRY」（仮）。PvP は「SWAT 対 立てこもり犯」の攻守（シージの攻撃／防衛に相当）。掛け声・無線は英語の音声＋日本語字幕。血の表現あり（設定で消せる）。アプリ版のリポジトリはユーザーに作ってもらう（`hardentry`、Settings → Pages で main / root）。
@@ -84,6 +85,10 @@ HARD ENTRY ソース一式（2026-11-11T21:36:11.585Z）
 - 方針（11-07 決定）: 対戦はシージが土台、RoN の硬さを足す（防具・反動・部位・音・扉の操作）。作戦は RoN にもっと寄せる（同じ仕組みで、数値と遊び方を RoN 寄りに）。
 - 準備（攻守のモード）: 攻撃側は準備のあいだ体を出さず、ドローンだけを動かす。準備の終わりに選んだ出現地点（外の候補から。押すたびに次）に出る。防衛側は準備中は建物から出られない。行動中に外へ出ると 2.5 秒で居場所が攻撃側に知られる（出続ける間）。
 - バリケード（シージと同じ）: 扉と窓に置く板。外に面した窓は TDM 以外で最初から板（TDM はガラス）。弾は当たった所に穴を開け、穴から見通せる・撃ち抜ける。近接3回・蹴り・破城槌・ブリーチング散弾・C2・爆発で崩れる。乗り越えは崩れてから。ドローンは扉の板の下（床すれすれ）を通れる。
+- 置ける盾・有刺鉄線（11-12。シージの守る側の道具）: 対戦の装備の枠に入れる（守る側の初めの装備は 置ける盾1・有刺鉄線2・包帯1。扉の罠は選べば持てる）。手に持ち、射撃で前に置く（ひざをついて 盾1.4秒・鉄線1.2秒）。平らな床だけ（家具・階段の上、人の前、壁・家具にかかる所は不可。手に持つと「射撃で前に置く／ここには置けない（理由）」を出す）。
+  - 置ける盾: 幅1m・高さ1mの鋼の板（前0.78m）。弾・爆風・閃光・視線を止める。のぞき窓（高さ0.74〜0.84m・幅0.3m）からは見えて撃てる。乗り越えられる（AI も詰まると乗り越える）。体もドローンも通れない。爆発（破片・罠1.7m、C2 2.4m、壁の爆破薬2.0m）で壊れる。守る側は見て「調べる」で拾い直せる（1秒）。
+  - 有刺鉄線: 幅1.6m・奥行き0.9m（前1.05m）。上では誰でも0.45倍の速さで走れない。中を動くと音（0.42mごと。AI にも聞こえる）。近接2回か爆発で壊れる。ドローンは遅くならない。
+  - 守る側のボットは準備中に、目標の部屋の入口の内側1.5mに盾（入口を向く）、入口の外1.6mに鉄線を置く。
 - 監視カメラ（防衛側）: マップごとの固定カメラをボタンで順に見る（長押しでやめる）。見ている先の敵を射撃ボタンで味方に知らせる。撃つ・爆発で壊れる。
 - 近接（押すと銃で殴る。届く 1.35m、当たるまで 0.16 秒、振り 0.6 秒）: 対戦は 50（軽装は2回、中・重は3回）、作戦は 18 で怯ませて、正当でなければ交戦規定に記録。3回でバリケードが崩れる。
 - 陣営: SWAT（青）と 立てこもり犯（赤）。武器と装備の候補が陣営で違う。
@@ -123,7 +128,7 @@ HARD ENTRY ソース一式（2026-11-11T21:36:11.585Z）
 ### 移動（2026-10-29 20時 決定）
 - 速さ（m/s。RoNの値）: 歩き 2.4、ゆっくり 0.96、しゃがみ 1.2、しゃがみゆっくり 0.48、伏せ 0.45、ローレディ ×1.2、ADS ×0.7、横 ×0.9・後ろ ×0.8。加速 5 m/s²（防具で下がる）。ダッシュ 4.6 m/s は作戦・対戦とも（11-06 13:20 の要望で作戦にも。もとは RoN に合わせて作戦はなし）。対戦は防具で 軽×1.08・中×1.0・重×0.9（R6の3段階）。盾を構えている・拘束・投降中は走れない。
 - リーン（左右 0.35m、傾き12°、壁にめり込まない）、しゃがみ0.25秒、伏せ0.8秒。足を負傷すると遅くなる。
-- 乗り越え（11-12）: 前1mまでの物の高さが0.4〜1.45mなら、種類を問わず越える（家具・低い壁・手すり・窓・車・ゴミ箱など。約0.6〜0.9秒）。向こうに降りる所があれば越える。向こうが低ければ飛び降りる（2階の窓・外廊下や吹き抜けの手すり。下の車の屋根などにも降りる）。降りる所がなければ物の上に乗る（壁ぎわの机・カウンター・車の屋根。天井まで1.84mないとかがむ、1.24mないと伏せる）。割れていない窓は割って越える（+0.22秒。割る音は AI に聞こえる）。板を打った窓（バリケード）は崩れるまで越えられない。高い壁・フェンス（1.9m以上）は物の上に乗っても越えない。正面から最大0.45mずれて立っていても、斜め17°までなら通れる線を探す。ボタンに「飛び降り 3.0m」「上に乗る」「割って越える」を出す。
+- 乗り越え（11-12）: 前1mまでの物の高さが0.4〜1.45mなら、種類を問わず越える（家具・低い壁・手すり・窓・車・ゴミ箱など。約0.6〜0.9秒）。向こうに降りる所があれば越える。向こうが低ければ飛び降りる（2階の窓・外廊下や吹き抜けの手すり。下の車の屋根などにも降りる）。降りる所がなければ物の上に乗る（壁ぎわの机・カウンター・車の屋根。天井まで1.84mないとかがむ、1.24mないと伏せる）。割れていない窓は割って越える（+0.22秒。割る音は AI に聞こえる）。板を打った窓（バリケード）は崩れるまで越えられない。高い壁・フェンス（1.9m以上）は物の上に乗っても越えない。正面から最大0.45mずれて立っていても、斜め17°までなら通れる線を探す。ボタンは乗り越えられるときだけ明るくなる（文字は出さない。11-12 06:53 の要望）。
 - 落下（11-12）: 2mまでは傷なし。そこからは 14×(高さ−2)^1.3（1階分＝約3mで15、4.5mで46、6mで86）。かがんで着地すると傷0.7倍・怯み0.6倍。怯み 0.25＋0.2×(高さ−2) 秒（最大1.3秒。足が遅くなり体がかがむ）。3.5mより高いと脚を痛める。重い防具ほど傷が大きい（対戦: 軽0.9・中1・重1.15倍。作戦: ベストなし0.9・軽1・重1.12倍、鋼の板はさらに1.06倍）。着地の音は高いほど遠くまで聞こえる（AI にも）。キルログは「落下」。
 
 ### 武器と弾（2026-10-29 20時 決定）
@@ -194,6 +199,7 @@ HARD ENTRY ソース一式（2026-11-11T21:36:11.585Z）
 - 2026-10-30: GitHub のリリースから落とした実行ファイル（sherpa-onnx）を動かすのは許可されなかった（外部のコード）。声は ffmpeg 内蔵の flite で作る。聞き取りの確認は tools/asr.py（numpy＋onnxruntime で Whisper base.en の ONNX を自前で推論。モデルは /home/claude/tts/sherpa-onnx-whisper-base.en、GitHub の asr-models リリースから）。
 
 ## バランス変更の記録（1つずつ戻せるように）
+- 11-12 対戦の守る側に置ける盾・有刺鉄線（ボットは準備の初めに入口へ置く。そのぶん補強は減る）: 同じシード（9マップ×3モード×3試合）で、爆弾の攻撃側ラウンド勝率 27%（32/117）→ 35%（38/108）、殲滅戦のSWAT側 27% → 29%、TDM のチーム0 26% → 52%。守りが固くなりすぎてはいない（AI の攻撃側は盾に詰まると乗り越える）。
 - 11-06 爆弾: 防衛ボットは角を押さえて止まっているとき反応と最初の狙いが速い（`bot.js` holdK）・設置後は近くの敵を片づけてから外す → 攻撃側ラウンド勝率 74% → 65%。
 - 11-06 爆弾: 目標を1ラウンド1か所に（`pvp.js` m.target）・守る側は足音・扉・銃声を聞いてそちらを向く（`bot.js` heardAt）・設置後に外す人は手が届く位置まで寄る（以前は届かない所から外そうとして失敗していた） → 攻撃側 65% → 48%（99ラウンド、ボット4v4・各3試合）。殲滅戦の SWAT 側 58%（57/98）。
 - 11-06 TDM: 両チームとも外の反対の端から始める（`pvp.js` startRound の ends） → チーム0 44% → 50%（48試合、銀行 0/6 → 3/6）。
@@ -261,6 +267,7 @@ HARD ENTRY ソース一式（2026-11-11T21:36:11.585Z）
 - 11-08 長押しの判定: こまがいつも 150ms 以上あく遅い端末では、いつもの間隔の2.2倍を超えたときだけ「遅れ」とみなす（以前は遅い端末では離すまで長押しが決まらず、円形メニューが出なかった）。
 - 11-08 版 0.1.4（重さと緊張感・発煙弾・レイクショア邸・長押しの判定）。テスト一式 79/79 合格（作戦のAIだけの試合 35試合で完了23、対戦ボット 27試合すべて決着）。オンラインの項目は2画面を画質「低」にし、射撃を3秒押し続けるようにした（ソフトウェア描画で1こまが1秒を超え、短い押しが届かなかった）。
 - 11-12 版 0.1.5（置き物の配置・乗り越え・落下）。全10マップの置き物を点検して直した（`tools/propaudit.mjs` で0件）。乗り越えを広げた（2階以上の窓・割れていない窓は割って越える・高さ0.4〜1.45mならどの物でも・降りる所がなければ上に乗る・少しずれていても越える・高い壁とフェンスは越えない）。落下ダメージ（2mまで0、1階分で15、受け身0.7倍、重い防具ほど大きい）。テスト一式 80/80 合格（単体44件。作戦のAIだけの試合 35試合で完了19＝前の版の23より少ない。置き物を動かしたことと、窓が1枚ぜんぶ割れるようになったことで展開が変わった。次の版で調べる。対戦ボット 27試合すべて決着）。
+- 11-12 版 0.1.6（置ける盾・有刺鉄線・乗り越えのボタンの文字をなくす）。テスト一式 80/80 合格（単体49件。作戦のAIだけの試合 完了19/35。対戦ボット 27試合すべて決着）。
 - 次: Pages を有効にしてもらう → 実機での確認をお願いする → その結果で直す。残り: AIだけの作戦で、爆弾（2階に爆弾があると時間切れ）と人質（突入の前に人質が撃たれる）が弱い。ナイトクラブの強制捜査（容疑者9人）は AI だけだと全滅しやすい。
 
 @@@@ FILE dev/view.html text 446
@@ -346,7 +353,7 @@ export async function getAssetURL(name, type) {
   return URL.createObjectURL(new Blob([buf], { type }));
 }
 
-@@@@ FILE src/app/game.js text 84887
+@@@@ FILE src/app/game.js text 86585
 // 1回の試合: エンジンを進め、入力を命令にし、出来事を音・効果・HUDへ。カメラ（一人称）と描画。
 import { createGame, step, dump, load } from '../engine/engine.js';
 import { eyeOf, capsOf } from '../engine/combat.js';
@@ -354,6 +361,7 @@ import { curWeapon, curW, ammoCount } from '../engine/actor.js';
 import { contextOf, OP_NAME, doorOps, personOps } from '../engine/interact.js';
 import { spreadDeg, attMods } from '../engine/weapon.js';
 import { vaultPlan } from '../engine/move.js';
+import { depSpot, DEP_WHY } from '../engine/deploy.js';
 import { raycast, CS, LH, levelOfY, los } from '../engine/world.js';
 import { smokeBetween } from '../engine/nades.js';
 import { sideOf, isOpen } from '../engine/doors.js';
@@ -884,7 +892,7 @@ export class Match {
           if (e.k === 'locked' && e.id !== me && S.byId[e.id] && S.byId[e.id].kind === 'swat') this._say(S.byId[e.id], 'swat_locked');
           break;
         }
-        case 'deny': if (e.id === me) { const why = { locked: '鍵がかかっている', wedged: 'ウェッジで開かない', barred: 'バリケード', nogear: '残数なし', nodet: '起爆対象なし', open: '開いている', broken: '破損', needdoor: '閉じた扉を見て使う', nolong: '特殊装備なし', noammo: '弾がない', far: '手が届かない（近づく）', blocked: '間に物・人があって届かない', prepout: '準備中は建物の外に出られない' }[e.why]; if (why) hud.showBanner(why, 1400); au.ui('deny'); } break;
+        case 'deny': if (e.id === me) { const why = { locked: '鍵がかかっている', wedged: 'ウェッジで開かない', barred: 'バリケード', nogear: '残数なし', nodet: '起爆対象なし', open: '開いている', broken: '破損', needdoor: '閉じた扉を見て使う', nolong: '特殊装備なし', noammo: '弾がない', far: '手が届かない（近づく）', blocked: '間に物・人があって届かない', prepout: '準備中は建物の外に出られない', depspace: '前に置く場所がない', depfloor: '平らな床にしか置けない', depperson: '前に人がいる', depair: '立ってから置く' }[e.why]; if (why) hud.showBanner(why, 1400); au.ui('deny'); } break;
         case 'nade': { if (e.type === 'smoke') { for (let i = 0; i < 6; i++) fx.smoke(e.x, e.y + 0.5, e.z, 0.9, [0.62, 0.63, 0.64], 0.6, 3); au.sfx('gasPop', [e.x, e.y, e.z], { rate: 0.8 }); break; } if (e.type === 'cs') { for (let i = 0; i < 8; i++) fx.smoke(e.x, e.y + 0.4, e.z, 1.2, [0.85, 0.85, 0.8], 0.5, 6); au.sfx('gasPop', [e.x, e.y, e.z]); } else { fx.explosion(e.x, e.y, e.z, 3, e.type === 'flash' ? 'flash' : 'stinger'); au.sfx(e.type === 'flash' ? 'flashbang' : 'stinger', [e.x, e.y, e.z]); } const d = Math.hypot(e.x - this.cam.x, e.z - this.cam.z); this.shake = Math.max(this.shake, Math.max(0, 1 - d / 10) * 0.6); break; }
         case 'boom': case 'c2': { fx.explosion(e.x, e.y, e.z, e.r || 3, e.kind || 'c2'); au.sfx('explosion', [e.x, e.y, e.z], { vol: 1.2 }); const d = Math.hypot(e.x - this.cam.x, e.z - this.cam.z); this.shake = Math.max(this.shake, Math.max(0, 1 - d / 18)); this._heatUp(0.5 * Math.max(0, 1 - d / 40)); break; }
         case 'flashed': if (e.id === me) { this.flashW = Math.max(this.flashW, Math.min(1, 0.4 + e.k * 1.2)); au.deafen(2 + 4 * e.k); } break;
@@ -933,6 +941,11 @@ export class Match {
         case 'end': hud.showBanner(e.res === 'fail' ? '作戦失敗' : e.res === 'abort' ? '撤収' : '作戦完了', 0, e.res === 'fail' ? 'bad' : 'ok'); au.ui(e.res === 'fail' ? 'lose' : 'win'); break;
         case 'revive': hud.feed(`${nm(S.byId[e.by])} が ${nm(S.byId[e.id])} を起こした`, 'ok'); break;
         case 'bandaged': if (e.id === me) au.sfx('bandage', null); break;
+        // 置いた物（置ける盾・有刺鉄線）
+        case 'depset': au.sfx(e.k === 'wire' ? 'impMetal' : 'barricade', [e.x, e.y + 0.3, e.z], { vol: e.id === me ? 0.55 : 0.8, rate: e.k === 'wire' ? 1.4 : 0.8 }); break;
+        case 'depbreak': if (e.why !== 'pick') { fx.debris(e.x, e.y, e.z, e.k === 'wire' ? [0.55, 0.56, 0.54] : [0.24, 0.26, 0.25]); au.sfx('impMetal', [e.x, e.y, e.z], { vol: 1, rate: 0.7 }); } else au.sfx('draw', [e.x, e.y, e.z], { vol: 0.5 }); break;
+        case 'dephit': au.sfx('impMetal', [e.x, e.y, e.z], { vol: 0.8, rate: 1.3 }); break;
+        case 'wire': { const near = Math.hypot(e.x - this.cam.x, e.z - this.cam.z); if (near < 30) au.sfx('impMetal', e.id === me ? null : [e.x, e.y, e.z], { vol: e.id === me ? 0.35 : 0.55, rate: 1.6 + Math.random() * 0.3 }); break; }
         // 着地: 自分なら画面が揺れる。高い所から落ちたほど重い音（まわりにも聞こえる）
         case 'fall': {
           const big = (e.h || 0) > 2;
@@ -1304,10 +1317,12 @@ export class Match {
     this.ctxT -= dt;
     if (this.ctxT <= 0) {
       this.ctxT = 0.12; this.ctx = p.alive ? contextOf(S, this.w, p) : null;
-      // 乗り越えられるか（飛び降りなら高さ）
+      // 乗り越えられるか（ボタンを明るくするだけ。文字は出さない）
       const vp = p.alive && !p.vault ? vaultPlan(S, this.w, p, this._vp || (this._vp = {})) : null;
-      this.vaultOK = !!vp; this.vaultDrop = vp && vp.drop > 0 ? vp.drop : 0;
-      this.vaultKind = !vp ? '' : vp.drop > 0 ? 'drop' : vp.onto ? 'onto' : vp.gk >= 0 ? 'glass' : '';
+      this.vaultOK = !!vp;
+      // 置く物を手に持っている: 前に置けるか
+      const hg = p.alive && p.ws && p.ws.slot === 2 && p.ws.gear && GEAR[p.ws.gear] && GEAR[p.ws.gear].kind === 'deploy' ? GEAR[p.ws.gear] : null;
+      this.depHint = hg ? (depSpot(S, this.w, p, hg.dep) ? `${hg.name}: 射撃で前に置く` : `${hg.name}: ここには置けない（${{ space: '前に物がある', floor: '平らな床だけ', person: '前に人がいる', air: '足元が不安定' }[DEP_WHY] || '場所がない'}）`) : '';
     }
     const c = this.ctx;
     const wi = curWeapon(p);
@@ -1315,7 +1330,7 @@ export class Match {
       p, wi, pvp: S.pvp, yaw: this.cam ? this.cam.yaw : p.yaw, adsOn: this.adsOn, leanL: this.leanSide < 0, leanR: this.leanSide > 0, lowOn: this.lowOn, nvgOn: this.nvgOn, hasNvg: p.armor.head === 'nvg',
       gearSel: this.gearSel, gearId: p.ws.gear, team: this.team,
       spread: wi ? spreadDeg(S, p, WEAPONS[wi.id], wi) : 2,
-      optic: null, canVault: this.vaultOK !== false, vaultDrop: this.vaultDrop || 0, vaultKind: this.vaultKind || '',
+      optic: null, canVault: this.vaultOK !== false,
       ctxLabel: c ? (c.def.far ? (c.def.why === 'block' ? '回り込む' : '近づく') : (OP_NAME[c.def.op] || c.def.op)) : '',
       cmdLabel: '命令', mmZoom: this.mmZoom,
       droneOK: S.pvp && S.m.kind !== 'tdm' && p.team === S.m.att && (S.m.phase === 'prep' ? !!p.staged : S.m.phase === 'action' && p.alive && !p.down) && ((p.dronesLeft ?? 2) > 0 || S.actors.some(d => d.isDrone && d.owner === p.id && d.alive)),
@@ -1328,6 +1343,7 @@ export class Match {
     // 案内
     let prompt = '';
     if (c) prompt = `${ctxName(c, S)}: ${OP_NAME[c.def.op] || c.def.op}` + (c.def.far ? (c.def.why === 'block' ? '（間に物がある）' : '（近づく）') : c.ops.length > 1 ? '（長押し: メニュー）' : '');
+    if (!c && this.depHint) prompt = this.depHint;
     if (p.act) { v.prog = Math.min(1, p.act.t / p.act.dur); v.progLabel = OP_NAME[p.act.k] || ''; prompt = ''; }
     if (this.droneId != null) prompt = S.m && S.m.phase === 'prep' && p.staged ? 'ドローン ― 射撃: 敵にマーク／乗り越え: ジャンプ（準備が終わると出現地点に出る）' : 'ドローン ― 射撃: マーク／乗り越え: ジャンプ／ドローン: 戻る';
     else if (p.staged) prompt = '準備中 ― ドローンで偵察できる' + (v.zoneOK ? '（出現地点のボタンで出る場所を選ぶ）' : '');
@@ -1365,6 +1381,8 @@ export class Match {
     }
     if (S.m && S.m.bombs) for (const b of S.m.bombs) if (!b.done && b.found) marks.push({ x: b.x, z: b.z, col: '#ff9a20', r: 4, sq: true });
     if (S.m && S.m.sites && S.pvp) for (const s2 of S.m.sites) if (S.m.target == null || s2.id === S.m.target) marks.push({ x: s2.x, z: s2.z, col: 'rgba(255,255,255,0.9)', r: 5, sq: true });
+    // 味方の置いた物（置ける盾・有刺鉄線）
+    if (S.deps) for (const d of S.deps) if (d.team === p.team && Math.abs(d.y - p.y) < 1.6) marks.push({ x: d.x, z: d.z, col: d.k === 'wire' ? 'rgba(190,190,180,0.85)' : 'rgba(120,160,140,0.95)', r: d.k === 'wire' ? 2.4 : 2.8, sq: true });
     v.marks = marks;
     hud.update(v);
     // スコア表（対戦）: 開いている間は 0.5 秒ごとに作り直す
@@ -3181,7 +3199,7 @@ export function ammoCount(w) {
   return [w.mag + (w.ch || 0), w.res];
 }
 
-@@@@ FILE src/engine/ai/bot.js text 16865
+@@@@ FILE src/engine/ai/bot.js text 19437
 // 対戦のボット: TDM（敵を探して撃つ）、殲滅戦（慎重に）、爆弾（攻撃: 場所へ行って設置・守る／防衛: 準備で補強とバリケード、場所を守る、解除）
 import { baseInput, pushAct, visibility, detect, lastSeen, seenAgo, goTo, steerToward, aimAt, trigger, hearNearest, randomCellInRoom, roomAtPos, angDiff, yawTo, turnToward, SKILL } from './common.js';
 import { navCell, cellCenter, buildNav, roomGraph } from './nav.js';
@@ -3192,6 +3210,7 @@ import { CS, LH, NB, C, levelOfY, los } from '../world.js';
 import { M } from '../data/materials.js';
 import { isOpen, isClosed, sideOf } from '../doors.js';
 import { doorOps, reachOK } from '../interact.js';
+import { depSpot, DEP } from '../deploy.js';
 
 const sec = (S, t0) => (S.t - t0) * S.dt;
 
@@ -3407,15 +3426,18 @@ function defendPrep(S, w, a, inp, dt, ctx) {
   if (!ai.job || ai.job.done) ai.job = pickPrepJob(S, w, a, site);
   const j = ai.job;
   if (!j) return holdNear(S, w, a, inp, dt, site.x, site.y, site.z, 4);
-  const r = goTo(S, w, a, inp, j.x, j.y, j.z, { r: 0.45, unlock: true, noDoors: j.kind !== 'wall' });
+  const dep = j.kind === 'dep';
+  const r = goTo(S, w, a, inp, j.x, j.y, j.z, { r: dep ? 0.3 : 0.45, unlock: true, noDoors: j.kind === 'bar' }); // 置く物・補強は扉を開けて行く
   // 手が届く所に来てから、向いて行う（届かないまま止まったら、その仕事はしばらく後回し）
-  const can = j.kind === 'wall' ? reachOK(S, w, a, 'wall', j.k, 'reinforce') : reachOK(S, w, a, 'door', j.id, j.kind);
-  if (can && (r !== 'moving' || Math.hypot(j.x - a.x, j.z - a.z) < 0.6)) {
+  const can = j.kind === 'wall' ? reachOK(S, w, a, 'wall', j.k, 'reinforce') : dep ? Math.hypot(j.x - a.x, j.z - a.z) < 0.5 : reachOK(S, w, a, 'door', j.id, j.kind);
+  if (can && (r !== 'moving' || Math.hypot(j.x - a.x, j.z - a.z) < (dep ? 0.35 : 0.6))) {
     inp.mx = inp.mz = 0;
-    inp.yaw = turnToward(a.yaw, yawTo(j.lx - a.x, j.lz - a.z), 6 * dt);
+    const want = dep ? j.yaw : yawTo(j.lx - a.x, j.lz - a.z);
+    inp.yaw = turnToward(a.yaw, want, 6 * dt);
     inp.pitch = turnToward(a.pitch, 0, 3 * dt);
-    if (Math.abs(angDiff(a.yaw, yawTo(j.lx - a.x, j.lz - a.z))) < 0.2) {
+    if (Math.abs(angDiff(a.yaw, want)) < (dep ? 0.06 : 0.2)) {
       if (j.kind === 'wall') pushAct(inp, { a: 'op', k: 'wall', id: j.k, q: 1, op: 'reinforce' });
+      else if (dep) { pushAct(inp, { a: 'deploy', id: j.g }); (ai.badJobs || (ai.badJobs = {}))[j.key] = S.t + Math.round(30 / S.dt); } // 置けなくても同じ所はしばらく選ばない
       else pushAct(inp, { a: 'op', k: 'door', id: j.id, op: j.kind });
       j.done = true;
     }
@@ -3435,6 +3457,38 @@ function pickPrepJob(S, w, a, site) {
   const room = roomAtPos(w, site.x, site.y, site.z);
   if (room < 0) return null;
   const r = w.rooms[room];
+  // 置く物（シージの守りと同じ。準備の初めに）: 部屋の入口の内側に置ける盾（入口を向く）、入口の外に有刺鉄線。入口ごとに1つずつ。
+  // 置ける所（depSpot が通る所）を、入口からの距離と横のずれを変えて探す
+  const has = (id) => { const g = a.inv.gear.find(q => q.id === id); return !!(g && g.n > 0); };
+  const near = (x, z) => (S.deps || []).some(q => Math.hypot(q.x - x, q.z - z) < 1.3);
+  const rg0 = roomGraph(w);
+  const fake = { id: a.id, x: 0, y: 0, z: 0, yaw: 0, ground: true, air: false, vault: null };
+  const findSpot = (d, nx, nz, y, k, dists, inside) => {
+    const D = k === 'wire' ? DEP.wire.dist : DEP.shield.dist, yaw = Math.atan2(-nx, -nz);
+    for (const dd of dists) for (const lat of [0, 0.35, -0.35]) {
+      const px = d.cx + nx * dd * (inside ? 1 : -1) + nz * lat, pz = d.cz + nz * dd * (inside ? 1 : -1) - nx * lat;
+      const rid = roomAtPos(w, px, y, pz);
+      if (near(px, pz) || rid < 0 || w.rooms[rid].out || (rid === room) !== inside) continue; // 準備中は外に出られない（外には置かない）
+      fake.x = px - Math.sin(yaw) * D; fake.z = pz - Math.cos(yaw) * D; fake.y = y; fake.yaw = yaw;
+      if (!depSpot(S, w, fake, k)) continue;
+      return { x: fake.x, z: fake.z, yaw };
+    }
+    return null;
+  };
+  for (const p of rg0.adj[room] || []) {
+    if (p.type !== 'door' || p.door < 0) continue;
+    const d = w.doors[p.door], ds = S.doors[p.door];
+    if (!ds || ds.broken) continue;
+    const inSide = sideOf(d, r.cx, r.cz) || 1, nx = d.nx * inSide, nz = d.nz * inSide, y = d.L * LH;
+    if (has('dshield') && !taken.has('ps' + p.door)) {
+      const sp = findSpot(d, nx, nz, y, 'shield', [1.5, 1.2, 1.9, 2.3], true);
+      if (sp) return { kind: 'dep', g: 'dshield', key: 'ps' + p.door, x: sp.x, y, z: sp.z, yaw: sp.yaw, lx: d.cx, lz: d.cz };
+    }
+    if (has('wire') && !taken.has('pw' + p.door)) {
+      const sp = findSpot(d, nx, nz, y, 'wire', [1.6, 1.3, 2.0], false);
+      if (sp) return { kind: 'dep', g: 'wire', key: 'pw' + p.door, x: sp.x, y, z: sp.z, yaw: sp.yaw, lx: d.cx, lz: d.cz };
+    }
+  }
   // 補強: 部屋の外周の石膏・木の壁
   if ((m.reinfLeft ?? 0) > 0) {
     let best = null, bd = 1e9;
@@ -3467,7 +3521,7 @@ function pickPrepJob(S, w, a, site) {
   return null;
 }
 
-@@@@ FILE src/engine/ai/brain.js text 4770
+@@@@ FILE src/engine/ai/brain.js text 5197
 // AI の入口: 命令を配り、種類ごとに考えて入力を作る。考えるのは数ステップに1回ずつ（交代で）、間は前の入力を少し続ける
 import { thinkSuspect, thinkCiv } from './sus.js';
 import { thinkSwat, takeOrders } from './swat.js';
@@ -3537,13 +3591,16 @@ export function collectNoise(S, ev) {
       // バリケードを殴る・崩す音は遠くまで届く（シージと同じく、どこから来るかが分かる）。弾で削る音は小さい
       case 'barhit': if (e.big) { const a = S.byId[e.by ?? -1]; H.push({ x: e.x, y: e.y - 1, z: e.z, k: 'breach', loud: 1.1, id: e.by ?? -1, team: a ? a.team : -1 }); } break;
       case 'barbreak': if (!e.pry) { const a = S.byId[e.id]; H.push({ x: e.x, y: e.y - 1, z: e.z, k: 'breach', loud: 1.3, id: e.id, team: a ? a.team : -1 }); } break;
+      // 有刺鉄線の中を動く音（ガシャ）・置ける盾を置く音・壊れる音
+      case 'wire': { const a = S.byId[e.id]; H.push({ x: e.x, y: e.y, z: e.z, k: 'step', loud: 0.9, id: e.id, team: a ? a.team : -1 }); break; }
+      case 'depbreak': if (e.why !== 'pick') { const a = S.byId[e.by]; H.push({ x: e.x, y: e.y - 0.5, z: e.z, k: 'breach', loud: 1.0, id: e.by ?? -1, team: a ? a.team : -1 }); } break;
       case 'shout': H.push({ x: e.x, y: e.y - 1.6, z: e.z, k: 'shout', loud: 0.8, id: e.id, team: S.byId[e.id] ? S.byId[e.id].team : -1 }); break;
     }
   }
   S.heard = H;
 }
 
-@@@@ FILE src/engine/ai/common.js text 20835
+@@@@ FILE src/engine/ai/common.js text 21272
 // AIの共通の道具: 見る（明るさ・視野・見通し）、聞く、経路に沿って歩く（扉を開ける）、狙う（反応の遅れ・ぶれ・反動の抑え）
 import { occluded, CS, LH, levelOfY, groundAt, leafEnd } from '../world.js';
 import { reachOK } from '../interact.js';
@@ -3751,6 +3808,11 @@ export function goTo(S, w, a, inp, tx, ty, tz, o = {}) {
   const moved = Math.hypot(a.x - nv.lx, a.z - nv.lz);
   if (moved < 0.02) { nv.stuck = (nv.stuck || 0) + S.dt; } else nv.stuck = Math.max(0, (nv.stuck || 0) - S.dt * 2);
   nv.lx = a.x; nv.lz = a.z;
+  // 置ける盾（対戦）にはばまれた: 乗り越える（盾の向こうへ進む向きを向いている）
+  if (nv.stuck > 0.45 && S.deps && S.deps.length && !a.vault) {
+    const sh = S.deps.find(q => q.k === 'shield' && q.hp > 0 && Math.abs(q.y - a.y) < 0.6 && Math.hypot(q.x - a.x, q.z - a.z) < 1.15);
+    if (sh) { nv.stuck = 0; pushAct(inp, { a: 'vault' }); steerToward(a, inp, px, pz, 0, true); return 'moving'; }
+  }
   if (nv.stuck > 1.2) {
     nv.stuck = 0;
     // 開いた扉の板の陰に入って動けない: 板に手が届けば閉める（突入する扉 o.keep は除く）
@@ -5382,7 +5444,7 @@ function search(S, w, a, inp, dt, o, people) {
   return true;
 }
 
-@@@@ FILE src/engine/barricade.js text 7783
+@@@@ FILE src/engine/barricade.js text 7836
 // バリケード（シージ式）の状態と壊れ方。枠の形は world.js の w.bars、状態は S.bars[枠] = { h, b, t }
 //  h: かけらごとの残り（'0'〜'2' の文字列。空ならバリケードなし）。b: 殴って落とした段（3ビット）。t: 初めの状態から変わったか（通信で送る）
 // 弾は当たったかけらを削る（2発で穴が開き、そこから見えて撃てる）。散弾は1発で穴＋となりを傷める。
@@ -5391,6 +5453,7 @@ function search(S, w, a, inp, dt, o, people) {
 import { NB, barPiece } from './world.js';
 import { M } from './data/materials.js';
 import { hrand } from './rng.js';
+import { linkDeps } from './deploy.js';
 
 export const BAR_FALL = 0.25;
 
@@ -5407,7 +5470,7 @@ export function initBars(S, w) {
   S.barV = (S.barV || 0) + 1;
 }
 // 弾・視線の計算から見えるように、扉の状態の配列にぶら下げる（S.doors を作り直したら呼ぶ）
-export function linkBars(S) { if (S.doors && S.bars) Object.defineProperty(S.doors, 'bars', { value: S.bars, writable: true, configurable: true, enumerable: false }); }
+export function linkBars(S) { if (S.doors && S.bars) Object.defineProperty(S.doors, 'bars', { value: S.bars, writable: true, configurable: true, enumerable: false }); linkDeps(S); }
 // 板を打つ窓・ガラスの壁のガラスは最初から外しておく（読み込み・ゲストでも同じにする。差分には入れない）
 export function barGlass(S, w) {
   if (!windowsBarred(S)) return;
@@ -5534,7 +5597,7 @@ export function applyBarsNet(S, w, BR) {
   return changed;
 }
 
-@@@@ FILE src/engine/combat.js text 28616
+@@@@ FILE src/engine/combat.js text 28834
 // 弾と当たり: 弾丸は速さと重力を持ち、1ステップごとの線分で当たりを調べる。材質を貫通して弱まる（RoNの式）。
 // ダメージは PvE（RoN換算・防具・負傷・出血）と PvP（R6寄り・頭は即死・手足75%・ダウン）の2系統。
 import { raycast, CS, LH, levelOfY, glassPane } from './world.js';
@@ -5546,6 +5609,7 @@ import { holdOf, poseState } from './actor.js';
 import { ACT_POSE } from './data/acts.js';
 import { hrand } from './rng.js';
 import { hitBar, bashBar } from './barricade.js';
+import { meleeDeps } from './deploy.js';
 
 const G = 9.81;
 // モードのきまり（engine が入れる）: canDown(S, a)
@@ -5989,6 +6053,8 @@ function meleeHit(S, w, a, ev) {
     if (wh.kind === 'door') ev.push({ e: 'door', d: wh.id, k: 'knock', id: a.id, loud: 0.45 });
     return;
   }
+  // 有刺鉄線（足元）を殴る: 2回で壊れる
+  if (!best && meleeDeps(S, w, a, eye, dx, dy, dz, R, ev)) { ev.push({ e: 'meleehit', id: a.id, k: 'wire' }); return; }
   if (!best) { ev.push({ e: 'meleehit', id: a.id, k: 'air' }); return; }
   const b = best.b, x = eye[0] + dx * best.t, y = eye[1] + dy * best.t, z = eye[2] + dz * best.t;
   if (best.part === 'drone') { killDrone(S, b, a.id, ev); ev.push({ e: 'meleehit', id: a.id, k: 'drone', x, y, z }); return; }
@@ -6080,14 +6146,14 @@ function harm(S, a, shooter, how, d, part, ev, pre = null) {
   }
 }
 
-@@@@ FILE src/engine/data/acts.js text 2985
+@@@@ FILE src/engine/data/acts.js text 3055
 // 動作（調べる・使う）の体の動きと、手が届く距離。エンジン（当たり・届くか）と描画（三人称の姿勢・一人称の腕）で同じものを使う。
 // 体の動き: cuff 相手の手首に両手（結束バンドを締める）／kneel ひざをついて両手で作業／grab かがんで拾う／place 両手で壁や扉に取りつける／
 //          radio 左手で肩の無線／bandage 腕に包帯／kick 右足で蹴る（銃は持ったまま）／knob 左手でノブを回して押す・引く（銃は右手）
 export const ACT_POSE = {
   restrain: 'cuff',
   revive: 'kneel', bombdefuse: 'kneel', defuse: 'kneel', plant: 'kneel', pick: 'kneel', lockgun: 'kneel', wedge: 'kneel', unwedge: 'kneel', disarm: 'kneel', trap: 'kneel', mirror: 'kneel',
-  c2: 'place', reinforce: 'place', frame: 'place', bar: 'place', unbar: 'place',
+  c2: 'place', reinforce: 'place', frame: 'place', bar: 'place', unbar: 'place', deploy: 'kneel', deppick: 'kneel',
   collect: 'grab', pickup: 'grab',
   report: 'radio', bandage: 'bandage', kick: 'kick', bash: 'kick',
   open: 'knob', close: 'knob', peek: 'knob',
@@ -6095,14 +6161,14 @@ export const ACT_POSE = {
 // 両手を使う（銃は胸の前に吊る・拳銃はホルスター）
 export const FREE_HANDS = new Set(['cuff', 'kneel', 'grab', 'place', 'bandage', 'peek']);
 // しゃがんで行う
-export const KNEEL_ACT = new Set(['restrain', 'revive', 'bombdefuse', 'defuse', 'plant', 'pick', 'lockgun', 'wedge', 'unwedge', 'disarm', 'trap', 'mirror', 'collect', 'pickup']);
+export const KNEEL_ACT = new Set(['restrain', 'revive', 'bombdefuse', 'defuse', 'plant', 'pick', 'lockgun', 'wedge', 'unwedge', 'disarm', 'trap', 'mirror', 'collect', 'pickup', 'deploy', 'deppick']);
 // 手が届く距離（m）。人・物・爆弾は体の中心から目標（人は体の中心、倒れた人は胸）までの水平の距離、
 // 扉は手を当てる所（ノブ・扉の下・錠）まで、壁は壁の面まで。腕の長さ（肩から約0.6m）＋体の厚みが目安
 export const REACH_D = {
   restrain: 1.0, revive: 1.0, report: 3.2, collect: 1.0, pickup: 1.0,
   open: 1.0, close: 1.05, peek: 1.0, kick: 1.15, pick: 0.85, lockgun: 0.9, wedge: 0.95, unwedge: 0.95, c2: 0.95, mirror: 1.0, wand: 1.7, ram: 1.35, breach: 1.7,
   disarm: 0.95, bar: 1.1, unbar: 1.1, bash: 1.25, trap: 1.0, det: 99,
-  bombdefuse: 1.0, defuse: 1.0, plant: 99, reinforce: 1.0, frame: 1.0,
+  bombdefuse: 1.0, defuse: 1.0, plant: 99, reinforce: 1.0, frame: 1.0, deppick: 1.5,
 };
 // 動作の立ち位置: 目標から体の中心までの距離（m）。動作の始め（ALIGN_T 秒）に、ここへ寄って目標を向く
 export const STAND_D = {
@@ -6115,7 +6181,7 @@ export const ALIGN_T = { restrain: 0.45, def: 0.3 };
 // 拘束の段取り（動作の進み 0..1）: 寄る・ひざをつく → 相手の手を取る → 背中へ回す → 結束バンドを締める → 離す
 export const CUFF_PH = { grab: 0.2, back: 0.5, tie: 0.62, pull: 0.82, rel: 0.9 };
 
-@@@@ FILE src/engine/data/equipment.js text 6010
+@@@@ FILE src/engine/data/equipment.js text 6601
 // 装備: 防具・ヘルメット・頭の装備・投げ物・戦術装備（RoN のwikiの値を基準）
 export const VEST = {
   none: { name: 'なし', cover: [] },
@@ -6154,6 +6220,8 @@ export const GEAR = {
   bandage: { name: '包帯', kind: 'heal', max: 3, use: 3.5, desc: '止血して体力を40回復する（対戦）。作戦では止血のみ（50%まで回復）。' },
   frame: { name: '壁用の爆破薬（フレームチャージ）', kind: 'wallcharge', max: 1, place: 4.0, desc: '対戦の攻撃側だけ。補強した壁にも大きな穴を開ける。' },
   claymore: { name: '扉の罠（手榴弾とワイヤー）', kind: 'trap', max: 2, place: 3.0, desc: '対戦の守る側だけ。扉に仕掛け、開けた人を吹き飛ばす。ミラーで見つけられ、マルチツールで外せる。' },
+  dshield: { name: '置ける盾', kind: 'deploy', dep: 'shield', max: 1, place: 1.4, desc: '対戦の守る側。腰の高さ（1m）の鋼の盾を前に立てる。弾を止め、のぞき窓からは見えて撃てる。乗り越えられる。爆発で壊れる。守る側は「調べる」で拾い直せる。' },
+  wire: { name: '有刺鉄線', kind: 'deploy', dep: 'wire', max: 2, place: 1.2, desc: '対戦の守る側。前の床に鉄条網（幅1.6m）を張る。上を通る人は遅くなり、音が出る（敵にも味方にも）。近接2回か爆発で壊れる。' },
 };
 // 長い戦術装備（背中に1つ）
 export const LONG = {
@@ -6256,7 +6324,7 @@ export const EVIDENCE = {
   drugs: { name: '麻薬の包み' }, phone: { name: '携帯電話' }, docs: { name: '書類' }, cash: { name: '現金の束' }, drive: { name: 'ハードディスク' }, guns: { name: '銃のケース' },
 };
 
-@@@@ FILE src/engine/data/npc.js text 7308
+@@@@ FILE src/engine/data/npc.js text 7323
 // 人の性格と装備の種類（容疑者・市民・隊員）。資料室はここから作る。
 // morale: 士気の範囲（0で必ず投降）、aggr: 攻撃的（撃ち始めやすさ）、hidden: 隠し武器（投降のふりから撃つ）、
 // hide: 隠れる、flee: 逃げる、ambush: 待ち伏せ、armor: 防弾ベストの確率、react: 反応時間の倍率、acc: 命中の良さ
@@ -6303,11 +6371,11 @@ export const LOADOUTS = {
 // PvP の既定の装備（陣営ごと）
 export const PVP_LOADOUTS = {
   swat: { primary: { id: 'mk18', sight: 'holo', grip: 'vert', ammo: 'ap' }, secondary: { id: 'g17' }, gear: [['flash', 2], ['c2', 1], ['bandage', 1]], armor: 'medium' },
-  sus: { primary: { id: 'akm', sight: 'iron', ammo: 'ap' }, secondary: { id: 'm1911' }, gear: [['claymore', 1], ['stinger', 1], ['bandage', 1]], armor: 'medium' },
+  sus: { primary: { id: 'akm', sight: 'iron', ammo: 'ap' }, secondary: { id: 'm1911' }, gear: [['dshield', 1], ['wire', 2], ['bandage', 1]], armor: 'medium' },
 };
 export const PVP_ALLOWED = {
   swat: { primary: ['mk18', 'hk416', 'm4a1', 'mcx', 'g36c', 'scarl', 'aug', 'tavor', 'sa58', 'scarh', 'mp5', 'mp5sd', 'mp5k', 'ump45', 'mpx', 'mp7', 'mp9', 'vector', 'evo3', 'm4super', 'r870', 'ksg', 'saiga', 'spas12'], secondary: ['g17', 'g19', 'm17', 'm45a1', 'usp', 'm92', 'fiveseven', 'python', 'deagle'], gear: ['flash', 'stinger', 'cs', 'smoke', 'c2', 'frame', 'bandage', 'wedge'] },
-  sus: { primary: ['akm', 'aks74u', 'vz58', 'rpk', 'g3', 'sks', 'mini14', 'uzi', 'mac10', 'p90', 'bizon', 'skorpion', 'm590', 'saiga', 'spas12', 'sawedoff', 'tec9'], secondary: ['m1911', 'makarov', 'g18', 'g19', 'm92', 'fiveseven', 'python', 'deagle'], gear: ['claymore', 'stinger', 'cs', 'bandage', 'wedge', 'flash'] },
+  sus: { primary: ['akm', 'aks74u', 'vz58', 'rpk', 'g3', 'sks', 'mini14', 'uzi', 'mac10', 'p90', 'bizon', 'skorpion', 'm590', 'saiga', 'spas12', 'sawedoff', 'tec9'], secondary: ['m1911', 'makarov', 'g18', 'g19', 'm92', 'fiveseven', 'python', 'deagle'], gear: ['dshield', 'wire', 'claymore', 'stinger', 'cs', 'bandage', 'wedge', 'flash'] },
 };
 
 @@@@ FILE src/engine/data/props.js text 8696
@@ -6378,7 +6446,7 @@ export const PROPS = {
 
 @@@@ FILE src/engine/data/version.js text 209
 // 版番号: 互換（セーブ・オンラインの相性。上げたら古いセーブは捨てる）と表示用
-export const VERSION = '0.1.5';
+export const VERSION = '0.1.6';
 export const COMPAT = 2;
 export const TITLE = 'HARD ENTRY';
 
@@ -6771,6 +6839,164 @@ export function capOf(wid, mag) {
 }
 export const CAT_NAME = { rifle: '小銃', smg: '短機関銃', shotgun: '散弾銃', pistol: '拳銃', less: '非致死' };
 
+@@@@ FILE src/engine/deploy.js text 8166
+// 置く物（対戦の守る側。シージの Deployable Shield と Barbed Wire）。状態は S.deps = [{ id, k, x, y, z, yaw, L, team, by, hp }]
+//  置ける盾（shield）: 幅1m・高さ1mの鋼の板。弾は止まり、のぞき窓からは見えて撃てる。乗り越えられる。爆発で壊れる。守る側は拾い直せる。
+//  有刺鉄線（wire）: 幅1.6m・奥行き0.9mの鉄条網。上を通る人は遅くなり（誰でも）、ガシャガシャと音が出る。近接2回か爆発で壊れる。
+// 形と当たりは world.js（DSHIELD・pushOut・raycast・occluded）。ここは置く・壊す・遅くする・送る。
+import { pushOut, groundAt, standAt, levelOfY, LH, CS, STEP, DSHIELD, depAxis, inMap, rayBox } from './world.js';
+import { hrand } from './rng.js';
+
+export const DEP = {
+  shield: { dist: 0.78, hp: 1 },
+  wire: { hw: 0.8, hd: 0.45, h: 0.45, dist: 1.05, hp: 2, slow: 0.45, noise: 0.42 },
+};
+const _po = [0, 0, 0, 0];
+function free(S, w, x, z, y0, y1, r) { pushOut(w, x, z, y0, y1, r, S.doors, -1, _po, 0); return !_po[2]; }
+
+// S.doors に「置いた物」の一覧をぶら下げる（当たり・弾・視線の計算から見えるように）。linkBars から呼ぶ
+export function linkDeps(S) {
+  if (!S.doors) return;
+  if (!S.deps) S.deps = [];
+  Object.defineProperty(S.doors, 'deps', { value: S.deps, writable: true, configurable: true, enumerable: false });
+}
+
+// 置く場所（前を向いて置く）。置けなければ null と理由（DEP_WHY）
+export let DEP_WHY = '';
+export function depSpot(S, w, a, k) {
+  DEP_WHY = 'space';
+  if (!a.ground || a.air || a.vault) { DEP_WHY = 'air'; return null; }
+  const fx = Math.sin(a.yaw), fz = Math.cos(a.yaw), ux = -fz, uz = fx;
+  const D = k === 'wire' ? DEP.wire.dist : DEP.shield.dist;
+  const x = a.x + fx * D, z = a.z + fz * D, y = a.y;
+  // 床（家具・階段の上は不可）
+  const g = groundAt(w, x, z, y + 0.3);
+  if (Math.abs(g - y) > 0.06 || Math.abs(standAt(w, x, z, y + 0.3) - g) > 0.01 || Math.abs(groundAt(w, a.x, a.z, y + 0.3) - y) > 0.06) { DEP_WHY = 'floor'; return null; }
+  const L = levelOfY(y + 0.2);
+  const i = Math.floor(x / CS), j = Math.floor(z / CS);
+  if (!inMap(w, i, j) || w.stairAt[w.idx(L, i, j)] >= 0) { DEP_WHY = 'floor'; return null; }
+  if (k === 'shield') {
+    // 板の線の上（5点）が壁・家具・扉・ほかの盾に当たらない
+    for (let s = -2; s <= 2; s++) {
+      const px = x + ux * DSHIELD.hw * s / 2 * 0.92, pz = z + uz * DSHIELD.hw * s / 2 * 0.92;
+      if (!free(S, w, px, pz, y + 0.08, y + DSHIELD.h, 0.07)) return null;
+      if (Math.abs(groundAt(w, px, pz, y + 0.3) - y) > 0.06) { DEP_WHY = 'floor'; return null; }
+    }
+  } else {
+    // 四すみと真ん中が床で、腰より下に壁・家具がない（すみは少し内側）
+    const W = DEP.wire;
+    for (const [sa, sb] of [[0, 0], [-0.85, -0.8], [0.85, -0.8], [-0.85, 0.8], [0.85, 0.8]]) {
+      const px = x + ux * W.hw * sa + fx * W.hd * sb, pz = z + uz * W.hw * sa + fz * W.hd * sb;
+      if (!free(S, w, px, pz, y + 0.06, y + W.h, 0.06)) return null;
+      if (Math.abs(groundAt(w, px, pz, y + 0.3) - y) > 0.06) { DEP_WHY = 'floor'; return null; }
+    }
+    // 同じ所に有刺鉄線が重ならない
+    for (const d of S.deps || []) if (d.k === 'wire' && d.hp > 0 && Math.abs(d.y - y) < 0.5 && Math.hypot(d.x - x, d.z - z) < 1.0) return null;
+  }
+  // 人が立っている所には置かない
+  for (const b of S.actors) {
+    if (b === a || !b.alive || b.isDrone || Math.abs(b.y - y) > 1.2) continue;
+    const dx = b.x - x, dz = b.z - z, along = dx * ux + dz * uz, across = dx * fx + dz * fz;
+    const hw = k === 'wire' ? DEP.wire.hw : DSHIELD.hw, hd = k === 'wire' ? DEP.wire.hd : 0.05;
+    if (Math.abs(along) < hw + 0.25 && Math.abs(across) < hd + 0.25) { DEP_WHY = 'person'; return null; }
+  }
+  DEP_WHY = '';
+  return { x, y, z, yaw: a.yaw, L };
+}
+
+export function placeDep(S, w, a, k, sp, ev) {
+  if (!S.deps) linkDeps(S);
+  const d = { id: (S.nextDep = (S.nextDep || 0) + 1), k, x: sp.x, y: sp.y, z: sp.z, yaw: sp.yaw, L: sp.L, team: a.team, by: a.id, hp: DEP[k].hp };
+  S.deps.push(d);
+  S.depV = (S.depV || 0) + 1;
+  ev.push({ e: 'depset', d: d.id, k, id: a.id, x: d.x, y: d.y, z: d.z });
+  return d;
+}
+export function removeDep(S, d, ev, why = 'break', by = -1) {
+  const i = S.deps ? S.deps.indexOf(d) : -1;
+  if (i < 0) return;
+  S.deps.splice(i, 1);
+  S.depV = (S.depV || 0) + 1;
+  ev.push({ e: 'depbreak', d: d.id, k: d.k, why, by, x: d.x, y: d.y + (d.k === 'shield' ? 0.5 : 0.2), z: d.z });
+}
+
+// 有刺鉄線の上にいるか（足元）
+export function wireAt(S, x, z, y) {
+  if (!S.deps || !S.deps.length) return null;
+  const W = DEP.wire;
+  for (const d of S.deps) {
+    if (d.k !== 'wire' || !(d.hp > 0) || Math.abs(d.y - y) > 0.5) continue;
+    const dx = x - d.x, dz = z - d.z;
+    if (Math.abs(dx) > 1.3 || Math.abs(dz) > 1.3) continue;
+    const [ux, uz] = depAxis(d), fx = Math.sin(d.yaw), fz = Math.cos(d.yaw);
+    if (Math.abs(dx * ux + dz * uz) <= W.hw + 0.12 && Math.abs(dx * fx + dz * fz) <= W.hd + 0.12) return d;
+  }
+  return null;
+}
+// 有刺鉄線の中を動くと音が出る（AI にも聞こえる）。動いた距離で鳴らす
+export function stepWire(S, a, dist, ev) {
+  const d = a.isDrone ? null : wireAt(S, a.x, a.z, a.y);
+  if (!d) { a.wireD = 0; return; }
+  a.wireD = (a.wireD || 0) + dist;
+  if (a.wireD >= DEP.wire.noise) { a.wireD = 0; ev.push({ e: 'wire', id: a.id, d: d.id, x: a.x, y: a.y + 0.2, z: a.z }); }
+}
+
+// 爆発のまわり（半径 R）の置いた物を壊す
+export function blastDeps(S, w, x, y, z, R, ev, by = -1) {
+  if (!S.deps || !S.deps.length) return;
+  for (const d of S.deps.slice()) {
+    const dist = Math.hypot(d.x - x, d.y + 0.4 - y, d.z - z);
+    if (dist <= R + (d.k === 'wire' ? 0.5 : 0.3)) removeDep(S, d, ev, 'blast', by);
+  }
+}
+// 近接で殴る: 目の前（届く所）の有刺鉄線を傷める。当たれば true
+export function meleeDeps(S, w, a, eye, dx, dy, dz, R, ev) {
+  if (!S.deps || !S.deps.length) return false;
+  let best = null, bt = R + 0.35;
+  for (const d of S.deps) {
+    if (d.k !== 'wire' || !(d.hp > 0)) continue;
+    // 局所の座標で、張った鉄線の箱（高さ0.45m）と照準の線
+    const [ux, uz] = depAxis(d), fx = Math.sin(d.yaw), fz = Math.cos(d.yaw);
+    const ox = eye[0] - d.x, oz = eye[2] - d.z;
+    const lx = ox * ux + oz * uz, lz = ox * fx + oz * fz, ldx = dx * ux + dz * uz, ldz = dx * fx + dz * fz;
+    const r = rayBox(lx, eye[1], lz, ldx, dy, ldz, -DEP.wire.hw, d.y, -DEP.wire.hd, DEP.wire.hw, d.y + DEP.wire.h + 0.1, DEP.wire.hd);
+    if (r && r[1] > 0 && r[0] < bt) { bt = r[0]; best = d; }
+  }
+  if (!best) return false;
+  best.hp--;
+  S.depV = (S.depV || 0) + 1;
+  if (best.hp <= 0) removeDep(S, best, ev, 'melee', a.id);
+  else ev.push({ e: 'dephit', d: best.id, k: best.k, by: a.id, x: best.x, y: best.y + 0.25, z: best.z });
+  return true;
+}
+
+// 見ている置ける盾（拾い直す）: 守る側の味方の盾で、2m以内
+export function depAimed(S, a, hits) {
+  for (const h of hits) {
+    if (h.kind !== 'dep') { if (h.kind === 'block' || h.kind === 'door' || h.kind === 'bar' || h.kind === 'prop') return null; continue; }
+    const d = S.deps && S.deps.find(q => q.id === h.id);
+    if (!d || h.t0 > 2.0) return null;
+    return d;
+  }
+  return null;
+}
+
+// 通信: 置いた物の一覧 [id, 種類, x, y, z, 向き, チーム, 残り]
+const KIND = ['shield', 'wire'];
+export function packDeps(S) {
+  return (S.deps || []).map(d => [d.id, KIND.indexOf(d.k), Math.round(d.x * 100), Math.round(d.y * 100), Math.round(d.z * 100), Math.round(d.yaw * 1000), d.team, d.hp]);
+}
+export function applyDepsNet(S, DP) {
+  const next = DP.map(r => ({ id: r[0], k: KIND[r[1]] || 'shield', x: r[2] / 100, y: r[3] / 100, z: r[4] / 100, yaw: r[5] / 1000, L: levelOfY(r[3] / 100 + 0.2), team: r[6], hp: r[7] }));
+  if (!S.deps) S.deps = [];
+  S.deps.length = 0;
+  for (const d of next) S.deps.push(d);
+  linkDeps(S);
+}
+// 置いた物の見た目の揺れ（同じ id なら同じ）
+export function depSeed(d) { return hrand(d.id, 0, 777); }
+
+
 @@@@ FILE src/engine/doors.js text 11795
 // 扉: 開ける（向こうへ押す）・少し開ける・閉める・蹴る・ピッキング・ウェッジ・C2・破城槌・ブリーチングショットガン・ミラー・罠・バリケード
 import { leafEnd, CS, LH, pushOut } from './world.js';
@@ -6994,7 +7220,7 @@ export function detonateC2(S, w, did, ev) {
   return true;
 }
 
-@@@@ FILE src/engine/engine.js text 8181
+@@@@ FILE src/engine/engine.js text 8203
 // エンジン: 状態（関数を含まないデータ）と1ステップの進め方。命令（入力）→ 出来事（イベント）。
 // 固定ステップ 1/60 秒（シミュレーションでは 1/30 も可）。乱数はシード付き。dump/load で丸ごと保存・復元。
 import { compileMap, CS, LH } from './world.js';
@@ -7062,7 +7288,7 @@ export function createGame(o) {
     rules: Object.assign({ cap: 44, diff: 'normal', ff: true, dbno: false, recoil: 1 }, o.rules || {}),
     pvp: o.mode !== 'pve' && o.mode !== 'train', nextId: 1, nextItem: 1,
     actors: [], byId: {}, doors: makeDoorStates(w), bdiff: {}, reinf: {}, bullets: [], nades: [], clouds: [], blasts: [], items: [], harms: [],
-    orders: [], shouts: [], mines: [], ev: [], evSeq: 0, over: null, phase: 'play', m: {}, chems: [], notes: [], cmdSeq: 0, paused: false,
+    orders: [], shouts: [], mines: [], ev: [], evSeq: 0, over: null, phase: 'play', m: {}, chems: [], notes: [], cmdSeq: 0, paused: false, deps: [], nextDep: 0,
   };
   const api = { S, w };
   const mod = MODES[o.mode];
@@ -7165,7 +7391,7 @@ export function load(o) {
 }
 export { CS, LH };
 
-@@@@ FILE src/engine/interact.js text 53406
+@@@@ FILE src/engine/interact.js text 55902
 // 調べる・使う: 見ている物（扉・人・落ちている物・爆弾・壁）と、そのときできる操作。時間のかかる動作の進み。
 import { raycast, los, CS, LH, levelOfY, NB, isWallish, C, leafEnd, pushOut, rayBox } from './world.js';
 import { M, MATS } from './data/materials.js';
@@ -7177,6 +7403,7 @@ import { placeBar, clearBar, bashBar } from './barricade.js';
 import { curW } from './actor.js';
 import { startReload, switchTo, m320Next } from './weapon.js';
 import { ACT_POSE, REACH_D, STAND_D, ALIGN_T } from './data/acts.js';
+import { depSpot, placeDep, removeDep, DEP_WHY } from './deploy.js';
 
 const _rc = { out: [], seenProp: new Set(), seenDoor: new Set() };
 export const REACH = 2.3;
@@ -7184,12 +7411,13 @@ export const REACH = 2.3;
 // 時間（秒）
 export const ACT_T = {
   restrain: 2.8, report: 0.6, collect: 1.2, pick: 6.0, lockgun: 2.0, wedge: 1.5, unwedge: 2.0, c2: 2.5, ram: 0.8, breach: 0.7, mirror: 2.4, mirrorP: 0.8, wand: 0.6, disarm: 3.0,
-  bar: 1.5, unbar: 1.6, trap: 3.0, bash: 0.55, bandage: 3.5, plant: 7.0, defuse: 7.0, revive: 4.0, reinforce: 4.5, frame: 4.0, bombdefuse: 6.0, kick: 0.45, wall: 0.3,
+  bar: 1.5, unbar: 1.6, trap: 3.0, bash: 0.55, bandage: 3.5, plant: 7.0, defuse: 7.0, revive: 4.0, reinforce: 4.5, frame: 4.0, bombdefuse: 6.0, kick: 0.45, wall: 0.3, deppick: 1.0,
 };
 export const OP_NAME = {
   open: '開ける', peek: '少し開ける', close: '閉める', kick: '蹴る', pick: 'ピッキング', lockgun: 'ロックピックガン', wedge: 'ウェッジ', unwedge: 'ウェッジを外す', c2: 'C2を仕掛ける',
   ram: '破城槌', breach: '散弾で開ける', mirror: 'ミラーで見る', wand: 'オプティワンド', disarm: '罠を外す', bar: 'バリケード', unbar: 'バリケードを外す', trap: '罠を仕掛ける', bash: 'バリケードを壊す',
   restrain: '拘束', report: 'TOCに報告', collect: '証拠を回収', revive: '手当て', plant: '解除装置を設置', defuse: '解除装置を外す', pickup: '拾う', reinforce: '補強', frame: '壁用の爆破薬', bombdefuse: '爆弾を解除', det: '起爆',
+  deploy: '置く', deppick: '盾を拾う',
 };
 
 // ---- 手が届くか: 距離と、間に家具・壁・扉・人がないか（オブジェクト越し・離れた所からはできない）
@@ -7405,6 +7633,11 @@ export function reachOK(S, w, a, k, id, op, slack = 0) {
     const fx = Math.abs(cx - a.x) > Math.abs(cz - a.z) ? cx - Math.sign(cx - a.x) * 0.2 : a.x, fz = Math.abs(cx - a.x) > Math.abs(cz - a.z) ? a.z : cz - Math.sign(cz - a.z) * 0.2;
     return bodyClear(S, w, a, fx, fz, L);
   }
+  if (k === 'dep') {
+    const d = S.deps && S.deps.find(q => q.id === id);
+    if (!d) return false;
+    return Math.hypot(d.x - a.x, d.z - a.z) <= lim && Math.abs(d.y - a.y) < 0.6;
+  }
   return true;
 }
 // AI: 目標（人・物）に手が届く立ち位置。近い順に、歩ける床のマスから届くかを試す（家具の向こうなら回り込む）
@@ -7465,6 +7698,7 @@ function actTarget(S, w, a, k, id, op) {
     return [a.x + Math.sin(a.yaw) * 0.5, a.y + 0.05, a.z + Math.cos(a.yaw) * 0.5];
   }
   if (k === 'wall') { const i = id % w.W, j = Math.floor(id / w.W) % w.D; const cx = (i + 0.5) * CS, cz = (j + 0.5) * CS; const ax = Math.abs(cx - a.x) > Math.abs(cz - a.z); return [ax ? cx - Math.sign(cx - a.x) * 0.16 : a.x, a.y + 1.15, ax ? a.z : cz - Math.sign(cz - a.z) * 0.16]; }
+  if (k === 'dep') { const d = S.deps && S.deps.find(q => q.id === id); return d ? [d.x, d.y + 0.55, d.z] : null; }
   return null;
 }
 // 動作の立ち位置: 目標の手前（目標から自分への向き、扉は自分の側の正面）。歩ける所で、今の所から体ごと移れるときだけ
@@ -7513,8 +7747,9 @@ export function contextOf(S, w, a) {
   const eye = eyeOf(S, a);
   const cp = Math.cos(a.pitch), dx = Math.sin(a.yaw) * cp, dy = Math.sin(a.pitch), dz = Math.cos(a.yaw) * cp;
   const hits = raycast(w, eye[0], eye[1], eye[2], dx, dy, dz, 3.2, S.doors, _rc);
-  let wallHit = null, doorHit = null, barHit = null;
+  let wallHit = null, doorHit = null, barHit = null, depHit = null;
   for (const h of hits) {
+    if (h.kind === 'dep') { if (!depHit) depHit = h; continue; }
     if (h.kind === 'bar' && h.id < 0) { barHit = h; break; }
     if (h.kind === 'door' || h.kind === 'bar') { doorHit = h; break; }
     if (h.kind === 'block' || h.kind === 'slab' || h.kind === 'prop' || h.kind === 'stair' || h.kind === 'edge') { if (MATS[h.mat] && MATS[h.mat].see) continue; wallHit = h; break; }
@@ -7553,6 +7788,11 @@ export function contextOf(S, w, a) {
   if (item) {
     const ops = itemOps(S, a, item);
     if (ops.length) return markReach(S, w, a, { k: 'item', id: item.id, ops, def: ops[0] });
+  }
+  // 置ける盾（味方の盾は拾い直せる）
+  if (depHit && depHit.t0 < 2.0 && depHit.t0 < wallT) {
+    const d = S.deps && S.deps.find(q => q.id === depHit.id);
+    if (d && d.k === 'shield' && d.team === a.team) return markReach(S, w, a, { k: 'dep', id: d.id, ops: [{ op: 'deppick', t: ACT_T.deppick }], def: null });
   }
   // 窓・ガラスの壁のバリケード（見ている板）
   if (barHit && barHit.t0 < 2.6) {
@@ -7718,6 +7958,7 @@ export function doAction(S, w, a, ac, ev) {
   if (kind === 'peekend') { if (a.peek) endPeek(S, w, a, ev, 'user'); return; }
   if (kind === 'dropcarry') { if (a.carry === 'defuser') { a.carry = null; S.items.push({ id: S.nextItem++, kind: 'defuser', x: a.x, y: a.y + 0.02, z: a.z }); ev.push({ e: 'defdrop', id: a.id }); } return; }
   if (a.act) return;
+  if (kind === 'deploy') { startDeploy(S, w, a, ac.id, ev); return; }
   let ctx = null, op = null;
   if (kind === 'use') { ctx = contextOf(S, w, a); if (!ctx) return; op = ctx.def; }
   else if (kind === 'op') {
@@ -7924,6 +8165,21 @@ function finishOp(S, w, a, x, ev) {
     if (k === 'frame' && useGear(a, 'frame')) { S.mines = S.mines || []; S.mines.push({ k: 'frame', owner: a.id, x: (kk % w.W + 0.5) * CS, y: a.y + 1.0, z: (Math.floor(kk / w.W) % w.D + 0.5) * CS, cell: kk }); ev.push({ e: 'frameset', id: a.id }); }
     return;
   }
+  if (k === 'deploy') {
+    // 置く直前にもう一度場所を確かめる（人が入った・向きを変えた）
+    const G = GEAR[x.g], sp = G && depSpot(S, w, a, G.dep);
+    if (!sp) { ev.push({ e: 'deny', id: a.id, why: 'dep' + DEP_WHY }); return; }
+    if (useGear(a, x.g)) placeDep(S, w, a, G.dep, sp, ev);
+    return;
+  }
+  if (x.kind === 'dep' && k === 'deppick') {
+    const d = S.deps && S.deps.find(q => q.id === x.id);
+    if (!d || d.team !== a.team) return;
+    removeDep(S, d, ev, 'pick', a.id);
+    const gid = d.k === 'shield' ? 'dshield' : 'wire', g = a.inv.gear.find(q => q.id === gid);
+    if (g) g.n = Math.min((GEAR[gid].max || 9), g.n + 1); else a.inv.gear.push({ id: gid, n: 1 });
+    return;
+  }
   if (k === 'bandage') {
     if (S.pvp) { a.hp = Math.min(a.maxHp, a.hp + 40); } else { a.hp = Math.max(a.hp, Math.min(a.maxHp, a.maxHp * 0.5)); a.inj.arm = 0; }
     a.bleed = 0;
@@ -7946,8 +8202,8 @@ function selectGear(S, a, id, ev) {
   const g = a.inv.gear.find(x => x.id === id);
   if (!g || g.n <= 0) { ev.push({ e: 'deny', id: a.id, why: 'nogear' }); return; }
   if (G.kind === 'heal') { if (a.act) return; if (g.n > 0) { g.n--; a.act = { k: 'bandage', t: 0, dur: ACT_T.bandage, kind: 'self', id: a.id, still: false, noAds: true, x: a.x, z: a.z, pose: 'bandage', tgt: null }; ev.push({ e: 'act', id: a.id, k: 'bandage', dur: ACT_T.bandage }); } return; }
-  if (G.kind === 'nade' || G.kind === 'spray') {
-    // 手に持つ（slot 2）。引き金で投げる・吹きつける
+  if (G.kind === 'nade' || G.kind === 'spray' || G.kind === 'deploy') {
+    // 手に持つ（slot 2）。引き金で投げる・吹きつける・前に置く
     a.ws.gear = id;
     if (a.ws.slot !== 2) switchTo(S, a, 2, ev);
     ev.push({ e: 'gearsel', id: a.id, g: id });
@@ -7971,12 +8227,26 @@ function gearInHand(S, w, a, dt, ev) {
     g.n--;
     throwNade(S, a, id, inp.power ?? 0.75, ev);
     if (g.n <= 0 || !inp.keepGear) { ws.next = ws.prev >= 0 ? ws.prev : 0; ws.st = 'holster'; ws.t = 0.35; }
+  } else if (GEAR[id].kind === 'deploy') {
+    startDeploy(S, w, a, id, ev);
   } else if (GEAR[id].kind === 'spray') {
     spray(S, w, a, ev);
     g.n = Math.max(0, g.n - 0); // 本数ではなく回数で管理（6回）
     ws.sprays = (ws.sprays || 0) + 1;
     if (ws.sprays >= (GEAR.spray.uses || 6)) { g.n = 0; ws.next = ws.prev >= 0 ? ws.prev : 0; ws.st = 'holster'; ws.t = 0.3; }
   }
+}
+
+// 置く（置ける盾・有刺鉄線）: ひざをついて前の床に置く。置ける所でなければ理由を知らせる
+function startDeploy(S, w, a, id, ev) {
+  const G = GEAR[id];
+  if (!G || G.kind !== 'deploy' || a.act || a.down || a.cuffed) return;
+  if (gearN(a, id) <= 0) { ev.push({ e: 'deny', id: a.id, why: 'nogear' }); return; }
+  const sp = depSpot(S, w, a, G.dep);
+  if (!sp) { ev.push({ e: 'deny', id: a.id, why: 'dep' + DEP_WHY }); return; }
+  const dur = G.place * (a.inj.arm ? 1.2 : 1);
+  a.act = { k: 'deploy', t: 0, dur, kind: 'self', id: a.id, still: true, noAds: true, x: a.x, z: a.z, pose: 'kneel', tgt: [sp.x, sp.y + 0.3, sp.z], g: id };
+  ev.push({ e: 'act', id: a.id, k: 'deploy', dur, g: id });
 }
 
 function spray(S, w, a, ev) {
@@ -10301,7 +10571,7 @@ export function scoreMission(S) {
   return out;
 }
 
-@@@@ FILE src/engine/modes/pvp.js text 29128
+@@@@ FILE src/engine/modes/pvp.js text 29173
 // 対戦（PvP）: リスポーンありTDM・殲滅戦（リスポーンなし）・爆弾（シージ式の攻守）
 // 陣営: チーム0/1。見た目は SWAT（攻撃・チーム0のTDM）と立てこもり犯（防衛）。空きはボット。
 import { createActor, makeInventory, makeArmor } from '../actor.js';
@@ -10438,6 +10708,7 @@ function startRound(S, w, first) {
     S.doors = makeDoorStates(w);
     S.items.length = 0; S.nades.length = 0; S.clouds.length = 0; S.blasts.length = 0; S.bullets.length = 0; S.mines = [];
     S.reinf = {};
+    S.deps = []; S.depV = (S.depV || 0) + 1;
     S.actors = S.actors.filter(a => !a.isDrone);
     initBars(S, w);
   }
@@ -10941,7 +11212,7 @@ export function placeActors(S, w, def) {
   for (let i = 0; i < Math.min(2, civ.length); i++) { const [x, z] = civ[(i + S.m.resets) % civ.length]; spawnCivilian(S, w, x, z, 0, i ? 'adult' : 'staff'); }
 }
 
-@@@@ FILE src/engine/move.js text 23789
+@@@@ FILE src/engine/move.js text 24115
 // 移動: RoN の速さ（歩き2.4・ゆっくり0.96・しゃがみ1.2）、しゃがみ・伏せ・リーン・乗り越え・飛び降り・落下・階段・PvPのダッシュ
 import { groundAt, standAt, ceilAt, pushOut, raycast, STEP, CS, LH, BH, NB, levelOfY, cellType, C, leafEnd, inMap, isWallish } from './world.js';
 import { hurt, pvpDamage, breakGlass } from './combat.js';
@@ -10952,6 +11223,7 @@ import { curW, bodyHeight, curWeapon } from './actor.js';
 import { attMods } from './weapon.js';
 import { PLATE, LONG } from './data/equipment.js';
 import { FLOORS } from './data/materials.js';
+import { DEP, wireAt, stepWire } from './deploy.js';
 
 export const SPEED = { walk: 2.4, crouch: 1.2, prone: 0.45, low: 1.2, ads: 0.7, sprint: 4.6, back: 0.8, side: 0.9 };
 export const RADIUS = 0.28;
@@ -10993,6 +11265,8 @@ export function maxSpeed(S, a, inp) {
   if (a.bleed > 0) v *= 0.8;
   if (a.stun > 0 || a.flash > 0.5) v *= 0.45;
   if (a.gas > 0 && !(a.armor.head === 'gasmask')) v *= 0.7;
+  // 有刺鉄線の上（対戦）: 誰でも遅くなる
+  if (S.deps && S.deps.length && !a.isDrone && wireAt(S, a.x, a.z, a.y)) v *= DEP.wire.slow;
   if (a.comply === 1) v = Math.min(v, 0.9);
   if (a.comply === 2 || a.cuffed || a.down || a.dead || a.tased > 0) v = a.down && S.pvp && a.dbno ? 0.35 : 0;
   if (a.act && a.act.still) v = 0;
@@ -11057,7 +11331,7 @@ export function moveActor(S, w, a, inp, dt, ev) {
   let mag = Math.hypot(mx, mz); if (mag > 1) { mx /= mag; mz /= mag; mag = 1; }
   // ダッシュ（PvPだけ。立って前へ）
   // ダッシュ: 作戦・対戦とも（スティックを上へ押し込む・Shift）。盾を構えている・運んでいる・拘束されているときは走れない
-  a.sprint = !!(inp.sprint && a.st < 0.2 && mz > 0.55 && !a.adsOn && !a.down && !a.act && !a.cuffed && !a.comply && !(a.ws && a.ws.slot === 1 && a.inv && a.inv.long === 'shield'));
+  a.sprint = !!(inp.sprint && a.st < 0.2 && mz > 0.55 && !a.adsOn && !a.down && !a.act && !a.cuffed && !a.comply && !(a.ws && a.ws.slot === 1 && a.inv && a.inv.long === 'shield') && !(S.deps && S.deps.length && wireAt(S, a.x, a.z, a.y)));
   const vmax = maxSpeed(S, a, inp);
   // 後ろ・横は遅い
   let dirMul = 1;
@@ -11105,6 +11379,7 @@ export function moveActor(S, w, a, inp, dt, ev) {
   a.ground = a.y - g < 0.05;
   // 歩きの位相と足音
   const dist = Math.hypot(a.x - ox, a.z - oz);
+  if (ev && S.deps && S.deps.length) stepWire(S, a, dist, ev);
   const stepLen = a.sprint ? 0.95 : a.st > 1.5 ? 0.35 : a.st > 0.5 ? 0.55 : 0.72;
   const before = Math.floor(a.phase / Math.PI);
   a.phase += dist * Math.PI / stepLen;
@@ -11349,13 +11624,14 @@ function pushLeaves(S, w, a, vx, vz, dt) {
   }
 }
 
-@@@@ FILE src/engine/nades.js text 10869
+@@@@ FILE src/engine/nades.js text 11068
 // 投げ物と爆発: 閃光・スティンガー・CSガス・罠（破片）・C2・壁用の爆破薬。ガスの雲。
 import { raycast, los, CS, LH, levelOfY, NB } from './world.js';
 import { hrand } from './rng.js';
 import { eyeOf, hurt, killActor, pvpDamage, damageBlock, breakGlass, downActor, breakCamAt } from './combat.js';
 import { M, MATS } from './data/materials.js';
 import { blastBars } from './barricade.js';
+import { blastDeps } from './deploy.js';
 
 const _rc = { out: [], seenProp: new Set(), seenDoor: new Set() };
 
@@ -11530,6 +11806,8 @@ export function stepBlasts(S, w, dt, ev) {
     if (S.cams && w._cams) for (let ci = 0; ci < S.cams.length; ci++) { const K = w._cams[ci]; if (K && S.cams[ci].ok && Math.hypot(K.x - b.x, K.y - b.y, K.z - b.z) < 2.0) breakCamAt(S, ci, b.by ?? -1, ev, K.x, K.y, K.z); }
     // バリケード: 爆発のまわりの板を吹き飛ばす（破片・罠 1.7m、C2 2.4m、壁の爆破薬 2.0m）
     blastBars(S, w, b.x, b.y, b.z, b.kind === 'c2' ? 2.4 : b.kind === 'frame' ? 2.0 : 1.7, ev, b.by ?? -1);
+    // 置ける盾・有刺鉄線も吹き飛ぶ
+    blastDeps(S, w, b.x, b.y, b.z, b.kind === 'c2' ? 2.4 : b.kind === 'frame' ? 2.0 : 1.7, ev, b.by ?? -1);
     // 壁（石膏・木）を壊す
     if (b.kind === 'c2' || b.kind === 'frame' || b.kind === 'frag') {
       const R = b.kind === 'frame' ? 1.4 : b.kind === 'c2' ? 0.9 : 0.6;
@@ -12379,7 +12657,7 @@ function tryFire(S, w, a, W, wi, inp, ev) {
   ev.push({ e: 'shot', id: a.id, wid: wi.id, x: a.x, y: a.y, z: a.z, supp, loud: (W.less ? 0.4 : 1) * m.noise, fl: m.flash, n: ws.shots });
 }
 
-@@@@ FILE src/engine/world.js text 51066
+@@@@ FILE src/engine/world.js text 54267
 // マップを組み立てて、当たり・視線・弾の通り道を調べる（DOMなし。ホストとゲストで同じ結果になる）
 // 座標: メートル。マス (i, j) の中心は x = (i+0.5)*CS, z = (j+0.5)*CS。階 L の床は y = L*LH。
 // 壁はマスの中央の板。高さ方向に4つのブロック（0.7mずつ、上の端は天井 2.8m）。
@@ -12387,6 +12665,13 @@ import { M, MATS, F } from './data/materials.js';
 import { PROPS } from './data/props.js';
 
 export const CS = 0.5, LH = 3.0, CEIL = 2.8, BH = 0.7, NB = 4, SLAB = 0.2, STEP = 0.36;
+// 置ける盾（対戦の守る側。シージの Deployable Shield）: 幅1m・高さ1.4mの鋼の板。のぞき窓（高さ s0〜s1、幅 ±shw）は、かがんだ目の高さ（1.32m）。
+// 立つと頭が上に出る。高さ1.4mなので乗り越えられる
+export const DSHIELD = { hw: 0.5, th: 0.07, h: 1.4, s0: 1.2, s1: 1.36, shw: 0.15 };
+// 盾の4つの部分（下・上・のぞき窓の左右）: [u0, u1, y0, y1]（u は幅の向き）
+const SH_PARTS = [[-DSHIELD.hw, DSHIELD.hw, 0, DSHIELD.s0], [-DSHIELD.hw, DSHIELD.hw, DSHIELD.s1, DSHIELD.h], [-DSHIELD.hw, -DSHIELD.shw, DSHIELD.s0, DSHIELD.s1], [DSHIELD.shw, DSHIELD.hw, DSHIELD.s0, DSHIELD.s1]];
+// 盾の幅の向き（置いた人の右）
+export function depAxis(d) { return [-Math.cos(d.yaw), Math.sin(d.yaw)]; }
 
 // マスの種類
 export const C = { VOID: 0, FLOOR: 1, OUT: 2, WALL: 3, DOOR: 4, WINDOW: 5, GLASSWALL: 6, OPEN: 7, LOW: 8, FENCE: 9, STAIR: 10 };
@@ -12933,10 +13218,26 @@ export function pushOut(w, x, z, y0, y1, r, doorsState, ignoreProp = -1, out = [
         }
       }
     }
+    const deps = doorsState && doorsState.deps;
+    if (deps && deps.length) { const r2 = pushDeps(deps, px, pz, y0, y1, r); if (r2[2]) { px += r2[0]; pz += r2[1]; hit = 1; if (pass) pm = Math.max(pm, Math.abs(r2[0]) + Math.abs(r2[1])); } }
   }
   out[0] = px - x; out[1] = pz - z; out[2] = hit; out[3] = pm; // out[3]: 2回目の押し出しの最大（0に近ければ収まっている）
   return out;
 }
+// 置ける盾に体が当たったら押し出す（高さ1mなので乗り越えられる）
+function pushDeps(deps, px, pz, y0, y1, r) {
+  let ox = 0, oz = 0, hit = 0;
+  for (const d of deps) {
+    if (d.k !== 'shield' || !(d.hp > 0) || d.y + DSHIELD.h <= y0 || d.y >= y1) continue;
+    if (Math.abs(px + ox - d.x) > r + 0.6 || Math.abs(pz + oz - d.z) > r + 0.6) continue;
+    const [ux, uz] = depAxis(d);
+    const r2 = circleSeg(px + ox, pz + oz, r + DSHIELD.th / 2, d.x - ux * DSHIELD.hw, d.z - uz * DSHIELD.hw, d.x + ux * DSHIELD.hw, d.z + uz * DSHIELD.hw);
+    if (r2) { ox += r2[0]; oz += r2[1]; hit = 1; }
+  }
+  _pd[0] = ox; _pd[1] = oz; _pd[2] = hit;
+  return _pd;
+}
+const _pd = [0, 0, 0];
 
 // そのマスのその高さに、ぶつかる壁のブロックがあるか
 function solidAt(w, L, i, j, q, glassOpen = 0) {
@@ -12996,6 +13297,8 @@ export function raycast(w, ox, oy, oz, dx, dy, dz, max, doorsState, opt = {}) {
   const seenDoor = opt.seenDoor || _seenD; seenDoor.clear();
   let guard = 0;
   let stopAt = max;
+  const deps = doorsState && doorsState.deps;
+  if (deps && deps.length) rayDeps(deps, ox, oy, oz, dx, dy, dz, max, hits);
   while (t < stopAt && guard++ < 4000) {
     const tNext = Math.min(tmI, tmJ, max);
     if (!inMap(w, i, j)) { hits.push({ t0: t, t1: t, kind: 'edge', mat: M.CONCRETE }); break; }
@@ -13090,6 +13393,28 @@ export function raycast(w, ox, oy, oz, dx, dy, dz, max, doorsState, opt = {}) {
   }
   hits.sort((a, b) => a.t0 - b.t0);
   return hits;
+}
+
+// 置ける盾に当たるか（のぞき窓は抜ける）。当たれば hits に { kind: 'dep', id } を足す
+function rayDeps(deps, ox, oy, oz, dx, dy, dz, max, hits) {
+  for (const d of deps) {
+    const best = rayShield(d, ox, oy, oz, dx, dy, dz, max);
+    if (best) hits.push({ t0: Math.max(0, best[0]), t1: best[1], kind: 'dep', mat: M.METAL, id: d.id, nx: best[2], ny: 0, nz: best[3], L: d.L });
+  }
+}
+function rayShield(d, ox, oy, oz, dx, dy, dz, max) {
+  if (d.k !== 'shield' || !(d.hp > 0)) return null;
+  // 大まかに: 水平に見て、盾の中心から0.7m以内を通るか
+  const cx = d.x - ox, cz = d.z - oz, h2 = dx * dx + dz * dz;
+  if (h2 > 1e-9) { const t = Math.max(0, Math.min(max, (cx * dx + cz * dz) / h2)); if (Math.hypot(cx - dx * t, cz - dz * t) > 0.7) return null; }
+  else if (Math.hypot(cx, cz) > 0.7) return null;
+  const [ux, uz] = depAxis(d);
+  let best = null;
+  for (const P of SH_PARTS) {
+    const r = raySlabSeg(ox, oy, oz, dx, dy, dz, d.x + ux * P[0], d.z + uz * P[0], d.x + ux * P[1], d.z + uz * P[1], DSHIELD.th, d.y + P[2], d.y + P[3]);
+    if (r && r[1] > 0 && r[0] < max && (!best || r[0] < best[0])) best = r;
+  }
+  return best;
 }
 
 // 視線が通るか（見えない物にさえぎられないか）
@@ -13199,6 +13524,8 @@ export function occluded(w, ax, ay, az, bx, by, bz, doorsState = null, props = t
   let tmJ = dz !== 0 ? ((dz > 0 ? (j + 1) * CS - az : az - j * CS) / Math.abs(dz)) : Infinity;
   let t = 0, guard = 0;
   const maxT = L - 0.02;
+  const deps = doorsState && doorsState.deps;
+  if (deps && deps.length) for (const d of deps) if (rayShield(d, ax, ay, az, dx, dy, dz, maxT)) return true;
   while (t < maxT && guard++ < 3000) {
     if (i < 0 || j < 0 || i >= w.W || j >= w.D) return false;
     const tN = Math.min(tmI, tmJ, maxT);
@@ -14100,7 +14427,7 @@ export class GuestSession {
   }
 }
 
-@@@@ FILE src/net/snap.js text 22996
+@@@@ FILE src/net/snap.js text 23780
 // 通信の中身: ホストのエンジンの状態 → 小さな写し（数を丸めた配列）。ゲストは写しから「見せるための状態」を作る。
 // 静かな情報（名前・見た目・装備の種類・目的の一覧）は st、動く情報（位置・姿勢・扉・物・出来事）は g。
 import { createActor, makeWeapon } from '../engine/actor.js';
@@ -14108,16 +14435,18 @@ import { makeDoorStates } from '../engine/doors.js';
 import { WEAPONS } from '../engine/data/weapons.js';
 import { ACT_POSE } from '../engine/data/acts.js';
 import { initBars, packBars, applyBarsNet } from '../engine/barricade.js';
+import { packDeps, applyDepsNet } from '../engine/deploy.js';
 import { mapCams } from '../engine/modes/pvp.js';
 import { MAPS } from '../engine/maps/index.js';
 
 const KSENT = new WeakMap(); // 状態ごとの「最後に送った成績」
 const BSENT = new WeakMap(); // 状態ごとの「最後に送ったバリケード」
+const DSENT = new WeakMap(); // 状態ごとの「最後に送った置いた物」
 const r2 = (v) => Math.round(v * 100);
 const r3 = (v) => Math.round(v * 1000);
 const isNum = (v) => typeof v === 'number' && isFinite(v);
 // 送る出来事（見た目・音・HUDに要るもの）
-export const NET_EV = new Set(['shot', 'imp', 'blood', 'hit', 'whiz', 'kill', 'down', 'cuffed', 'report', 'evidence', 'bombdone', 'soft', 'glass', 'block', 'reinf', 'door', 'deny', 'nade', 'boom', 'c2', 'flashed', 'stung', 'tase', 'spray', 'reload', 'reloaded', 'shell', 'pumped', 'dry', 'draw', 'fmode', 'lightsw', 'step', 'shout', 'cmd', 'mirror', 'act', 'trap', 'trapset', 'barset', 'c2set', 'barhit', 'barbreak', 'plant', 'disable', 'defpick', 'defdrop', 'spotted', 'drone', 'dronedead', 'phase', 'round', 'roundstart', 'swap', 'respawn', 'matchend', 'end', 'revive', 'bandaged', 'fall', 'throw', 'bounce', 'allbombs', 'trapoff', 'peek', 'peekend', 'launch', 'shieldhit', 'longsel', 'm320sel', 'gearhint', 'gearsel', 'melee', 'meleehit', 'outside', 'zone', 'camdead']);
+export const NET_EV = new Set(['shot', 'imp', 'blood', 'hit', 'whiz', 'kill', 'down', 'cuffed', 'report', 'evidence', 'bombdone', 'soft', 'glass', 'block', 'reinf', 'door', 'deny', 'nade', 'boom', 'c2', 'flashed', 'stung', 'tase', 'spray', 'reload', 'reloaded', 'shell', 'pumped', 'dry', 'draw', 'fmode', 'lightsw', 'step', 'shout', 'cmd', 'mirror', 'act', 'trap', 'trapset', 'barset', 'c2set', 'barhit', 'barbreak', 'plant', 'disable', 'defpick', 'defdrop', 'spotted', 'drone', 'dronedead', 'phase', 'round', 'roundstart', 'swap', 'respawn', 'matchend', 'end', 'revive', 'bandaged', 'fall', 'throw', 'bounce', 'allbombs', 'trapoff', 'peek', 'peekend', 'launch', 'shieldhit', 'longsel', 'm320sel', 'gearhint', 'gearsel', 'melee', 'meleehit', 'outside', 'zone', 'camdead', 'depset', 'depbreak', 'dephit', 'wire']);
 // 出来事の数を丸める（小数2けた）
 export function packEvent(e) {
   const o = {};
@@ -14184,6 +14513,14 @@ export function packSnap(S, w, events, mePids, withBlocks) {
     if (S.barV !== st.v) { st.v = S.barV; st.fresh = 20; }
     if (st.fresh > 0 || st.n >= 30) { st.fresh = Math.max(0, st.fresh - 1); st.n = 0; out.BR = packBars(S); }
     BSENT.set(S, st);
+  }
+  // 置いた物（置ける盾・有刺鉄線）: 変わってから20回は毎回、ほかは30回に1回
+  if (S.deps) {
+    const st = DSENT.get(S) || { v: -1, n: 0, fresh: 0 };
+    st.n++;
+    if (S.depV !== st.v) { st.v = S.depV; st.fresh = 20; }
+    if (st.fresh > 0 || st.n >= 30) { st.fresh = Math.max(0, st.fresh - 1); st.n = 0; out.DP = packDeps(S); }
+    DSENT.set(S, st);
   }
   // 壊れた壁（ときどき全部）
   if (withBlocks) out.B = Object.keys(S.bdiff).map(k => { const b = +k * 4; return [+k, w.blocks[b], w.blocks[b + 1], w.blocks[b + 2], w.blocks[b + 3]]; });
@@ -14332,6 +14669,8 @@ export class Mirror {
     if (rd != null) this._rd = rd;
     // バリケード（いちばん新しい表）
     for (let i = B.length - 1; i >= 0; i--) { const BR = B[i].g.BR; if (BR) { if (BR !== this._lastBR) { this._lastBR = BR; applyBarsNet(S, this.w, BR); } break; } }
+    // 置いた物（いちばん新しい表）
+    for (let i = B.length - 1; i >= 0; i--) { const DP = B[i].g.DP; if (DP) { if (DP !== this._lastDP) { this._lastDP = DP; applyDepsNet(S, DP); } break; } }
     if (last.B && last !== this._lastB) {
       this._lastB = last;
       for (const [k, b0, b1, b2, b3] of last.B) { const b = k * 4, w = this.w; if (w.blocks[b] !== b0 || w.blocks[b + 1] !== b1 || w.blocks[b + 2] !== b2 || w.blocks[b + 3] !== b3) { w.blocks[b] = b0; w.blocks[b + 1] = b1; w.blocks[b + 2] = b2; w.blocks[b + 3] = b3; S.bdiff[k] = 1; this.changed.push(k); } }
@@ -18704,7 +19043,7 @@ function car(B, G, col, van) {
   }
 }
 
-@@@@ FILE src/render/renderer.js text 32470
+@@@@ FILE src/render/renderer.js text 36389
 // 描画の司令塔: 太陽の影 → 本描画(HDR: 空・世界・扉・人・銃・粒子・ガラス) → 一人称 → 光のにじみ → 仕上げ（トーンマップ・暗視・閃光） → FXAA
 import { createGL, tex2D, fbo, depthTex } from './gl.js';
 import { m4, m4mul, m4persp, m4lookAt, m4invert, frustumPlanes, aabbVisible } from './math.js';
@@ -18714,7 +19053,7 @@ import { COMMON, LIGHT, WORLD_VS, WORLD_FS, SKIN_VS, SKIN_FS, SHADOW_VS, SHADOW_
 import { prepareLevel, buildChunk, doorLeafMesh, barPanelMesh, CHUNK } from './level.js';
 import { WV, MeshBuilder, hex } from './build.js';
 import { bakeLight } from '../engine/light.js';
-import { CS, LH, CEIL, NB } from '../engine/world.js';
+import { CS, LH, CEIL, NB, DSHIELD } from '../engine/world.js';
 
 // 画質: まとめて選ぶ（低・中・高）か、細かく選ぶ（カスタム）
 export const QUALITY = { low: { name: '低' }, medium: { name: '中' }, high: { name: '高' }, custom: { name: 'カスタム' } };
@@ -19098,7 +19437,7 @@ export class Renderer {
     for (const [, ch] of vis) { drawMesh(gl, ch.mesh); this.stats.draws++; this.stats.tris += ch.tris; this.stats.chunks++; }
     if (this.outer && this.outer.mesh) { if (P.u.uOuter) gl.uniform1f(P.u.uOuter, 1); drawMesh(gl, this.outer.mesh); if (P.u.uOuter) gl.uniform1f(P.u.uOuter, 0); this.stats.draws++; this.stats.tris += this.outer.tris; }
     // 扉
-    if (f.doors) { this._drawDoors(P, f.doors); this._drawBars(P, f.doors.bars); }
+    if (f.doors) { this._drawDoors(P, f.doors); this._drawBars(P, f.doors.bars); this._drawDeps(P, f.doors.deps); }
     for (const h of this.hooks.opaque) h(this, f);
     // 空（奥の深さ1で、まだ何も描いていない所だけ）
     gl.disable(gl.CULL_FACE);
@@ -19195,6 +19534,30 @@ export class Renderer {
       drawMesh(gl, bm.mesh); this.stats.draws++;
     }
     gl.uniform1f(P.u.uRoomOverride, -1);
+  }
+
+  // 置いた物（置ける盾・有刺鉄線）: 形は1度だけ作り、向きと位置の行列で描く。ローカル: X = 幅（置いた人の右）、Y = 上、Z = 置いた人の側（後ろ）
+  _drawDeps(P, deps) {
+    const gl = this.gl, w = this.w0;
+    if (!deps || !deps.length) return;
+    if (!this._depMesh) this._depMesh = { shield: makeWorldMesh(gl, shieldMesh()), wire: makeWorldMesh(gl, wireMesh()) };
+    const M = this._mDep || (this._mDep = new Float32Array(16));
+    for (const d of deps) {
+      if (!(d.hp > 0) || !this._depMesh[d.k]) continue;
+      const r = d.k === 'wire' ? 0.95 : 0.6;
+      if (!aabbVisible(this.planes, d.x - r, d.y, d.z - r, d.x + r, d.y + 1.1, d.z + r)) continue;
+      const fx = Math.sin(d.yaw), fz = Math.cos(d.yaw);
+      // X = 右 (-fz, fx)、Z = 後ろ (-fx, -fz)（扉の板と同じ向きの決まり）
+      M[0] = -fz; M[1] = 0; M[2] = fx; M[3] = 0; M[4] = 0; M[5] = 1; M[6] = 0; M[7] = 0; M[8] = -fx; M[9] = 0; M[10] = -fz; M[11] = 0;
+      M[12] = d.x; M[13] = d.y; M[14] = d.z; M[15] = 1;
+      gl.uniformMatrix4fv(P.u.uModel, false, M);
+      const i = Math.floor(d.x / CS), j = Math.floor(d.z / CS), L = Math.max(0, Math.min(w.NL - 1, d.L | 0));
+      const room = i >= 0 && j >= 0 && i < w.W && j < w.D ? w.roomAt[w.idx(L, i, j)] : -1;
+      gl.uniform1f(P.u.uRoomOverride, Math.max(0, room));
+      drawMesh(gl, this._depMesh[d.k]); this.stats.draws++;
+    }
+    gl.uniform1f(P.u.uRoomOverride, -1);
+    gl.uniformMatrix4fv(P.u.uModel, false, this.ident);
   }
 
   // 罠の形（扉の幅と壁の厚さごと）。ローカル: X=扉にそって 0..幅、Z=罠の側。
@@ -19320,6 +19683,49 @@ export class Renderer {
     }
     gl.enable(gl.DEPTH_TEST);
   }
+}
+
+// 置ける盾の形: 鋼の板（のぞき窓つき）と、後ろの脚。-Z が敵の側
+function shieldMesh() {
+  const B = new MeshBuilder();
+  const S = DSHIELD, t = 0.028, st = hex('#4b544d'), ed = hex('#2c312d'), bl = hex('#1d1f1e');
+  B.bbox(-S.hw, 0.03, -t, S.hw, S.s0, t, 0.012, LAYER.metal, st);
+  B.bbox(-S.hw, S.s1, -t, S.hw, S.h, t, 0.012, LAYER.metal, st);
+  B.bbox(-S.hw, S.s0 - 0.01, -t, -S.shw, S.s1 + 0.01, t, 0.008, LAYER.metal, st);
+  B.bbox(S.shw, S.s0 - 0.01, -t, S.hw, S.s1 + 0.01, t, 0.008, LAYER.metal, st);
+  // のぞき窓の縁と、表の補強の帯
+  B.box(-S.shw - 0.015, S.s0 - 0.015, -t - 0.006, S.shw + 0.015, S.s0, -t, LAYER.metal, ed);
+  B.box(-S.shw - 0.015, S.s1, -t - 0.006, S.shw + 0.015, S.s1 + 0.015, -t, LAYER.metal, ed);
+  for (const yb of [0.32, 0.86]) B.box(-S.hw + 0.02, yb, -t - 0.008, S.hw - 0.02, yb + 0.04, -t, LAYER.metal, ed);
+  // 縁
+  for (const sx of [-S.hw, S.hw - 0.025]) B.box(sx, 0.03, -t - 0.006, sx + 0.025, S.h, -t, LAYER.metal, ed);
+  // 後ろの脚（斜めの支え）と取っ手
+  for (const sx of [-0.36, 0.36]) {
+    B.tube([sx, 0.85, t], [sx, 0.0, 0.46], 0.017, 0.017, 6, LAYER.metal, bl, { caps: true });
+    B.bbox(sx - 0.04, 0, 0.41, sx + 0.04, 0.025, 0.51, 0.006, LAYER.rubber, bl);
+  }
+  B.tube([-0.12, S.h - 0.06, t + 0.005], [0.12, S.h - 0.06, t + 0.005], 0.012, 0.012, 6, LAYER.rubber, bl, { caps: true });
+  return B;
+}
+// 有刺鉄線の形: 輪にした鉄線（蛇腹）を横に並べ、両端に杭
+function wireMesh() {
+  const B = new MeshBuilder();
+  const col = hex('#9a9c98'), dk = hex('#5e5a52'), N = 9, R = 0.21, hw = 0.78;
+  for (let n = 0; n < N; n++) {
+    const x = -hw + (2 * hw) * n / (N - 1), tilt = (n % 2 ? 0.22 : -0.22);
+    const seg = 10;
+    let prev = null;
+    for (let s = 0; s <= seg; s++) {
+      const a = s / seg * Math.PI * 2;
+      const p = [x + Math.sin(a) * R * tilt, 0.23 + Math.cos(a) * R, Math.sin(a) * 0.4];
+      if (prev) B.tube(prev, p, 0.005, 0.005, 3, LAYER.metal, col);
+      prev = p;
+    }
+  }
+  // 輪をつなぐ線と、地面の杭
+  for (const [y, z] of [[0.06, 0.32], [0.06, -0.32], [0.43, 0.0]]) B.tube([-hw, y, z], [hw, y, z], 0.004, 0.004, 3, LAYER.metal, col);
+  for (const sx of [-hw - 0.04, hw + 0.04]) B.bbox(sx - 0.02, 0, -0.02, sx + 0.02, 0.48, 0.02, 0.004, LAYER.wood, dk);
+  return B;
 }
 
 @@@@ FILE src/render/shaders.js text 20346
@@ -20355,7 +20761,7 @@ export class Book {
 // 爆弾の制限時間（マップで違う）: 「10〜15分」
 function bombMin(M) { const ts = MAP_LIST.filter(id => MAPS[id].missions && MAPS[id].missions.bomb).map(id => MAPS[id].missions.bomb.time || M.time); if (!ts.length) ts.push(M.time); const a = Math.floor(Math.min(...ts) / 60), b = Math.floor(Math.max(...ts) / 60); return a === b ? `${a}分` : `${a}〜${b}分・マップによる`; }
 
-@@@@ FILE src/ui/hud.js text 33956
+@@@@ FILE src/ui/hud.js text 33549
 // HUD（CODモバイル／PUBGモバイル風）: ボタン、ミニマップ、方位、目的、出来事、隊員、体力、弾、字幕、照準、命中、被弾の向き、円形メニュー、HUDの編集
 import { BTN, INFO, ICONS } from './hudlayout.js';
 import { onTap } from './input.js';
@@ -20664,10 +21070,7 @@ export class Hud {
       const gn = v.gearSel ? (p.inv.gear.find(x => x.id === v.gearSel) || { n: 0 }).n : 0;
       const gk = gtxt + gn;
       if (this.cache.gear !== gk) { this.cache.gear = gk; this.btn.gear.querySelector('.lb').textContent = gtxt; this.btn.gear.querySelector('.ct').textContent = v.gearSel ? gn : ''; }
-      this.btn.vault.classList.toggle('dis', !v.canVault);
-      // 飛び降りになるとき: 高さを出して、色を変える。上に乗る・窓を割って越えるときも出す
-      const vk = v.vaultDrop > 0 ? `飛び降り ${v.vaultDrop.toFixed(1)}m` : v.vaultKind === 'onto' ? '上に乗る' : v.vaultKind === 'glass' ? '割って越える' : '';
-      if (this.cache.vault !== vk) { this.cache.vault = vk; this.btn.vault.querySelector('.lb').textContent = vk; this.btn.vault.classList.toggle('drop', v.vaultDrop > 0); }
+      this.btn.vault.classList.toggle('dis', !v.canVault); // 乗り越えのボタンは文字を出さない（11-12 の要望）
       this.btn.reload.classList.toggle('dis', false);
       // 調べる: その時できること
       const ukey = v.ctxLabel || '';
@@ -21252,7 +21655,7 @@ export class Input {
   }
 }
 
-@@@@ FILE src/ui/loadout.js text 15722
+@@@@ FILE src/ui/loadout.js text 15743
 // 装備の画面: 左に枠（主武器・照準・…）、右にその枠の候補と説明。作戦は自分とAI隊員4人、対戦は陣営ごと。
 import { onTap } from './input.js';
 import { Scroller, esc } from './widgets.js';
@@ -21260,7 +21663,7 @@ import { WEAPONS, ATTACH, CAT_NAME, AMMO, CAL, SLOT_NAME, attachOptions, capOf }
 import { GEAR, LONG, VEST, PLATE, HELMET, HEADWEAR } from '../engine/data/equipment.js';
 import { OFFICERS, PVP_LOADOUTS, PVP_ALLOWED } from '../engine/data/npc.js';
 
-const PERSLOT = { flash: 2, stinger: 2, cs: 1, smoke: 2, c2: 1, wedge: 2, lockgun: 1, spray: 1, bandage: 2, frame: 1, claymore: 1, chem: 4, taser: 1 };
+const PERSLOT = { flash: 2, stinger: 2, cs: 1, smoke: 2, c2: 1, wedge: 2, lockgun: 1, spray: 1, bandage: 2, frame: 1, claymore: 1, chem: 4, taser: 1, dshield: 1, wire: 2 };
 const PVE_GEAR = ['flash', 'stinger', 'cs', 'smoke', 'c2', 'wedge', 'lockgun', 'spray'];
 const AMMO_NAME = { ap: '徹甲弾（AP）', jhp: 'ホローポイント（JHP）', buck: '散弾（バックショット）', slug: 'スラッグ', bean: 'ビーンバッグ', pepper: 'ペッパーボール', taser: 'カートリッジ' };
 // アタッチメントの枠（主武器・副武器）と、何も選んでいないときの物
@@ -22076,7 +22479,7 @@ export class Stage {
   }
 }
 
-@@@@ FILE src/ui/style.css text 41611
+@@@@ FILE src/ui/style.css text 41509
 /* HARD ENTRY — 見た目の決まり（色・枠・書体）。雰囲気より読みやすさを優先。自分の側はいつも青、相手は赤 */
 :root {
   --bg: #07090c; --panel: rgba(12, 16, 22, 0.9); --panel2: rgba(22, 28, 36, 0.92); --line: rgba(255, 255, 255, 0.13); --line2: rgba(255, 255, 255, 0.28);
@@ -22297,8 +22700,6 @@ table.board small { color: var(--dim); font-size: max(11px, .72em); margin-left:
 .hb.down { background: rgba(255,255,255,.32); transform: scale(.94); }
 .hb.on { background: rgba(242,179,61,.42); border-color: var(--accent2); }
 .hb.dis { opacity: .35 !important; }
-.hb.drop { border-color: #ff9a5a; background: rgba(160,60,20,.38); }
-.hb.drop .lb { color: #ffb48a; }
 .hb[data-btn="fire"], .hb[data-btn="fireL"] { background: rgba(200,40,30,.28); border-color: rgba(255,140,120,.8); }
 .hb[data-btn="fire"].down, .hb[data-btn="fireL"].down { background: rgba(255,70,50,.55); }
 .hb[data-btn="shout"] { border-color: rgba(255,207,106,.85); }
@@ -23952,6 +24353,149 @@ if (note.length) md += `\n## メモ\n` + note.map(n => '- ' + n).join('\n') + '\
 fs.writeFileSync(path.join(OUT, 'summary.md'), md);
 console.log(`\n${ok}/${results.length} 合格 → test-results/summary.md`);
 process.exit(ok === results.length ? 0 : 1);
+
+@@@@ FILE tests/unit/deploy.test.mjs text 7630
+import { test, ok, eq, near } from '../lib/t.mjs';
+import { createGame, step, dump, load } from '../../src/engine/engine.js';
+import { vaultPlan } from '../../src/engine/move.js';
+import { raycast, los, CS, DSHIELD } from '../../src/engine/world.js';
+import { DEP, packDeps, applyDepsNet, wireAt } from '../../src/engine/deploy.js';
+
+// 対戦（TDM）で、始まりの3秒を飛ばし、自分以外を遠ざける
+function tdm(map = 'suburb') {
+  const G = createGame({ map, mode: 'tdm', teams: [1, 1], seed: 3 });
+  for (let i = 0; i < 400 && G.S.m.phase === 'pre'; i++) step(G, {});
+  const p = G.S.actors.find(a => a.pid === 0);
+  for (const a of G.S.actors) if (a !== p) { a.x = 2; a.z = 30; a.y = 0; a.ai = null; a.vx = a.vz = 0; }
+  p.inv.gear = [{ id: 'dshield', n: 1 }, { id: 'wire', n: 2 }, { id: 'bandage', n: 1 }];
+  return { G, S: G.S, w: G.w, p };
+}
+const I = (p, o = {}) => ({ [p.id]: { yaw: p.yaw, pitch: 0, stance: 0, ...o } });
+function put(G, p, xc, zc, yaw) {
+  p.x = xc * CS; p.z = zc * CS; p.y = 0; p.vx = p.vz = p.vy = 0; p.yaw = yaw; p.ground = true; p.air = false;
+  for (let i = 0; i < 5; i++) step(G, I(p));
+}
+// 装備を手に持って、射撃で置く。置き終わるまで進める
+function deploy(G, p, id, n = 140) {
+  const ev = [];
+  ev.push(...step(G, I(p, { act: [{ a: 'gear', id }] })));
+  for (let i = 0; i < 70; i++) { ev.push(...step(G, I(p))); if (p.ws.slot === 2 && (p.ws.st === 'ready' || p.ws.st === 'gear')) break; }
+  ev.push(...step(G, I(p, { fire: true })));
+  for (let i = 0; i < n; i++) ev.push(...step(G, I(p)));
+  return ev;
+}
+
+test('deploy: 置ける盾を前に置く（1.4秒）。弾は止まり、のぞき窓は抜ける。体は通れず、乗り越えられる', () => {
+  const { G, S, w, p } = tdm();
+  put(G, p, 10, 50, 0); // 家の南の庭、南を向く
+  const ev = deploy(G, p, 'dshield');
+  eq(S.deps.length, 1, '盾が1つ');
+  const d = S.deps[0];
+  ok(ev.some(e => e.e === 'depset' && e.k === 'shield'), '置いた出来事');
+  eq(p.inv.gear.find(g => g.id === 'dshield').n, 0, '残り0');
+  near(Math.hypot(d.x - p.x, d.z - p.z), DEP.shield.dist, 0.05, '前0.78m');
+  // 弾: 前（盾の向こう）から盾の真ん中の高さ → 盾に当たる。のぞき窓の高さの真ん中 → 抜ける。窓の高さの端 → 当たる
+  const fx = Math.sin(d.yaw), fz = Math.cos(d.yaw), ux = -fz, uz = fx;
+  const ray = (u, h) => raycast(w, d.x + fx * 3 + ux * u, d.y + h, d.z + fz * 3 + uz * u, -fx, 0, -fz, 5, S.doors).find(x => x.kind === 'dep');
+  ok(ray(0, 0.4), '胴の高さは止まる');
+  ok(!ray(0, (DSHIELD.s0 + DSHIELD.s1) / 2), 'のぞき窓は抜ける');
+  ok(ray(0.3, (DSHIELD.s0 + DSHIELD.s1) / 2), '窓の横は止まる');
+  ok(!los(w, d.x + fx * 2, d.y + 0.5, d.z + fz * 2, d.x - fx * 1.5, d.y + 0.5, d.z - fz * 1.5, S.doors), '盾の向こうは見えない（低い所）');
+  const sy = (DSHIELD.s0 + DSHIELD.s1) / 2;
+  ok(los(w, d.x + fx * 2, d.y + sy, d.z + fz * 2, d.x - fx * 1.5, d.y + sy, d.z - fz * 1.5, S.doors), 'のぞき窓から見える');
+  // 歩いて通れない
+  for (let i = 0; i < 90; i++) step(G, I(p, { mz: 1 }));
+  const along = (p.x - d.x) * fx + (p.z - d.z) * fz;
+  ok(along < -0.25, '盾の手前で止まる ' + along.toFixed(2));
+  // 乗り越えられる
+  const pl = vaultPlan(S, w, p, {});
+  ok(pl && pl.top - p.y > DSHIELD.h - 0.05 && !pl.onto, '盾を乗り越えられる ' + JSON.stringify(pl && { top: pl.top - p.y, onto: pl.onto }));
+});
+
+test('deploy: 爆発で壊れる。味方は拾い直せる。通信の表で同じに戻る', () => {
+  const { G, S, w, p } = tdm();
+  put(G, p, 10, 50, 0);
+  deploy(G, p, 'dshield');
+  const d = S.deps[0];
+  // 通信
+  const DP = packDeps(S), S2 = { doors: [], deps: [] };
+  applyDepsNet(S2, DP);
+  near(S2.deps[0].x, d.x, 0.01); near(S2.deps[0].yaw, d.yaw, 0.002); eq(S2.deps[0].k, 'shield');
+  ok(S2.doors.deps === S2.deps, 'ゲストでも扉の状態にぶら下がる');
+  // 保存と読み込み
+  const G2 = load(JSON.parse(JSON.stringify(dump(G))));
+  eq(G2.S.deps.length, 1, '読み込み後も盾がある');
+  ok(G2.S.doors.deps === G2.S.deps, '読み込み後も当たりに使われる');
+  // 拾う（味方: 少し下がって盾を見て「調べる」）
+  p.x -= Math.sin(d.yaw) * 0.5; p.z -= Math.cos(d.yaw) * 0.5; p.pitch = -0.75;
+  for (let i = 0; i < 3; i++) step(G, I(p, { pitch: -0.75 }));
+  step(G, I(p, { pitch: -0.75, act: [{ a: 'op', k: 'dep', id: d.id, op: 'deppick' }] }));
+  ok(p.act && p.act.k === 'deppick', '拾い始める ' + JSON.stringify(p.act && p.act.k));
+  for (let i = 0; i < 80; i++) step(G, I(p, { pitch: -0.75 }));
+  eq(S.deps.length, 0, '拾った');
+  eq(p.inv.gear.find(g => g.id === 'dshield').n, 1, '手元に戻る');
+  // もう一度置いて、爆発で壊す
+  p.pitch = 0;
+  deploy(G, p, 'dshield');
+  eq(S.deps.length, 1);
+  const d2 = S.deps[0];
+  S.blasts.push({ x: d2.x + 0.5, y: d2.y + 0.5, z: d2.z, r: 3, dmg: 0, kind: 'frag', t: 0, by: -1 });
+  const ev = [];
+  for (let i = 0; i < 3; i++) ev.push(...step(G, I(p)));
+  eq(S.deps.length, 0, '爆発で壊れた');
+  ok(ev.some(e => e.e === 'depbreak' && e.why === 'blast'), '壊れた出来事');
+});
+
+test('deploy: 有刺鉄線の上は遅く、音が出る。近接2回で壊れる', () => {
+  const { G, S, w, p } = tdm();
+  put(G, p, 10, 50, 0);
+  deploy(G, p, 'wire');
+  eq(S.deps.length, 1, '有刺鉄線');
+  eq(p.inv.gear.find(g => g.id === 'wire').n, 1, '残り1');
+  const d = S.deps[0];
+  // 歩いて入る
+  const ev = [];
+  for (let i = 0; i < 150; i++) ev.push(...step(G, I(p, { mz: 1 })));
+  ok(wireAt(S, p.x, p.z, p.y) || ev.some(e => e.e === 'wire'), '中を通った');
+  ok(ev.filter(e => e.e === 'wire').length >= 2, '音が出る ' + ev.filter(e => e.e === 'wire').length);
+  // 中での速さ
+  p.x = d.x; p.z = d.z; p.vx = p.vz = 0;
+  for (let i = 0; i < 30; i++) step(G, I(p, { mz: 1 }));
+  p.x = d.x; p.z = d.z;
+  for (let i = 0; i < 20; i++) step(G, I(p, { mz: 1 }));
+  const v = Math.hypot(p.vx, p.vz);
+  ok(v < 2.4 * DEP.wire.slow + 0.15, '遅い ' + v.toFixed(2));
+  // 外から近接2回
+  const fx = Math.sin(d.yaw), fz = Math.cos(d.yaw);
+  p.x = d.x - fx * 1.1; p.z = d.z - fz * 1.1; p.yaw = d.yaw; p.vx = p.vz = 0;
+  for (let i = 0; i < 30; i++) step(G, I(p, { pitch: -0.9 }));
+  const ev2 = [];
+  for (let n = 0; n < 2; n++) { ev2.push(...step(G, I(p, { pitch: -0.9, act: [{ a: 'melee' }] }))); for (let i = 0; i < 70; i++) ev2.push(...step(G, I(p, { pitch: -0.9 }))); }
+  eq(S.deps.length, 0, '2回で壊れた');
+  ok(ev2.some(e => e.e === 'dephit') && ev2.some(e => e.e === 'depbreak' && e.why === 'melee'), '当たり・壊れた出来事');
+});
+
+test('deploy: 壁ぎわ・人の前・階段には置けない（理由を知らせる）', () => {
+  const { G, S, w, p } = tdm();
+  put(G, p, 10, 50, 0);
+  // 前に人
+  const b = S.actors.find(a => a !== p && !a.isDrone);
+  b.x = p.x; b.z = p.z + 0.8; b.y = 0;
+  const ev = deploy(G, p, 'dshield', 10);
+  eq(S.deps.length, 0, '置かない');
+  ok(ev.some(e => e.e === 'deny' && e.why === 'depperson'), '前に人 ' + JSON.stringify(ev.filter(e => e.e === 'deny')));
+});
+
+test('deploy: 爆弾のボットの守る側は、準備の間に置ける盾・有刺鉄線を置く', () => {
+  let placed = 0, rounds = 0;
+  for (const map of ['suburb', 'office']) {
+    const G = createGame({ map, mode: 'bomb', teams: [4, 4], seed: 5, rules: {} });
+    for (let i = 0; i < 60 * 70 && !(G.S.m.phase === 'action'); i++) step(G, {});
+    rounds++;
+    placed += G.S.deps.length;
+  }
+  ok(placed >= 2, `2マップで ${placed} 個置いた`);
+});
 
 @@@@ FILE tests/unit/engine.test.mjs text 30547
 import { test, ok, eq, near } from '../lib/t.mjs';
