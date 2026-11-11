@@ -98,7 +98,7 @@ export function step(G, inputs = {}) {
     else if (a.pid == null && a.act && !a.act.quick && a.act.kind !== 'self' && a.act.k !== 'report') inp = actingInput(a, inp, dt);
     a._inp = inp;
     if (inp.act) for (const ac of inp.act) {
-      if (ac.a === 'vault') tryVault(S, w, a);
+      if (ac.a === 'vault') tryVault(S, w, a, ev);
       else if (mod.act && mod.act(S, w, a, ac, ev)) { /* モードの動作（ドローン・出現地点） */ }
       else doAction(S, w, a, ac, ev);
     }

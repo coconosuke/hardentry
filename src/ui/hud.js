@@ -307,6 +307,9 @@ export class Hud {
       const gk = gtxt + gn;
       if (this.cache.gear !== gk) { this.cache.gear = gk; this.btn.gear.querySelector('.lb').textContent = gtxt; this.btn.gear.querySelector('.ct').textContent = v.gearSel ? gn : ''; }
       this.btn.vault.classList.toggle('dis', !v.canVault);
+      // 飛び降りになるとき: 高さを出して、色を変える。上に乗る・窓を割って越えるときも出す
+      const vk = v.vaultDrop > 0 ? `飛び降り ${v.vaultDrop.toFixed(1)}m` : v.vaultKind === 'onto' ? '上に乗る' : v.vaultKind === 'glass' ? '割って越える' : '';
+      if (this.cache.vault !== vk) { this.cache.vault = vk; this.btn.vault.querySelector('.lb').textContent = vk; this.btn.vault.classList.toggle('drop', v.vaultDrop > 0); }
       this.btn.reload.classList.toggle('dis', false);
       // 調べる: その時できること
       const ukey = v.ctxLabel || '';

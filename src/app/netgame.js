@@ -2,7 +2,7 @@
 //  ホスト: エンジンを動かし、ゲストの入力と動作をエンジンへ渡し、写しを配る。ゲストが切れたら止めて待つ。
 //  ゲスト: エンジンは動かさず、ホストの写しを補間して表示する。自分の移動と銃（反動・弾の見た目）だけは手元で先に動かし、ホストの位置へなめらかに寄せる。
 import { packStatic, packSnap, packEvent, NET_EV } from '../net/snap.js';
-import { moveActor } from '../engine/move.js';
+import { moveActor, tryVault } from '../engine/move.js';
 import { stepWeapon } from '../engine/weapon.js';
 import { doAction } from '../engine/interact.js';
 import { setSalt } from '../engine/rng.js';
@@ -63,6 +63,7 @@ export function netMixin(Match) {
   };
   P.guestFrame = function (dt, fo) {
     const app = this.app, sess = this.net.sess, S = this.S, p = this.p, mir = this.mirror;
+    S.predict = true; // 手元の先読み: 着地の傷などはホストが決める
     this.time += dt;
     const inp = fo.input === false ? { mx: 0, mz: 0, lookDX: 0, lookDY: 0, gyroX: 0, gyroY: 0, fire: false, sprint: false, hold: new Set(), edges: [] } : app.input.take();
     this._look(inp, dt);
@@ -111,7 +112,11 @@ export function netMixin(Match) {
       setSalt(sess.seed || 0); // ホストと同じ塩（反動・散らばりをそろえる）
       const cmd = this._command(inp);
       // 動作: ホストへ送る（手元でも先にやるものだけ実行）
-      if (cmd.act) for (const ac of cmd.act) { sess.pushAct(ac); if (LOCAL_ACTS.has(ac.a)) { try { doAction(S, this.w, me, ac, ev); } catch (e) { /* なし */ } } }
+      if (cmd.act) for (const ac of cmd.act) {
+        sess.pushAct(ac);
+        if (LOCAL_ACTS.has(ac.a)) { try { doAction(S, this.w, me, ac, ev); } catch (e) { /* なし */ } }
+        else if (ac.a === 'vault') { try { tryVault(S, this.w, me); } catch (e) { /* なし */ } } // 乗り越え・飛び降りも手元で先に（ホストと同じ計算）
+      }
       const dc = this.droneId != null ? this._droneCmd(inp) : null;
       if (dc && this.droneId != null) sess.setInput({ mx: r2(dc.mx), mz: r2(dc.mz), y: r4(dc.yaw), p: r4(dc.pitch), f: dc.fire ? 1 : 0, j: dc.jump ? 1 : 0, s: cmd.stance, dr: 1 });
       else sess.setInput({ mx: r2(cmd.mx), mz: r2(cmd.mz), y: r4(cmd.yaw), p: r4(cmd.pitch), f: cmd.fire ? 1 : 0, a: cmd.ads ? 1 : 0, l: cmd.low ? 1 : 0, s: cmd.stance, ln: cmd.lean, sp: cmd.sprint ? 1 : 0, pw: cmd.power });

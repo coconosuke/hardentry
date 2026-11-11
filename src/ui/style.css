@@ -218,6 +218,8 @@ table.board small { color: var(--dim); font-size: max(11px, .72em); margin-left:
 .hb.down { background: rgba(255,255,255,.32); transform: scale(.94); }
 .hb.on { background: rgba(242,179,61,.42); border-color: var(--accent2); }
 .hb.dis { opacity: .35 !important; }
+.hb.drop { border-color: #ff9a5a; background: rgba(160,60,20,.38); }
+.hb.drop .lb { color: #ffb48a; }
 .hb[data-btn="fire"], .hb[data-btn="fireL"] { background: rgba(200,40,30,.28); border-color: rgba(255,140,120,.8); }
 .hb[data-btn="fire"].down, .hb[data-btn="fireL"].down { background: rgba(255,70,50,.55); }
 .hb[data-btn="shout"] { border-color: rgba(255,207,106,.85); }

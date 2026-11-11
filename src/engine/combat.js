@@ -1,6 +1,6 @@
 // 弾と当たり: 弾丸は速さと重力を持ち、1ステップごとの線分で当たりを調べる。材質を貫通して弱まる（RoNの式）。
 // ダメージは PvE（RoN換算・防具・負傷・出血）と PvP（R6寄り・頭は即死・手足75%・ダウン）の2系統。
-import { raycast, CS, levelOfY } from './world.js';
+import { raycast, CS, LH, levelOfY, glassPane } from './world.js';
 import { MATS, M, BODY_PEN } from './data/materials.js';
 import { WEAPONS, AMMO } from './data/weapons.js';
 import { PLATE, HELMET, SHIELD } from './data/equipment.js';
@@ -166,7 +166,11 @@ function stepBullet(S, w, b, dt, ev) {
     if (!mat) continue;
     if (h.kind === 'edge') return false;
     // 割れる物
-    if (h.mat === M.GLASS) { breakGlass(S, w, h, ev); b.pen -= 30; b.k = Math.max(0.05, b.pen / b.pen0); continue; }
+    if (h.mat === M.GLASS) {
+      // 同じ弾がもう割った板（1枚ぜんぶ割れる）は素通り
+      if (h.k != null && w.blocks[h.k * 4 + (h.q | 0)] !== M.GLASS) continue;
+      breakGlass(S, w, h, ev); b.pen -= 30; b.k = Math.max(0.05, b.pen / b.pen0); continue;
+    }
     if (h.mat === M.GLASSBROKEN) continue;
     if (h.kind === 'bar') hitBar(S, w, h.bar, h.pc, b.pellet ? 2 : 1, ev, { x: hx, y: hy, z: hz, by: b.owner });
     if (h.kind === 'block' && mat.hp > 0 && b.pellet && b.dist < 6) { damageBlock(S, w, h.k, h.q, 8, ev); }
@@ -208,12 +212,20 @@ function raySphere(ox, oy, oz, dx, dy, dz, maxT, cx, cy, cz, r) {
 
 export function breakGlass(S, w, h, ev) {
   const k = h.k, q = h.q;
-  if (k == null) return;
-  // 同じ窓のガラスはまとめて割れる
-  const b = k * 4;
-  let any = false;
-  for (let qq = 0; qq < 4; qq++) if (w.blocks[b + qq] === M.GLASS) { w.blocks[b + qq] = M.GLASSBROKEN; any = true; }
-  if (any) { S.bdiff[k] = 1; ev.push({ e: 'glass', k, x: h.x, q }); }
+  if (k == null) return false;
+  // 同じ窓のガラスは1枚ぜんぶ割れる（窓は左右に続くマスまで、ガラスの壁は1.5mの板）
+  const ks = [];
+  for (const kk of glassPane(w, k)) {
+    const b = kk * 4;
+    let any = false;
+    for (let qq = 0; qq < 4; qq++) if (w.blocks[b + qq] === M.GLASS) { w.blocks[b + qq] = M.GLASSBROKEN; any = true; }
+    if (any) { S.bdiff[kk] = 1; ks.push(kk); }
+  }
+  if (ks.length) {
+    const WD = w.W * w.D, L = Math.floor(k / WD), r = k % WD;
+    ev.push({ e: 'glass', k, ks, x: h.x, q, by: h.by ?? -1, px: (r % w.W + 0.5) * CS, py: L * LH + 1.2, pz: (Math.floor(r / w.W) + 0.5) * CS });
+  }
+  return ks.length > 0;
 }
 
 // 壁のブロックを傷める（散弾・爆発）。壊れたら穴になる
@@ -435,7 +447,7 @@ function meleeHit(S, w, a, ev) {
   if (wh && wh.t0 < bt) {
     const x = eye[0] + dx * wh.t0, y = eye[1] + dy * wh.t0, z = eye[2] + dz * wh.t0;
     if (wh.kind === 'bar') bashBar(S, w, wh.bar, y, ev, a.id);
-    else if (wh.mat === M.GLASS) breakGlass(S, w, wh, ev);
+    else if (wh.mat === M.GLASS) breakGlass(S, w, Object.assign({}, wh, { by: a.id }), ev);
     ev.push({ e: 'meleehit', id: a.id, k: wh.kind === 'bar' ? 'bar' : wh.kind === 'door' ? 'door' : 'wall', m: wh.mat, x, y, z });
     if (wh.kind === 'door') ev.push({ e: 'door', d: wh.id, k: 'knock', id: a.id, loud: 0.45 });
     return;

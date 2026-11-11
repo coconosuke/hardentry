@@ -4,6 +4,7 @@ import { eyeOf, capsOf } from '../engine/combat.js';
 import { curWeapon, curW, ammoCount } from '../engine/actor.js';
 import { contextOf, OP_NAME, doorOps, personOps } from '../engine/interact.js';
 import { spreadDeg, attMods } from '../engine/weapon.js';
+import { vaultPlan } from '../engine/move.js';
 import { raycast, CS, LH, levelOfY, los } from '../engine/world.js';
 import { smokeBetween } from '../engine/nades.js';
 import { sideOf, isOpen } from '../engine/doors.js';
@@ -516,7 +517,13 @@ export class Match {
         case 'evidence': hud.feed('証拠を回収', 'ok'); au.ui('pickup'); break;
         case 'bombdone': hud.feed('爆弾を解除', 'ok'); au.ui('ok'); this._say(null, 'toc_bomb', false, 'TOC'); break;
         case 'soft': hud.showBanner('主目的 達成<br><small>メニューから作戦終了、または続行</small>', 4500, 'ok'); au.ui('ok'); this._say(null, 'toc_soft', false, 'TOC'); break;
-        case 'glass': { const k = e.k, i = k % this.w.W, j = Math.floor((k % (this.w.W * this.w.D)) / this.w.W), L = Math.floor(k / (this.w.W * this.w.D)); fx.glassBreak((i + 0.5) * CS, L * LH + 0.7, (j + 0.5) * CS); au.sfx('glass', [(i + 0.5) * CS, L * LH + 1.2, (j + 0.5) * CS]); this.r.rebuildCells([k], S); break; }
+        case 'glass': {
+          // 窓は1枚ぜんぶ割れる（マスごとに破片、音は1つ）
+          const ks = e.ks && e.ks.length ? e.ks : [e.k], W = this.w.W, WD = this.w.W * this.w.D;
+          for (const k of ks) { const i = k % W, j = Math.floor((k % WD) / W), L = Math.floor(k / WD); fx.glassBreak((i + 0.5) * CS, L * LH + 0.7, (j + 0.5) * CS); }
+          { const k = e.k, i = k % W, j = Math.floor((k % WD) / W), L = Math.floor(k / WD); au.sfx('glass', [(i + 0.5) * CS, L * LH + 1.2, (j + 0.5) * CS], { vol: ks.length > 1 ? 1 : 0.85 }); }
+          this.r.rebuildCells(ks, S); break;
+        }
         case 'block': { const k = e.k, i = k % this.w.W, j = Math.floor((k % (this.w.W * this.w.D)) / this.w.W), L = Math.floor(k / (this.w.W * this.w.D)); fx.debris((i + 0.5) * CS, L * LH + e.q * 0.7 + 0.35, (j + 0.5) * CS, e.m === M.BRICK ? [0.45, 0.25, 0.2] : e.m === M.WOOD ? [0.5, 0.38, 0.25] : [0.82, 0.8, 0.76]); this._rebuild = this._rebuild || new Set(); this._rebuild.add(k); au.sfx('wallBreak', [(i + 0.5) * CS, L * LH + 1, (j + 0.5) * CS]); break; }
         case 'reinf': this._rebuild = this._rebuild || new Set(); this._rebuild.add(e.k); au.sfx('reinforce', null); break;
         case 'door': {
@@ -577,7 +584,13 @@ export class Match {
         case 'end': hud.showBanner(e.res === 'fail' ? '作戦失敗' : e.res === 'abort' ? '撤収' : '作戦完了', 0, e.res === 'fail' ? 'bad' : 'ok'); au.ui(e.res === 'fail' ? 'lose' : 'win'); break;
         case 'revive': hud.feed(`${nm(S.byId[e.by])} が ${nm(S.byId[e.id])} を起こした`, 'ok'); break;
         case 'bandaged': if (e.id === me) au.sfx('bandage', null); break;
-        case 'fall': if (e.id === me) au.sfx('land', null); break;
+        // 着地: 自分なら画面が揺れる。高い所から落ちたほど重い音（まわりにも聞こえる）
+        case 'fall': {
+          const big = (e.h || 0) > 2;
+          if (e.id === me) { au.sfx('land', null, { vol: big ? 1 : 0.7, rate: big ? 0.8 : 1 }); if (big) { this.shake = Math.min(1, this.shake + 0.25 + 0.1 * e.h); this._heatUp(0.3); } }
+          else if (big && e.x != null && Math.hypot(e.x - this.cam.x, e.z - this.cam.z) < 35) au.sfx('land', [e.x, e.y + 0.2, e.z], { vol: Math.min(1, 0.4 + e.h * 0.15), rate: 0.75 });
+          break;
+        }
         case 'throw': { const a = S.byId[e.id]; au.sfx('throw', a === p ? null : [a.x, a.y + 1.5, a.z], { vol: 0.6 }); break; }
         case 'bounce': if (e.v > 2) au.sfx('nadeBounce', [e.x, e.y, e.z], { vol: Math.min(1, e.v / 8) }); break;
         case 'launch': { const a = S.byId[e.id]; if (!a) break; au.sfx('launch', a === p ? null : [a.x, a.y + 1.4, a.z], { vol: 0.9 }); if (a === p) { this.shake = Math.max(this.shake, 0.3); if (this.vm.on) { const mz = this.vm.out.muzzle, f = this.vm.out.fwd; fx.smoke(mz[0] + f[0] * 0.1, mz[1], mz[2] + f[2] * 0.1, 0.25, [0.75, 0.74, 0.7], 0.25, 1.2); } } break; }
@@ -940,14 +953,20 @@ export class Match {
   _hud(dt) {
     const S = this.S, p = this.p, hud = this.hud;
     this.ctxT -= dt;
-    if (this.ctxT <= 0) { this.ctxT = 0.12; this.ctx = p.alive ? contextOf(S, this.w, p) : null; }
+    if (this.ctxT <= 0) {
+      this.ctxT = 0.12; this.ctx = p.alive ? contextOf(S, this.w, p) : null;
+      // 乗り越えられるか（飛び降りなら高さ）
+      const vp = p.alive && !p.vault ? vaultPlan(S, this.w, p, this._vp || (this._vp = {})) : null;
+      this.vaultOK = !!vp; this.vaultDrop = vp && vp.drop > 0 ? vp.drop : 0;
+      this.vaultKind = !vp ? '' : vp.drop > 0 ? 'drop' : vp.onto ? 'onto' : vp.gk >= 0 ? 'glass' : '';
+    }
     const c = this.ctx;
     const wi = curWeapon(p);
     const v = {
       p, wi, pvp: S.pvp, yaw: this.cam ? this.cam.yaw : p.yaw, adsOn: this.adsOn, leanL: this.leanSide < 0, leanR: this.leanSide > 0, lowOn: this.lowOn, nvgOn: this.nvgOn, hasNvg: p.armor.head === 'nvg',
       gearSel: this.gearSel, gearId: p.ws.gear, team: this.team,
       spread: wi ? spreadDeg(S, p, WEAPONS[wi.id], wi) : 2,
-      optic: null, canVault: true,
+      optic: null, canVault: this.vaultOK !== false, vaultDrop: this.vaultDrop || 0, vaultKind: this.vaultKind || '',
       ctxLabel: c ? (c.def.far ? (c.def.why === 'block' ? '回り込む' : '近づく') : (OP_NAME[c.def.op] || c.def.op)) : '',
       cmdLabel: '命令', mmZoom: this.mmZoom,
       droneOK: S.pvp && S.m.kind !== 'tdm' && p.team === S.m.att && (S.m.phase === 'prep' ? !!p.staged : S.m.phase === 'action' && p.alive && !p.down) && ((p.dronesLeft ?? 2) > 0 || S.actors.some(d => d.isDrone && d.owner === p.id && d.alive)),
@@ -1070,7 +1089,7 @@ function fmtT(s) { s = Math.max(0, Math.ceil(s)); return `${Math.floor(s / 60)}:
 function nm(a) { return a ? (a.pid != null ? a.name : a.kind === 'sus' ? '容疑者' : a.kind === 'civ' ? '市民' : a.name) : '?'; }
 function feedKill(k, v, e, p) {
   const kn = k ? nm(k) : '?', vn = nm(v);
-  const wpn = e.kind === 'melee' ? '近接' : k && curWeapon(k) ? WEAPONS[curWeapon(k).id].name : e.kind === 'bleed' ? '出血' : e.kind === 'blast' ? '爆発' : '';
+  const wpn = e.kind === 'melee' ? '近接' : e.kind === 'fall' ? '落下' : k && curWeapon(k) ? WEAPONS[curWeapon(k).id].name : e.kind === 'bleed' ? '出血' : e.kind === 'blast' ? '爆発' : '';
   return `<b class="${k && k.team === p.team ? 'ally' : 'enemy'}">${kn}</b> <i>${wpn}${e.hs ? '・頭' : ''}</i> <b class="${v.team === p.team ? 'ally' : 'enemy'}">${vn}</b>`;
 }
 function ctxName(c, S) { return c.k === 'bar' ? (c.ops && c.ops[0] && c.ops[0].op === 'bar' ? '窓' : 'バリケード') : c.k === 'door' ? (S.doors[c.id] && S.doors[c.id].bar > 0 ? 'バリケード' : '扉') : c.k === 'person' ? (S.byId[c.id] ? (S.byId[c.id].kind === 'sus' ? '容疑者' : S.byId[c.id].kind === 'civ' ? '市民' : '隊員') : '人') : c.k === 'item' ? '物' : c.k === 'bomb' ? '爆弾' : c.k === 'site' ? '爆弾の場所' : c.k === 'wall' ? '壁' : ''; }

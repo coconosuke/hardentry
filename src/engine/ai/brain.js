@@ -55,12 +55,15 @@ export function collectNoise(S, ev) {
     switch (e.e) {
       case 'shot': H.push({ x: e.x, y: e.y, z: e.z, k: 'shot', loud: e.supp ? 0.35 : (e.loud || 1) * 1.6, id: e.id, team: S.byId[e.id] ? S.byId[e.id].team : -1 }); break;
       case 'step': if (e.loud > 0.4) H.push({ x: e.x, y: e.y, z: e.z, k: 'step', loud: e.loud * 0.35, id: e.id, team: S.byId[e.id] ? S.byId[e.id].team : -1 }); break;
+      // 飛び降りて着地した音（ドサッ）。高いほど遠くまで
+      case 'fall': if (e.h > 1.5) H.push({ x: e.x, y: e.y, z: e.z, k: 'step', loud: e.loud, id: e.id, team: S.byId[e.id] ? S.byId[e.id].team : -1 }); break;
       case 'door': if (e.loud) { const a = S.byId[e.id]; H.push({ x: a ? a.x : 0, y: a ? a.y : 0, z: a ? a.z : 0, k: e.k === 'kickopen' || e.k === 'ram' || e.k === 'breach' ? 'breach' : 'door', loud: e.loud, id: e.id, team: a ? a.team : -1 }); } break;
       case 'nade': H.push({ x: e.x, y: e.y, z: e.z, k: 'boom', loud: 2.0, id: e.by, team: -1 }); break;
       case 'boom': case 'c2': H.push({ x: e.x, y: e.y, z: e.z, k: 'boom', loud: 2.5, id: e.by ?? -1, team: -1 }); break;
       case 'launch': { const a = S.byId[e.id]; if (a) H.push({ x: a.x, y: a.y + 1.4, z: a.z, k: 'shot', loud: 0.9, id: e.id, team: a.team }); break; }
       case 'shieldhit': H.push({ x: e.x, y: e.y, z: e.z, k: 'shot', loud: 0.5, id: e.id, team: S.byId[e.id] ? S.byId[e.id].team : -1 }); break;
-      case 'glass': break;
+      // 窓を割る音（殴る・乗り越えで割る）。撃って割ったときは銃声のほうが聞こえる
+      case 'glass': if (e.by >= 0 && e.px != null) { const a = S.byId[e.by]; H.push({ x: e.px, y: e.py - 1, z: e.pz, k: 'breach', loud: 1.0, id: e.by, team: a ? a.team : -1 }); } break;
       // バリケードを殴る・崩す音は遠くまで届く（シージと同じく、どこから来るかが分かる）。弾で削る音は小さい
       case 'barhit': if (e.big) { const a = S.byId[e.by ?? -1]; H.push({ x: e.x, y: e.y - 1, z: e.z, k: 'breach', loud: 1.1, id: e.by ?? -1, team: a ? a.team : -1 }); } break;
       case 'barbreak': if (!e.pry) { const a = S.byId[e.id]; H.push({ x: e.x, y: e.y - 1, z: e.z, k: 'breach', loud: 1.3, id: e.id, team: a ? a.team : -1 }); } break;

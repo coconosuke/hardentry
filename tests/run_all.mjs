@@ -74,6 +74,11 @@ try {
     rows.push(`${id}: 到達${r.stats.reach}%${r.errors.length ? ' ✗' + r.errors.length : ''}${r.warn.length ? ' △' + r.warn.length : ''}`);
     rec('マップ', `${MAPS[id].name}: 家具・出現位置・扉・明かりに誤りがなく、どこへでも歩いて行ける`, !r.errors.length && r.stats.reach >= 100, r.errors.slice(0, 2).concat(r.warn.slice(0, 2)).join(' / ') || `${r.stats.rooms}部屋・扉${r.stats.doors}・家具${r.stats.props}・到達${r.stats.reach}%`);
   }
+  // 置き物の配置: 扉・窓・開口・階段の前と、道の幅（tools/propaudit.mjs）
+  const { auditMap } = await import('../tools/propaudit.mjs');
+  const pa = MAP_LIST.map(id => ({ id, f: auditMap(id).finds }));
+  const paBad = pa.filter(x => x.f.length);
+  rec('マップ', '置き物が扉・窓・開口・階段の前をふさがず、どの扉・窓・部屋へも幅0.8m以上の道で行ける（全マップ）', !paBad.length, paBad.map(x => `${x.id}: ${x.f.length}件 ${x.f[0].msg}`).slice(0, 3).join(' / ') || `${pa.length}マップ・0件`);
   rec('マップ', 'マップの数: 作戦用7（対戦でも使える）＋対戦用2＋訓練場', PVE_MAPS.length === 7 && PVP_MAPS.length === 9 && PVP_MAPS.filter(m => MAPS[m].pvpOnly).length === 2 && !!MAPS.training, `作戦 ${PVE_MAPS.length}・対戦 ${PVP_MAPS.length}（うち対戦用 ${PVP_MAPS.filter(m => MAPS[m].pvpOnly).length}）`);
 } catch (e) { rec('マップ', 'マップの点検', false, e.message.slice(0, 200)); }
 

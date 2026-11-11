@@ -410,8 +410,52 @@ export function groundAt(w, x, z, y) {
   return best;
 }
 
+// 立てる高さ: 床・階段に加えて、家具や車の上面（乗り越えで上に乗る）。y（足の高さ）から STEP 以内で上にある、いちばん高いもの
+export function standAt(w, x, z, y) {
+  let g = groundAt(w, x, z, y);
+  const i = Math.floor(x / CS), j = Math.floor(z / CS);
+  if (!inMap(w, i, j)) return g;
+  const L = Math.min(w.NL - 1, levelOfY(y + 0.1));
+  const pr = w.propNear.get(w.idx(L, i, j));
+  if (pr) for (const pid of pr) {
+    const p = w.props[pid];
+    if (!p.solid || !p.alive) continue;
+    for (const b of p.boxes) {
+      if (x < b[0] || x > b[3] || z < b[2] || z > b[5]) continue;
+      if (b[4] <= y + STEP + 0.02 && b[4] > g) g = b[4];
+    }
+  }
+  return g;
+}
+// 頭の上の天井（屋内・上の階の床の下）。外は 1e9。家具の上に乗ったとき、立てるか・かがむかを決める
+export function ceilAt(w, x, z, y) {
+  const i = Math.floor(x / CS), j = Math.floor(z / CS);
+  if (!inMap(w, i, j)) return 1e9;
+  const L = Math.min(w.NL - 1, levelOfY(y + 0.1)), k = w.idx(L, i, j);
+  if (L + 1 < w.NL) return w.slab[w.idx(L + 1, i, j)] ? L * LH + CEIL : 1e9;
+  const t = w.cell[k];
+  return t === C.FLOOR || w.indoor[k] === 2 || (t === C.STAIR && w.indoor[k]) ? L * LH + CEIL : 1e9;
+}
+// 同じ窓のガラス: 壁の線に沿って続く同じ種類のマス。窓は1枚ぜんぶ（左右8マスまで）、ガラスの壁は左右1マスまで（1.5mの板）
+export function glassPane(w, k) {
+  const WD = w.W * w.D, L = Math.floor(k / WD), r = k % WD, j = Math.floor(r / w.W), i = r % w.W;
+  const t = w.cell[k];
+  if (t !== C.WINDOW && t !== C.GLASSWALL) return [k];
+  const T = (ii, jj) => inMap(w, ii, jj) ? w.cell[w.idx(L, ii, jj)] : C.VOID;
+  const horiz = T(i - 1, j) === t || T(i + 1, j) === t ? true : T(i, j - 1) === t || T(i, j + 1) === t ? false : isWallish(T(i - 1, j)) || isWallish(T(i + 1, j));
+  const lim = t === C.WINDOW ? 8 : 1, out = [k];
+  for (const s of [1, -1]) for (let n = 1; n <= lim; n++) {
+    const ii = horiz ? i + s * n : i, jj = horiz ? j : j + s * n;
+    if (T(ii, jj) !== t) break;
+    out.push(w.idx(L, ii, jj));
+  }
+  return out;
+}
+
 // 円（半径r、高さ y0..y1）が壁・家具・扉にめり込んでいたら押し出す。戻り値: 押し出した量 [dx, dz, 当たったか]
-export function pushOut(w, x, z, y0, y1, r, doorsState, ignoreProp = -1, out = [0, 0, 0]) {
+// mode: 1 = 宙にいる（2階より上の何もないマスは空気。飛び降りの最中・乗り越えの見込み）、2 = 窓のバリケードも当たり（乗り越えの見込み）、
+//       4 = 割れていないガラスも通れる（乗り越えの見込み。越えるときに割る）
+export function pushOut(w, x, z, y0, y1, r, doorsState, ignoreProp = -1, out = [0, 0, 0], mode = 0) {
   let px = x, pz = z, hit = 0, pm = 0, pass = 0;
   const i0 = Math.floor((x - r - 0.3) / CS), i1 = Math.floor((x + r + 0.3) / CS);
   const j0 = Math.floor((z - r - 0.3) / CS), j1 = Math.floor((z + r + 0.3) / CS);
@@ -429,7 +473,7 @@ export function pushOut(w, x, z, y0, y1, r, doorsState, ignoreProp = -1, out = [
         }
         const k = w.idx(L, i, j);
         const t = w.cell[k];
-        if (t === C.VOID && L === levelOfY(y0 + 0.1)) {
+        if (t === C.VOID && L === levelOfY(y0 + 0.1) && !((mode & 1) && L > 0)) {
           // 何もないマス（建物の外の空白）も通れない
           const cx = Math.max(i * CS, Math.min((i + 1) * CS, px)), cz = Math.max(j * CS, Math.min((j + 1) * CS, pz));
           const dx = px - cx, dz = pz - cz, d2 = dx * dx + dz * dz;
@@ -439,7 +483,7 @@ export function pushOut(w, x, z, y0, y1, r, doorsState, ignoreProp = -1, out = [
           const nb = w.nbox[k], bb = k * NB;
           for (let q = 0; q < NB; q++) {
             const m = w.blocks[bb + q];
-            if (!m || m === M.GLASSBROKEN) continue;
+            if (!m || m === M.GLASSBROKEN || ((mode & 4) && m === M.GLASS)) continue;
             const by0 = base + q * BH, by1 = by0 + BH;
             if (by1 <= y0 || by0 >= y1) continue;
             // 板の継ぎ目で引っかからないように: 隣のマスへ同じ面で続く板は延ばして考え、
@@ -448,10 +492,10 @@ export function pushOut(w, x, z, y0, y1, r, doorsState, ignoreProp = -1, out = [
             for (let n = 0; n < nb; n++) {
               const o = k * 8 + n * 4;
               let x0 = w.boxes[o], z0 = w.boxes[o + 1], x1 = w.boxes[o + 2], z1 = w.boxes[o + 3];
-              if (x0 <= i * CS + 1e-6 && solidAt(w, L, i - 1, j, q)) x0 -= r;
-              if (x1 >= (i + 1) * CS - 1e-6 && solidAt(w, L, i + 1, j, q)) x1 += r;
-              if (z0 <= j * CS + 1e-6 && solidAt(w, L, i, j - 1, q)) z0 -= r;
-              if (z1 >= (j + 1) * CS - 1e-6 && solidAt(w, L, i, j + 1, q)) z1 += r;
+              if (x0 <= i * CS + 1e-6 && solidAt(w, L, i - 1, j, q, mode & 4)) x0 -= r;
+              if (x1 >= (i + 1) * CS - 1e-6 && solidAt(w, L, i + 1, j, q, mode & 4)) x1 += r;
+              if (z0 <= j * CS + 1e-6 && solidAt(w, L, i, j - 1, q, mode & 4)) z0 -= r;
+              if (z1 >= (j + 1) * CS - 1e-6 && solidAt(w, L, i, j + 1, q, mode & 4)) z1 += r;
               const r2 = circleBox(px, pz, r, x0, z0, x1, z1);
               if (r2) { const mm = Math.abs(r2[0]) + Math.abs(r2[1]); if (mm > bm) { bm = mm; best = r2; } }
             }
@@ -499,7 +543,7 @@ export function pushOut(w, x, z, y0, y1, r, doorsState, ignoreProp = -1, out = [
           const si = w.barAt[k];
           if (si >= 0) {
             const s = w.bars[si], st = bars[si];
-            if (s.walk && st && st.h && !(s.y1 <= y0 || s.y0 >= y1)) {
+            if ((s.walk || (mode & 2)) && st && st.h && !(s.y1 <= y0 || s.y0 >= y1)) {
               const r2 = circleBox(px, pz, r, s.box[0], s.box[1], s.box[2], s.box[3]);
               if (r2) { px += r2[0]; pz += r2[1]; hit = 1; if (pass) pm = Math.max(pm, Math.abs(r2[0]) + Math.abs(r2[1])); }
             }
@@ -513,12 +557,12 @@ export function pushOut(w, x, z, y0, y1, r, doorsState, ignoreProp = -1, out = [
 }
 
 // そのマスのその高さに、ぶつかる壁のブロックがあるか
-function solidAt(w, L, i, j, q) {
+function solidAt(w, L, i, j, q, glassOpen = 0) {
   if (i < 0 || j < 0 || i >= w.W || j >= w.D) return false;
   const k = w.idx(L, i, j);
   if (!isWallish(w.cell[k])) return false;
   const m = w.blocks[k * NB + q];
-  return !!m && m !== M.GLASSBROKEN;
+  return !!m && m !== M.GLASSBROKEN && !(glassOpen && m === M.GLASS);
 }
 
 export function leafEnd(lf, ang) {

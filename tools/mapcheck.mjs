@@ -25,15 +25,14 @@ export function checkMap(id) {
       if (t === C.VOID) bad = `外にはみ出し (${i},${j})`;
       else if (t === C.STAIR) bad = `階段の上 (${i},${j})`;
       else if (wallish(t) || t === C.OPEN) {
-        // 壁の板はマスの中央に thick の幅。家具の箱が板に触れていなければよい
-        const th = (w.thick[w.idx(p.L, i, j)] || 0.12) / 2, cx = (i + 0.5) * CS, cz = (j + 0.5) * CS;
-        const arms = w.arms[w.idx(p.L, i, j)];
-        // 板の範囲（腕のある向きはマスの端まで）
-        const bx0 = (arms & 2) ? i * CS : cx - th, bx1 = (arms & 1) ? (i + 1) * CS : cx + th;
-        const bz0 = (arms & 8) ? j * CS : cz - th, bz1 = (arms & 4) ? (j + 1) * CS : cz + th;
+        // 壁の板（マスの当たりの箱。T字・L字は腕ごとの細い箱）に家具の箱が触れていなければよい
+        const k = w.idx(p.L, i, j);
         const px0 = p.x - p.w / 2, px1 = p.x + p.w / 2, pz0 = p.z - p.d / 2, pz1 = p.z + p.d / 2;
-        const ov = Math.min(px1, bx1) - Math.max(px0, bx0) > 0.02 && Math.min(pz1, bz1) - Math.max(pz0, bz0) > 0.02;
-        if (ov) bad = `${t === C.DOOR ? '扉' : t === C.WINDOW ? '窓' : t === C.OPEN ? '開口' : '壁'}にめり込み (${i},${j})`;
+        for (let n = 0; n < w.nbox[k] && !bad; n++) {
+          const o = k * 8 + n * 4, bx0 = w.boxes[o], bz0 = w.boxes[o + 1], bx1 = w.boxes[o + 2], bz1 = w.boxes[o + 3];
+          const ov = Math.min(px1, bx1) - Math.max(px0, bx0) > 0.02 && Math.min(pz1, bz1) - Math.max(pz0, bz0) > 0.02;
+          if (ov) bad = `${t === C.DOOR ? '扉' : t === C.WINDOW ? '窓' : t === C.OPEN ? '開口' : '壁'}にめり込み (${i},${j})`;
+        }
       }
     }
     if (bad) out.errors.push(`家具 ${p.type}#${p.id} (${(p.x / CS).toFixed(1)},${(p.z / CS).toFixed(1)},${p.L}): ${bad}`);
