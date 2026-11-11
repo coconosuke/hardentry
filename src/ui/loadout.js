@@ -5,7 +5,7 @@ import { WEAPONS, ATTACH, CAT_NAME, AMMO, CAL, SLOT_NAME, attachOptions, capOf }
 import { GEAR, LONG, VEST, PLATE, HELMET, HEADWEAR } from '../engine/data/equipment.js';
 import { OFFICERS, PVP_LOADOUTS, PVP_ALLOWED } from '../engine/data/npc.js';
 
-const PERSLOT = { flash: 2, stinger: 2, cs: 1, smoke: 2, c2: 1, wedge: 2, lockgun: 1, spray: 1, bandage: 2, frame: 1, claymore: 1, chem: 4, taser: 1 };
+const PERSLOT = { flash: 2, stinger: 2, cs: 1, smoke: 2, c2: 1, wedge: 2, lockgun: 1, spray: 1, bandage: 2, frame: 1, claymore: 1, chem: 4, taser: 1, dshield: 1, wire: 2 };
 const PVE_GEAR = ['flash', 'stinger', 'cs', 'smoke', 'c2', 'wedge', 'lockgun', 'spray'];
 const AMMO_NAME = { ap: '徹甲弾（AP）', jhp: 'ホローポイント（JHP）', buck: '散弾（バックショット）', slug: 'スラッグ', bean: 'ビーンバッグ', pepper: 'ペッパーボール', taser: 'カートリッジ' };
 // アタッチメントの枠（主武器・副武器）と、何も選んでいないときの物

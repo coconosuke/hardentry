@@ -9,6 +9,7 @@ import { holdOf, poseState } from './actor.js';
 import { ACT_POSE } from './data/acts.js';
 import { hrand } from './rng.js';
 import { hitBar, bashBar } from './barricade.js';
+import { meleeDeps } from './deploy.js';
 
 const G = 9.81;
 // モードのきまり（engine が入れる）: canDown(S, a)
@@ -452,6 +453,8 @@ function meleeHit(S, w, a, ev) {
     if (wh.kind === 'door') ev.push({ e: 'door', d: wh.id, k: 'knock', id: a.id, loud: 0.45 });
     return;
   }
+  // 有刺鉄線（足元）を殴る: 2回で壊れる
+  if (!best && meleeDeps(S, w, a, eye, dx, dy, dz, R, ev)) { ev.push({ e: 'meleehit', id: a.id, k: 'wire' }); return; }
   if (!best) { ev.push({ e: 'meleehit', id: a.id, k: 'air' }); return; }
   const b = best.b, x = eye[0] + dx * best.t, y = eye[1] + dy * best.t, z = eye[2] + dz * best.t;
   if (best.part === 'drone') { killDrone(S, b, a.id, ev); ev.push({ e: 'meleehit', id: a.id, k: 'drone', x, y, z }); return; }

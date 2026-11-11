@@ -36,6 +36,8 @@ export const GEAR = {
   bandage: { name: '包帯', kind: 'heal', max: 3, use: 3.5, desc: '止血して体力を40回復する（対戦）。作戦では止血のみ（50%まで回復）。' },
   frame: { name: '壁用の爆破薬（フレームチャージ）', kind: 'wallcharge', max: 1, place: 4.0, desc: '対戦の攻撃側だけ。補強した壁にも大きな穴を開ける。' },
   claymore: { name: '扉の罠（手榴弾とワイヤー）', kind: 'trap', max: 2, place: 3.0, desc: '対戦の守る側だけ。扉に仕掛け、開けた人を吹き飛ばす。ミラーで見つけられ、マルチツールで外せる。' },
+  dshield: { name: '置ける盾', kind: 'deploy', dep: 'shield', max: 1, place: 1.4, desc: '対戦の守る側。腰の高さ（1m）の鋼の盾を前に立てる。弾を止め、のぞき窓からは見えて撃てる。乗り越えられる。爆発で壊れる。守る側は「調べる」で拾い直せる。' },
+  wire: { name: '有刺鉄線', kind: 'deploy', dep: 'wire', max: 2, place: 1.2, desc: '対戦の守る側。前の床に鉄条網（幅1.6m）を張る。上を通る人は遅くなり、音が出る（敵にも味方にも）。近接2回か爆発で壊れる。' },
 };
 // 長い戦術装備（背中に1つ）
 export const LONG = {

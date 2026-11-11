@@ -134,6 +134,7 @@ function startRound(S, w, first) {
     S.doors = makeDoorStates(w);
     S.items.length = 0; S.nades.length = 0; S.clouds.length = 0; S.blasts.length = 0; S.bullets.length = 0; S.mines = [];
     S.reinf = {};
+    S.deps = []; S.depV = (S.depV || 0) + 1;
     S.actors = S.actors.filter(a => !a.isDrone);
     initBars(S, w);
   }

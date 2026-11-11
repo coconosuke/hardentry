@@ -6,6 +6,7 @@
 import { NB, barPiece } from './world.js';
 import { M } from './data/materials.js';
 import { hrand } from './rng.js';
+import { linkDeps } from './deploy.js';
 
 export const BAR_FALL = 0.25;
 
@@ -22,7 +23,7 @@ export function initBars(S, w) {
   S.barV = (S.barV || 0) + 1;
 }
 // 弾・視線の計算から見えるように、扉の状態の配列にぶら下げる（S.doors を作り直したら呼ぶ）
-export function linkBars(S) { if (S.doors && S.bars) Object.defineProperty(S.doors, 'bars', { value: S.bars, writable: true, configurable: true, enumerable: false }); }
+export function linkBars(S) { if (S.doors && S.bars) Object.defineProperty(S.doors, 'bars', { value: S.bars, writable: true, configurable: true, enumerable: false }); linkDeps(S); }
 // 板を打つ窓・ガラスの壁のガラスは最初から外しておく（読み込み・ゲストでも同じにする。差分には入れない）
 export function barGlass(S, w) {
   if (!windowsBarred(S)) return;

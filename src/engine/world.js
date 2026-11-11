@@ -5,6 +5,12 @@ import { M, MATS, F } from './data/materials.js';
 import { PROPS } from './data/props.js';
 
 export const CS = 0.5, LH = 3.0, CEIL = 2.8, BH = 0.7, NB = 4, SLAB = 0.2, STEP = 0.36;
+// 置ける盾（対戦の守る側。シージの Deployable Shield）: 幅1m・高さ1mの鋼の板。のぞき窓（高さ s0〜s1、幅 ±shw）からは見えて撃てる
+export const DSHIELD = { hw: 0.5, th: 0.07, h: 1.0, s0: 0.74, s1: 0.84, shw: 0.15 };
+// 盾の4つの部分（下・上・のぞき窓の左右）: [u0, u1, y0, y1]（u は幅の向き）
+const SH_PARTS = [[-DSHIELD.hw, DSHIELD.hw, 0, DSHIELD.s0], [-DSHIELD.hw, DSHIELD.hw, DSHIELD.s1, DSHIELD.h], [-DSHIELD.hw, -DSHIELD.shw, DSHIELD.s0, DSHIELD.s1], [DSHIELD.shw, DSHIELD.hw, DSHIELD.s0, DSHIELD.s1]];
+// 盾の幅の向き（置いた人の右）
+export function depAxis(d) { return [-Math.cos(d.yaw), Math.sin(d.yaw)]; }
 
 // マスの種類
 export const C = { VOID: 0, FLOOR: 1, OUT: 2, WALL: 3, DOOR: 4, WINDOW: 5, GLASSWALL: 6, OPEN: 7, LOW: 8, FENCE: 9, STAIR: 10 };
@@ -551,10 +557,26 @@ export function pushOut(w, x, z, y0, y1, r, doorsState, ignoreProp = -1, out = [
         }
       }
     }
+    const deps = doorsState && doorsState.deps;
+    if (deps && deps.length) { const r2 = pushDeps(deps, px, pz, y0, y1, r); if (r2[2]) { px += r2[0]; pz += r2[1]; hit = 1; if (pass) pm = Math.max(pm, Math.abs(r2[0]) + Math.abs(r2[1])); } }
   }
   out[0] = px - x; out[1] = pz - z; out[2] = hit; out[3] = pm; // out[3]: 2回目の押し出しの最大（0に近ければ収まっている）
   return out;
 }
+// 置ける盾に体が当たったら押し出す（高さ1mなので乗り越えられる）
+function pushDeps(deps, px, pz, y0, y1, r) {
+  let ox = 0, oz = 0, hit = 0;
+  for (const d of deps) {
+    if (d.k !== 'shield' || !(d.hp > 0) || d.y + DSHIELD.h <= y0 || d.y >= y1) continue;
+    if (Math.abs(px + ox - d.x) > r + 0.6 || Math.abs(pz + oz - d.z) > r + 0.6) continue;
+    const [ux, uz] = depAxis(d);
+    const r2 = circleSeg(px + ox, pz + oz, r + DSHIELD.th / 2, d.x - ux * DSHIELD.hw, d.z - uz * DSHIELD.hw, d.x + ux * DSHIELD.hw, d.z + uz * DSHIELD.hw);
+    if (r2) { ox += r2[0]; oz += r2[1]; hit = 1; }
+  }
+  _pd[0] = ox; _pd[1] = oz; _pd[2] = hit;
+  return _pd;
+}
+const _pd = [0, 0, 0];
 
 // そのマスのその高さに、ぶつかる壁のブロックがあるか
 function solidAt(w, L, i, j, q, glassOpen = 0) {
@@ -614,6 +636,8 @@ export function raycast(w, ox, oy, oz, dx, dy, dz, max, doorsState, opt = {}) {
   const seenDoor = opt.seenDoor || _seenD; seenDoor.clear();
   let guard = 0;
   let stopAt = max;
+  const deps = doorsState && doorsState.deps;
+  if (deps && deps.length) rayDeps(deps, ox, oy, oz, dx, dy, dz, max, hits);
   while (t < stopAt && guard++ < 4000) {
     const tNext = Math.min(tmI, tmJ, max);
     if (!inMap(w, i, j)) { hits.push({ t0: t, t1: t, kind: 'edge', mat: M.CONCRETE }); break; }
@@ -708,6 +732,28 @@ export function raycast(w, ox, oy, oz, dx, dy, dz, max, doorsState, opt = {}) {
   }
   hits.sort((a, b) => a.t0 - b.t0);
   return hits;
+}
+
+// 置ける盾に当たるか（のぞき窓は抜ける）。当たれば hits に { kind: 'dep', id } を足す
+function rayDeps(deps, ox, oy, oz, dx, dy, dz, max, hits) {
+  for (const d of deps) {
+    const best = rayShield(d, ox, oy, oz, dx, dy, dz, max);
+    if (best) hits.push({ t0: Math.max(0, best[0]), t1: best[1], kind: 'dep', mat: M.METAL, id: d.id, nx: best[2], ny: 0, nz: best[3], L: d.L });
+  }
+}
+function rayShield(d, ox, oy, oz, dx, dy, dz, max) {
+  if (d.k !== 'shield' || !(d.hp > 0)) return null;
+  // 大まかに: 水平に見て、盾の中心から0.7m以内を通るか
+  const cx = d.x - ox, cz = d.z - oz, h2 = dx * dx + dz * dz;
+  if (h2 > 1e-9) { const t = Math.max(0, Math.min(max, (cx * dx + cz * dz) / h2)); if (Math.hypot(cx - dx * t, cz - dz * t) > 0.7) return null; }
+  else if (Math.hypot(cx, cz) > 0.7) return null;
+  const [ux, uz] = depAxis(d);
+  let best = null;
+  for (const P of SH_PARTS) {
+    const r = raySlabSeg(ox, oy, oz, dx, dy, dz, d.x + ux * P[0], d.z + uz * P[0], d.x + ux * P[1], d.z + uz * P[1], DSHIELD.th, d.y + P[2], d.y + P[3]);
+    if (r && r[1] > 0 && r[0] < max && (!best || r[0] < best[0])) best = r;
+  }
+  return best;
 }
 
 // 視線が通るか（見えない物にさえぎられないか）
@@ -817,6 +863,8 @@ export function occluded(w, ax, ay, az, bx, by, bz, doorsState = null, props = t
   let tmJ = dz !== 0 ? ((dz > 0 ? (j + 1) * CS - az : az - j * CS) / Math.abs(dz)) : Infinity;
   let t = 0, guard = 0;
   const maxT = L - 0.02;
+  const deps = doorsState && doorsState.deps;
+  if (deps && deps.length) for (const d of deps) if (rayShield(d, ax, ay, az, dx, dy, dz, maxT)) return true;
   while (t < maxT && guard++ < 3000) {
     if (i < 0 || j < 0 || i >= w.W || j >= w.D) return false;
     const tN = Math.min(tmI, tmJ, maxT);

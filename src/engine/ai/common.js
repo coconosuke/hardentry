@@ -205,6 +205,11 @@ export function goTo(S, w, a, inp, tx, ty, tz, o = {}) {
   const moved = Math.hypot(a.x - nv.lx, a.z - nv.lz);
   if (moved < 0.02) { nv.stuck = (nv.stuck || 0) + S.dt; } else nv.stuck = Math.max(0, (nv.stuck || 0) - S.dt * 2);
   nv.lx = a.x; nv.lz = a.z;
+  // 置ける盾（対戦）にはばまれた: 乗り越える（盾の向こうへ進む向きを向いている）
+  if (nv.stuck > 0.45 && S.deps && S.deps.length && !a.vault) {
+    const sh = S.deps.find(q => q.k === 'shield' && q.hp > 0 && Math.abs(q.y - a.y) < 0.6 && Math.hypot(q.x - a.x, q.z - a.z) < 1.15);
+    if (sh) { nv.stuck = 0; pushAct(inp, { a: 'vault' }); steerToward(a, inp, px, pz, 0, true); return 'moving'; }
+  }
   if (nv.stuck > 1.2) {
     nv.stuck = 0;
     // 開いた扉の板の陰に入って動けない: 板に手が届けば閉める（突入する扉 o.keep は除く）

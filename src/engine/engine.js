@@ -65,7 +65,7 @@ export function createGame(o) {
     rules: Object.assign({ cap: 44, diff: 'normal', ff: true, dbno: false, recoil: 1 }, o.rules || {}),
     pvp: o.mode !== 'pve' && o.mode !== 'train', nextId: 1, nextItem: 1,
     actors: [], byId: {}, doors: makeDoorStates(w), bdiff: {}, reinf: {}, bullets: [], nades: [], clouds: [], blasts: [], items: [], harms: [],
-    orders: [], shouts: [], mines: [], ev: [], evSeq: 0, over: null, phase: 'play', m: {}, chems: [], notes: [], cmdSeq: 0, paused: false,
+    orders: [], shouts: [], mines: [], ev: [], evSeq: 0, over: null, phase: 'play', m: {}, chems: [], notes: [], cmdSeq: 0, paused: false, deps: [], nextDep: 0,
   };
   const api = { S, w };
   const mod = MODES[o.mode];

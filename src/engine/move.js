@@ -8,6 +8,7 @@ import { curW, bodyHeight, curWeapon } from './actor.js';
 import { attMods } from './weapon.js';
 import { PLATE, LONG } from './data/equipment.js';
 import { FLOORS } from './data/materials.js';
+import { DEP, wireAt, stepWire } from './deploy.js';
 
 export const SPEED = { walk: 2.4, crouch: 1.2, prone: 0.45, low: 1.2, ads: 0.7, sprint: 4.6, back: 0.8, side: 0.9 };
 export const RADIUS = 0.28;
@@ -49,6 +50,8 @@ export function maxSpeed(S, a, inp) {
   if (a.bleed > 0) v *= 0.8;
   if (a.stun > 0 || a.flash > 0.5) v *= 0.45;
   if (a.gas > 0 && !(a.armor.head === 'gasmask')) v *= 0.7;
+  // 有刺鉄線の上（対戦）: 誰でも遅くなる
+  if (S.deps && S.deps.length && !a.isDrone && wireAt(S, a.x, a.z, a.y)) v *= DEP.wire.slow;
   if (a.comply === 1) v = Math.min(v, 0.9);
   if (a.comply === 2 || a.cuffed || a.down || a.dead || a.tased > 0) v = a.down && S.pvp && a.dbno ? 0.35 : 0;
   if (a.act && a.act.still) v = 0;
@@ -113,7 +116,7 @@ export function moveActor(S, w, a, inp, dt, ev) {
   let mag = Math.hypot(mx, mz); if (mag > 1) { mx /= mag; mz /= mag; mag = 1; }
   // ダッシュ（PvPだけ。立って前へ）
   // ダッシュ: 作戦・対戦とも（スティックを上へ押し込む・Shift）。盾を構えている・運んでいる・拘束されているときは走れない
-  a.sprint = !!(inp.sprint && a.st < 0.2 && mz > 0.55 && !a.adsOn && !a.down && !a.act && !a.cuffed && !a.comply && !(a.ws && a.ws.slot === 1 && a.inv && a.inv.long === 'shield'));
+  a.sprint = !!(inp.sprint && a.st < 0.2 && mz > 0.55 && !a.adsOn && !a.down && !a.act && !a.cuffed && !a.comply && !(a.ws && a.ws.slot === 1 && a.inv && a.inv.long === 'shield') && !(S.deps && S.deps.length && wireAt(S, a.x, a.z, a.y)));
   const vmax = maxSpeed(S, a, inp);
   // 後ろ・横は遅い
   let dirMul = 1;
@@ -161,6 +164,7 @@ export function moveActor(S, w, a, inp, dt, ev) {
   a.ground = a.y - g < 0.05;
   // 歩きの位相と足音
   const dist = Math.hypot(a.x - ox, a.z - oz);
+  if (ev && S.deps && S.deps.length) stepWire(S, a, dist, ev);
   const stepLen = a.sprint ? 0.95 : a.st > 1.5 ? 0.35 : a.st > 0.5 ? 0.55 : 0.72;
   const before = Math.floor(a.phase / Math.PI);
   a.phase += dist * Math.PI / stepLen;

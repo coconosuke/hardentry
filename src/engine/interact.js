@@ -9,6 +9,7 @@ import { placeBar, clearBar, bashBar } from './barricade.js';
 import { curW } from './actor.js';
 import { startReload, switchTo, m320Next } from './weapon.js';
 import { ACT_POSE, REACH_D, STAND_D, ALIGN_T } from './data/acts.js';
+import { depSpot, placeDep, removeDep, DEP_WHY } from './deploy.js';
 
 const _rc = { out: [], seenProp: new Set(), seenDoor: new Set() };
 export const REACH = 2.3;
@@ -16,12 +17,13 @@ export const REACH = 2.3;
 // 時間（秒）
 export const ACT_T = {
   restrain: 2.8, report: 0.6, collect: 1.2, pick: 6.0, lockgun: 2.0, wedge: 1.5, unwedge: 2.0, c2: 2.5, ram: 0.8, breach: 0.7, mirror: 2.4, mirrorP: 0.8, wand: 0.6, disarm: 3.0,
-  bar: 1.5, unbar: 1.6, trap: 3.0, bash: 0.55, bandage: 3.5, plant: 7.0, defuse: 7.0, revive: 4.0, reinforce: 4.5, frame: 4.0, bombdefuse: 6.0, kick: 0.45, wall: 0.3,
+  bar: 1.5, unbar: 1.6, trap: 3.0, bash: 0.55, bandage: 3.5, plant: 7.0, defuse: 7.0, revive: 4.0, reinforce: 4.5, frame: 4.0, bombdefuse: 6.0, kick: 0.45, wall: 0.3, deppick: 1.0,
 };
 export const OP_NAME = {
   open: '開ける', peek: '少し開ける', close: '閉める', kick: '蹴る', pick: 'ピッキング', lockgun: 'ロックピックガン', wedge: 'ウェッジ', unwedge: 'ウェッジを外す', c2: 'C2を仕掛ける',
   ram: '破城槌', breach: '散弾で開ける', mirror: 'ミラーで見る', wand: 'オプティワンド', disarm: '罠を外す', bar: 'バリケード', unbar: 'バリケードを外す', trap: '罠を仕掛ける', bash: 'バリケードを壊す',
   restrain: '拘束', report: 'TOCに報告', collect: '証拠を回収', revive: '手当て', plant: '解除装置を設置', defuse: '解除装置を外す', pickup: '拾う', reinforce: '補強', frame: '壁用の爆破薬', bombdefuse: '爆弾を解除', det: '起爆',
+  deploy: '置く', deppick: '盾を拾う',
 };
 
 // ---- 手が届くか: 距離と、間に家具・壁・扉・人がないか（オブジェクト越し・離れた所からはできない）
@@ -237,6 +239,11 @@ export function reachOK(S, w, a, k, id, op, slack = 0) {
     const fx = Math.abs(cx - a.x) > Math.abs(cz - a.z) ? cx - Math.sign(cx - a.x) * 0.2 : a.x, fz = Math.abs(cx - a.x) > Math.abs(cz - a.z) ? a.z : cz - Math.sign(cz - a.z) * 0.2;
     return bodyClear(S, w, a, fx, fz, L);
   }
+  if (k === 'dep') {
+    const d = S.deps && S.deps.find(q => q.id === id);
+    if (!d) return false;
+    return Math.hypot(d.x - a.x, d.z - a.z) <= lim && Math.abs(d.y - a.y) < 0.6;
+  }
   return true;
 }
 // AI: 目標（人・物）に手が届く立ち位置。近い順に、歩ける床のマスから届くかを試す（家具の向こうなら回り込む）
@@ -297,6 +304,7 @@ function actTarget(S, w, a, k, id, op) {
     return [a.x + Math.sin(a.yaw) * 0.5, a.y + 0.05, a.z + Math.cos(a.yaw) * 0.5];
   }
   if (k === 'wall') { const i = id % w.W, j = Math.floor(id / w.W) % w.D; const cx = (i + 0.5) * CS, cz = (j + 0.5) * CS; const ax = Math.abs(cx - a.x) > Math.abs(cz - a.z); return [ax ? cx - Math.sign(cx - a.x) * 0.16 : a.x, a.y + 1.15, ax ? a.z : cz - Math.sign(cz - a.z) * 0.16]; }
+  if (k === 'dep') { const d = S.deps && S.deps.find(q => q.id === id); return d ? [d.x, d.y + 0.55, d.z] : null; }
   return null;
 }
 // 動作の立ち位置: 目標の手前（目標から自分への向き、扉は自分の側の正面）。歩ける所で、今の所から体ごと移れるときだけ
@@ -345,8 +353,9 @@ export function contextOf(S, w, a) {
   const eye = eyeOf(S, a);
   const cp = Math.cos(a.pitch), dx = Math.sin(a.yaw) * cp, dy = Math.sin(a.pitch), dz = Math.cos(a.yaw) * cp;
   const hits = raycast(w, eye[0], eye[1], eye[2], dx, dy, dz, 3.2, S.doors, _rc);
-  let wallHit = null, doorHit = null, barHit = null;
+  let wallHit = null, doorHit = null, barHit = null, depHit = null;
   for (const h of hits) {
+    if (h.kind === 'dep') { if (!depHit) depHit = h; continue; }
     if (h.kind === 'bar' && h.id < 0) { barHit = h; break; }
     if (h.kind === 'door' || h.kind === 'bar') { doorHit = h; break; }
     if (h.kind === 'block' || h.kind === 'slab' || h.kind === 'prop' || h.kind === 'stair' || h.kind === 'edge') { if (MATS[h.mat] && MATS[h.mat].see) continue; wallHit = h; break; }
@@ -385,6 +394,11 @@ export function contextOf(S, w, a) {
   if (item) {
     const ops = itemOps(S, a, item);
     if (ops.length) return markReach(S, w, a, { k: 'item', id: item.id, ops, def: ops[0] });
+  }
+  // 置ける盾（味方の盾は拾い直せる）
+  if (depHit && depHit.t0 < 2.0 && depHit.t0 < wallT) {
+    const d = S.deps && S.deps.find(q => q.id === depHit.id);
+    if (d && d.k === 'shield' && d.team === a.team) return markReach(S, w, a, { k: 'dep', id: d.id, ops: [{ op: 'deppick', t: ACT_T.deppick }], def: null });
   }
   // 窓・ガラスの壁のバリケード（見ている板）
   if (barHit && barHit.t0 < 2.6) {
@@ -550,6 +564,7 @@ export function doAction(S, w, a, ac, ev) {
   if (kind === 'peekend') { if (a.peek) endPeek(S, w, a, ev, 'user'); return; }
   if (kind === 'dropcarry') { if (a.carry === 'defuser') { a.carry = null; S.items.push({ id: S.nextItem++, kind: 'defuser', x: a.x, y: a.y + 0.02, z: a.z }); ev.push({ e: 'defdrop', id: a.id }); } return; }
   if (a.act) return;
+  if (kind === 'deploy') { startDeploy(S, w, a, ac.id, ev); return; }
   let ctx = null, op = null;
   if (kind === 'use') { ctx = contextOf(S, w, a); if (!ctx) return; op = ctx.def; }
   else if (kind === 'op') {
@@ -756,6 +771,21 @@ function finishOp(S, w, a, x, ev) {
     if (k === 'frame' && useGear(a, 'frame')) { S.mines = S.mines || []; S.mines.push({ k: 'frame', owner: a.id, x: (kk % w.W + 0.5) * CS, y: a.y + 1.0, z: (Math.floor(kk / w.W) % w.D + 0.5) * CS, cell: kk }); ev.push({ e: 'frameset', id: a.id }); }
     return;
   }
+  if (k === 'deploy') {
+    // 置く直前にもう一度場所を確かめる（人が入った・向きを変えた）
+    const G = GEAR[x.g], sp = G && depSpot(S, w, a, G.dep);
+    if (!sp) { ev.push({ e: 'deny', id: a.id, why: 'dep' + DEP_WHY }); return; }
+    if (useGear(a, x.g)) placeDep(S, w, a, G.dep, sp, ev);
+    return;
+  }
+  if (x.kind === 'dep' && k === 'deppick') {
+    const d = S.deps && S.deps.find(q => q.id === x.id);
+    if (!d || d.team !== a.team) return;
+    removeDep(S, d, ev, 'pick', a.id);
+    const gid = d.k === 'shield' ? 'dshield' : 'wire', g = a.inv.gear.find(q => q.id === gid);
+    if (g) g.n = Math.min((GEAR[gid].max || 9), g.n + 1); else a.inv.gear.push({ id: gid, n: 1 });
+    return;
+  }
   if (k === 'bandage') {
     if (S.pvp) { a.hp = Math.min(a.maxHp, a.hp + 40); } else { a.hp = Math.max(a.hp, Math.min(a.maxHp, a.maxHp * 0.5)); a.inj.arm = 0; }
     a.bleed = 0;
@@ -778,8 +808,8 @@ function selectGear(S, a, id, ev) {
   const g = a.inv.gear.find(x => x.id === id);
   if (!g || g.n <= 0) { ev.push({ e: 'deny', id: a.id, why: 'nogear' }); return; }
   if (G.kind === 'heal') { if (a.act) return; if (g.n > 0) { g.n--; a.act = { k: 'bandage', t: 0, dur: ACT_T.bandage, kind: 'self', id: a.id, still: false, noAds: true, x: a.x, z: a.z, pose: 'bandage', tgt: null }; ev.push({ e: 'act', id: a.id, k: 'bandage', dur: ACT_T.bandage }); } return; }
-  if (G.kind === 'nade' || G.kind === 'spray') {
-    // 手に持つ（slot 2）。引き金で投げる・吹きつける
+  if (G.kind === 'nade' || G.kind === 'spray' || G.kind === 'deploy') {
+    // 手に持つ（slot 2）。引き金で投げる・吹きつける・前に置く
     a.ws.gear = id;
     if (a.ws.slot !== 2) switchTo(S, a, 2, ev);
     ev.push({ e: 'gearsel', id: a.id, g: id });
@@ -803,12 +833,26 @@ function gearInHand(S, w, a, dt, ev) {
     g.n--;
     throwNade(S, a, id, inp.power ?? 0.75, ev);
     if (g.n <= 0 || !inp.keepGear) { ws.next = ws.prev >= 0 ? ws.prev : 0; ws.st = 'holster'; ws.t = 0.35; }
+  } else if (GEAR[id].kind === 'deploy') {
+    startDeploy(S, w, a, id, ev);
   } else if (GEAR[id].kind === 'spray') {
     spray(S, w, a, ev);
     g.n = Math.max(0, g.n - 0); // 本数ではなく回数で管理（6回）
     ws.sprays = (ws.sprays || 0) + 1;
     if (ws.sprays >= (GEAR.spray.uses || 6)) { g.n = 0; ws.next = ws.prev >= 0 ? ws.prev : 0; ws.st = 'holster'; ws.t = 0.3; }
   }
+}
+
+// 置く（置ける盾・有刺鉄線）: ひざをついて前の床に置く。置ける所でなければ理由を知らせる
+function startDeploy(S, w, a, id, ev) {
+  const G = GEAR[id];
+  if (!G || G.kind !== 'deploy' || a.act || a.down || a.cuffed) return;
+  if (gearN(a, id) <= 0) { ev.push({ e: 'deny', id: a.id, why: 'nogear' }); return; }
+  const sp = depSpot(S, w, a, G.dep);
+  if (!sp) { ev.push({ e: 'deny', id: a.id, why: 'dep' + DEP_WHY }); return; }
+  const dur = G.place * (a.inj.arm ? 1.2 : 1);
+  a.act = { k: 'deploy', t: 0, dur, kind: 'self', id: a.id, still: true, noAds: true, x: a.x, z: a.z, pose: 'kneel', tgt: [sp.x, sp.y + 0.3, sp.z], g: id };
+  ev.push({ e: 'act', id: a.id, k: 'deploy', dur, g: id });
 }
 
 function spray(S, w, a, ev) {

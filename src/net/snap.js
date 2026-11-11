@@ -5,16 +5,18 @@ import { makeDoorStates } from '../engine/doors.js';
 import { WEAPONS } from '../engine/data/weapons.js';
 import { ACT_POSE } from '../engine/data/acts.js';
 import { initBars, packBars, applyBarsNet } from '../engine/barricade.js';
+import { packDeps, applyDepsNet } from '../engine/deploy.js';
 import { mapCams } from '../engine/modes/pvp.js';
 import { MAPS } from '../engine/maps/index.js';
 
 const KSENT = new WeakMap(); // 状態ごとの「最後に送った成績」
 const BSENT = new WeakMap(); // 状態ごとの「最後に送ったバリケード」
+const DSENT = new WeakMap(); // 状態ごとの「最後に送った置いた物」
 const r2 = (v) => Math.round(v * 100);
 const r3 = (v) => Math.round(v * 1000);
 const isNum = (v) => typeof v === 'number' && isFinite(v);
 // 送る出来事（見た目・音・HUDに要るもの）
-export const NET_EV = new Set(['shot', 'imp', 'blood', 'hit', 'whiz', 'kill', 'down', 'cuffed', 'report', 'evidence', 'bombdone', 'soft', 'glass', 'block', 'reinf', 'door', 'deny', 'nade', 'boom', 'c2', 'flashed', 'stung', 'tase', 'spray', 'reload', 'reloaded', 'shell', 'pumped', 'dry', 'draw', 'fmode', 'lightsw', 'step', 'shout', 'cmd', 'mirror', 'act', 'trap', 'trapset', 'barset', 'c2set', 'barhit', 'barbreak', 'plant', 'disable', 'defpick', 'defdrop', 'spotted', 'drone', 'dronedead', 'phase', 'round', 'roundstart', 'swap', 'respawn', 'matchend', 'end', 'revive', 'bandaged', 'fall', 'throw', 'bounce', 'allbombs', 'trapoff', 'peek', 'peekend', 'launch', 'shieldhit', 'longsel', 'm320sel', 'gearhint', 'gearsel', 'melee', 'meleehit', 'outside', 'zone', 'camdead']);
+export const NET_EV = new Set(['shot', 'imp', 'blood', 'hit', 'whiz', 'kill', 'down', 'cuffed', 'report', 'evidence', 'bombdone', 'soft', 'glass', 'block', 'reinf', 'door', 'deny', 'nade', 'boom', 'c2', 'flashed', 'stung', 'tase', 'spray', 'reload', 'reloaded', 'shell', 'pumped', 'dry', 'draw', 'fmode', 'lightsw', 'step', 'shout', 'cmd', 'mirror', 'act', 'trap', 'trapset', 'barset', 'c2set', 'barhit', 'barbreak', 'plant', 'disable', 'defpick', 'defdrop', 'spotted', 'drone', 'dronedead', 'phase', 'round', 'roundstart', 'swap', 'respawn', 'matchend', 'end', 'revive', 'bandaged', 'fall', 'throw', 'bounce', 'allbombs', 'trapoff', 'peek', 'peekend', 'launch', 'shieldhit', 'longsel', 'm320sel', 'gearhint', 'gearsel', 'melee', 'meleehit', 'outside', 'zone', 'camdead', 'depset', 'depbreak', 'dephit', 'wire']);
 // 出来事の数を丸める（小数2けた）
 export function packEvent(e) {
   const o = {};
@@ -81,6 +83,14 @@ export function packSnap(S, w, events, mePids, withBlocks) {
     if (S.barV !== st.v) { st.v = S.barV; st.fresh = 20; }
     if (st.fresh > 0 || st.n >= 30) { st.fresh = Math.max(0, st.fresh - 1); st.n = 0; out.BR = packBars(S); }
     BSENT.set(S, st);
+  }
+  // 置いた物（置ける盾・有刺鉄線）: 変わってから20回は毎回、ほかは30回に1回
+  if (S.deps) {
+    const st = DSENT.get(S) || { v: -1, n: 0, fresh: 0 };
+    st.n++;
+    if (S.depV !== st.v) { st.v = S.depV; st.fresh = 20; }
+    if (st.fresh > 0 || st.n >= 30) { st.fresh = Math.max(0, st.fresh - 1); st.n = 0; out.DP = packDeps(S); }
+    DSENT.set(S, st);
   }
   // 壊れた壁（ときどき全部）
   if (withBlocks) out.B = Object.keys(S.bdiff).map(k => { const b = +k * 4; return [+k, w.blocks[b], w.blocks[b + 1], w.blocks[b + 2], w.blocks[b + 3]]; });
@@ -229,6 +239,8 @@ export class Mirror {
     if (rd != null) this._rd = rd;
     // バリケード（いちばん新しい表）
     for (let i = B.length - 1; i >= 0; i--) { const BR = B[i].g.BR; if (BR) { if (BR !== this._lastBR) { this._lastBR = BR; applyBarsNet(S, this.w, BR); } break; } }
+    // 置いた物（いちばん新しい表）
+    for (let i = B.length - 1; i >= 0; i--) { const DP = B[i].g.DP; if (DP) { if (DP !== this._lastDP) { this._lastDP = DP; applyDepsNet(S, DP); } break; } }
     if (last.B && last !== this._lastB) {
       this._lastB = last;
       for (const [k, b0, b1, b2, b3] of last.B) { const b = k * 4, w = this.w; if (w.blocks[b] !== b0 || w.blocks[b + 1] !== b1 || w.blocks[b + 2] !== b2 || w.blocks[b + 3] !== b3) { w.blocks[b] = b0; w.blocks[b + 1] = b1; w.blocks[b + 2] = b2; w.blocks[b + 3] = b3; S.bdiff[k] = 1; this.changed.push(k); } }

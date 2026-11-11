@@ -4,7 +4,7 @@
 export const ACT_POSE = {
   restrain: 'cuff',
   revive: 'kneel', bombdefuse: 'kneel', defuse: 'kneel', plant: 'kneel', pick: 'kneel', lockgun: 'kneel', wedge: 'kneel', unwedge: 'kneel', disarm: 'kneel', trap: 'kneel', mirror: 'kneel',
-  c2: 'place', reinforce: 'place', frame: 'place', bar: 'place', unbar: 'place',
+  c2: 'place', reinforce: 'place', frame: 'place', bar: 'place', unbar: 'place', deploy: 'kneel', deppick: 'kneel',
   collect: 'grab', pickup: 'grab',
   report: 'radio', bandage: 'bandage', kick: 'kick', bash: 'kick',
   open: 'knob', close: 'knob', peek: 'knob',
@@ -12,14 +12,14 @@ export const ACT_POSE = {
 // 両手を使う（銃は胸の前に吊る・拳銃はホルスター）
 export const FREE_HANDS = new Set(['cuff', 'kneel', 'grab', 'place', 'bandage', 'peek']);
 // しゃがんで行う
-export const KNEEL_ACT = new Set(['restrain', 'revive', 'bombdefuse', 'defuse', 'plant', 'pick', 'lockgun', 'wedge', 'unwedge', 'disarm', 'trap', 'mirror', 'collect', 'pickup']);
+export const KNEEL_ACT = new Set(['restrain', 'revive', 'bombdefuse', 'defuse', 'plant', 'pick', 'lockgun', 'wedge', 'unwedge', 'disarm', 'trap', 'mirror', 'collect', 'pickup', 'deploy', 'deppick']);
 // 手が届く距離（m）。人・物・爆弾は体の中心から目標（人は体の中心、倒れた人は胸）までの水平の距離、
 // 扉は手を当てる所（ノブ・扉の下・錠）まで、壁は壁の面まで。腕の長さ（肩から約0.6m）＋体の厚みが目安
 export const REACH_D = {
   restrain: 1.0, revive: 1.0, report: 3.2, collect: 1.0, pickup: 1.0,
   open: 1.0, close: 1.05, peek: 1.0, kick: 1.15, pick: 0.85, lockgun: 0.9, wedge: 0.95, unwedge: 0.95, c2: 0.95, mirror: 1.0, wand: 1.7, ram: 1.35, breach: 1.7,
   disarm: 0.95, bar: 1.1, unbar: 1.1, bash: 1.25, trap: 1.0, det: 99,
-  bombdefuse: 1.0, defuse: 1.0, plant: 99, reinforce: 1.0, frame: 1.0,
+  bombdefuse: 1.0, defuse: 1.0, plant: 99, reinforce: 1.0, frame: 1.0, deppick: 1.5,
 };
 // 動作の立ち位置: 目標から体の中心までの距離（m）。動作の始め（ALIGN_T 秒）に、ここへ寄って目標を向く
 export const STAND_D = {

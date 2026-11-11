@@ -44,9 +44,9 @@ export const LOADOUTS = {
 // PvP の既定の装備（陣営ごと）
 export const PVP_LOADOUTS = {
   swat: { primary: { id: 'mk18', sight: 'holo', grip: 'vert', ammo: 'ap' }, secondary: { id: 'g17' }, gear: [['flash', 2], ['c2', 1], ['bandage', 1]], armor: 'medium' },
-  sus: { primary: { id: 'akm', sight: 'iron', ammo: 'ap' }, secondary: { id: 'm1911' }, gear: [['claymore', 1], ['stinger', 1], ['bandage', 1]], armor: 'medium' },
+  sus: { primary: { id: 'akm', sight: 'iron', ammo: 'ap' }, secondary: { id: 'm1911' }, gear: [['dshield', 1], ['wire', 2], ['bandage', 1]], armor: 'medium' },
 };
 export const PVP_ALLOWED = {
   swat: { primary: ['mk18', 'hk416', 'm4a1', 'mcx', 'g36c', 'scarl', 'aug', 'tavor', 'sa58', 'scarh', 'mp5', 'mp5sd', 'mp5k', 'ump45', 'mpx', 'mp7', 'mp9', 'vector', 'evo3', 'm4super', 'r870', 'ksg', 'saiga', 'spas12'], secondary: ['g17', 'g19', 'm17', 'm45a1', 'usp', 'm92', 'fiveseven', 'python', 'deagle'], gear: ['flash', 'stinger', 'cs', 'smoke', 'c2', 'frame', 'bandage', 'wedge'] },
-  sus: { primary: ['akm', 'aks74u', 'vz58', 'rpk', 'g3', 'sks', 'mini14', 'uzi', 'mac10', 'p90', 'bizon', 'skorpion', 'm590', 'saiga', 'spas12', 'sawedoff', 'tec9'], secondary: ['m1911', 'makarov', 'g18', 'g19', 'm92', 'fiveseven', 'python', 'deagle'], gear: ['claymore', 'stinger', 'cs', 'bandage', 'wedge', 'flash'] },
+  sus: { primary: ['akm', 'aks74u', 'vz58', 'rpk', 'g3', 'sks', 'mini14', 'uzi', 'mac10', 'p90', 'bizon', 'skorpion', 'm590', 'saiga', 'spas12', 'sawedoff', 'tec9'], secondary: ['m1911', 'makarov', 'g18', 'g19', 'm92', 'fiveseven', 'python', 'deagle'], gear: ['dshield', 'wire', 'claymore', 'stinger', 'cs', 'bandage', 'wedge', 'flash'] },
 };

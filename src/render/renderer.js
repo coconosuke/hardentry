@@ -7,7 +7,7 @@ import { COMMON, LIGHT, WORLD_VS, WORLD_FS, SKIN_VS, SKIN_FS, SHADOW_VS, SHADOW_
 import { prepareLevel, buildChunk, doorLeafMesh, barPanelMesh, CHUNK } from './level.js';
 import { WV, MeshBuilder, hex } from './build.js';
 import { bakeLight } from '../engine/light.js';
-import { CS, LH, CEIL, NB } from '../engine/world.js';
+import { CS, LH, CEIL, NB, DSHIELD } from '../engine/world.js';
 
 // 画質: まとめて選ぶ（低・中・高）か、細かく選ぶ（カスタム）
 export const QUALITY = { low: { name: '低' }, medium: { name: '中' }, high: { name: '高' }, custom: { name: 'カスタム' } };
@@ -391,7 +391,7 @@ export class Renderer {
     for (const [, ch] of vis) { drawMesh(gl, ch.mesh); this.stats.draws++; this.stats.tris += ch.tris; this.stats.chunks++; }
     if (this.outer && this.outer.mesh) { if (P.u.uOuter) gl.uniform1f(P.u.uOuter, 1); drawMesh(gl, this.outer.mesh); if (P.u.uOuter) gl.uniform1f(P.u.uOuter, 0); this.stats.draws++; this.stats.tris += this.outer.tris; }
     // 扉
-    if (f.doors) { this._drawDoors(P, f.doors); this._drawBars(P, f.doors.bars); }
+    if (f.doors) { this._drawDoors(P, f.doors); this._drawBars(P, f.doors.bars); this._drawDeps(P, f.doors.deps); }
     for (const h of this.hooks.opaque) h(this, f);
     // 空（奥の深さ1で、まだ何も描いていない所だけ）
     gl.disable(gl.CULL_FACE);
@@ -488,6 +488,30 @@ export class Renderer {
       drawMesh(gl, bm.mesh); this.stats.draws++;
     }
     gl.uniform1f(P.u.uRoomOverride, -1);
+  }
+
+  // 置いた物（置ける盾・有刺鉄線）: 形は1度だけ作り、向きと位置の行列で描く。ローカル: X = 幅（置いた人の右）、Y = 上、Z = 置いた人の側（後ろ）
+  _drawDeps(P, deps) {
+    const gl = this.gl, w = this.w0;
+    if (!deps || !deps.length) return;
+    if (!this._depMesh) this._depMesh = { shield: makeWorldMesh(gl, shieldMesh()), wire: makeWorldMesh(gl, wireMesh()) };
+    const M = this._mDep || (this._mDep = new Float32Array(16));
+    for (const d of deps) {
+      if (!(d.hp > 0) || !this._depMesh[d.k]) continue;
+      const r = d.k === 'wire' ? 0.95 : 0.6;
+      if (!aabbVisible(this.planes, d.x - r, d.y, d.z - r, d.x + r, d.y + 1.1, d.z + r)) continue;
+      const fx = Math.sin(d.yaw), fz = Math.cos(d.yaw);
+      // X = 右 (-fz, fx)、Z = 後ろ (-fx, -fz)（扉の板と同じ向きの決まり）
+      M[0] = -fz; M[1] = 0; M[2] = fx; M[3] = 0; M[4] = 0; M[5] = 1; M[6] = 0; M[7] = 0; M[8] = -fx; M[9] = 0; M[10] = -fz; M[11] = 0;
+      M[12] = d.x; M[13] = d.y; M[14] = d.z; M[15] = 1;
+      gl.uniformMatrix4fv(P.u.uModel, false, M);
+      const i = Math.floor(d.x / CS), j = Math.floor(d.z / CS), L = Math.max(0, Math.min(w.NL - 1, d.L | 0));
+      const room = i >= 0 && j >= 0 && i < w.W && j < w.D ? w.roomAt[w.idx(L, i, j)] : -1;
+      gl.uniform1f(P.u.uRoomOverride, Math.max(0, room));
+      drawMesh(gl, this._depMesh[d.k]); this.stats.draws++;
+    }
+    gl.uniform1f(P.u.uRoomOverride, -1);
+    gl.uniformMatrix4fv(P.u.uModel, false, this.ident);
   }
 
   // 罠の形（扉の幅と壁の厚さごと）。ローカル: X=扉にそって 0..幅、Z=罠の側。
@@ -613,4 +637,45 @@ export class Renderer {
     }
     gl.enable(gl.DEPTH_TEST);
   }
+}
+
+// 置ける盾の形: 鋼の板（のぞき窓つき）と、後ろの脚。-Z が敵の側
+function shieldMesh() {
+  const B = new MeshBuilder();
+  const S = DSHIELD, t = 0.028, st = hex('#3c423d'), ed = hex('#2a2e2b'), bl = hex('#1d1f1e');
+  B.bbox(-S.hw, 0.03, -t, S.hw, S.s0, t, 0.012, LAYER.metal, st);
+  B.bbox(-S.hw, S.s1, -t, S.hw, S.h, t, 0.012, LAYER.metal, st);
+  B.bbox(-S.hw, S.s0 - 0.01, -t, -S.shw, S.s1 + 0.01, t, 0.008, LAYER.metal, st);
+  B.bbox(S.shw, S.s0 - 0.01, -t, S.hw, S.s1 + 0.01, t, 0.008, LAYER.metal, st);
+  // のぞき窓の縁と、表の補強の帯
+  B.box(-S.shw - 0.015, S.s0 - 0.015, -t - 0.006, S.shw + 0.015, S.s0, -t, LAYER.metal, ed);
+  B.box(-S.shw - 0.015, S.s1, -t - 0.006, S.shw + 0.015, S.s1 + 0.015, -t, LAYER.metal, ed);
+  B.box(-S.hw + 0.02, 0.32, -t - 0.008, S.hw - 0.02, 0.36, -t, LAYER.metal, ed);
+  // 後ろの脚（斜めの支え）と取っ手
+  for (const sx of [-0.36, 0.36]) {
+    B.tube([sx, 0.62, t], [sx, 0.0, 0.38], 0.016, 0.016, 6, LAYER.metal, bl, { caps: true });
+    B.bbox(sx - 0.04, 0, 0.33, sx + 0.04, 0.025, 0.43, 0.006, LAYER.rubber, bl);
+  }
+  B.tube([-0.12, S.h - 0.06, t + 0.005], [0.12, S.h - 0.06, t + 0.005], 0.012, 0.012, 6, LAYER.rubber, bl, { caps: true });
+  return B;
+}
+// 有刺鉄線の形: 輪にした鉄線（蛇腹）を横に並べ、両端に杭
+function wireMesh() {
+  const B = new MeshBuilder();
+  const col = hex('#9a9c98'), dk = hex('#5e5a52'), N = 9, R = 0.21, hw = 0.78;
+  for (let n = 0; n < N; n++) {
+    const x = -hw + (2 * hw) * n / (N - 1), tilt = (n % 2 ? 0.22 : -0.22);
+    const seg = 10;
+    let prev = null;
+    for (let s = 0; s <= seg; s++) {
+      const a = s / seg * Math.PI * 2;
+      const p = [x + Math.sin(a) * R * tilt, 0.23 + Math.cos(a) * R, Math.sin(a) * 0.4];
+      if (prev) B.tube(prev, p, 0.005, 0.005, 3, LAYER.metal, col);
+      prev = p;
+    }
+  }
+  // 輪をつなぐ線と、地面の杭
+  for (const [y, z] of [[0.06, 0.32], [0.06, -0.32], [0.43, 0.0]]) B.tube([-hw, y, z], [hw, y, z], 0.004, 0.004, 3, LAYER.metal, col);
+  for (const sx of [-hw - 0.04, hw + 0.04]) B.bbox(sx - 0.02, 0, -0.02, sx + 0.02, 0.48, 0.02, 0.004, LAYER.wood, dk);
+  return B;
 }
