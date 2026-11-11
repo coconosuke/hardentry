@@ -44,14 +44,15 @@ test('deploy: 置ける盾を前に置く（1.4秒）。弾は止まり、のぞ
   ok(!ray(0, (DSHIELD.s0 + DSHIELD.s1) / 2), 'のぞき窓は抜ける');
   ok(ray(0.3, (DSHIELD.s0 + DSHIELD.s1) / 2), '窓の横は止まる');
   ok(!los(w, d.x + fx * 2, d.y + 0.5, d.z + fz * 2, d.x - fx * 1.5, d.y + 0.5, d.z - fz * 1.5, S.doors), '盾の向こうは見えない（低い所）');
-  ok(los(w, d.x + fx * 2, d.y + 0.79, d.z + fz * 2, d.x - fx * 1.5, d.y + 0.79, d.z - fz * 1.5, S.doors), 'のぞき窓から見える');
+  const sy = (DSHIELD.s0 + DSHIELD.s1) / 2;
+  ok(los(w, d.x + fx * 2, d.y + sy, d.z + fz * 2, d.x - fx * 1.5, d.y + sy, d.z - fz * 1.5, S.doors), 'のぞき窓から見える');
   // 歩いて通れない
   for (let i = 0; i < 90; i++) step(G, I(p, { mz: 1 }));
   const along = (p.x - d.x) * fx + (p.z - d.z) * fz;
   ok(along < -0.25, '盾の手前で止まる ' + along.toFixed(2));
   // 乗り越えられる
   const pl = vaultPlan(S, w, p, {});
-  ok(pl && pl.top - p.y > 0.95 && !pl.onto, '盾を乗り越えられる ' + JSON.stringify(pl && { top: pl.top - p.y, onto: pl.onto }));
+  ok(pl && pl.top - p.y > DSHIELD.h - 0.05 && !pl.onto, '盾を乗り越えられる ' + JSON.stringify(pl && { top: pl.top - p.y, onto: pl.onto }));
 });
 
 test('deploy: 爆発で壊れる。味方は拾い直せる。通信の表で同じに戻る', () => {

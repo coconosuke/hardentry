@@ -5,8 +5,9 @@ import { M, MATS, F } from './data/materials.js';
 import { PROPS } from './data/props.js';
 
 export const CS = 0.5, LH = 3.0, CEIL = 2.8, BH = 0.7, NB = 4, SLAB = 0.2, STEP = 0.36;
-// 置ける盾（対戦の守る側。シージの Deployable Shield）: 幅1m・高さ1mの鋼の板。のぞき窓（高さ s0〜s1、幅 ±shw）からは見えて撃てる
-export const DSHIELD = { hw: 0.5, th: 0.07, h: 1.0, s0: 0.74, s1: 0.84, shw: 0.15 };
+// 置ける盾（対戦の守る側。シージの Deployable Shield）: 幅1m・高さ1.4mの鋼の板。のぞき窓（高さ s0〜s1、幅 ±shw）は、かがんだ目の高さ（1.32m）。
+// 立つと頭が上に出る。高さ1.4mなので乗り越えられる
+export const DSHIELD = { hw: 0.5, th: 0.07, h: 1.4, s0: 1.2, s1: 1.36, shw: 0.15 };
 // 盾の4つの部分（下・上・のぞき窓の左右）: [u0, u1, y0, y1]（u は幅の向き）
 const SH_PARTS = [[-DSHIELD.hw, DSHIELD.hw, 0, DSHIELD.s0], [-DSHIELD.hw, DSHIELD.hw, DSHIELD.s1, DSHIELD.h], [-DSHIELD.hw, -DSHIELD.shw, DSHIELD.s0, DSHIELD.s1], [DSHIELD.shw, DSHIELD.hw, DSHIELD.s0, DSHIELD.s1]];
 // 盾の幅の向き（置いた人の右）

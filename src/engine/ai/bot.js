@@ -8,6 +8,7 @@ import { CS, LH, NB, C, levelOfY, los } from '../world.js';
 import { M } from '../data/materials.js';
 import { isOpen, isClosed, sideOf } from '../doors.js';
 import { doorOps, reachOK } from '../interact.js';
+import { depSpot, DEP } from '../deploy.js';
 
 const sec = (S, t0) => (S.t - t0) * S.dt;
 
@@ -224,17 +225,17 @@ function defendPrep(S, w, a, inp, dt, ctx) {
   const j = ai.job;
   if (!j) return holdNear(S, w, a, inp, dt, site.x, site.y, site.z, 4);
   const dep = j.kind === 'dep';
-  const r = goTo(S, w, a, inp, j.x, j.y, j.z, { r: dep ? 0.2 : 0.45, unlock: true, noDoors: j.kind !== 'wall' });
+  const r = goTo(S, w, a, inp, j.x, j.y, j.z, { r: dep ? 0.3 : 0.45, unlock: true, noDoors: j.kind === 'bar' }); // 置く物・補強は扉を開けて行く
   // 手が届く所に来てから、向いて行う（届かないまま止まったら、その仕事はしばらく後回し）
-  const can = j.kind === 'wall' ? reachOK(S, w, a, 'wall', j.k, 'reinforce') : dep ? Math.hypot(j.x - a.x, j.z - a.z) < 0.4 : reachOK(S, w, a, 'door', j.id, j.kind);
-  if (can && (r !== 'moving' || Math.hypot(j.x - a.x, j.z - a.z) < (dep ? 0.3 : 0.6))) {
+  const can = j.kind === 'wall' ? reachOK(S, w, a, 'wall', j.k, 'reinforce') : dep ? Math.hypot(j.x - a.x, j.z - a.z) < 0.5 : reachOK(S, w, a, 'door', j.id, j.kind);
+  if (can && (r !== 'moving' || Math.hypot(j.x - a.x, j.z - a.z) < (dep ? 0.35 : 0.6))) {
     inp.mx = inp.mz = 0;
     const want = dep ? j.yaw : yawTo(j.lx - a.x, j.lz - a.z);
     inp.yaw = turnToward(a.yaw, want, 6 * dt);
     inp.pitch = turnToward(a.pitch, 0, 3 * dt);
     if (Math.abs(angDiff(a.yaw, want)) < (dep ? 0.06 : 0.2)) {
       if (j.kind === 'wall') pushAct(inp, { a: 'op', k: 'wall', id: j.k, q: 1, op: 'reinforce' });
-      else if (dep) pushAct(inp, { a: 'deploy', id: j.g });
+      else if (dep) { pushAct(inp, { a: 'deploy', id: j.g }); (ai.badJobs || (ai.badJobs = {}))[j.key] = S.t + Math.round(30 / S.dt); } // 置けなくても同じ所はしばらく選ばない
       else pushAct(inp, { a: 'op', k: 'door', id: j.id, op: j.kind });
       j.done = true;
     }
@@ -254,6 +255,38 @@ function pickPrepJob(S, w, a, site) {
   const room = roomAtPos(w, site.x, site.y, site.z);
   if (room < 0) return null;
   const r = w.rooms[room];
+  // 置く物（シージの守りと同じ。準備の初めに）: 部屋の入口の内側に置ける盾（入口を向く）、入口の外に有刺鉄線。入口ごとに1つずつ。
+  // 置ける所（depSpot が通る所）を、入口からの距離と横のずれを変えて探す
+  const has = (id) => { const g = a.inv.gear.find(q => q.id === id); return !!(g && g.n > 0); };
+  const near = (x, z) => (S.deps || []).some(q => Math.hypot(q.x - x, q.z - z) < 1.3);
+  const rg0 = roomGraph(w);
+  const fake = { id: a.id, x: 0, y: 0, z: 0, yaw: 0, ground: true, air: false, vault: null };
+  const findSpot = (d, nx, nz, y, k, dists, inside) => {
+    const D = k === 'wire' ? DEP.wire.dist : DEP.shield.dist, yaw = Math.atan2(-nx, -nz);
+    for (const dd of dists) for (const lat of [0, 0.35, -0.35]) {
+      const px = d.cx + nx * dd * (inside ? 1 : -1) + nz * lat, pz = d.cz + nz * dd * (inside ? 1 : -1) - nx * lat;
+      const rid = roomAtPos(w, px, y, pz);
+      if (near(px, pz) || rid < 0 || w.rooms[rid].out || (rid === room) !== inside) continue; // 準備中は外に出られない（外には置かない）
+      fake.x = px - Math.sin(yaw) * D; fake.z = pz - Math.cos(yaw) * D; fake.y = y; fake.yaw = yaw;
+      if (!depSpot(S, w, fake, k)) continue;
+      return { x: fake.x, z: fake.z, yaw };
+    }
+    return null;
+  };
+  for (const p of rg0.adj[room] || []) {
+    if (p.type !== 'door' || p.door < 0) continue;
+    const d = w.doors[p.door], ds = S.doors[p.door];
+    if (!ds || ds.broken) continue;
+    const inSide = sideOf(d, r.cx, r.cz) || 1, nx = d.nx * inSide, nz = d.nz * inSide, y = d.L * LH;
+    if (has('dshield') && !taken.has('ps' + p.door)) {
+      const sp = findSpot(d, nx, nz, y, 'shield', [1.5, 1.2, 1.9, 2.3], true);
+      if (sp) return { kind: 'dep', g: 'dshield', key: 'ps' + p.door, x: sp.x, y, z: sp.z, yaw: sp.yaw, lx: d.cx, lz: d.cz };
+    }
+    if (has('wire') && !taken.has('pw' + p.door)) {
+      const sp = findSpot(d, nx, nz, y, 'wire', [1.6, 1.3, 2.0], false);
+      if (sp) return { kind: 'dep', g: 'wire', key: 'pw' + p.door, x: sp.x, y, z: sp.z, yaw: sp.yaw, lx: d.cx, lz: d.cz };
+    }
+  }
   // 補強: 部屋の外周の石膏・木の壁
   if ((m.reinfLeft ?? 0) > 0) {
     let best = null, bd = 1e9;
@@ -282,23 +315,6 @@ function pickPrepJob(S, w, a, site) {
     // 部屋の内側に立つ
     const inSide = sideOf(d, r.cx, r.cz);
     return { kind: 'bar', id: p.door, key: 'd' + p.door, x: d.cx + d.nx * inSide * 0.7, y: d.L * LH, z: d.cz + d.nz * inSide * 0.7, lx: d.cx, lz: d.cz };
-  }
-  // 置く物（シージの守りと同じ）: 部屋の入口の内側に置ける盾（入口を向く）、入口の外に有刺鉄線
-  const has = (id) => { const g = a.inv.gear.find(q => q.id === id); return !!(g && g.n > 0); };
-  const near = (x, z) => (S.deps || []).some(q => Math.hypot(q.x - x, q.z - z) < 1.3);
-  for (const p of rg.adj[room] || []) {
-    if (p.type !== 'door' || p.door < 0) continue;
-    const d = w.doors[p.door], ds = S.doors[p.door];
-    if (!ds || ds.broken) continue;
-    const inSide = sideOf(d, r.cx, r.cz) || 1, nx = d.nx * inSide, nz = d.nz * inSide, y = d.L * LH;
-    if (has('dshield') && !taken.has('ps' + p.door)) {
-      const px = d.cx + nx * 1.5, pz = d.cz + nz * 1.5;
-      if (!near(px, pz) && roomAtPos(w, px, y, pz) === room) return { kind: 'dep', g: 'dshield', key: 'ps' + p.door, x: px + nx * 0.78, y, z: pz + nz * 0.78, yaw: Math.atan2(-nx, -nz), lx: d.cx, lz: d.cz };
-    }
-    if (has('wire') && !taken.has('pw' + p.door)) {
-      const px = d.cx - nx * 1.6, pz = d.cz - nz * 1.6;
-      if (!near(px, pz) && roomAtPos(w, px, y, pz) !== room) return { kind: 'dep', g: 'wire', key: 'pw' + p.door, x: px + nx * 1.05, y, z: pz + nz * 1.05, yaw: Math.atan2(-nx, -nz), lx: px, lz: pz };
-    }
   }
   return null;
 }

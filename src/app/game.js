@@ -961,10 +961,9 @@ export class Match {
     this.ctxT -= dt;
     if (this.ctxT <= 0) {
       this.ctxT = 0.12; this.ctx = p.alive ? contextOf(S, this.w, p) : null;
-      // 乗り越えられるか（飛び降りなら高さ）
+      // 乗り越えられるか（ボタンを明るくするだけ。文字は出さない）
       const vp = p.alive && !p.vault ? vaultPlan(S, this.w, p, this._vp || (this._vp = {})) : null;
-      this.vaultOK = !!vp; this.vaultDrop = vp && vp.drop > 0 ? vp.drop : 0;
-      this.vaultKind = !vp ? '' : vp.drop > 0 ? 'drop' : vp.onto ? 'onto' : vp.gk >= 0 ? 'glass' : '';
+      this.vaultOK = !!vp;
       // 置く物を手に持っている: 前に置けるか
       const hg = p.alive && p.ws && p.ws.slot === 2 && p.ws.gear && GEAR[p.ws.gear] && GEAR[p.ws.gear].kind === 'deploy' ? GEAR[p.ws.gear] : null;
       this.depHint = hg ? (depSpot(S, this.w, p, hg.dep) ? `${hg.name}: 射撃で前に置く` : `${hg.name}: ここには置けない（${{ space: '前に物がある', floor: '平らな床だけ', person: '前に人がいる', air: '足元が不安定' }[DEP_WHY] || '場所がない'}）`) : '';
@@ -975,7 +974,7 @@ export class Match {
       p, wi, pvp: S.pvp, yaw: this.cam ? this.cam.yaw : p.yaw, adsOn: this.adsOn, leanL: this.leanSide < 0, leanR: this.leanSide > 0, lowOn: this.lowOn, nvgOn: this.nvgOn, hasNvg: p.armor.head === 'nvg',
       gearSel: this.gearSel, gearId: p.ws.gear, team: this.team,
       spread: wi ? spreadDeg(S, p, WEAPONS[wi.id], wi) : 2,
-      optic: null, canVault: this.vaultOK !== false, vaultDrop: this.vaultDrop || 0, vaultKind: this.vaultKind || '',
+      optic: null, canVault: this.vaultOK !== false,
       ctxLabel: c ? (c.def.far ? (c.def.why === 'block' ? '回り込む' : '近づく') : (OP_NAME[c.def.op] || c.def.op)) : '',
       cmdLabel: '命令', mmZoom: this.mmZoom,
       droneOK: S.pvp && S.m.kind !== 'tdm' && p.team === S.m.att && (S.m.phase === 'prep' ? !!p.staged : S.m.phase === 'action' && p.alive && !p.down) && ((p.dronesLeft ?? 2) > 0 || S.actors.some(d => d.isDrone && d.owner === p.id && d.alive)),

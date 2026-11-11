@@ -642,7 +642,7 @@ export class Renderer {
 // 置ける盾の形: 鋼の板（のぞき窓つき）と、後ろの脚。-Z が敵の側
 function shieldMesh() {
   const B = new MeshBuilder();
-  const S = DSHIELD, t = 0.028, st = hex('#3c423d'), ed = hex('#2a2e2b'), bl = hex('#1d1f1e');
+  const S = DSHIELD, t = 0.028, st = hex('#4b544d'), ed = hex('#2c312d'), bl = hex('#1d1f1e');
   B.bbox(-S.hw, 0.03, -t, S.hw, S.s0, t, 0.012, LAYER.metal, st);
   B.bbox(-S.hw, S.s1, -t, S.hw, S.h, t, 0.012, LAYER.metal, st);
   B.bbox(-S.hw, S.s0 - 0.01, -t, -S.shw, S.s1 + 0.01, t, 0.008, LAYER.metal, st);
@@ -650,11 +650,13 @@ function shieldMesh() {
   // のぞき窓の縁と、表の補強の帯
   B.box(-S.shw - 0.015, S.s0 - 0.015, -t - 0.006, S.shw + 0.015, S.s0, -t, LAYER.metal, ed);
   B.box(-S.shw - 0.015, S.s1, -t - 0.006, S.shw + 0.015, S.s1 + 0.015, -t, LAYER.metal, ed);
-  B.box(-S.hw + 0.02, 0.32, -t - 0.008, S.hw - 0.02, 0.36, -t, LAYER.metal, ed);
+  for (const yb of [0.32, 0.86]) B.box(-S.hw + 0.02, yb, -t - 0.008, S.hw - 0.02, yb + 0.04, -t, LAYER.metal, ed);
+  // 縁
+  for (const sx of [-S.hw, S.hw - 0.025]) B.box(sx, 0.03, -t - 0.006, sx + 0.025, S.h, -t, LAYER.metal, ed);
   // 後ろの脚（斜めの支え）と取っ手
   for (const sx of [-0.36, 0.36]) {
-    B.tube([sx, 0.62, t], [sx, 0.0, 0.38], 0.016, 0.016, 6, LAYER.metal, bl, { caps: true });
-    B.bbox(sx - 0.04, 0, 0.33, sx + 0.04, 0.025, 0.43, 0.006, LAYER.rubber, bl);
+    B.tube([sx, 0.85, t], [sx, 0.0, 0.46], 0.017, 0.017, 6, LAYER.metal, bl, { caps: true });
+    B.bbox(sx - 0.04, 0, 0.41, sx + 0.04, 0.025, 0.51, 0.006, LAYER.rubber, bl);
   }
   B.tube([-0.12, S.h - 0.06, t + 0.005], [0.12, S.h - 0.06, t + 0.005], 0.012, 0.012, 6, LAYER.rubber, bl, { caps: true });
   return B;
