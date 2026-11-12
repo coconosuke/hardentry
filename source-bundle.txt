@@ -1,8 +1,8 @@
-HARD ENTRY ソース一式（2026-11-12T13:07:59.775Z）
+HARD ENTRY ソース一式（2026-11-12T13:55:55.313Z）
 復元: node tools/unbundle.mjs source-bundle.txt <出力先>
 （tools/unbundle.mjs がない場合は、下の "@@@@ FILE " の区切りごとにファイルへ書き出す。base64 と書かれたものはデコードする）
 
-@@@@ FILE DESIGN.md text 93533
+@@@@ FILE DESIGN.md text 96541
 # HARD ENTRY（仮タイトル）設計メモ
 
 ## 文脈が消えたら最初に読む
@@ -56,8 +56,8 @@ HARD ENTRY ソース一式（2026-11-12T13:07:59.775Z）
 - 2026-11-12 16:33〜16:34 2倍・3倍・4倍・6倍・8倍のサイトやスコープも実装。付けられる銃は実際の銃の仕様に合わせて。実際のスコープ・サイトをモデルに（→ 下の「倍率の照準器」）。
 - 2026-11-12 17:44〜17:50 片側だけ使える物（狙撃銃）はチームデスマッチではない方がいい → チームデスマッチでは両方使えるべき、という意味（→ TDM では両方のチームが使える）。
 - 2026-11-12 21:11 ダッシュ中はほかの操作を受け付けないのを直して。ダッシュを入力していても、操作したアクションが先。リーンならリーンをやめたら再びダッシュ、ADS も同じ。リロードはリロードが先になるが、ダッシュを入力し直したらリロードをキャンセルできるように（→ 下の「ダッシュ中の操作」）。
-- 2026-11-12 21:59 「続きから」はなくしていい。どのモードでも（→ 次の版）。
-- 2026-11-12 22:05 スコープをのぞいたときに UI が隠れるのを改善。スコープやサイトをのぞいたときの視点の表現や揺れも現実に沿って。ただし程よいリアルさで、ゲームのバランスに合わせて（→ 次の版）。
+- 2026-11-12 21:59 「続きから」はなくしていい。どのモードでも（→ 0.1.12 でなくした。タイトルのボタン・裏に回ったときの保存・アーティファクトを更新したときに試合へ戻るのも）。
+- 2026-11-12 22:05 スコープをのぞいたときに UI が隠れるのを改善。スコープやサイトをのぞいたときの視点の表現や揺れも現実に沿って。ただし程よいリアルさで、ゲームのバランスに合わせて（→ 0.1.12。下の「構えたときの見え方と揺れ」）。
 
 ## 約束（仕様・数値）— 必ず守る。守れなくなったら先に言う
 - 仮に決めて伝えたこと（15:20 送信）: ゲーム名「HARD ENTRY」（仮）。PvP は「SWAT 対 立てこもり犯」の攻守（シージの攻撃／防衛に相当）。掛け声・無線は英語の音声＋日本語字幕。血の表現あり（設定で消せる）。アプリ版のリポジトリはユーザーに作ってもらう（`hardentry`、Settings → Pages で main / root）。
@@ -158,6 +158,7 @@ HARD ENTRY ソース一式（2026-11-12T13:07:59.775Z）
 - 11-07 武器を増やした（計56丁）: SWAT に M4A1・MCX VIRTUS・AUG A3・Tavor X95・SCAR-H・HK417、Vector・MP5K-PDW・MP9・Scorpion EVO 3、KSG、M17・Glock 19・Beretta 92FS・Desert Eagle、両方に Saiga-12K・SPAS-12。犯人側に SKS・Mini-14・vz.58・RPK、PP-19 Bizon・vz.61 Skorpion。対戦で選べるのは陣営ごとの一覧（npc.js PVP_ALLOWED。HK417 は2発で倒せる連射になるので対戦には入れない）。容疑者の持ち物にも混ぜた。
 - 11-07 アタッチメントは RoN のように7つの枠: 照準器（アイアン・ドット・広窓ドット SRS・ホロ・4倍 ACOG・等倍〜4倍／拳銃は RMR・SRO）、マズル（消音器・コンペンセイター・マズルブレーキ・フラッシュハイダー／散弾はチョーク）、グリップ（縦・斜め・短い縦・ハンドストップ）、ライト・レーザー（ライト・赤のレーザー・両方・赤外線レーザー）、弾倉（標準・長い・2本つなぎ・ドラム）、銃床（標準・縮める・重い・たたむ）、色（標準・タン・OD・グレー）。数値は weapons.js の ATTACH（反動・構える時間・リロード・歩く速さ・腰だめ・音・発射炎・散弾の広がり）。付けられる物は銃ごと（attachOptions。見た目と合わせる: 前の握りが元からある AUG・MP9・MP5K・MP7 はグリップなし、レールのない拳銃はライトなし など）。
 - 狙撃銃（11-12 の要望で追加。計57丁）: AT308（アキュラシー・インターナショナルの警察向けのボルトアクション。7.62x51mm・10発の箱弾倉・SWAT）。1発ごとに右手でボルトを起こして引き、押して倒す（0.95秒。この間は撃てない。見た目は右手が槓桿へ行きボルトが回って下がる、音は起こす・引く・押す・倒す、薬莢はボルトを引ききったときに飛ぶ）。照準器は狙撃用スコープ（シュミット＆ベンダー PM II 3-12x50 を元に。4倍・8倍を射撃モードのボタンで切り替え、HUDのボタンに ×4/×8。像はミルドットの十字と中心の赤い点）・等倍〜8倍・6倍・4倍・等倍〜4倍。8倍の見回しの速さは4倍の半分（画面の上で同じ速さ）、エイムアシストの範囲も倍率に合わせて狭い。構えると照準がゆっくり揺れる（立ち 約0.2°、しゃがみ半分、伏せ4分の1、動くと大きい、腕のけがで大きい。弾も揺れた向きへ飛ぶ）。腰だめ 6°、構える 0.5秒、動きやすさ 88%。作戦の威力は同じ弾の小銃と同じ（7.62x51mm）。対戦: 胴 115（軽装100・中装110は1発、重装125は耐える）、頭は即死（ほかの銃と同じ）。対戦では SWAT 側だけが選べる（ボットは使わない）。両チームが同じ条件で戦う TDM では、両方のチームが使える（11-12 17:44〜17:50 の要望。犯人側の装備にも選べ、「TDMだけ（爆弾・殲滅戦は SWAT 側だけ）」と出る。攻守のモードで犯人側の装備に入っていたら既定の主武器になる）。
+- 構えたときの見え方と揺れ（11-12 22:05 の要望。実際に沿って、程よく。weapon.js・game.js _aimFx・hud.js）: どの銃も構えると照準がゆっくり揺れ、弾は揺れた向きへ飛ぶ。立って止まっていて 約0.06〜0.13°（重い銃ほど大きく、拳銃は肩で支えないので大きい。狙撃銃 AT308 は 0.2°）。しゃがむと半分、伏せると4分の1、歩くと2倍ほど、腕のけが 1.8倍、リーン 1.15倍。止まって構えていると1.5秒で3割落ち着く。揺れは ゆっくりした8の字 ＋ 息（約4秒で上下）＋ 手の小さなふるえ。走ったあとは息が上がり（5秒走ると最大。止まると6秒・歩くと9秒で戻る。move.js a.fat）、揺れが2倍ほどになり速い息が混ざる。等倍の照準器（ドット・ホロ・アイアン）は目はほとんど動かず銃が揺れる: 揺れの65%は銃と照準の点が画面の上で動き、35%が視界。スコープはのぞききると目と筒が一緒に動くので像ごと揺れ、模様は真ん中のまま。スコープは構え0.7〜0.95で接眼レンズの丸い像が大きくなりながら現れ（0.9で銃の像と入れ替わる）、目と筒の軸のずれで丸い視界がずれて縁が暗くぼやける（スコープの影: 撃つと跳ね、向きを速く変えると遅れ、歩くと揺れ、揺れにもついていく。半径の14%まで）。内側の縁は少し暗い（筒の中）。スコープの外側の黒は HUD のいちばん下に置く（前は上に置いていて、ミニマップ・方位・体力・弾数・味方などが黒に隠れていた）。
 - 倍率の照準器（11-12 の要望で追加。実在の照準器の形と照準の模様を元に）: 2倍 ACOG TA47 2x20（細い胴・赤い十字）、3倍 EXPS3＋G33（ホロサイトの後ろの3倍ブースター。STS の台の左の蝶番で横へ倒すと等倍のホロサイト）、4倍 ACOG TA31 4x32（赤い山形と 5.56mm の距離の目盛り。TA51 の台）、等倍〜4倍 ELCAN SpecterDR 1-4x（箱形・上の倍率レバー。十字と赤い点）、6倍 ACOG TA648 6x48（大きな48mmの対物・TA75 の台。赤い馬蹄形と点・.308 の距離の目盛り）、等倍〜8倍 Nightforce NX8 1-8x24（片持ちの台・2ミルごとの目盛りと赤い円）、狙撃用 PM II 3-12x50（4倍・8倍）。倍率を切り替えられる物は、構えている間に射撃モードのボタンで切り替える（射撃モードが1つの銃はいつも。構えていないときは連射・単発）。等倍のスコープは丸い窓が広い。像は SVG（style.css）、形は guns.js addSight。付けられる銃は実銃の取り付け方に合わせる（weapons.js rifleSights）: 上がレールの小銃はドット・ホロ・2倍・4倍・等倍〜4倍、ブースターは上のレールが長い物（vz.58 は短いので付かない）、等倍〜8倍は銃身が長めの物（M4A1・HK416・AUG・Tavor・SCAR-H・HK417）、6倍（7.62mm 用）は SCAR-H・HK417・G3（爪の台）。G3 はドット・2倍・4倍・6倍、G36C はドット・ホロ・2倍。短機関銃はレールがあれば2倍まで（9mm の目盛りの型もある）、上のレールが長い MPX・UMP・Vector はブースターも。散弾銃と拳銃に倍率の照準器はない。AK・SKS・Mini-14・RPK は照準器なし。見回しの速さ: 倍率の照準器は「スコープ」の感度（4倍が基準）を倍率に合わせて変える（2倍は約1.6倍、8倍は半分。画面の上で同じ速さ）。
 - レーザー: ライトのボタンで点ける。点けている間だけ腰だめの散らばりが小さくなる。赤は線と点が誰にでも見える、赤外線は暗視装置でだけ見える。照準器を載せるとレールの上の照門はたたむ。
 - 特殊装備の使い方（2026-10-30 決定）: 盾は副武器に持ち替えると構える（左手で胸の前。前からの弾を止める・7.62×51mmの徹甲弾だけ抜ける・ADSでは盾を下げて拳銃を構える）。M320・オプティワンド・破城槌・ブリーチング用散弾銃は「装備」の長押しメニューから構える（4番目の持ち物）。射撃ボタンで使う: M320 は撃つ（1発ずつ自動で込める2.6秒、射撃モードのボタンで弾の種類）、オプティワンドは扉を見ていれば扉の下から、そうでなければ角の先をのぞく、破城槌と散弾銃は閉じた扉を見て使う。扉の操作メニューからも使える。
@@ -179,7 +180,7 @@ HARD ENTRY ソース一式（2026-11-12T13:07:59.775Z）
 - アプリ版: ゲストごとにWebRTCのデータチャネル（写しは順不同・再送なし、命令と出来事は順番どおり）。申し込みと返事は公開MQTT中継（トライアド・タクティクスの部品を多人数用に直す）。予備にコードの手渡し。
 
 ### 画面の流れ
-- 読み込み → タイトル（作戦・対戦・訓練・設定・資料室・続きから）→ 作戦: ひとり／みんなで → マップ・作戦の種類・難易度・人数 → ブリーフィング（見取り図・情報・目的・交戦規定）→ 装備（自分と隊員）→ 突入口を選ぶ → 作戦 → 結果（点数の内訳・評価・成績）。
+- 読み込み → タイトル（作戦・対戦・訓練・設定・資料室。「続きから」は 0.1.12 でなくした）→ 作戦: ひとり／みんなで → マップ・作戦の種類・難易度・人数 → ブリーフィング（見取り図・情報・目的・交戦規定）→ 装備（自分と隊員）→ 突入口を選ぶ → 作戦 → 結果（点数の内訳・評価・成績）。
 - 対戦: ひとり（ボット）／みんなで → 部屋の設定（モード・マップ・各チームの人数1〜4・ボットの強さ・勝利ラウンド・時間・エイムアシスト・味方撃ち）→ ロビー（チーム分け・装備）→ 対戦 → 結果（キル・デス・アシスト・MVP）。
 - 訓練: 射撃場とキルハウス（命令の練習）。
 
@@ -199,7 +200,7 @@ HARD ENTRY ソース一式（2026-11-12T13:07:59.775Z）
 4. 横向きは縦持ちで90度回す（座標変換・自前スクロール）。基準はステージの幅高さのCSS変数。安全領域（アイランドのない側は16px、角の段は32px、window.orientationで判定）。-webkit-text-size-adjust:100%。はみ出し・切れ・重なりなし。全画面サイズで自動テスト（実フォント）。
 5. タッチ基本。やり直せない操作はタッチで2段階・マウスで1回（設定で切替）。2本指同時操作。タップはpointerupで判定し続くclickは捨てる。長押し繰り返し。視点を勝手に動かさない＋「元に戻す」。文字入力は回した画面の外で端末の向きのまま。
 6. 音は指を離した瞬間に開始。audioSession 'ambient'（消音でも鳴らす時だけ'playback'）。オフラインで数値検査、声は音声認識。BGM・効果音・声の音量は別。裏に回ったら止める。
-7. localStorageはtry/catch、キーに版。裏に回ったら自動保存→「続きから」。アプリ版は保存場所が別、引き継ぎコード。
+7. localStorageはtry/catch、キーに版。裏に回ったら一時停止（遊びかけの保存と「続きから」は 0.1.12 でなくした。11-12 21:59 の要望。どのモードでも。オンラインの部屋のつなぎ直し（ホストが読み込み直しても部屋を続ける・ゲストが入り直す）は「続きから」とは別なので残す）。アプリ版は保存場所が別、引き継ぎコード。
 8. オンライン: ホスト権威、番号付き命令、ロビー、5文字コードと共有リンク、Claude内はroom/db、アプリはWebRTC＋MQTT中継、手動予備、再接続、版チェック、テストは自前中継。
 9. アプリ版: GitHub Pages（公開リポジトリのmain直下、.nojekyll）、SWはno-cache・ビルドごとのキャッシュ名・アイコンは横取りしない、apple-touch-iconはdata URLでページ内、起動時に別ページへ飛ばさない、black-translucentの黒帯対策（WebKit bug 301108）、iOS 26の共有ボタンは「…」の中、Android用マニフェスト。
 10. Claude版: alert等なし、許可CDNのみ、同じパスで更新（capabilitiesは省略で引き継ぎ）、再公開時に途中状態を引き継ぐ。
@@ -308,7 +309,8 @@ HARD ENTRY ソース一式（2026-11-12T13:07:59.775Z）
 - 11-12 版 0.1.10（狙撃銃 AT308・倍率の照準器 2・3・4・6・8倍。実在の照準器を元にした形と照準の模様）。互換6（新しい銃の番号。古い版とはオンラインで遊べない）。テスト一式 79/80（単体60件。作戦のAIだけの試合（60こま）完了24/35＝0.1.9 と同じ（AIは変えていない）。対戦ボット 27試合すべて決着）。落ちた1つは「命令の長押しで円形のメニュー」で、テストの待ち方の問題（この環境の描画が1こま1.5秒前後で、長押しが決まる前の0.7秒で見ていた）。出るまで待つように直して、単独で2回とも合格（8項目）。
 - 11-12 港を広げた（「マップが単調で狭い」への対応の続き）: 倉庫を屋根まで吹き抜け（6m）にした。西に中2階（冷蔵室の上の事務所・作業場の上の休憩室・トイレの上の更衣室と、吹き抜けを見下ろす通路）、北の壁ぞいのキャットウォーク（手すり）、現場事務所の上の物置（窓から倉庫を見下ろす）。倉庫の南の壁ぞいの鉄の階段（西へ上がる）から上がる。倉庫の高い窓。天井灯は屋根の高さ（強め）。部屋 13 → 18、扉 18 → 22、置き物 104 → 129。
 - 11-12 版 0.1.11（ダッシュ中の操作・港の拡張・TDM の狙撃銃は両チーム）。互換7（港の部屋と扉が増え、オンラインの動作 'sprint' が増えた）。オンラインのゲストは、自分のリロードと倍率の切り替えを手元で先に動かしていなかった（リロードの動きと音が出ず、倍率が切り替わらず、リロード中に走れるずれもできる）→ 手元でも動かす（ダッシュの直しで見つけた）。テスト一式 82/83（単体68件。ダッシュ中の操作をブラウザで3項目追加）。落ちた1つは「ダッシュの固定」の項目のうちリーンの見方で、固定で走り続けて壁ぎわにいると傾く量が小さくなるのに、傾きの量で見ていた。リーンの入力が効いて走らないことを見るように直し、同じ手順を単独で回して 13/13。作戦の AI だけの試合（2シード×7マップ×5作戦・60こま）: 完了 44/70（0.1.10 は 48/70。シード7だけなら 22/35、0.1.10 は 24/35）。違いは港だけで 9 → 5/10: 隊長役の AI が、何度も通る倉庫を「入れない部屋」としてふさいで中2階へ行かないまま見回りを打ち切る、中2階から撃ち下ろされて倉庫で隊員がやられる。対戦ボット（港、シード1〜6と11〜16の12試合ずつ）: 爆弾の攻撃側 53%（27/51）・殲滅戦の SWAT 側 41%（25/61）・TDM のチーム0 42%（5/12）（広げる前はシード11〜16で 11%・13%・33%）。ダッシュの直しでボットも撃つ・リロードの間は走らなくなったが、ガソリンスタンドで比べて大きな違いはない（爆弾の攻撃 52→50%・殲滅戦 12→12%）。
-- 次: 「続きから」をなくす（21:59）・スコープをのぞいたときの UI と、のぞいたときの見え方・揺れ（22:05）→ アパートの拡張（できている）。実機での確認をお願いする → その結果で直す。残り: ほかのマップの拡張（オフィス・銀行・モーテル）。AI の弱いところ（後で）: 隊長役の AI は「移動の空振り」を続けての回数でなく通った回数で数えていて、何度も通る部屋（港の倉庫）をふさぐ（入れた部屋で数え直すやり方は、途中まで比べたところ、ほかのマップで終わるのが遅くなり完了も増えなかったので、別のやり方を試す）。小さい部屋の中から外へ突入すると、入った隊員が向こう側にいる味方に詰まり、突入した扉を自分で閉めて戻る、をくり返す（ガソリンスタンドの2階の物置）。
+- 11-12 版 0.1.12（「続きから」をなくした・スコープをのぞいても UI が隠れない・構えたときの見え方と揺れ）。互換8（揺れでオンラインの弾の向きが変わる）。テスト一式 83/83（単体71件。揺れの単体3件、「続きから」がないことをブラウザで確かめる項目に置きかえ）。作戦の AI だけの試合（2シード×7マップ×5作戦・60こま）: 完了 41/70（0.1.11 は 44/70。違いはオフィス 9→7・ナイトクラブ 8→7 だけ。AI も構えると揺れて弾の向きが少し変わり、そこから先の展開が変わる。近い撃ち合いの当たりはほぼ変わらない）。対戦ボット（シード1〜6）: ガソリンスタンド 爆弾の攻撃 50→55%・殲滅戦の SWAT 12→23%、港 爆弾の攻撃 70→71%・殲滅戦の SWAT 32→23%（6試合ずつなので揺れの影響は見分けられない程度）。
+- 次: アパートの拡張（できている）。実機での確認をお願いする → その結果で直す。残り: ほかのマップの拡張（オフィス・銀行・モーテル）。AI の弱いところ（後で）: 隊長役の AI は「移動の空振り」を続けての回数でなく通った回数で数えていて、何度も通る部屋（港の倉庫）をふさぐ（入れた部屋で数え直すやり方は、途中まで比べたところ、ほかのマップで終わるのが遅くなり完了も増えなかったので、別のやり方を試す）。小さい部屋の中から外へ突入すると、入った隊員が向こう側にいる味方に詰まり、突入した扉を自分で閉めて戻る、をくり返す（ガソリンスタンドの2階の物置）。
 
 @@@@ FILE dev/view.html text 446
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -393,9 +395,9 @@ export async function getAssetURL(name, type) {
   return URL.createObjectURL(new Blob([buf], { type }));
 }
 
-@@@@ FILE src/app/game.js text 90290
+@@@@ FILE src/app/game.js text 92872
 // 1回の試合: エンジンを進め、入力を命令にし、出来事を音・効果・HUDへ。カメラ（一人称）と描画。
-import { createGame, step, dump, load } from '../engine/engine.js';
+import { createGame, step, load } from '../engine/engine.js';
 import { eyeOf, capsOf } from '../engine/combat.js';
 import { curWeapon, curW, ammoCount } from '../engine/actor.js';
 import { contextOf, OP_NAME, doorOps, personOps } from '../engine/interact.js';
@@ -405,7 +407,7 @@ import { depSpot, DEP_WHY } from '../engine/deploy.js';
 import { raycast, CS, LH, levelOfY, los } from '../engine/world.js';
 import { smokeBetween } from '../engine/nades.js';
 import { sideOf, isOpen } from '../engine/doors.js';
-import { WEAPONS, zoomOf, opticOf, zoomsOf } from '../engine/data/weapons.js';
+import { WEAPONS, zoomOf, opticOf, zoomsOf, swayCamK } from '../engine/data/weapons.js';
 import { GEAR, LONG } from '../engine/data/equipment.js';
 import { MAPS } from '../engine/maps/index.js';
 import { MISSIONS } from '../engine/data/missions.js';
@@ -678,6 +680,37 @@ export class Match {
     if (p.peek) { if (cmd.fire || Math.hypot(cmd.mx, cmd.mz) > 0.3) this._peekQuit(); cmd.fire = false; cmd.ads = false; }
     // しゃがみの状態を体に合わせる（伏せられないなど）
     return cmd;
+  }
+
+  // のぞいたときの見え方（11-12 22:05: 実際に沿って、程よく）。HUD へ渡す（hud.js）:
+  //  ・等倍の照準器: 揺れのうち銃が受け持つ分だけ、照準の点が画面の真ん中からずれる（弾が飛ぶ所）
+  //  ・スコープ: 目に寄せる途中（構え 0.7〜0.95）で接眼レンズの像が大きくなりながら現れる。目と筒の軸のずれで、
+  //    丸い視界が少しずれて縁が暗く・ぼやける（スコープの影）: 反動で跳ね、向きを速く変えると遅れ、歩くと揺れ、揺れにもついていく
+  _aimFx(p, wi, cam, kc, swx, swy, cyaw, cpitch, dt) {
+    const H = this.app.stage ? this.app.stage.h : 390, Wd = this.app.stage ? this.app.stage.w : 844;
+    const ppr = (H / 2) / Math.tan(cam.fov / 2); // 画面の真ん中あたりの、1ラジアンあたりの画素
+    const g = 1 - kc;
+    this._retOff = [-g * swx * DEG * ppr, -g * swy * DEG * ppr];
+    // 向きを変える速さ（ラジアン/秒。なめらかに）
+    const lw = this._lastAim || [cyaw, cpitch];
+    let wy = cyaw - lw[0]; wy = Math.atan2(Math.sin(wy), Math.cos(wy));
+    const wp = cpitch - lw[1];
+    this._lastAim = [cyaw, cpitch];
+    const kk = 1 - Math.exp(-dt / 0.08), ww = this._aimW || [0, 0];
+    ww[0] += ((dt > 0 ? wy / dt : 0) - ww[0]) * kk; ww[1] += ((dt > 0 ? wp / dt : 0) - ww[1]) * kk; this._aimW = ww;
+    const o = opticOf(wi);
+    const a = Math.max(0, Math.min(1, (p.ads - 0.7) / 0.25)), k = a * a * (3 - 2 * a);
+    if (!o.scope || k <= 0) { this._scopeFx = null; return; }
+    const R = Math.min(H, Wd) * (0.3 + 0.13 * k); // 接眼レンズの像の半径（目に寄るほど大きい）
+    const m = Math.min(1, (p.spd || 0) / 2.4), ph = p.phase || 0;
+    let dx = ww[0] * 0.05 * R + Math.sin(ph) * m * 0.05 * R + (swx / 0.5) * 0.06 * R;
+    let dy = ww[1] * 0.05 * R + (Math.abs(Math.cos(ph)) - 0.5) * m * 0.06 * R - (swy / 0.5) * 0.06 * R;
+    const fk = Math.max(0, Math.min(1, p.fireK || 0));
+    dy += fk * 0.09 * R; dx += fk * 0.03 * R * ((p.stats.sh || 0) % 2 ? 1 : -1);
+    const d = Math.hypot(dx, dy), mx = 0.14 * R;
+    if (d > mx) { dx *= mx / d; dy *= mx / d; }
+    const off = Math.min(d, mx) / R;
+    this._scopeFx = { k, r: R, dx, dy, e: R * (0.02 + 0.22 * off) };
   }
 
   // のぞくのをやめる（1回だけ送る）
@@ -1082,6 +1115,7 @@ export class Match {
   _render(dt, inp) {
     const S = this.S, p = this.p, r = this.r, st = this.app.settings;
     let cam;
+    this._scopeFx = null; this._retOff = null; // のぞいたときの見え方（生きて自分の目で見ているときだけ。_aimFx）
     const drone = this.droneId != null ? S.byId[this.droneId] : null;
     if (this._hidDrone != null && this._hidDrone !== this.droneId) { this.av.hidden.delete(this._hidDrone); this._hidDrone = null; }
     const CK = this.camView != null ? mapCams(this.w, this.def)[this.camView] : null;
@@ -1122,14 +1156,16 @@ export class Match {
       const t = this.time;
       // ボルトの操作中（スコープをのぞいたまま）: 像が少し跳ねて傾く（見た目だけ。狙いは変わらない）
       const bp = W && W.bolt && p.ws.st === 'pump' ? Math.sin(Math.PI * Math.max(0, Math.min(1, 1 - p.ws.t / (W.pump || 1)))) * p.ads : 0;
+      // 照準の揺れ（ws.sx/sy。弾も同じ向きに飛ぶ）のうち視界が受け持つ分: スコープをのぞききると全部、等倍の照準器は35%（残りは銃と点が動く）
+      const kc = swayCamK(wi, p.ads), swx = p.ws.sx || 0, swy = p.ws.sy || 0;
       cam = {
         x: e[0], y: e[1], z: e[2],
-        // 反動と、狙撃銃の照準の揺れ（ws.sx/sy。弾も同じ向きに飛ぶ）
-        yaw: cyaw + ((p.ws.ry + (p.ws.sx || 0)) * DEG) + Math.sin(t * 37) * 0.012 * sh + p.flinch * 0.03 * Math.sin(t * 23),
-        pitch: cpitch + ((p.ws.rp + (p.ws.sy || 0)) * DEG) + Math.sin(t * 41) * 0.012 * sh + p.flinch * 0.04 - bp * 0.006,
+        yaw: cyaw + ((p.ws.ry + kc * swx) * DEG) + Math.sin(t * 37) * 0.012 * sh + p.flinch * 0.03 * Math.sin(t * 23),
+        pitch: cpitch + ((p.ws.rp + kc * swy) * DEG) + Math.sin(t * 41) * 0.012 * sh + p.flinch * 0.04 - bp * 0.006,
         roll: p.lean * 0.16 + Math.sin(t * 29) * 0.01 * sh + bp * 0.03,
         fov: 2 * Math.atan(Math.tan(fov0 / 2) / z),
       };
+      this._aimFx(p, wi, cam, kc, swx, swy, cyaw, cpitch, dt);
       if (!this.av.hidden.has(p.id)) this.av.hidden.add(p.id);
     } else {
       // 倒れた: 味方を見る（PvE は隊員、PvP は味方）
@@ -1408,6 +1444,7 @@ export class Match {
     if (v.zoneOK) { const zs = attackZones(this.w, this.def); v.zoneLabel = (zs[p.zone ?? 0] || zs[0] || {}).name || ''; if (zs.length < 2) v.zoneOK = false; }
     // 照準器の今の状態（倍率を切り替えると、模様・スコープの像・広い視野が変わる）
     if (wi) { const g = gunModel(wi.id, wi.att); if (g && g.pts.optic) { const o = opticOf(wi), key = wi.att.sight + o.kind + o.zoom; if (!this._opt || this._opt.key !== key || this._opt.base !== g.pts.optic) this._opt = { key, base: g.pts.optic, v: { ...g.pts.optic, kind: o.kind, scope: o.scope, wide: o.wide, zoom: o.zoom } }; v.optic = this._opt.v; } }
+    v.retOff = this._retOff; v.scopeFx = this._scopeFx;
     if (this.droneId != null || this.camView != null) v.hideCross = true;
     // 案内
     let prompt = '';
@@ -1513,7 +1550,6 @@ export class Match {
   }
   // 撤収（本部に戻る）
   abort() { step(this.G, { [this.p.id]: { act: [{ a: 'abortMission' }] } }); const m = this.S.m; if (m && m.kind === 'pve' && m.phase === 'play') { import_end(this.S); } }
-  saveState() { if (this.done) return null; try { return { dump: dump(this.G), cam: { yaw: this.yaw, pitch: this.pitch }, o: this.o }; } catch (e) { return null; } }
 }
 import { endMission } from '../engine/modes/pve.js';
 import { attackZones, OUT_GRACE, mapCams, CAM_YAW, CAM_PITCH } from '../engine/modes/pvp.js';
@@ -1541,7 +1577,7 @@ function mirrorHTML(e, S) {
 }
 function impSound(m) { return m === M.METAL || m === M.METALFURN || m === M.CAR || m === M.DOORMETAL ? 'impMetal' : m === M.WOOD || m === M.DOORWOOD || m === M.FURN ? 'impWood' : m === M.GLASS ? 'impGlass' : 'impHard'; }
 
-@@@@ FILE src/app/main.js text 18267
+@@@@ FILE src/app/main.js text 16764
 // アプリ全体: 起動・画面の切り替え・試合の開始と終了・保存・画面の作り直し（WebGLが落ちたとき）
 import { Stage } from '../ui/stage.js';
 import { Input, tapHooks } from '../ui/input.js';
@@ -1550,7 +1586,7 @@ import { Screens } from '../ui/screens.js';
 import { AudioSys } from '../audio/audio.js';
 import { Renderer, QUALITY, gfxOf } from '../render/renderer.js';
 import { loadSettings, saveSettings, loadProfile, saveProfile, loadLoadouts, saveLoadouts } from './settings.js';
-import { load, save, remove, purgeOld, exportCode, importCode, parseCode, loadRun } from './save.js';
+import { load, save, remove, purgeOld, exportCode, importCode, parseCode } from './save.js';
 import { getAsset } from './assets.js';
 import { Match } from './game.js';
 import { TitleScene } from './scenes.js';
@@ -1605,6 +1641,7 @@ class App {
 
   async boot(hot) {
     purgeOld();
+    remove('run'); // 「続きから」はなくした（11-12 21:59 の要望。どのモードでも）。前の版の遊びかけの保存を捨てる
     this.stageEl = $('#stage'); this.canvas = $('#gl');
     this.stage = new Stage(this.stageEl);
     this.settings = loadSettings(); this.profile = loadProfile(); this.loadouts = loadLoadouts();
@@ -1651,18 +1688,15 @@ class App {
     this.applySettings(false);
     this._events();
     requestAnimationFrame(this.loop);
-    const run = hot && hot.run ? hot.run : null;
-    if (run) { try { this._openRun(run); return; } catch (e) { console.warn('hot', e); } }
     this.screens.reset('title');
     this.netBoot && this.netBoot();
   }
 
   _events() {
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') { this.hidden = true; this.autosave(); if (this.game && this.mode === 'game' && !this.game.net) this.pauseGame(); this.audio.suspend(); this._releaseWake(); }
+      if (document.visibilityState === 'hidden') { this.hidden = true; if (this.game && this.mode === 'game' && !this.game.net) this.pauseGame(); this.audio.suspend(); this._releaseWake(); }
       else { this.hidden = false; this.audio.resume(); this.last = performance.now(); if (this.net || this.mode === 'game') this._requestWake(); }
     });
-    window.addEventListener('pagehide', () => this.autosave());
     this.canvas.addEventListener('webglcontextlost', (e) => {
       e.preventDefault();
       this.ctxLost = true; this.ctxEl.classList.add('on');
@@ -1670,9 +1704,6 @@ class App {
       if (this.game && this.mode === 'game' && !this.game.net) this.pauseGame();
     });
     this.canvas.addEventListener('webglcontextrestored', () => this._rebuildGL());
-    if (window.claude && window.claude.hot && window.claude.hot.snapshot) {
-      try { window.claude.hot.snapshot(() => ({ run: this._runState() })); } catch (e) { /* なし */ }
-    }
   }
   // 画面が落ちたら作り直す。続けて落ちたら画質を1段下げる
   _rebuildGL() {
@@ -1764,42 +1795,10 @@ class App {
   records() { return load('records', {}) || {}; }
   clearRecords() { remove('records'); }
 
-  // ---- 遊びかけ（続きから）
-  savedRun() {
-    const r = loadRun();
-    if (!r) return null;
-    const o = r.o || {};
-    const label = o.mode === 'pve' ? `${MAPS[o.map] ? MAPS[o.map].name : ''} · ${MISSIONS[o.mission] ? MISSIONS[o.mission].name : ''}` : o.mode === 'train' ? '訓練' : (MODE_INFO[o.mode] ? MODE_INFO[o.mode].name : '');
-    return { label };
-  }
-  _runState() {
-    const g = this.game;
-    if (!g || g.done || g.net) return null;
-    const st = g.saveState();
-    if (!st) return null;
-    return { ...st, at: Date.now() };
-  }
-  autosave() { const r = this._runState(); if (r) save('run', r); }
-  continueRun() {
-    const r = loadRun();
-    if (!r) { this.screens.reset('title'); return; }
-    try { this._openRun(r); } catch (e) { console.warn('続きから', e); remove('run'); this.destroyGame(); this.toTitle(); }
-  }
-  _openRun(r) {
-    this.destroyGame();
-    this.game = new Match(this, { ...r.o, dump: r.dump, cam: r.cam });
-    if (r.o && r.o.mode === 'pve') this.lastPve = r.o.sel || null;
-    this.mode = 'pause'; this.paused = true;
-    this.hud.show(false);
-    this.game.redraw();
-    this.screens.reset('pause');
-  }
-
   // ---- 試合の開始
   _seed() { return (Math.floor(Math.random() * 2 ** 31) ^ Date.now()) >>> 0; }
   async _start(o, label) {
     this.destroyGame();
-    remove('run');
     this.screens.loading(label || '現場へ向かっています…', 0.5);
     this.mode = 'loading';
     await nextFrame();
@@ -1844,7 +1843,6 @@ class App {
     this.input.enabled = false; this.input.reset();
     if (document.pointerLockElement) { try { document.exitPointerLock(); } catch (e) { /* なし */ } }
     this.hud.show(false);
-    this.autosave();
     if (!this.game.net) this._releaseWake();
     this.screens.reset('pause');
   }
@@ -1871,7 +1869,6 @@ class App {
       rec[k] = r;
     }
     save('records', rec);
-    remove('run');
     this.mode = 'result'; this.paused = true;
     this.input.enabled = false; this.input.reset();
     this.hud.show(false);
@@ -1881,7 +1878,7 @@ class App {
     this.audio.ambience(false); this.audio.loop('heart', false, { fade: 0.5 }); this.audio.setHurt(0);
     this.screens.reset('result', res);
   }
-  quitToTitle() { remove('run'); this.toTitle(); }
+  quitToTitle() { this.toTitle(); }
   toTitle() {
     if (this.net) { try { this.leaveRoom(true); } catch (e) { /* なし */ } }
     this.destroyGame();
@@ -2311,11 +2308,10 @@ export function netMixin(Match) {
 function r2(v) { return Math.round((v || 0) * 100) / 100; }
 function r4(v) { return Math.round((v || 0) * 10000) / 10000; }
 
-@@@@ FILE src/app/save.js text 2461
+@@@@ FILE src/app/save.js text 2163
 // 保存（localStorageは必ずtry/catch、キーに版を持たせる）
-// キーの版（DATA_V）は設定・名前・記録の形の版。遊びかけの作戦（run）は中身にエンジンの互換番号（COMPAT）を持ち、
-// 違えば読み込まずに捨てる（互換番号を上げても設定や記録は消えない）。
-import { COMPAT } from '../engine/data/version.js';
+// キーの版（DATA_V）は設定・名前・記録の形の版（互換番号を上げても設定や記録は消えない）。
+// 遊びかけの作戦の保存（「続きから」）は 0.1.12 でなくした（前の版の 'run' は起動のときに捨てる。main.js）
 
 export const DATA_V = 1;
 const PREFIX = 'hardentry.v' + DATA_V + '.';
@@ -2362,13 +2358,6 @@ export function importCode(code) {
     for (const k of ['settings', 'profile', 'records', 'loadouts']) if (o[k]) save(k, o[k]);
     return true;
   } catch (e) { return false; }
-}
-// 遊びかけの作戦: 互換番号が今と同じときだけ使う
-export function loadRun() {
-  const r = load('run');
-  if (!r || !r.dump) return null;
-  try { if (r.dump.v !== COMPAT) throw 0; } catch (e) { remove('run'); return null; }
-  return r;
 }
 
 @@@@ FILE src/app/scenes.js text 2318
@@ -6558,11 +6547,11 @@ export const PROPS = {
 
 @@@@ FILE src/engine/data/version.js text 210
 // 版番号: 互換（セーブ・オンラインの相性。上げたら古いセーブは捨てる）と表示用
-export const VERSION = '0.1.11';
-export const COMPAT = 7;
+export const VERSION = '0.1.12';
+export const COMPAT = 8;
 export const TITLE = 'HARD ENTRY';
 
-@@@@ FILE src/engine/data/weapons.js text 52667
+@@@@ FILE src/engine/data/weapons.js text 53834
 // 銃のデータ（実銃の諸元＋ゲームの扱い）。資料室はここから作る。
 // rpm: 発射速度（毎分）、vel: 銃口の弾の速さ m/s、kg: 重さ、mag: 装弾数、spare: 予備の弾倉の数
 // ads/draw: 構える・持ち替えの時間（秒）、move: 移動の速さの倍率
@@ -7004,6 +6993,22 @@ export function opticOf(wi) {
   const zoom = zoomOf(wi);
   if (x.flip && zoom <= 1) return { kind: 'holo', zoom: 1, scope: false, wide: false };
   return { kind: sid, zoom, scope: !!x.scope, wide: !!(x.wide1 && zoom <= 1) };
+}
+// 構えたときの照準の揺れ（度。立って止まっているとき。11-12 22:05: 実際に沿って、どの銃も構えると揺れる。強さは程よく）。
+// 重い銃ほど大きい（腕で支える重さ）。拳銃は銃床で肩に当てないので大きい。狙撃銃は銃ごとの値（AT308 は 6.4kg で 0.2）
+export function swayOf(W) {
+  if (!W) return 0;
+  if (W.sway != null) return W.sway;
+  const kg = W.kg || 3;
+  return W.cat === 'pistol' ? 0.11 + 0.02 * kg : (W.cat === 'smg' ? 0.06 : 0.075) + 0.012 * kg;
+}
+// 揺れのうち、視界（カメラ）が受け持つ割合。スコープをのぞききると目と筒が一緒に動くので全部（像ごと揺れ、照準の模様は真ん中のまま）。
+// 等倍の照準器（ドット・ホロ・アイアン）は目はほとんど動かず銃が揺れるので 35%（残りは銃と照準の点が画面の上で動く）
+export const SWAY_CAM_SIGHT = 0.35;
+export function swayCamK(wi, ads) {
+  const o = opticOf(wi);
+  const k = o.scope ? Math.max(0, Math.min(1, (ads - 0.7) / 0.25)) : 0;
+  return SWAY_CAM_SIGHT + (1 - SWAY_CAM_SIGHT) * k * k * (3 - 2 * k);
 }
 
 @@@@ FILE src/engine/deploy.js text 8166
@@ -10909,7 +10914,7 @@ export function scoreMission(S) {
   return out;
 }
 
-@@@@ FILE src/engine/modes/pvp.js text 29554
+@@@@ FILE src/engine/modes/pvp.js text 29565
 // 対戦（PvP）: リスポーンありTDM・殲滅戦（リスポーンなし）・爆弾（シージ式の攻守）
 // 陣営: チーム0/1。見た目は SWAT（攻撃・チーム0のTDM）と立てこもり犯（防衛）。空きはボット。
 import { createActor, makeInventory, makeArmor } from '../actor.js';
@@ -11142,7 +11147,7 @@ function resetFighter(S, w, a, pt, side) {
   a.spawnAt = [a.x, a.z];
   a.vx = a.vz = a.vy = 0; a.alive = true; a.dead = false; a.down = false; a.dbno = 0; a.dbnoCount = 0; a.cuffed = false; a.comply = 0;
   a.stun = a.flash = a.gas = a.tased = a.deaf = a.supp = a.bleed = 0; a.flinch = 0; a.act = null; a.carry = null; a.st = 0; a.stance = 0; a.vault = null; a.air = false; a.airTop = null; a.vy = 0;
-  a.lean = 0; a.ads = 0; a.low = 0; a.adsOn = false; a.lowOn = false; a.sprint = false; a.peek = null; a.melee = null; a.gest = null; a.outT = 0; a.outSeen = false; a.spot = 0;
+  a.lean = 0; a.ads = 0; a.low = 0; a.adsOn = false; a.lowOn = false; a.sprint = false; a.fat = 0; a.peek = null; a.melee = null; a.gest = null; a.outT = 0; a.outSeen = false; a.spot = 0;
   a.inj = { arm: 0, leg: 0, head: 0 };
   // 装備は陣営ごと（防護の重さも、選んだ陣営の物）
   const lo = Object.assign({}, PVP_LOADOUTS[side], a.pvpLo && a.pvpLo[side] ? a.pvpLo[side] : {});
@@ -11552,7 +11557,7 @@ export function placeActors(S, w, def) {
   for (let i = 0; i < Math.min(2, civ.length); i++) { const [x, z] = civ[(i + S.m.resets) % civ.length]; spawnCivilian(S, w, x, z, 0, i ? 'adult' : 'staff'); }
 }
 
-@@@@ FILE src/engine/move.js text 24937
+@@@@ FILE src/engine/move.js text 25227
 // 移動: RoN の速さ（歩き2.4・ゆっくり0.96・しゃがみ1.2）、しゃがみ・伏せ・リーン・乗り越え・飛び降り・落下・階段・PvPのダッシュ
 import { groundAt, standAt, ceilAt, pushOut, raycast, STEP, CS, LH, BH, NB, levelOfY, cellType, C, leafEnd, inMap, isWallish } from './world.js';
 import { hurt, pvpDamage, breakGlass } from './combat.js';
@@ -11639,6 +11644,8 @@ export function moveActor(S, w, a, inp, dt, ev) {
   if (a.peek && want < 1) want = 1;
   if (a.down || a.cuffed || a.comply === 2) want = 0;
   if (a.sprint && want) a.sprint = false;
+  // 息の上がり（0〜1）: 走ると5秒で上がりきり、止まると6秒・歩くと9秒で戻る。構えたときの揺れが大きくなる（weapon.js）
+  a.fat = a.sprint ? Math.min(1, (a.fat || 0) + dt / 5) : Math.max(0, (a.fat || 0) - dt / ((a.spd || 0) < 0.3 ? 6 : 9));
   // 引き金を離してからの時間（撃ったあと少しは走らない）。ダッシュを入れ直してリロードをやめるのは、手元が送る動作 'sprint'（interact.js doAction → weapon.js cancelReload）
   a.trigT = inp.fire ? 0 : Math.min(9, (a.trigT ?? 9) + dt);
   const rate = (a.st < 1 && want <= 1) || (a.st <= 1 && want === 0) ? 4.0 : 1.25;
@@ -12760,9 +12767,9 @@ export function stepStatus(S, w, dt, ev) {
   }
 }
 
-@@@@ FILE src/engine/weapon.js text 16137
+@@@@ FILE src/engine/weapon.js text 17146
 // 銃の動き: 撃つ・弾倉（1本ずつ残弾）・通常/速いリロード・1発ずつ込める・ポンプ・持ち替え・反動（BattleBit式）・散らばり
-import { WEAPONS, AMMO, ATTACH, zoomsOf } from './data/weapons.js';
+import { WEAPONS, AMMO, ATTACH, zoomsOf, swayOf } from './data/weapons.js';
 import { LONG, HAND_LONG } from './data/equipment.js';
 import { curWeapon, curW, magCap } from './actor.js';
 import { spawnBullet } from './combat.js';
@@ -12834,14 +12841,22 @@ export function stepWeapon(S, w, a, inp, dt, ev) {
   const adsT = W ? W.ads + attMods(wi).ads : 0.25;
   a.ads = Math.max(0, Math.min(1, a.ads + (a.adsOn ? dt / adsT : -dt / (adsT * 0.8))));
   a.low = Math.max(0, Math.min(1, a.low + (a.lowOn ? dt * 5 : -dt * 6)));
-  // 狙撃銃の照準の揺れ（度。構えたときだけ）: しゃがむと半分、伏せると4分の1、動くと大きい、腕のけがで大きい。
-  // 時間だけで決まる（乱数なし）ので、オンラインのゲストの手元とホストでほぼ同じになる
-  if (W && W.sway && a.ads > 0.01) {
+  // 構えたときの照準の揺れ（度。弾も揺れた向きへ飛ぶ。11-12 22:05: どの銃も。実際に沿って、強さは程よく）
+  //  ゆっくりした8の字のずれ ＋ 息（約4秒で上下）＋ 手の小さなふるえ。しゃがむと半分、伏せると4分の1、動くと大きい、
+  //  腕のけがで大きい、リーンで少し大きい。走ったあとは息が上がって大きく速くなり（数秒で戻る。move.js a.fat）、
+  //  止まって構えていると1.5秒で少し落ち着く。時間と体の状態だけで決まる（乱数なし）ので、オンラインのゲストの手元とホストでほぼ同じになる
+  if (W && a.ads > 0.01) {
+    const still = (a.spd || 0) < 0.3 && a.ads > 0.95;
+    ws.calm = still ? Math.min(1, (ws.calm || 0) + dt / 1.5) : Math.max(0, (ws.calm || 0) - dt * 4);
+    const fat = a.fat || 0;
+    const A = swayOf(W) * a.ads * a.ads * (a.st > 1.5 ? 0.25 : a.st > 0.5 ? 0.5 : 1) * (1 + Math.min(1.5, (a.spd || 0) / 2.4) * 1.5) * (a.inj && a.inj.arm ? 1.8 : 1)
+      * (Math.abs(a.lean || 0) > 0.3 ? 1.15 : 1) * (1 + 0.4 * fat) * (1 - 0.3 * ws.calm);
     const t = S.t * S.dt + a.id * 7.3;
-    const A = W.sway * a.ads * a.ads * (a.st > 1.5 ? 0.25 : a.st > 0.5 ? 0.5 : 1) * (1 + Math.min(1.5, (a.spd || 0) / 2.4) * 1.5) * (a.inj && a.inj.arm ? 1.8 : 1);
-    ws.sx = A * (Math.sin(t * 0.83) * 0.65 + Math.sin(t * 1.91 + 1.3) * 0.35);
-    ws.sy = A * (Math.sin(t * 1.17 + 2.1) * 0.6 + Math.sin(t * 0.57 + 0.4) * 0.4);
-  } else { ws.sx = 0; ws.sy = 0; }
+    // 息: ふだんは 1.55 rad/秒（約4秒）。走ったあとは大きく、速い息（2.7 rad/秒）が混ざる
+    const br = 0.55 * (1 + 1.2 * fat) * Math.sin(t * 1.55) + 0.75 * fat * Math.sin(t * 2.7 + 0.5);
+    ws.sx = A * (0.7 * (Math.sin(t * 0.83) * 0.65 + Math.sin(t * 1.91 + 1.3) * 0.35) + 0.15 * br + 0.05 * Math.sin(t * 10.3 + a.id));
+    ws.sy = A * (0.5 * (Math.sin(t * 1.17 + 2.1) * 0.6 + Math.sin(t * 0.57 + 0.4) * 0.4) + br + 0.05 * Math.sin(t * 12.1 + 2 * a.id));
+  } else { ws.sx = 0; ws.sy = 0; ws.calm = 0; }
   // 走るのをやめた: 銃を上げるまで撃てない（重い銃ほど長い 0.1〜0.25秒）。その間に引いた引き金は覚えておき、上がったら撃つ
   if (ws.sprWas && !a.sprint) ws.so = sprintOutT(W);
   ws.sprWas = !!a.sprint;
@@ -20805,12 +20820,12 @@ export function makeTextures() {
 }
 function vnoiseLine(x, y) { return (Math.sin(y * 1.7 + Math.sin(x * 0.05) * 3) * 0.5 + 0.5); }
 
-@@@@ FILE src/render/viewmodel.js text 32443
+@@@@ FILE src/render/viewmodel.js text 32979
 // 一人称の腕と銃: 腰だめ↔ADS（照準の線を目に合わせる）、揺れ（向きの慣性・歩き・呼吸）、撃った跳ね、リロード・ポンプ・持ち替え・ローレディ・ダッシュ・投げ物
 import { MeshBuilder, hex, mulc } from './build.js';
 import { LAYER } from './textures.js';
 import { makeWorldMesh, drawMesh } from './renderer.js';
-import { WEAPONS, opticOf } from '../engine/data/weapons.js';
+import { WEAPONS, opticOf, swayCamK } from '../engine/data/weapons.js';
 import { GEAR } from '../engine/data/equipment.js';
 import { curWeapon } from '../engine/actor.js';
 import { WV } from './build.js';
@@ -20889,7 +20904,8 @@ export class ViewModel {
     const pistol = !!P.pistol;
     // 倍率スコープをのぞいている: 銃（筒とレンズのふた）は描かず、HUD のスコープの像に任せる（筒の中から見ると視界がふさがれていた）
     const os = P.optic && wi ? opticOf(wi) : null;
-    this.scoped = !!(os && os.scope && a.ads > 0.8);
+    // 構え 0.7〜0.95 で HUD のスコープの像が現れる（game.js _aimFx）。像がほぼ出そろう 0.9 で銃を消す（入れ替わりが目立たないように）
+    this.scoped = !!(os && os.scope && a.ads > 0.9);
     // ブースター（ホロ＋3倍）: 等倍のときは横へ倒す（0.25秒）
     this.flipK = lerp(this.flipK || 0, os && P.optic.kind === 'mag3' && !os.scope ? 1 : 0, 1 - Math.exp(-dt * 12));
     this.flipP = P.flipPivot || null;
@@ -20926,6 +20942,8 @@ export class ViewModel {
     roll += Math.sin(ph) * 0.02 * amp; pitch += Math.sin(this.t * 1.25) * 0.004 * (1 - 0.7 * ads);
     // 揺れ
     yaw += this.sway[0] * 0.6; pitch += this.sway[1] * 0.6; px -= this.sway[0] * 0.04; py -= this.sway[1] * 0.03;
+    // 構えたときの照準の揺れ（エンジンの ws.sx/sy。度）のうち銃が受け持つ分（等倍の照準器は 65%。視界は残り。HUD の点も同じだけずれる）
+    if (wi && a.ads > 0.01) { const g = 1 - swayCamK(wi, a.ads); yaw += g * (ws.sx || 0) * Math.PI / 180; pitch += g * (ws.sy || 0) * Math.PI / 180; }
     // ローレディ・ダッシュ・動作中・持ち替え
     const lowK = Math.max(low, this.actK * (1 - this.freeK) * 0.9);
     pitch -= 1.25 * this.freeK; py -= 0.32 * this.freeK; px += 0.07 * this.freeK; pz -= 0.05 * this.freeK;
@@ -21355,7 +21373,7 @@ export class Book {
 // 爆弾の制限時間（マップで違う）: 「10〜15分」
 function bombMin(M) { const ts = MAP_LIST.filter(id => MAPS[id].missions && MAPS[id].missions.bomb).map(id => MAPS[id].missions.bomb.time || M.time); if (!ts.length) ts.push(M.time); const a = Math.floor(Math.min(...ts) / 60), b = Math.floor(Math.max(...ts) / 60); return a === b ? `${a}分` : `${a}〜${b}分・マップによる`; }
 
-@@@@ FILE src/ui/hud.js text 34261
+@@@@ FILE src/ui/hud.js text 35592
 // HUD（CODモバイル／PUBGモバイル風）: ボタン、ミニマップ、方位、目的、出来事、隊員、体力、弾、字幕、照準、命中、被弾の向き、円形メニュー、HUDの編集
 import { BTN, INFO, ICONS } from './hudlayout.js';
 import { onTap } from './input.js';
@@ -21388,6 +21406,8 @@ export class Hud {
   _build() {
     const r = this.root;
     r.innerHTML = '';
+    // スコープの像（外側の黒）はいちばん下に置く。上に置くと、ミニマップ・体力・弾数・味方・方位などが黒に隠れていた（11-12 22:05）
+    this.scope = el('div', 'hud-scope', '<div class="ret"></div>'); r.appendChild(this.scope);
     // 情報
     // ミニマップ: タップで地図を開く（地図のボタンの代わり）
     const mm = el('div', 'hud-mm'); const mc = document.createElement('canvas'); mc.width = 240; mc.height = 240; mm.appendChild(mc); mm.appendChild(el('div', 'hud-mm-n', 'N')); mm.appendChild(el('div', 'hud-mm-x', svg('expand')));
@@ -21404,7 +21424,6 @@ export class Hud {
     // 中央の物
     this.cross = el('div', 'hud-cross', '<i class="c"></i><i class="t"></i><i class="b"></i><i class="l"></i><i class="r"></i>'); r.appendChild(this.cross);
     this.reticle = el('div', 'hud-reticle'); r.appendChild(this.reticle);
-    this.scope = el('div', 'hud-scope', '<div class="ret"></div>'); r.appendChild(this.scope);
     this.hitm = el('div', 'hud-hit'); r.appendChild(this.hitm);
     this.dmg = el('div', 'hud-dmg'); r.appendChild(this.dmg);
     this.prog = el('div', 'hud-prog', '<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="26" class="bg"/><circle cx="32" cy="32" r="26" class="fg"/></svg><div class="lb"></div>'); r.appendChild(this.prog);
@@ -21578,10 +21597,24 @@ export class Hud {
       if (this.cache.gap !== g) { this.cache.gap = g; this.cross.style.setProperty('--gap', g + 'px'); }
       this.cross.classList.toggle('dot', this.S.crosshair === 'dot');
     }
-    this.reticle.className = 'hud-reticle' + (optic && ads > 0.85 && !optic.scope ? ' on ' + optic.kind : '');
-    // 倍率スコープ: 銃の像と同じ所（構え 0.8）で切り替える
-    const sk = optic && optic.scope && ads > 0.8 ? 'hud-scope on ' + optic.kind + (optic.wide ? ' wide' : '') : 'hud-scope';
+    const retOn = !!(optic && ads > 0.85 && !optic.scope);
+    this.reticle.className = 'hud-reticle' + (retOn ? ' on ' + optic.kind : '');
+    // 等倍の照準器: 揺れのうち銃が受け持つ分だけ、点が真ん中からずれる（弾が飛ぶ所。game.js _aimFx）
+    const ro = retOn && v.retOff ? 'translate(' + v.retOff[0].toFixed(1) + 'px,' + v.retOff[1].toFixed(1) + 'px)' : '';
+    if (this.cache.retT !== ro) { this.cache.retT = ro; this.reticle.style.transform = ro; }
+    // スコープ: 目に寄せる途中（構え 0.7〜0.95）で接眼レンズの像が大きくなりながら現れ、目と筒のずれで丸い視界がずれて縁が暗くなる
+    const fx = optic && optic.scope ? v.scopeFx : null;
+    const sk = fx ? 'hud-scope on ' + optic.kind + (optic.wide ? ' wide' : '') : 'hud-scope';
     if (this.cache.scope !== sk) { this.cache.scope = sk; this.scope.className = sk; }
+    if (fx) {
+      const key = Math.round(fx.r) + ',' + Math.round(fx.dx * 2) + ',' + Math.round(fx.dy * 2) + ',' + Math.round(fx.e) + ',' + Math.round(fx.k * 50);
+      if (this.cache.sfx !== key) {
+        this.cache.sfx = key;
+        const st = this.scope.style;
+        st.setProperty('--sr', fx.r.toFixed(1) + 'px'); st.setProperty('--scx', fx.dx.toFixed(1) + 'px'); st.setProperty('--scy', fx.dy.toFixed(1) + 'px'); st.setProperty('--se', fx.e.toFixed(1) + 'px');
+        st.opacity = fx.k >= 0.99 ? '' : fx.k.toFixed(2);
+      }
+    } else if (this.cache.sfx) { this.cache.sfx = null; this.scope.style.opacity = ''; }
     // 体力・防具
     if (p) {
       const hp = Math.max(0, Math.round(p.hp)), max = p.maxHp || 100;
@@ -22461,7 +22494,7 @@ export function weaponCard(spec, kind) {
     <p class="desc">${esc(W.desc || '')}</p><p class="note">初速 ${W.vel || '-'} m/s · 重さ ${W.kg || '-'} kg</p>`;
 }
 
-@@@@ FILE src/ui/screens.js text 49658
+@@@@ FILE src/ui/screens.js text 49426
 // 画面: 読み込み・タイトル・作戦の準備（マップ・作戦・難易度・人数・突入口）・ブリーフィング・装備・対戦の準備・
 // オンライン（ルームを作る/参加・ロビー）・一時停止・地図（タブレット）・結果・設定・資料室（手順書と資料）
 import { onTap } from './input.js';
@@ -22536,12 +22569,11 @@ export class Screens {
 
   // ---- タイトル
   _title() {
-    const a = this.app, run = a.savedRun();
+    const a = this.app;
     const el = this._mk('title', `
       <div class="t-logo"><div class="t-badge">SWAT · CQB</div><h1>HARD<b>ENTRY</b></h1><p>突入。制圧。確保。</p></div>
       <nav class="t-menu" aria-label="メニュー">
-        ${run ? `<button class="mi main" data-a="continue"><span class="mi-l">続きから</span><span class="mi-d">${esc(run.label)}</span></button>` : ''}
-        <button class="mi ${run ? '' : 'main'}" data-a="pve"><span class="mi-l">作戦</span><span class="mi-d">PvE · ソロ／協力</span></button>
+        <button class="mi main" data-a="pve"><span class="mi-l">作戦</span><span class="mi-d">PvE · ソロ／協力</span></button>
         <button class="mi" data-a="pvp"><span class="mi-l">対戦</span><span class="mi-d">PvP · 1v1〜4v4</span></button>
         <button class="mi" data-a="train"><span class="mi-l">訓練</span><span class="mi-d">射撃場・キルハウス</span></button>
         <button class="mi" data-a="settings"><span class="mi-l">設定</span></button>
@@ -22549,7 +22581,6 @@ export class Screens {
       </nav>
       <div class="t-foot"><span>ヘッドホン推奨</span><span class="ver">互換${COMPAT} · v${VERSION}</span></div>`);
     this._acts(el, {
-      continue: () => a.continueRun(),
       pve: () => this.open('pveMenu'),
       pvp: () => this.open('pvpMenu'),
       train: () => this.open('train'),
@@ -23102,7 +23133,7 @@ export function sprintZone(dx, dy, spr, armed) {
   return armed ? (dy < -(spr - SPRINT_ZONE.drop) && ang <= SPRINT_ZONE.keep) : (dy < -spr && ang <= SPRINT_ZONE.start);
 }
 
-@@@@ FILE src/ui/style.css text 47061
+@@@@ FILE src/ui/style.css text 47632
 /* HARD ENTRY — 見た目の決まり（色・枠・書体）。雰囲気より読みやすさを優先。自分の側はいつも青、相手は赤 */
 :root {
   --bg: #07090c; --panel: rgba(12, 16, 22, 0.9); --panel2: rgba(22, 28, 36, 0.92); --line: rgba(255, 255, 255, 0.13); --line2: rgba(255, 255, 255, 0.28);
@@ -23408,13 +23439,16 @@ table.board small { color: var(--dim); font-size: max(11px, .72em); margin-left:
 .hud-reticle.on.holo::before { content: ''; position: absolute; left: -17px; top: -17px; width: 30px; height: 30px; border-radius: 50%; border: 2px solid rgba(255,70,50,.9); box-shadow: 0 0 3px rgba(255,70,50,.8); }
 .hud-reticle.on.holo::after { content: ''; position: absolute; left: -2px; top: -2px; width: 4px; height: 4px; border-radius: 50%; background: rgba(255,70,50,.95); }
 .hud-reticle.on.iron::before { content: ''; position: absolute; left: -1px; top: -1px; width: 2px; height: 2px; background: rgba(255,255,255,.5); }
-.hud-scope { position: absolute; inset: 0; display: none; background: radial-gradient(circle at 50% 50%, transparent 0, transparent calc(min(var(--sh), var(--sw)) * 0.42), #000 calc(min(var(--sh), var(--sw)) * 0.43)); }
+/* スコープの像: 接眼レンズの丸い視界（半径 --sr）。目と筒の軸のずれ（--scx・--scy）で丸がずれ、縁がぼやけて暗くなる（--se。スコープの影）。
+   内側の縁ほど少し暗い（筒の中）。ずれても照準の模様は画面の真ん中（弾が飛ぶ所）のまま。値は game.js _aimFx → hud.js */
+.hud-scope { position: absolute; inset: 0; display: none; pointer-events: none; --sr: calc(min(var(--sh), var(--sw)) * 0.43); --scx: 0px; --scy: 0px; --se: 6px;
+  background: radial-gradient(circle at calc(50% + var(--scx)) calc(50% + var(--scy)), transparent 0, transparent calc(var(--sr) * 0.72), rgba(0,0,0,.2) calc(var(--sr) - var(--se) * 1.6), rgba(0,0,0,.8) calc(var(--sr) - var(--se) * 0.4), #000 calc(var(--sr) + var(--se) * 0.3)); }
 .hud-scope.on { display: block; }
 .hud-scope .ret { position: absolute; left: 50%; top: 50%; width: 60%; height: 1px; background: rgba(0,0,0,.85); transform: translate(-50%, 0); }
 .hud-scope .ret::after { content: ''; position: absolute; left: 50%; top: -120px; width: 1px; height: 240px; background: rgba(0,0,0,.85); }
 .hud-scope .ret::before { content: ''; position: absolute; left: 50%; top: 50%; width: 5px; height: 5px; margin: -2.5px; border-radius: 50%; background: #ff3a2a; box-shadow: 0 0 4px #ff2a1a; z-index: 1; }
 /* 倍率の照準器の像（11-12。実在の照準器の模様を元に。SVG）: 大きさは画面の短い辺の0.86（スコープの丸い窓） */
-.hud-scope.acog2 .ret, .hud-scope.mag3 .ret, .hud-scope.acog .ret, .hud-scope.scope6 .ret, .hud-scope.lpvo .ret, .hud-scope.lpvo8 .ret, .hud-scope.sniper .ret { width: calc(min(var(--sh), var(--sw)) * 0.86); height: calc(min(var(--sh), var(--sw)) * 0.86); transform: translate(-50%, -50%); background: center / 100% 100% no-repeat; }
+.hud-scope.acog2 .ret, .hud-scope.mag3 .ret, .hud-scope.acog .ret, .hud-scope.scope6 .ret, .hud-scope.lpvo .ret, .hud-scope.lpvo8 .ret, .hud-scope.sniper .ret { width: calc(var(--sr) * 2); height: calc(var(--sr) * 2); transform: translate(-50%, -50%); background: center / 100% 100% no-repeat; }
 .hud-scope.acog2 .ret::before, .hud-scope.acog2 .ret::after, .hud-scope.mag3 .ret::before, .hud-scope.mag3 .ret::after, .hud-scope.acog .ret::before, .hud-scope.acog .ret::after, .hud-scope.scope6 .ret::before, .hud-scope.scope6 .ret::after, .hud-scope.lpvo .ret::before, .hud-scope.lpvo .ret::after, .hud-scope.lpvo8 .ret::before, .hud-scope.lpvo8 .ret::after, .hud-scope.sniper .ret::before, .hud-scope.sniper .ret::after { display: none; }
 .hud-scope.acog2 .ret { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><g fill='none' stroke='%23000' stroke-opacity='.9'><path d='M0 100H84M116 100H200M100 116V200M100 0V84' stroke-width='1'/><path d='M0 100H50M150 100H200M100 150V200' stroke-width='3.4'/></g><g fill='none' stroke='%23ff3a2a' stroke-width='1.8' stroke-linecap='round'><path d='M84 100H96M104 100H116M100 84V96M100 104V116'/></g><circle cx='100' cy='100' r='1.1' fill='%23ff3a2a'/></svg>"); }
 .hud-scope.mag3 .ret { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><g fill='none' stroke='%23ff3a2a' stroke-width='2.2'><circle cx='100' cy='100' r='24'/><path d='M100 72V78M100 122V128M72 100H78M122 100H128'/></g><circle cx='100' cy='100' r='1.9' fill='%23ff3a2a'/></svg>"); }
@@ -23424,7 +23458,7 @@ table.board small { color: var(--dim); font-size: max(11px, .72em); margin-left:
 .hud-scope.lpvo8 .ret { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><g fill='none' stroke='%23000' stroke-opacity='.92'><path d='M0 100H90M110 100H200M100 110V200M100 0V90' stroke-width='.7'/><path d='M0 100H58M142 100H200M100 142V200M100 0V58' stroke-width='3.2'/><g stroke-width='.8'><path d='M116 97V103M84 97V103M97 116H103' /><path d='M124 97V103M76 97V103M97 124H103' /><path d='M132 97V103M68 97V103M97 132H103' /><path d='M140 97V103M60 97V103M97 140H103' /><path d='M148 97V103M52 97V103M97 148H103' /></g></g><circle cx='100' cy='100' r='8' fill='none' stroke='%23ff3a2a' stroke-width='1.4'/><circle cx='100' cy='100' r='1.2' fill='%23ff3a2a'/></svg>"); }
 .hud-scope.sniper .ret { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><g fill='none' stroke='%23000' stroke-opacity='.92'><path d='M0 100H200M100 0V200' stroke-width='.5'/><path d='M0 100H62M138 100H200M100 0V62M100 138V200' stroke-width='3.2'/></g><g fill='%23000' fill-opacity='.92'><circle cx='108' cy='100' r='1'/><circle cx='92' cy='100' r='1'/><circle cx='100' cy='108' r='1'/><circle cx='100' cy='92' r='1'/><circle cx='116' cy='100' r='1'/><circle cx='84' cy='100' r='1'/><circle cx='100' cy='116' r='1'/><circle cx='100' cy='84' r='1'/><circle cx='124' cy='100' r='1'/><circle cx='76' cy='100' r='1'/><circle cx='100' cy='124' r='1'/><circle cx='100' cy='76' r='1'/><circle cx='132' cy='100' r='1'/><circle cx='68' cy='100' r='1'/><circle cx='100' cy='132' r='1'/><circle cx='100' cy='68' r='1'/></g><circle cx='100' cy='100' r='.9' fill='%23ff3a2a'/></svg>"); }
 .hud-scope.mag3 .ret, .hud-scope.acog2 .ret, .hud-scope.acog .ret, .hud-scope.scope6 .ret, .hud-scope.lpvo .ret, .hud-scope.lpvo8 .ret { filter: drop-shadow(0 0 1.5px rgba(255,60,40,.55)); }
-.hud-scope.wide { background: radial-gradient(circle at 50% 50%, transparent 0, transparent calc(min(var(--sh), var(--sw)) * 0.8), rgba(0,0,0,.9) calc(min(var(--sh), var(--sw)) * 0.9)); }
+.hud-scope.wide { background: radial-gradient(circle at calc(50% + var(--scx)) calc(50% + var(--scy)), transparent 0, transparent calc(var(--sr) * 1.86), rgba(0,0,0,.9) calc(var(--sr) * 2.09 + var(--se))); }
 .hud-hit { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px; opacity: 0; }
 .hud-hit::before, .hud-hit::after { content: ''; position: absolute; left: 50%; top: 50%; width: 26px; height: 2px; margin: -1px -13px; background: #fff; transform: rotate(45deg); box-shadow: 0 0 2px #000; }
 .hud-hit::after { transform: rotate(-45deg); }
@@ -23893,10 +23927,10 @@ export async function runTests(filter) {
   return res;
 }
 
-@@@@ FILE tests/run_all.mjs text 61770
+@@@@ FILE tests/run_all.mjs text 61980
 // テスト一式: node tests/run_all.mjs [--quick] [--no-sizes] [--no-net] → test-results/summary.md
 //  1 ビルド  2 単体  3 マップ  4 音  5 自動の試合（作戦・対戦・同じシードで同じ結果・途中保存）
-//  6 ブラウザ（起動・タップ・音の開始・回した画面・2本指・射撃/ADS/リロード/リーン/しゃがみ・ミニマップ→地図・ミラーの視点・HUDの編集・撤収→結果・保存と続きから・2回押し・WebGL）
+//  6 ブラウザ（起動・タップ・音の開始・回した画面・2本指・射撃/ADS/リロード/リーン/しゃがみ・ミニマップ→地図・ミラーの視点・HUDの編集・撤収→結果・続きからがない・2回押し・WebGL）
 //  7 全サイズの見た目（iPhone各種・iPad・PC、安全領域つき）  8 オンライン（自前の中継で2人: 協力・対戦）  9 アプリ版  10 古い保存から上がる
 import fs from 'node:fs';
 import path from 'node:path';
@@ -24459,19 +24493,20 @@ try {
   await page.setViewportSize({ width: 844, height: 390 });
   await page.evaluate(() => window.__app.stage.layout());
 
-  // ---- 裏に回ったときの保存から「続きから」・タイトルへ戻るは2回押す・WebGLが落ちても戻る
+  // ---- 「続きから」はない（11-12 21:59 の要望）・タイトルへ戻るは2回押す・WebGLが落ちても戻る
   {
     await page.evaluate(() => window.__app.resumeGame());
     await page.keyboard.down('KeyW'); await page.waitForTimeout(1200); await page.keyboard.up('KeyW');
-    // 止めてから保存（再読み込みの直前にも裏に回った保存が走るので、同じ場面にそろえる）
-    const g1 = await page.evaluate(() => { const a = window.__app, g = a.game; a.freeze = true; a.autosave(); return { t: g.S.t, x: g.p.x, z: g.p.z, map: g.S.map }; });
+    // 裏に回ったときと同じ一時停止（保存はしない）→ 読み込み直すとタイトルで、「続きから」は出ない
+    const s1 = await page.evaluate(() => { const a = window.__app; a.pauseGame(); return { mode: a.mode, run: localStorage.getItem('hardentry.v1.run') }; });
     await page.reload();
     await waitTitle(page, 240000);
-    const cont = await center('.screen.title.on [data-a="continue"]');
-    if (cont) await tapAt(cont, 51);
-    await page.waitForFunction(() => window.__app.screens.cur === 'pause' && window.__app.game, null, { timeout: 120000 }).catch(() => {});
-    const g2 = await page.evaluate(() => { const g = window.__app.game; return g ? { t: g.S.t, x: g.p.x, z: g.p.z, map: g.S.map } : null; });
-    rec('保存', '裏に回ったときの保存から「続きから」で同じ場面に戻る', !!cont && g2 && g2.map === g1.map && g2.t === g1.t && Math.abs(g2.x - g1.x) < 1e-6, g2 ? `t ${g1.t}→${g2.t}` : '戻れない');
+    const s2 = await page.evaluate(() => ({ cont: !!document.querySelector('.screen.title [data-a="continue"]'), game: !!window.__app.game, run: localStorage.getItem('hardentry.v1.run'), first: (document.querySelector('.screen.title .t-menu .mi') || {}).dataset?.a }));
+    rec('保存', '「続きから」はない: 一時停止しても遊びかけを保存せず、読み込み直すとタイトル（作戦が先頭）', s1.mode === 'pause' && s1.run == null && !s2.cont && !s2.game && s2.run == null && s2.first === 'pve', JSON.stringify({ s1, s2 }));
+    await page.evaluate(() => window.__app.startTrain({ start: 'range' }));
+    await waitGame();
+    await page.evaluate(() => window.__app.pauseGame());
+    await page.waitForFunction(() => window.__app.screens.cur === 'pause', null, { timeout: 30000 }).catch(() => {});
     const q = await center('.screen.pause [data-a="quit"]');
     await tapAt(q, 52);
     const after1 = await page.evaluate(() => window.__app.screens.cur);
@@ -24575,7 +24610,7 @@ try {
   const { ctx, page, logs } = await openPage(env, 'dist/claude/preview.html', { w: 844, h: 390, touch: true, mobile: true, init: OLD });
   await waitTitle(page, 240000);
   const u = await page.evaluate(() => ({ hfov: window.__app.settings.hfov, sens: window.__app.settings.sens, name: window.__app.profile.name, rec: window.__app.records()['suburb:barricade:normal'], cont: !!document.querySelector('.screen.title [data-a="continue"]'), run: localStorage.getItem('hardentry.v1.run'), old: localStorage.getItem('hardentry.v0.settings') }));
-  rec('保存', '古い版の保存から上がる（視野角は横の角度へ直す・名前と記録は残る・互換の違う遊びかけは捨てる）', u.hfov === 82 && u.sens === 1.4 && u.name === 'カナタ' && u.rec && u.rec.plays === 3 && !u.cont && u.run == null && u.old == null && !logs.filter(l => /pageerror/.test(l)).length, JSON.stringify(u));
+  rec('保存', '古い版の保存から上がる（視野角は横の角度へ直す・名前と記録は残る・遊びかけの保存は捨てる）', u.hfov === 82 && u.sens === 1.4 && u.name === 'カナタ' && u.rec && u.rec.plays === 3 && !u.cont && u.run == null && u.old == null && !logs.filter(l => /pageerror/.test(l)).length, JSON.stringify(u));
   await ctx.close();
 } catch (e) { rec('保存', '古い版の保存から上がる', false, e.message.split('\n')[0]); }
 await env.close();
@@ -26013,6 +26048,81 @@ test('stick: ダッシュは真上から少し斜め（±40°）に倒しても�
   ok(!sprintZone(...at(5, 0.9), spr, true), '印から大きく下がると止まる');
   ok(!sprintZone(...at(170, 2), spr, true), '下向きは走らない');
   ok(SPRINT_ZONE.keep < 56, 'エンジンが走る範囲の内側');
+});
+
+@@@@ FILE tests/unit/sway.test.mjs text 4371
+import { test, ok, eq } from '../lib/t.mjs';
+import { createGame, step } from '../../src/engine/engine.js';
+import { WEAPONS, swayOf, swayCamK, SWAY_CAM_SIGHT } from '../../src/engine/data/weapons.js';
+import { makeWeapon } from '../../src/engine/actor.js';
+
+// 構えたときの照準の揺れ（11-12 22:05: どの銃も。実際に沿って程よく）。訓練場で1人
+function mk(gun) {
+  const G = createGame({ map: 'training', mode: 'train', seed: 7, team: 1, house: false });
+  const p = G.S.actors.find(a => a.pid === 0);
+  p.inv.w[0] = makeWeapon(gun);
+  p.ws.slot = 0; p.ws.st = 'ready'; p.ws.t = 0;
+  const run = (o = {}, n = 1) => { for (let i = 0; i < n; i++) step(G, { [p.id]: { mx: 0, mz: 0, yaw: p.yaw, pitch: 0, stance: 0, ...o } }); };
+  // 揺れの大きさ: この先 sec 秒の、照準のずれの最大（度）
+  const amp = (o = {}, sec = 6) => { let m = 0; for (let i = 0; i < 60 * sec; i++) { run(o); m = Math.max(m, Math.hypot(p.ws.sx || 0, p.ws.sy || 0)); } return m; };
+  return { G, p, run, amp };
+}
+
+test('sway: どの銃も構えると揺れ、腰だめでは揺れない。拳銃は小銃より、狙撃銃はもっと大きい', () => {
+  const r = mk({ id: 'mk18', ammo: 'ap' });
+  ok(r.amp({}, 2) === 0, '腰だめでは揺れない');
+  const rifle = r.amp({ ads: true }, 8);
+  const ps = mk({ id: 'g17', ammo: 'fmj' }), pistol = ps.amp({ ads: true }, 8);
+  const sn = mk({ id: 'at308', ammo: 'ap' }), sniper = sn.amp({ ads: true }, 8);
+  ok(rifle > 0.04 && rifle < 0.2, `小銃 ${rifle.toFixed(3)}°`);
+  ok(pistol > rifle, `拳銃 ${pistol.toFixed(3)}° > 小銃`);
+  ok(sniper > rifle * 1.4, `狙撃銃 ${sniper.toFixed(3)}° > 小銃`);
+  ok(swayOf(WEAPONS.at308) === 0.2 && swayOf(WEAPONS.hk417) > swayOf(WEAPONS.mk18), '重い銃ほど大きい');
+});
+
+test('sway: 走ったあとは息が上がって大きく、止まっていると数秒で戻る。止まって構えていると少し落ち着く', () => {
+  const r = mk({ id: 'mk18', ammo: 'ap' });
+  r.run({ ads: true }, 60 * 3);
+  const rested = r.amp({ ads: true }, 6);
+  // 5秒走る
+  r.run({ mz: 1, sprint: true }, 60 * 5);
+  ok(r.p.fat > 0.9, `息が上がる ${r.p.fat.toFixed(2)}`);
+  const tired = r.amp({ ads: true }, 3);
+  ok(tired > rested * 1.8, `走ったあと ${tired.toFixed(3)}° > ふだん ${rested.toFixed(3)}°`);
+  r.run({ ads: true }, 60 * 7);
+  ok(r.p.fat < 0.05, `止まっていると6秒ほどで戻る ${r.p.fat.toFixed(2)}`);
+  // 落ち着き: 構えた直後より、止まって1.5秒たつと小さい
+  const c = mk({ id: 'mk18', ammo: 'ap' });
+  c.run({ ads: true }, 30);
+  ok(c.p.ws.calm < 0.3, '構えた直後は落ち着いていない');
+  c.run({ ads: true }, 120);
+  ok(c.p.ws.calm > 0.99, '止まって構えていると落ち着く');
+  const m = mk({ id: 'mk18', ammo: 'ap' });
+  m.run({ ads: true }, 30);
+  m.run({ ads: true, mx: 1 }, 30);
+  ok(m.p.ws.calm < 0.1, '動くと落ち着きは消える');
+});
+
+test('sway: 視界が受け持つ割合は、等倍の照準器 35%・スコープをのぞききると全部。弾は揺れた向きへ飛ぶ', () => {
+  const dot = makeWeapon({ id: 'mk18', ammo: 'ap' }); dot.att.sight = 'reddot';
+  const sc = makeWeapon({ id: 'mk18', ammo: 'ap' }); sc.att.sight = 'acog';
+  eq(swayCamK(dot, 1), SWAY_CAM_SIGHT); eq(swayCamK(sc, 0.5), SWAY_CAM_SIGHT);
+  ok(Math.abs(swayCamK(sc, 1) - 1) < 1e-9, 'スコープをのぞききると全部');
+  ok(swayCamK(sc, 0.8) > SWAY_CAM_SIGHT && swayCamK(sc, 0.8) < 1, '目に寄せる途中は間');
+  // 弾の向き: 撃った瞬間の揺れの分だけずれる（反動の前）
+  const r = mk({ id: 'at308', ammo: 'ap' });
+  r.run({ ads: true }, 90);
+  const sx = r.p.ws.sx, sy = r.p.ws.sy;
+  ok(Math.hypot(sx, sy) > 0.01, '揺れている');
+  const yaw0 = r.p.yaw, pitch0 = r.p.pitch;
+  r.run({ ads: true, fire: true });
+  const b = r.G.S.bullets[r.G.S.bullets.length - 1];
+  ok(b, '撃った');
+  const v = b.v || [b.vx, b.vy, b.vz];
+  const byaw = Math.atan2(v[0], v[2]), bp = Math.atan2(v[1], Math.hypot(v[0], v[2]));
+  const wrap = (x) => Math.atan2(Math.sin(x), Math.cos(x));
+  const dyaw = wrap(byaw - yaw0) * 180 / Math.PI, dp = (bp - pitch0) * 180 / Math.PI;
+  ok(Math.abs(dyaw - sx) < 0.05 && Math.abs(dp - sy) < 0.05, `弾のずれ ${dyaw.toFixed(3)},${dp.toFixed(3)} ≒ 揺れ ${sx.toFixed(3)},${sy.toFixed(3)}`);
 });
 
 @@@@ FILE tests/unit/vault.test.mjs text 11815
