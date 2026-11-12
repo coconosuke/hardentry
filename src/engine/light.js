@@ -56,7 +56,7 @@ export function bakeLight(w, def, opt = {}) {
   });
   const pidx = (i, j, ly) => (ly * D1 + j) * W1 + i;
   const cellT = (L, i, j) => (i < 0 || j < 0 || i >= w.W || j >= w.D) ? C.VOID : w.cell[w.idx(L, i, j)];
-  const indoorCell = (L, i, j) => { const t = cellT(L, i, j); return t === C.FLOOR || (t === C.STAIR && w.indoor[w.idx(L, i, j)] === 1) || (isWallish(t) && w.indoor[w.idx(L, i, j)] === 2); };
+  const indoorCell = (L, i, j) => { const t = cellT(L, i, j); if (t === C.VOID) return i >= 0 && j >= 0 && i < w.W && j < w.D && w.indoor[w.idx(L, i, j)] === 1; return t === C.FLOOR || (t === C.STAIR && w.indoor[w.idx(L, i, j)] === 1) || (isWallish(t) && w.indoor[w.idx(L, i, j)] === 2); };
   // 窓・外への開口からの距離（屋内で空を調べる範囲を絞る）
   const nearOpen = new Uint8Array(w.NL * w.W * w.D);
   for (let L = 0; L < w.NL; L++) {

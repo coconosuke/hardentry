@@ -3,7 +3,7 @@
 //  - 家具が壁・扉・窓にめり込んでいないか、扉の前をふさいでいないか、家具どうしが重なっていないか
 //  - 出現位置（SWAT・容疑者・市民・人質・爆弾・PvP・TDM・目標地点）が歩ける床にあるか、家具の中でないか
 //  - SWATの出現位置から、すべての出現位置と部屋へ歩いて行けるか（扉は通れるものとする）
-import { compileMap, C, CS, nearestFloor } from '../src/engine/world.js';
+import { compileMap, C, CS, nearestFloor, isAtrium } from '../src/engine/world.js';
 import { MAPS } from '../src/engine/maps/index.js';
 import { buildNav } from '../src/engine/ai/nav.js';
 
@@ -98,10 +98,11 @@ export function checkMap(id) {
     if (!ok) out.warn.push(`部屋 ${r.name} (${r.L},${r.x0}-${r.x1},${r.z0}-${r.z1}) へ歩いて行けない`);
     if (/^部屋\d/.test(r.name) && r.cells.length >= 12) out.warn.push(`名前のない部屋 ${r.name} (${r.L},${r.x0}-${r.x1},${r.z0}-${r.z1}, ${r.cells.length}マス)`);
   }
-  // 4) 明かり: 屋内の床の上か
+  // 4) 明かり: 屋内の床の上か（吹き抜けの天井の明かりは、下の階の床の上）
   for (const lt of def.lights || []) {
     const [x, z, L = 0] = lt; const k = cellK(x, z, L);
-    if (k < 0 || !(w.cell[k] === C.FLOOR || w.cell[k] === C.OUT || w.cell[k] === C.STAIR)) out.warn.push(`明かり (${x},${z},${L}) が床の上でない`);
+    const atr = k >= 0 && L > 0 && isAtrium(w, k) && w.cell[cellK(x, z, L - 1)] === C.FLOOR;
+    if (k < 0 || !(w.cell[k] === C.FLOOR || w.cell[k] === C.OUT || w.cell[k] === C.STAIR || atr)) out.warn.push(`明かり (${x},${z},${L}) が床の上でない`);
   }
   // 5) 扉のオプションのキーが実在の扉か
   for (const key of Object.keys(def.doors || {})) {

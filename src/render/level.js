@@ -317,7 +317,7 @@ function faceSide(ctx, L, x, z, nx, nz) {
     const k = w.idx(L, i, j), t = w.cell[k];
     if (t === C.FLOOR || (t === C.STAIR && w.indoor[k])) return { side: 'in', room: w.roomAt[k] };
     if (t === C.OUT || t === C.STAIR) return { side: 'out', room: w.roomAt[k] };
-    if (t === C.VOID) return { side: 'out', room: -1 };
+    if (t === C.VOID) return w.indoor[k] === 1 && L > 0 ? { side: 'in', room: w.roomAt[w.idx(L - 1, i, j)] } : { side: 'out', room: -1 }; // 吹き抜けは下の部屋
   }
   return { side: 'in', room: -1 };
 }
