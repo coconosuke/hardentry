@@ -13,6 +13,7 @@ import { stepStatus } from './status.js';
 import { MAPS } from './maps/index.js';
 import { MODES } from './modes/index.js';
 import { thinkAll, collectNoise } from './ai/brain.js';
+import { buildNav } from './ai/nav.js';
 import { bakeLight, HS } from './light.js';
 import { initBars, barGlass, linkBars } from './barricade.js';
 
@@ -26,6 +27,8 @@ export function baseWorld(mapId) {
     w = compileMap(def);
     if (w.errors.length) throw new Error(`マップ ${mapId} の誤り: ` + w.errors.slice(0, 5).join(' / '));
     lightForAI(w, def);
+    // AI の歩ける所の格子も、マップを読むときに1回だけ作る（試合の最初のこまで作ると一瞬止まっていた）。試合ごとの w は元の w を引き継ぐ
+    buildNav(w);
     worldCache.set(mapId, w);
   }
   return w;

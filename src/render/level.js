@@ -2,7 +2,7 @@
 // 塊（チャンク）ごとに作り、壁が壊れたらその塊だけ作り直す。
 import { MeshBuilder, hex, mixc, mulc } from './build.js';
 import { LAYER } from './textures.js';
-import { CS, LH, CEIL, BH, NB, C, isWallish } from '../engine/world.js';
+import { CS, LH, CEIL, BH, NB, C, isWallish, railSide } from '../engine/world.js';
 import { M, F } from '../engine/data/materials.js';
 import { buildProp } from './props.js';
 
@@ -535,12 +535,12 @@ function stairMesh(ctx, B, s) {
   const along = s.dir === 'n' || s.dir === 's';
   const sides = along ? [[s.x0, -1], [s.x1, 1]] : [[s.z0, -1], [s.z1, 1]];
   for (const [c, sg] of sides) {
-    // 外側のマスが床（開いている）なら手すり
+    // 外側のマスが床（開いている）か金網なら手すり（当たりの w.rails と同じ決め方）
     const ci = along ? Math.floor((c + sg * 0.25) / CS) : Math.floor(((s.x0 + s.x1) / 2) / CS);
     const cj = along ? Math.floor(((s.z0 + s.z1) / 2) / CS) : Math.floor((c + sg * 0.25) / CS);
     if (ci < 0 || cj < 0 || ci >= w.W || cj >= w.D) continue;
     const t = w.cell[w.idx(s.L, ci, cj)];
-    if (isWallish(t)) continue;
+    if (!railSide(t)) continue;
     const off = -sg * 0.05;
     const a0 = s.dir === 'n' ? [c + off, base + LH + railY, s.z0] : s.dir === 's' ? [c + off, base + LH + railY, s.z1] : s.dir === 'e' ? [s.x1, base + LH + railY, c + off] : [s.x0, base + LH + railY, c + off];
     const a1 = s.dir === 'n' ? [c + off, base + railY, s.z1] : s.dir === 's' ? [c + off, base + railY, s.z0] : s.dir === 'e' ? [s.x0, base + railY, c + off] : [s.x1, base + railY, c + off];
@@ -654,14 +654,25 @@ function wallFaceDetails(ctx, B, L, i, j, k, b) {
     const hv = h3(i * 2 + (nx + nz > 0 ? 1 : 0), j, L * 7 + 3);
     // コンセント（9マスに1つくらい、腰より下）
     if (hv < 0.11 && a1 - a0 > 0.4) plate(B, fx + nx * 0.001, base + 0.3, fz + nz * 0.001, nx, nz, 0.07, 0.11, false);
-    // 額・ポスター（25マスに1つくらい、目の高さ。部屋ごとの色合い）
-    else if (hv > 0.955 && !blocked && a1 - a0 > 0.45 && w.blocks[k * NB + 2]) picture(ctx, B, fx, base + 1.55, fz, nx, nz, hv, sd.room);
+    // 額・ポスター（25マスに1つくらい、目の高さ。部屋ごとの色合い）。扉・窓・開口・角にはみ出さない幅だけ
+    else if (hv > 0.955 && !blocked && a1 - a0 > 0.45 && w.blocks[k * NB + 2]) {
+      const di = ax === 0 ? 1 : 0, dj = ax === 0 ? 0 : 1;
+      const room2 = (sg) => solidRun(w, L, i + di * sg, j + dj * sg) ? CS : 0;
+      const free = Math.min(am - a0 + room2(-1), a1 - am + room2(1)) - 0.1;
+      if (free >= 0.2) picture(ctx, B, fx, base + 1.55, fz, nx, nz, hv, sd.room, free);
+    }
   }
 }
 
-// 額（絵）とポスター
-function picture(ctx, B, x, y, z, nx, nz, hv, room) {
-  const pr = 0.025, hw = 0.26 + (hv * 37 % 1) * 0.12, hh = 0.2 + (hv * 53 % 1) * 0.1;
+// 隣のマスも、目の高さまでふつうの壁が続いているか（扉・窓・開口・ガラスの壁でない）
+function solidRun(w, L, i, j) {
+  if (i < 0 || j < 0 || i >= w.W || j >= w.D) return false;
+  const k = w.idx(L, i, j);
+  return w.cell[k] === C.WALL && !!w.blocks[k * NB + 2] && !!w.blocks[k * NB + 3];
+}
+// 額（絵）とポスター。maxHw: 横の半分の幅の上限（扉や窓にはみ出さない）
+function picture(ctx, B, x, y, z, nx, nz, hv, room, maxHw = 1) {
+  const pr = 0.025, hw = Math.min(maxHw, 0.26 + (hv * 37 % 1) * 0.12), hh = 0.2 + (hv * 53 % 1) * 0.1;
   const frame = [hex('#2b2622'), hex('#6b4a2c'), hex('#d9d4c8'), hex('#1d1e20')][Math.floor(hv * 997) % 4];
   const bx = (a0, a1, y0, y1, d0, d1, col, r = 0.004) => {
     if (nx) { const x0 = x + nx * d0, x1 = x + nx * d1; B.bbox(Math.min(x0, x1), y0, z + a0, Math.max(x0, x1), y1, z + a1, r, LAYER.plain, col); }

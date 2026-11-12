@@ -28,6 +28,9 @@ const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const TEAMS = ['gold', 'red', 'blue'];
 const TEAMCOL = { gold: '#e8b830', red: '#e5483f', blue: '#3d8cf0' };
 
+// 手が届かない（遠い）ときは、調べるボタン・案内・メニューに何も出さない（11-12 14:23 の要望）。間に物があるときは出す
+function tooFar(c) { return !!(c && c.def && c.def.far && c.def.why !== 'block'); }
+
 export class Match {
   constructor(app, o) {
     this.app = app; this.o = o;
@@ -132,12 +135,15 @@ export class Match {
     if (ads > 0.5) k *= zoom > 2 ? (st.sensScope || 0.45) : (st.sensAds || 0.75);
     if (inp.fire && !inp.mouse) k *= st.sensFire || 1;
     // エイムアシスト（タッチ）: 敵の近くでは少しゆっくりに。対戦は部屋の設定（0なし・1弱い・2ふつう）
-    let slow = 1;
+    let want = 1;
     const aa = this.S.pvp ? ['off', 'weak', 'strong'][this.S.rules.aimAssist ?? 1] : st.aimAssist;
     if (!inp.mouse && aa && aa !== 'off') {
       const near = this._nearTarget(0.06);
-      if (near) slow = aa === 'strong' ? 0.55 : 0.72;
+      if (near) want = aa === 'strong' ? 0.55 : 0.72;
     }
+    // 急に遅く・速くならないように、0.12秒かけて寄せる（11-12: エイムがなめらかに動かない）
+    this.aaK = this.aaK == null ? want : this.aaK + (want - this.aaK) * (1 - Math.exp(-dt / 0.12));
+    const slow = inp.mouse ? 1 : this.aaK;
     let dx = inp.lookDX * k * slow, dy = inp.lookDY * k * slow * 0.9;
     // ジャイロ
     const gy = st.gyro || 'off';
@@ -279,13 +285,14 @@ export class Match {
   // ---- 調べる（その時できること）
   _useDefault() {
     const c = contextOf(this.S, this.w, this.p);
-    if (!c) { this.app.audio.ui('deny'); return; }
+    if (!c || tooFar(c)) { this.app.audio.ui('deny'); return; }
     this.acts.push({ a: 'use' });
   }
   _useMenu(e) {
     const c = contextOf(this.S, this.w, this.p);
     if (!c) return;
-    const items = c.ops.map(o => ({ label: OP_NAME[o.op] || o.op, sub: o.far ? (o.why === 'block' ? '間に物' : '近づく') : o.t ? o.t.toFixed(1) + '秒' : '', disabled: !!o.far, go: () => this.acts.push({ a: 'op', k: c.k, id: c.id, op: o.op }) }));
+    if (tooFar(c)) return;
+    const items = c.ops.map(o => ({ label: OP_NAME[o.op] || o.op, sub: o.far ? (o.why === 'block' ? '間に物' : '') : o.t ? o.t.toFixed(1) + '秒' : '', disabled: !!o.far, go: () => this.acts.push({ a: 'op', k: c.k, id: c.id, op: o.op }) }));
     if (!items.length) return;
     this.app.input.openRadial('use', items, e.pid, e.x, e.y);
     this.app.input.radial.title = c.k === 'door' ? '扉' : c.k === 'person' ? '人' : c.k === 'item' ? '物' : '';
@@ -536,7 +543,7 @@ export class Match {
           if (e.k === 'locked' && e.id !== me && S.byId[e.id] && S.byId[e.id].kind === 'swat') this._say(S.byId[e.id], 'swat_locked');
           break;
         }
-        case 'deny': if (e.id === me) { const why = { locked: '鍵がかかっている', wedged: 'ウェッジで開かない', barred: 'バリケード', nogear: '残数なし', nodet: '起爆対象なし', open: '開いている', broken: '破損', needdoor: '閉じた扉を見て使う', nolong: '特殊装備なし', noammo: '弾がない', far: '手が届かない（近づく）', blocked: '間に物・人があって届かない', prepout: '準備中は建物の外に出られない', depspace: '前に置く場所がない', depfloor: '平らな床にしか置けない', depperson: '前に人がいる', depair: '立ってから置く' }[e.why]; if (why) hud.showBanner(why, 1400); au.ui('deny'); } break;
+        case 'deny': if (e.id === me) { const why = { locked: '鍵がかかっている', wedged: 'ウェッジで開かない', barred: 'バリケード', nogear: '残数なし', nodet: '起爆対象なし', open: '開いている', broken: '破損', needdoor: '閉じた扉を見て使う', nolong: '特殊装備なし', noammo: '弾がない',  blocked: '間に物・人があって届かない', prepout: '準備中は建物の外に出られない', depspace: '前に置く場所がない', depfloor: '平らな床にしか置けない', depperson: '前に人がいる', depair: '立ってから置く' }[e.why]; if (why) hud.showBanner(why, 1400); au.ui('deny'); } break;
         case 'nade': { if (e.type === 'smoke') { for (let i = 0; i < 6; i++) fx.smoke(e.x, e.y + 0.5, e.z, 0.9, [0.62, 0.63, 0.64], 0.6, 3); au.sfx('gasPop', [e.x, e.y, e.z], { rate: 0.8 }); break; } if (e.type === 'cs') { for (let i = 0; i < 8; i++) fx.smoke(e.x, e.y + 0.4, e.z, 1.2, [0.85, 0.85, 0.8], 0.5, 6); au.sfx('gasPop', [e.x, e.y, e.z]); } else { fx.explosion(e.x, e.y, e.z, 3, e.type === 'flash' ? 'flash' : 'stinger'); au.sfx(e.type === 'flash' ? 'flashbang' : 'stinger', [e.x, e.y, e.z]); } const d = Math.hypot(e.x - this.cam.x, e.z - this.cam.z); this.shake = Math.max(this.shake, Math.max(0, 1 - d / 10) * 0.6); break; }
         case 'boom': case 'c2': { fx.explosion(e.x, e.y, e.z, e.r || 3, e.kind || 'c2'); au.sfx('explosion', [e.x, e.y, e.z], { vol: 1.2 }); const d = Math.hypot(e.x - this.cam.x, e.z - this.cam.z); this.shake = Math.max(this.shake, Math.max(0, 1 - d / 18)); this._heatUp(0.5 * Math.max(0, 1 - d / 40)); break; }
         case 'flashed': if (e.id === me) { this.flashW = Math.max(this.flashW, Math.min(1, 0.4 + e.k * 1.2)); au.deafen(2 + 4 * e.k); } break;
@@ -975,7 +982,7 @@ export class Match {
       gearSel: this.gearSel, gearId: p.ws.gear, team: this.team,
       spread: wi ? spreadDeg(S, p, WEAPONS[wi.id], wi) : 2,
       optic: null, canVault: this.vaultOK !== false,
-      ctxLabel: c ? (c.def.far ? (c.def.why === 'block' ? '回り込む' : '近づく') : (OP_NAME[c.def.op] || c.def.op)) : '',
+      ctxLabel: c && !tooFar(c) ? (c.def.far ? '回り込む' : (OP_NAME[c.def.op] || c.def.op)) : '',
       cmdLabel: '命令', mmZoom: this.mmZoom,
       droneOK: S.pvp && S.m.kind !== 'tdm' && p.team === S.m.att && (S.m.phase === 'prep' ? !!p.staged : S.m.phase === 'action' && p.alive && !p.down) && ((p.dronesLeft ?? 2) > 0 || S.actors.some(d => d.isDrone && d.owner === p.id && d.alive)),
       zoneOK: S.pvp && S.m.kind !== 'tdm' && p.team === S.m.att && (S.m.phase === 'pre' || S.m.phase === 'prep'),
@@ -986,7 +993,7 @@ export class Match {
     if (this.droneId != null || this.camView != null) v.hideCross = true;
     // 案内
     let prompt = '';
-    if (c) prompt = `${ctxName(c, S)}: ${OP_NAME[c.def.op] || c.def.op}` + (c.def.far ? (c.def.why === 'block' ? '（間に物がある）' : '（近づく）') : c.ops.length > 1 ? '（長押し: メニュー）' : '');
+    if (c && !tooFar(c)) prompt = `${ctxName(c, S)}: ${OP_NAME[c.def.op] || c.def.op}` + (c.def.far ? '（間に物がある）' : c.ops.length > 1 ? '（長押し: メニュー）' : '');
     if (!c && this.depHint) prompt = this.depHint;
     if (p.act) { v.prog = Math.min(1, p.act.t / p.act.dur); v.progLabel = OP_NAME[p.act.k] || ''; prompt = ''; }
     if (this.droneId != null) prompt = S.m && S.m.phase === 'prep' && p.staged ? 'ドローン ― 射撃: 敵にマーク／乗り越え: ジャンプ（準備が終わると出現地点に出る）' : 'ドローン ― 射撃: マーク／乗り越え: ジャンプ／ドローン: 戻る';

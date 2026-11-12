@@ -56,6 +56,17 @@ export function capsOf(S, a) {
   return a._caps;
 }
 export function wristsOf(S, a) { capsOf(S, a); return a._wr.slice(); }
+// AI が見回すときの目: 体の形（computePose）は重いので、4ステップに1回（人ごとにずらして）だけ計算し、
+// 間は体が動いた分だけずらす（そのステップで計算済みならそれを使う）。撃つ弾の出どころは eyeOf（毎回正確）
+export function eyeAI(S, a) {
+  if (a._capT === S.t && a._eye) return a._eye;
+  const e = a._eyeA || (a._eyeA = [0, 0, 0, 0, 0, 0, 0]);
+  const due = a._eyeAT == null || S.t - a._eyeAT >= 8 || (S.t - a._eyeAT >= 4 && ((S.t + a.id) & 3) === 0) || a.down || a.dead || a.act;
+  if (due) { const ee = eyeOf(S, a); e[0] = ee[0]; e[1] = ee[1]; e[2] = ee[2]; e[3] = a.x; e[4] = a.y; e[5] = a.z; a._eyeAT = S.t; }
+  const o = a._eyeA2 || (a._eyeA2 = [0, 0, 0]);
+  o[0] = e[0] + a.x - e[3]; o[1] = e[1] + a.y - e[4]; o[2] = e[2] + a.z - e[5];
+  return o;
+}
 export function eyeOf(S, a) {
   if (a._capT === S.t && a._eye) return a._eye;
   capsOf(S, a);

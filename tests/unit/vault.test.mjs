@@ -186,3 +186,15 @@ test('vault: 車も越えられる（屋根1.45m）。物の上に乗っても�
   VAULT.tall = keep;
   ok(pl2, '（高さの決まりがなければ越えられる位置）');
 });
+
+test('vault: ガソリンスタンドの2階の窓を乗り越えて、平らな屋根に出られる（屋根のふちから飛び降りる）', () => {
+  const { G, S, w, p } = tdm('gasstation');
+  // 居間の南の窓（x 24〜27, z=29）の手前。南（+z）を向く（TDM は窓に板がない）
+  place(G, p, 25.5, 28.0, 0, 3);
+  ok(vaultPlan(S, w, p, {}), '窓を越える道がある');
+  vault(G, p);
+  ok(p.z > 29.6 * CS && Math.abs(p.y - 3) < 0.15 && p.alive, `屋根の上 z=${(p.z / CS).toFixed(1)} y=${p.y.toFixed(2)}`);
+  // 屋根の上を歩ける
+  for (let i = 0; i < 60; i++) step(G, { [p.id]: { mx: 0, mz: 1, yaw: 0, pitch: 0, stance: 0 } });
+  ok(p.z > 31.5 * CS && Math.abs(p.y - 3) < 0.15, `屋根を歩く z=${(p.z / CS).toFixed(1)} y=${p.y.toFixed(2)}`);
+});

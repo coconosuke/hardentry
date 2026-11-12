@@ -34,9 +34,14 @@ export function thinkSuspect(S, w, a, dt, ctx) {
   const ai = a.ai;
   const inp = baseInput(a);
   if (!a.alive || a.down || a.cuffed) { inp.stance = 0; return inp; }
-  const sk0 = SKILL[S.rules.diff] || SKILL.normal;
-  const sk = { ...sk0, err: sk0.err / (ai.acc || 1), react: sk0.react.map(r => r * (ai.react || 1)) };
-  if (ai.training) { sk.err *= 1.6; }
+  // 腕前（人ごとに1回だけ作る。毎ステップ作るとごみが増えてカクつく）
+  let sk = ai._sk;
+  if (!sk || ai._skD !== S.rules.diff) {
+    const sk0 = SKILL[S.rules.diff] || SKILL.normal;
+    sk = ai._sk = { ...sk0, err: sk0.err / (ai.acc || 1), react: sk0.react.map(r => r * (ai.react || 1)) };
+    if (ai.training) { sk.err *= 1.6; }
+    ai._skD = S.rules.diff;
+  }
   // 状態の時間
   ai.stT = (ai.stT || 0) + dt;
   if (ai.stagger > 0) ai.stagger -= dt;

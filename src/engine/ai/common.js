@@ -2,7 +2,7 @@
 import { occluded, CS, LH, levelOfY, groundAt, leafEnd } from '../world.js';
 import { reachOK } from '../interact.js';
 import { findPath, smoothPath, navCell, cellCenter, buildNav, leafCells } from './nav.js';
-import { eyeOf } from '../combat.js';
+import { eyeOf, eyeAI } from '../combat.js';
 import { smokeBetween } from '../nades.js';
 import { curW, curWeapon, ammoCount } from '../actor.js';
 import { hrand, rnd } from '../rng.js';
@@ -44,7 +44,7 @@ export function brightCell(w, x, y, z) {
 // a から b が見えるか（そのときの見えやすさ 0..1。0は見えない）
 export function visibility(S, w, a, b, opt = {}) {
   if (!b.alive && !opt.dead) return 0;
-  const e = eyeOf(S, a);
+  const e = eyeAI(S, a);
   const bx = b.x, bz = b.z, by = b.y + (b.down || b.dead ? 0.25 : b.st > 1.5 ? 0.3 : b.st > 0.5 ? 0.95 : 1.35);
   const dx = bx - e[0], dy = by - e[1], dz = bz - e[2];
   const d = Math.hypot(dx, dy, dz);

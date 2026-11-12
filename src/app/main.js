@@ -34,15 +34,21 @@ class App {
   _dynStep(raw) {
     const D = this.dyn;
     if (this.settings.autoRes === false) { D.i = 0; D.cap = 0; return; }
+    D.t = (D.t || 0) + raw;
     const target = 1 / this.fpsCap();
-    D.ema = D.ema ? D.ema + (raw - D.ema) * 0.08 : raw;
+    // 1こまだけの遅れ（読み込み・ごみ集め）は数えない
+    D.ema = D.ema ? D.ema + (Math.min(raw, target * 3) - D.ema) * 0.08 : raw;
     D.cool -= raw;
     D.slowT = D.ema > target * 1.22 ? D.slowT + raw : 0;
     D.fastT = D.ema < target * 1.06 ? D.fastT + raw : 0;
     if (D.cool > 0) return;
-    if (D.slowT > 2 && D.i < DYN.length - 1) { D.i++; D.cool = 3; D.slowT = 0; D.ema = 0; this._resize(); }
-    else if (D.slowT > 4 && D.i === DYN.length - 1 && !D.cap && this.settings.fps > 30) { D.cap = 30; D.cool = 4; D.slowT = 0; D.ema = 0; }
-    else if (D.fastT > 8 && D.i > 0 && !D.cap) { D.i--; D.cool = 5; D.fastT = 0; this._resize(); }
+    // 解像度を変えると画面を作り直すので一瞬止まる。行ったり来たりしないように:
+    //  下げるのは3秒遅れが続いたとき。上げるのは20秒速いままのときだけで、上げてすぐ（30秒以内）また下げたら、それからは上げない（画質の設定を変えると初めから）。
+    //  （11-12 まで: 遅れが続くと毎秒30こまに固定して戻さなかった → エイムがなめらかでなくなる。もう固定しない）
+    if (D.slowT > 3 && D.i < DYN.length - 1) {
+      if (D.upAt != null && D.t - D.upAt < 30) D.noUp = true;
+      D.i++; D.cool = 3; D.slowT = 0; D.fastT = 0; D.ema = 0; this._resize();
+    } else if (D.fastT > 20 && D.i > 0 && !D.noUp) { D.i--; D.cool = 5; D.fastT = 0; D.upAt = D.t; this._resize(); }
   }
   renderScale() { return (this.settings.scale || 1) * DYN[this.dyn.i]; }
   fpsCap() { return this.dyn.cap ? Math.min(this.dyn.cap, this.settings.fps) : this.settings.fps; }

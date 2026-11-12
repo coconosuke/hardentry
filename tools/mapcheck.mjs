@@ -65,6 +65,16 @@ export function checkMap(id) {
   const q = [];
   for (const k of starts) if (walkK(k) && !seen[k]) { seen[k] = 1; q.push(k); }
   const WD = w.W * w.D;
+  // 窓は乗り越えて行き来できる（ガソリンスタンドの屋上のように、窓からだけ出られる所も「行ける」）
+  const winLinks = new Map();
+  const addL = (a, b) => { if (!winLinks.has(a)) winLinks.set(a, []); winLinks.get(a).push(b); };
+  for (let L = 0; L < w.NL; L++) for (let j = 1; j < w.D - 1; j++) for (let i = 1; i < w.W - 1; i++) {
+    if (w.cell[w.idx(L, i, j)] !== C.WINDOW) continue;
+    for (const [di, dj] of [[1, 0], [0, 1]]) {
+      const a2 = w.idx(L, i - di, j - dj), b2 = w.idx(L, i + di, j + dj);
+      if (walkK(a2) && walkK(b2)) { addL(a2, b2); addL(b2, a2); }
+    }
+  }
   while (q.length) {
     const k = q.pop(); const L = Math.floor(k / WD), r = k % WD, j = Math.floor(r / w.W), i = r % w.W;
     for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
@@ -72,6 +82,7 @@ export function checkMap(id) {
       const k2 = w.idx(L, ni, nj); if (seen[k2] || !walkK(k2)) continue; seen[k2] = 1; q.push(k2);
     }
     const ln = nav.links.get(k); if (ln) for (const k2 of ln) if (!seen[k2]) { seen[k2] = 1; q.push(k2); }
+    const wl = winLinks.get(k); if (wl) for (const k2 of wl) if (!seen[k2]) { seen[k2] = 1; q.push(k2); }
   }
   // 出現位置の点検: 実際に置かれる位置（家具をよけた最寄りの床）で調べる
   const chk = (label, x, z, L, opt = {}) => {

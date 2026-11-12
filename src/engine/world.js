@@ -17,6 +17,8 @@ export function depAxis(d) { return [-Math.cos(d.yaw), Math.sin(d.yaw)]; }
 export const C = { VOID: 0, FLOOR: 1, OUT: 2, WALL: 3, DOOR: 4, WINDOW: 5, GLASSWALL: 6, OPEN: 7, LOW: 8, FENCE: 9, STAIR: 10 };
 const WALLISH = new Set([C.WALL, C.DOOR, C.WINDOW, C.GLASSWALL, C.OPEN, C.LOW, C.FENCE]);
 export const isWallish = (t) => WALLISH.has(t);
+// 階段の横に手すりを付けるか: 横のマスが開いている（壁でない）か、金網（背が低く、階段の上のほうは越えて見える）
+export const railSide = (t) => !WALLISH.has(t) || t === C.FENCE;
 
 // 文字 → [種類, 材質(壁) or 床の材質]
 const FLOOR_CH = { '.': -1, ':': F.TILE, '_': F.WOOD, '~': F.CARPET, '-': F.CONCRETE, 'm': F.METAL };
@@ -110,6 +112,19 @@ export function compileMap(def) {
       if (s.L + 1 < NL) { if (T(s.L + 1, i, j) !== C.STAIR) w.errors.push(`階段の上の階が 'S' ではない (${s.L + 1},${i},${j})`); w.stairAt[idx(s.L + 1, i, j)] = s.id; }
     }
     w.stairs.push(s);
+  }
+  // 3b) 階段の手すり（開いている側。描くのと同じ決め方: 横の真ん中のマスが壁でなければ）。体が当たる（11-12 まで見た目だけだった）
+  w.rails = [];
+  for (const s of w.stairs) {
+    const along = s.dir === 'n' || s.dir === 's';
+    for (const [c, sg] of along ? [[s.x0, -1], [s.x1, 1]] : [[s.z0, -1], [s.z1, 1]]) {
+      const ci = along ? Math.floor((c + sg * 0.25) / CS) : Math.floor(((s.x0 + s.x1) / 2) / CS);
+      const cj = along ? Math.floor(((s.z0 + s.z1) / 2) / CS) : Math.floor((c + sg * 0.25) / CS);
+      if (ci < 0 || cj < 0 || ci >= W || cj >= D) continue;
+      if (!railSide(w.cell[idx(s.L, ci, cj)])) continue;
+      const cc = c - sg * RAIL.inset;
+      w.rails.push(along ? { s, ax: cc, az: s.z0, bx: cc, bz: s.z1 } : { s, ax: s.x0, az: cc, bx: s.x1, bz: cc });
+    }
   }
   // 4) 床の板: 階L（L>=1）は、その階の床・壁、または下の階が屋内なら板がある。階段の吹き抜けは除く
   for (let L = 0; L < NL; L++) for (let j = 0; j < D; j++) for (let i = 0; i < W; i++) {
@@ -379,7 +394,7 @@ function buildRooms(w, def) {
     w.rooms.push(room);
   }
   for (const [name, en, i, j, L = 0] of named) {
-    const k = w.idx(L, i, j), r = w.roomAt[k];
+    const k = w.idx(L, Math.floor(i), Math.floor(j)), r = w.roomAt[k];
     if (r < 0) { w.errors.push(`部屋の名前の位置が床ではない: ${name} (${L},${i},${j})`); continue; }
     w.rooms[r].name = name; w.rooms[r].en = en;
   }
@@ -570,10 +585,38 @@ export function pushOut(w, x, z, y0, y1, r, doorsState, ignoreProp = -1, out = [
     }
     const deps = doorsState && doorsState.deps;
     if (deps && deps.length) { const r2 = pushDeps(deps, px, pz, y0, y1, r); if (r2[2]) { px += r2[0]; pz += r2[1]; hit = 1; if (pass) pm = Math.max(pm, Math.abs(r2[0]) + Math.abs(r2[1])); } }
+    if (w.rails && w.rails.length) { const r2 = pushRails(w, px, pz, y0, y1, r); if (r2[2]) { px += r2[0]; pz += r2[1]; hit = 1; if (pass) pm = Math.max(pm, Math.abs(r2[0]) + Math.abs(r2[1])); } }
   }
   out[0] = px - x; out[1] = pz - z; out[2] = hit; out[3] = pm; // out[3]: 2回目の押し出しの最大（0に近ければ収まっている）
   return out;
 }
+// 階段の手すり: 段の面から RAIL.h の高さまで、床（階段の下の端の階）から立ち上がる細い板として押し出す
+export const RAIL = { h: 0.95, inset: 0.05, th: 0.03, from: 0.6 };
+function pushRails(w, px, pz, y0, y1, r) {
+  let ox = 0, oz = 0, hit = 0;
+  for (const R of w.rails) {
+    const x = px + ox, z = pz + oz, m = r + 0.1;
+    if (x < Math.min(R.ax, R.bx) - m || x > Math.max(R.ax, R.bx) + m || z < Math.min(R.az, R.bz) - m || z > Math.max(R.az, R.bz) + m) continue;
+    const base = R.s.L * LH;
+    // 上の階の床に立っている人には当たらない（上の階の吹き抜けのふちは、その階の手すり（'L'）が受け持つ）
+    if (y0 - STEP >= base + LH - 0.1) continue;
+    // 当たるのは段の高さが RAIL.from（0.6m）より上の所だけ（下の端の近くは、横から寄っても引っかからないように）
+    const vx = R.bx - R.ax, vz = R.bz - R.az, l2 = vx * vx + vz * vz || 1;
+    const t = Math.max(0, Math.min(1, ((x - R.ax) * vx + (z - R.az) * vz) / l2));
+    const h0 = stairHeight(w, R.s, R.ax + vx * t, R.az + vz * t);
+    if (h0 - base < RAIL.from) continue;
+    const top = h0 + RAIL.h;
+    if (y1 <= base || y0 >= top) continue;
+    // 下の端の近くの区間を除いた線分
+    const hA = stairHeight(w, R.s, R.ax, R.az) - base, hB = stairHeight(w, R.s, R.bx, R.bz) - base;
+    const uA = hA < hB ? Math.min(1, RAIL.from / Math.max(0.01, hB - hA)) : 0, uB = hA < hB ? 1 : 1 - Math.min(1, RAIL.from / Math.max(0.01, hA - hB));
+    const r2 = circleSeg(x, z, r + RAIL.th, R.ax + vx * uA, R.az + vz * uA, R.ax + vx * uB, R.az + vz * uB);
+    if (r2) { ox += r2[0]; oz += r2[1]; hit = 1; }
+  }
+  _pr[0] = ox; _pr[1] = oz; _pr[2] = hit;
+  return _pr;
+}
+const _pr = [0, 0, 0];
 // 置ける盾に体が当たったら押し出す（高さ1mなので乗り越えられる）
 function pushDeps(deps, px, pz, y0, y1, r) {
   let ox = 0, oz = 0, hit = 0;
