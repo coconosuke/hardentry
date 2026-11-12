@@ -1,5 +1,5 @@
 // 銃の動き: 撃つ・弾倉（1本ずつ残弾）・通常/速いリロード・1発ずつ込める・ポンプ・持ち替え・反動（BattleBit式）・散らばり
-import { WEAPONS, AMMO, ATTACH } from './data/weapons.js';
+import { WEAPONS, AMMO, ATTACH, zoomsOf } from './data/weapons.js';
 import { LONG, HAND_LONG } from './data/equipment.js';
 import { curWeapon, curW, magCap } from './actor.js';
 import { spawnBullet } from './combat.js';
@@ -71,6 +71,14 @@ export function stepWeapon(S, w, a, inp, dt, ev) {
   const adsT = W ? W.ads + attMods(wi).ads : 0.25;
   a.ads = Math.max(0, Math.min(1, a.ads + (a.adsOn ? dt / adsT : -dt / (adsT * 0.8))));
   a.low = Math.max(0, Math.min(1, a.low + (a.lowOn ? dt * 5 : -dt * 6)));
+  // 狙撃銃の照準の揺れ（度。構えたときだけ）: しゃがむと半分、伏せると4分の1、動くと大きい、腕のけがで大きい。
+  // 時間だけで決まる（乱数なし）ので、オンラインのゲストの手元とホストでほぼ同じになる
+  if (W && W.sway && a.ads > 0.01) {
+    const t = S.t * S.dt + a.id * 7.3;
+    const A = W.sway * a.ads * a.ads * (a.st > 1.5 ? 0.25 : a.st > 0.5 ? 0.5 : 1) * (1 + Math.min(1.5, (a.spd || 0) / 2.4) * 1.5) * (a.inj && a.inj.arm ? 1.8 : 1);
+    ws.sx = A * (Math.sin(t * 0.83) * 0.65 + Math.sin(t * 1.91 + 1.3) * 0.35);
+    ws.sy = A * (Math.sin(t * 1.17 + 2.1) * 0.6 + Math.sin(t * 0.57 + 0.4) * 0.4);
+  } else { ws.sx = 0; ws.sy = 0; }
   // 状態の時間
   if (ws.t > 0) ws.t -= dt;
   if (ws.t <= 0) finishState(S, a, ev);
@@ -79,6 +87,8 @@ export function stepWeapon(S, w, a, inp, dt, ev) {
     if (ac.a === 'reload') startReload(S, a, !!ac.fast, ev);
     else if (ac.a === 'switch') switchTo(S, a, ac.slot, ev);
     else if (ac.a === 'mode' && ws.slot === 3) m320Next(a, ev);
+    // 倍率を切り替えられる照準器: 構えている間（射撃モードが1つの銃はいつも）は射撃モードのボタンで倍率を切り替える
+    else if (ac.a === 'mode' && W && wi && zoomsOf(wi.att) && (W.modes.length <= 1 || a.ads > 0.5)) { const zs = zoomsOf(wi.att); wi.zi = ((wi.zi || 0) + 1) % zs.length; ev.push({ e: 'zoom', id: a.id, z: zs[wi.zi], sight: wi.att.sight }); }
     else if (ac.a === 'mode' && W && wi && W.modes.length > 1 && ws.st === 'ready') { wi.mode = (wi.mode + 1) % W.modes.length; ev.push({ e: 'fmode', id: a.id, m: W.modes[wi.mode] }); }
     else if (ac.a === 'light' && wi && (wi.att.light || wi.att.laser)) { wi.lightOn = !wi.lightOn; ev.push({ e: 'lightsw', id: a.id, on: wi.lightOn }); }
   }
@@ -211,7 +221,7 @@ function tryFire(S, w, a, W, wi, inp, ev) {
   // 散らばりと反動
   const sh = ws.shots;
   const sprd = spreadDeg(S, a, W, wi) * DEG;
-  const baseYaw = a.yaw + ws.ry * DEG, basePitch = a.pitch + ws.rp * DEG;
+  const baseYaw = a.yaw + (ws.ry + (ws.sx || 0)) * DEG, basePitch = a.pitch + (ws.rp + (ws.sy || 0)) * DEG;
   const pellets = am.pellets || 1;
   const seed = a.stats.sh + 1;
   for (let p = 0; p < pellets; p++) {
@@ -238,4 +248,6 @@ function tryFire(S, w, a, W, wi, inp, ev) {
   // 音と光（AIは聞く）
   const supp = wi.att.muzzle === 'supp';
   ev.push({ e: 'shot', id: a.id, wid: wi.id, x: a.x, y: a.y, z: a.z, supp, loud: (W.less ? 0.4 : 1) * m.noise, fl: m.flash, n: ws.shots });
+  // ボルトアクション: 撃ったらすぐボルトを操作する（音と薬莢は見る側で、操作の進み具合に合わせて出す）
+  if (W.bolt && ws.st === 'pump') ev.push({ e: 'bolt', id: a.id, wid: wi.id, dur: ws.t });
 }

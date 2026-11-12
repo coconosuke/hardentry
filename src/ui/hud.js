@@ -3,7 +3,7 @@ import { BTN, INFO, ICONS } from './hudlayout.js';
 import { onTap } from './input.js';
 import { C, CS, LH, isWallish } from '../engine/world.js';
 import { M } from '../engine/data/materials.js';
-import { WEAPONS } from '../engine/data/weapons.js';
+import { WEAPONS, zoomsOf, zoomOf } from '../engine/data/weapons.js';
 import { GEAR, LONG } from '../engine/data/equipment.js';
 import { ammoCount } from '../engine/actor.js';
 
@@ -221,7 +221,7 @@ export class Hud {
     }
     this.reticle.className = 'hud-reticle' + (optic && ads > 0.85 && !optic.scope ? ' on ' + optic.kind : '');
     // 倍率スコープ: 銃の像と同じ所（構え 0.8）で切り替える
-    const sk = optic && optic.scope && ads > 0.8 ? 'hud-scope on ' + optic.kind : 'hud-scope';
+    const sk = optic && optic.scope && ads > 0.8 ? 'hud-scope on ' + optic.kind + (optic.wide ? ' wide' : '') : 'hud-scope';
     if (this.cache.scope !== sk) { this.cache.scope = sk; this.scope.className = sk; }
     // 体力・防具
     if (p) {
@@ -252,7 +252,7 @@ export class Hud {
       let akey = '';
       if (p.ws.slot === 2 && v.gearId) { const g = p.inv.gear.find(x => x.id === v.gearId); akey = 'g|' + v.gearId + '|' + (g ? g.n : 0); }
       else if (p.ws.slot === 3 && p.inv.long) { const m = p.inv.m320; akey = 'L|' + p.inv.long + '|' + (m ? [m.sel, m.flash, m.stinger, m.cs].join(',') : '') + '|' + (p.ws.lt > 0 ? 1 : 0); }
-      else if (wi && W) { const [m, r] = ammoCount(wi); akey = wi.id + '|' + m + '|' + r + '|' + wi.mode + '|' + (wi.mags ? wi.mags.join(',') : '') + '|' + p.ws.st; }
+      else if (wi && W) { const [m, r] = ammoCount(wi); akey = wi.id + '|' + m + '|' + r + '|' + wi.mode + '|' + (wi.zi || 0) + '|' + (wi.mags ? wi.mags.join(',') : '') + '|' + p.ws.st; }
       if (this.cache.ammo !== akey) {
         this.cache.ammo = akey;
         const am = this.info.ammo;
@@ -275,7 +275,7 @@ export class Hud {
           am.querySelector('.mags').innerHTML = '';
         } else if (wi && W) {
           const [m, r] = ammoCount(wi);
-          am.querySelector('.mode').textContent = (W.modes[wi.mode] === 'auto' ? '連射' : W.modes[wi.mode] === 'burst' ? '3点' : '単発') + (p.ws.st === 'reload' ? '・リロード中' : p.ws.st === 'shell' ? '・装填中' : '');
+          am.querySelector('.mode').textContent = (W.bolt ? 'ボルト' : W.modes[wi.mode] === 'auto' ? '連射' : W.modes[wi.mode] === 'burst' ? '3点' : '単発') + (zoomsOf(wi.att) ? (zoomOf(wi) <= 1 ? '・等倍' : `・${zoomOf(wi)}倍`) : '') + (p.ws.st === 'reload' ? '・リロード中' : p.ws.st === 'shell' ? '・装填中' : '');
           // 対戦は予備が減らない（∞）
           am.querySelector('.cnt').innerHTML = `<b class="${m === 0 ? 'empty' : m <= (wi.cap || W.mag) * 0.25 ? 'lowa' : ''}">${m}</b><span>/${v.pvp ? '∞' : wi.mags ? wi.mags.length + '本' : r}</span>`;
           // 弾倉ごとの残り（RoN の弾倉の確認のように）
@@ -300,8 +300,11 @@ export class Hud {
       this.btn.nvg.classList.toggle('dis', !v.hasNvg);
       this.btn.light.classList.toggle('dis', !(wi && wi.att && (wi.att.light || wi.att.laser)));
       const m320 = p.ws.slot === 3 && p.inv.long === 'm320';
-      this.btn.fmode.querySelector('.lb').textContent = m320 ? '弾種' : W ? (W.modes[wi.mode] === 'auto' ? 'AUTO' : 'SEMI') : '';
-      this.btn.fmode.classList.toggle('dis', !m320 && !(W && W.modes.length > 1));
+      // 倍率を切り替えられるスコープ（狙撃銃）: 射撃モードのボタンで倍率を切り替える
+      // 構えている間（射撃モードが1つの銃はいつも）は倍率
+      const zs = !m320 && W && wi && (W.modes.length <= 1 || p.ads > 0.5) ? zoomsOf(wi.att) : null;
+      this.btn.fmode.querySelector('.lb').textContent = m320 ? '弾種' : zs ? (zoomOf(wi) <= 1 ? '×1' : `×${zoomOf(wi)}`) : W ? (W.bolt ? 'BOLT' : W.modes[wi.mode] === 'auto' ? 'AUTO' : 'SEMI') : '';
+      this.btn.fmode.classList.toggle('dis', !m320 && !zs && !(W && W.modes.length > 1));
       const gtxt = v.gearSel ? (GEAR[v.gearSel] ? GEAR[v.gearSel].name.replace(/（.*）/, '') : '') : '';
       const gn = v.gearSel ? (p.inv.gear.find(x => x.id === v.gearSel) || { n: 0 }).n : 0;
       const gk = gtxt + gn;

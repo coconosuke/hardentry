@@ -58,6 +58,8 @@ const GUNS = {
   h357: { b: 0.15, br: 7000, tau: 0.016, boom: [120, 45, 0.22, 1.2], crack: true, mech: 1900, tail: 0.38, sat: 2.0 },
   h57: { b: 0.1, br: 8200, tau: 0.008, boom: [190, 78, 0.1, 0.55], crack: true, mech: 3200, tail: 0.2, sat: 1.2 },
   sg: { b: 0.2, br: 5200, tau: 0.022, boom: [95, 38, 0.3, 1.4], crack: false, mech: 1700, tail: 0.45, sat: 2.2 },
+  // 狙撃銃（7.62mm NATO・長い銃身）: 太く長い響き。ボルトアクションなので撃った瞬間の機関部の音はない
+  r308: { b: 0.19, br: 7600, tau: 0.018, boom: [105, 38, 0.3, 1.25], crack: true, mech: 0, tail: 0.55, sat: 2.0, bolt: true },
 };
 function gunNear(sr, seed, k) {
   const g = GUNS[k], r = rng(seed);
@@ -68,7 +70,7 @@ function gunNear(sr, seed, k) {
   const [f0, f1, bd, bg] = g.boom;
   mixInto(out, thump(sr, r, f0 * (0.95 + r() * 0.1), f1, bd, bg), 0, 1.0);
   if (g.crack) mixInto(out, crack(sr, r), 0, 0.55);
-  mixInto(out, clack(sr, r, g.mech, 0.06, 0.35), S(sr, 0.028 + r() * 0.012), 1);
+  if (!g.bolt) mixInto(out, clack(sr, r, g.mech, 0.06, 0.35), S(sr, 0.028 + r() * 0.012), 1);
   // 短い尾（銃の近くの空気の揺れ）
   const tn = S(sr, g.tail); const tl = noise(tn, r); lp(tl, 1400, sr); hp(tl, 120, sr); mulEnv(tl, expEnv(tn, sr, 0.004, g.tail * 0.22)); mixInto(out, tl, S(sr, 0.004), 0.22);
   sat(out, g.sat);
@@ -189,6 +191,19 @@ function throwW(sr, seed) { const r = rng(seed), out = buf(sr, 0.35); const n = 
 function magOut(sr, seed) { const r = rng(seed), out = buf(sr, 0.35); mixInto(out, clack(sr, r, 1700, 0.05, 1), 0, 1); const n = S(sr, 0.18); const z = noise(n, r); bp(z, 2400, 1.5, sr); mulEnv(z, env(n, sr, 0.02, 0.15, 2)); mixInto(out, z, S(sr, 0.04), 0.5); return fadeEdges(normalize(out, 0.6), sr); }
 function magIn(sr, seed) { const r = rng(seed), out = buf(sr, 0.45); mixInto(out, clack(sr, r, 1400, 0.06, 1), 0, 1); mixInto(out, thump(sr, r, 200, 120, 0.05, 0.5), 0, 1); mixInto(out, clack(sr, r, 2300, 0.07, 1.1), S(sr, 0.25), 1); return fadeEdges(normalize(out, 0.65), sr); }
 function pump(sr, seed) { const r = rng(seed), out = buf(sr, 0.45); mixInto(out, clack(sr, r, 1100, 0.08, 1), 0, 1); const n = S(sr, 0.12); const z = noise(n, r); bp(z, 1600, 1.2, sr); mulEnv(z, env(n, sr, 0.01, 0.1, 2)); mixInto(out, z, S(sr, 0.02), 0.5); mixInto(out, clack(sr, r, 1300, 0.08, 1.1), S(sr, 0.2), 1); return fadeEdges(normalize(out, 0.7), sr); }
+// ボルトの操作: 起こす（カチッ）→ 引く（こすれ）→ 引ききる（薬莢が抜ける）→ 押す（こすれ）→ 押しきる（弾が入る）→ 倒す（カチッ）。
+// 間合いは見た目の動き（AT308 のボルトの時間 0.95秒の 16〜26%・26〜46%・46〜64%・64〜74%）に合わせる
+function boltS(sr, seed, T = 0.95) {
+  const r = rng(seed), out = buf(sr, T + 0.1);
+  const at = (f) => S(sr, T * f);
+  mixInto(out, clack(sr, r, 1500, 0.06, 0.9), at(0.17), 1);
+  { const n = S(sr, T * 0.2); const z = noise(n, r); bp(z, 2600, 1.4, sr); mulEnv(z, env(n, sr, 0.02, T * 0.16, 1.5)); mixInto(out, z, at(0.26), 0.45); }
+  mixInto(out, clack(sr, r, 2100, 0.05, 0.7), at(0.45), 1);
+  { const n = S(sr, T * 0.17); const z = noise(n, r); bp(z, 2200, 1.4, sr); mulEnv(z, env(n, sr, 0.02, T * 0.14, 1.5)); mixInto(out, z, at(0.47), 0.4); }
+  mixInto(out, clack(sr, r, 1250, 0.07, 1.0), at(0.63), 1);
+  mixInto(out, clack(sr, r, 1700, 0.06, 0.9), at(0.735), 1);
+  return fadeEdges(normalize(out, 0.62), sr);
+}
 function shellIn(sr, seed) { const r = rng(seed), out = buf(sr, 0.25); mixInto(out, clack(sr, r, 1200 + r() * 200, 0.06, 0.8), 0, 1); const n = S(sr, 0.08); const z = noise(n, r); bp(z, 1800, 1.5, sr); mulEnv(z, env(n, sr, 0.01, 0.07, 2)); mixInto(out, z, S(sr, 0.03), 0.4); return fadeEdges(normalize(out, 0.55), sr); }
 function dry(sr, seed) { const r = rng(seed), out = buf(sr, 0.12); mixInto(out, clack(sr, r, 2200, 0.08, 1), 0, 1); return fadeEdges(normalize(out, 0.5), sr); }
 function cloth(sr, seed, dur = 0.3, f = 2600) { const r = rng(seed), out = buf(sr, dur); const n = S(sr, dur); const z = noise(n, r); bp(z, f, 1.1, sr); mulEnv(z, env(n, sr, dur * 0.25, dur * 0.7, 2)); mixInto(out, z, 0, 1); return fadeEdges(normalize(out, 0.4), sr); }
@@ -250,7 +265,7 @@ export const SFX = {
   explosion: [(sr, i) => boom(sr, 700 + i, true), 2], flashbang: [(sr, i) => flashBang(sr, 710 + i), 2], stinger: [(sr, i) => stingerBang(sr, 720 + i), 1], gasPop: [(sr, i) => gasPop(sr, 730 + i), 1],
   nadeBounce: [(sr, i) => nadeBounce(sr, 740 + i), 2], throw: [(sr, i) => throwW(sr, 750 + i), 2],
   // 銃と装備の扱い
-  magOut: [(sr, i) => magOut(sr, 800 + i), 2], magIn: [(sr, i) => magIn(sr, 810 + i), 2], pump: [(sr, i) => pump(sr, 820 + i), 1], shellIn: [(sr, i) => shellIn(sr, 830 + i), 2], shellStart: [(sr, i) => cloth(sr, 840 + i, 0.2, 2000), 1],
+  magOut: [(sr, i) => magOut(sr, 800 + i), 2], magIn: [(sr, i) => magIn(sr, 810 + i), 2], pump: [(sr, i) => pump(sr, 820 + i), 1], bolt: [(sr, i) => boltS(sr, 1020 + i), 2], shellIn: [(sr, i) => shellIn(sr, 830 + i), 2], shellStart: [(sr, i) => cloth(sr, 840 + i, 0.2, 2000), 1],
   dry: [(sr, i) => dry(sr, 850 + i), 1], draw: [(sr, i) => draw(sr, 860 + i), 2], fmode: [(sr, i) => dry(sr, 870 + i), 1], click: [(sr, i) => dry(sr, 880 + i), 1],
   cuffs: [(sr, i) => cuffs(sr, 900 + i), 1], cuffsStart: [(sr, i) => cloth(sr, 910 + i, 0.35, 1800), 1], mirror: [(sr, i) => cloth(sr, 920 + i, 0.3, 3200), 1], act: [(sr, i) => cloth(sr, 930 + i, 0.25, 2400), 2],
   bandage: [(sr, i) => bandage(sr, 940 + i), 1], spray: [(sr, i) => sprayS(sr, 950 + i), 1], nvg: [(sr, i) => nvgWhine(sr, 960 + i), 1], drone: [(sr, i) => droneLoop(sr, 970 + i), 1],

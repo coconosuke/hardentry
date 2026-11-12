@@ -151,7 +151,8 @@ function attSub(k, v, wid) {
   const A = ATTACH[k] && ATTACH[k][v]; if (!A) return '';
   const t = [];
   if (k === 'mag' && wid) t.push(`${capOf(wid, v)}発`);
-  if (A.zoom && A.zoom > 1.01) t.push(`倍率${A.zoom.toFixed(1)}`);
+  if (A.zooms) t.push(`倍率${Math.min(...A.zooms)}〜${Math.max(...A.zooms)}（切り替え）`);
+  else if (A.zoom && A.zoom > 1.01) t.push(`倍率${A.zoom.toFixed(1)}`);
   if (A.ads) t.push(`構える時間${A.ads > 0 ? '+' : ''}${Math.round(A.ads * 1000)}ms`);
   if (A.rcv && A.rcv !== 1) t.push(`縦の反動${Math.round((A.rcv - 1) * 100)}%`);
   if (A.rch && A.rch !== 1) t.push(`横の反動${Math.round((A.rch - 1) * 100)}%`);
@@ -183,7 +184,7 @@ export function weaponCard(spec, kind) {
   const bar = (label, v, max, txt) => `<div class="bar"><span>${label}</span><i><em style="width:${Math.max(3, Math.min(100, v / max * 100))}%"></em></i><b>${txt}</b></div>`;
   const rec = (W.rc ? W.rc.v * (W.rc.first || 1) : 1);
   const cap = capOf(spec.id, curAtt(spec, 'mag'));
-  return `<h3>${esc(W.name)}</h3><p class="sub">${CAT_NAME[W.cat]} · ${CAL[W.cal] ? CAL[W.cal].name : ''} · ${cap}発${W.modes ? ' · ' + W.modes.map(m => m === 'auto' ? '連射' : m === 'burst' ? '3点' : '単発').join('/') : ''}</p>
+  return `<h3>${esc(W.name)}</h3><p class="sub">${CAT_NAME[W.cat]} · ${CAL[W.cal] ? CAL[W.cal].name : ''} · ${cap}発${W.bolt ? ' · ボルトアクション' : W.modes ? ' · ' + W.modes.map(m => m === 'auto' ? '連射' : m === 'burst' ? '3点' : '単発').join('/') : ''}</p>
     ${bar('威力', dmg, kind === 'pvp' ? 130 : 200, Math.round(dmg))}
     ${bar('発射速度', W.rpm || 0, 1200, (W.rpm || 0) + '発/分')}
     ${bar('反動', rec, 4, rec.toFixed(1))}

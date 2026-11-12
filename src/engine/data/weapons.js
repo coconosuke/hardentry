@@ -81,6 +81,12 @@ export const WEAPONS = {
     ads: 0.38, draw: 0.75, move: 0.9, rc: { v: 1.4, h: 0.5, bias: 0.08, first: 1.2, ctrl: 8, kick: 1.4 }, sp: { hip: 3.0, ads: 0.05, move: 2.2 }, rl: { tac: 2.9, fast: 2.3, empty: 0.5 },
     pvp: { dmg: 62, fall: [35, 55, 0.82] }, model: 'ar15', mdl: { barrel: 0.42, rail: 'hk', stock: 'hk', mag762: true }, snd: 'r762',
     desc: 'HK416を7.62mm NATOにした選抜射手の小銃。遠くまでとてもよく当たる。重く長いので、室内では振り回しにくい。' }),
+  // ---------- SWAT: 狙撃銃（11-12 追加。ボルトアクション: 1発ごとに手でボルトを引いて次の弾を込める） ----------
+  // bolt: ボルトを操作する時間（秒）。この間は撃てない（ポンプと同じ扱い。見た目と音はボルト）。sway: 構えたときの照準の揺れ（度。立ち）
+  at308: W({ name: 'AT308', cat: 'sniper', side: 'swat', cal: '762x51', ammo: ['ap', 'jhp'], mag: 10, spare: 4, chamber: true, bolt: true, pump: 0.95, modes: ['semi'], rpm: 60, vel: 850, kg: 6.4, len: 1.13,
+    ads: 0.5, draw: 0.85, move: 0.88, sway: 0.2, rc: { v: 3.0, h: 0.45, bias: 0.05, first: 1, ctrl: 7, kick: 2.2 }, sp: { hip: 6.0, ads: 0.012, move: 3.0 }, rl: { tac: 3.1, fast: 2.5, empty: 0.6 },
+    pvp: { dmg: 115, fall: [70, 110, 0.9] }, model: 'bolt', mdl: {}, snd: 'r308',
+    desc: '英国アキュラシー・インターナショナル社の警察向けのボルトアクション狙撃銃（7.62mm NATO・10発の箱弾倉）。1発ごとに手でボルトを引く（約1秒）。狙撃用スコープは4倍と8倍を切り替えられる（射撃モードのボタン）。構えると照準がわずかに揺れる（しゃがむ・伏せると小さい）。腰だめはまず当たらない。' }),
   // ---------- SWAT: 短機関銃 ----------
   mp5: W({ name: 'MP5A4', cat: 'smg', side: 'swat', cal: '9mm', ammo: ['ap', 'jhp'], mag: 30, spare: 6, chamber: true, modes: ['auto', 'semi'], rpm: 800, vel: 400, kg: 2.5, len: 0.68,
     ads: 0.23, draw: 0.45, move: 0.98, rc: { v: 0.42, h: 0.3, bias: 0.04, first: 1.3, ctrl: 12, kick: 0.75 }, sp: { hip: 2.0, ads: 0.14, move: 1.5 }, rl: { tac: 2.6, fast: 2.2, empty: 0.55 },
@@ -271,8 +277,15 @@ export const ATTACH = {
     reddot: { name: 'ドットサイト（Micro T-2）', zoom: 1.1, ads: 0.01 },
     srs: { name: '広窓ドットサイト（SRS）', zoom: 1.1, ads: 0.014, desc: '窓が広く、まわりが見やすい。少し重い。' },
     holo: { name: 'ホロサイト（EXPS3）', zoom: 1.1, ads: 0.015 },
-    acog: { name: '4倍スコープ（ACOG）', zoom: 4.0, ads: 0.05, scope: true, desc: '4倍の固定倍率。遠くの頭を狙える。近くは見づらい。' },
-    lpvo: { name: '等倍〜4倍スコープ', zoom: 3.0, ads: 0.06, scope: true },
+    // 倍率の照準器（11-12。実在の物を元にした形と照準の模様）。zooms: 構えている間に射撃モードのボタンで切り替える倍率（はじめが既定）。
+    // flip: 等倍にするとブースターを横へ倒す（照準はホロサイト）。wide1: 等倍でもスコープをのぞく（視野が広い）
+    acog2: { name: '2倍スコープ（ACOG TA47 2x20）', zoom: 2.0, ads: 0.03, scope: true, desc: 'トリジコンの小型のACOG（全長13.5cm）。2倍の固定倍率で、照準は赤い十字（光ファイバーと夜光）。近くも見やすい。' },
+    mag3: { name: 'ホロサイト＋3倍ブースター（EXPS3・G33）', zoom: 3.0, zooms: [3, 1], ads: 0.04, scope: true, flip: true, desc: 'EOTech のホロサイトの後ろに3倍のブースター（G33）。構えている間に射撃モードのボタンで、ブースターを横へ倒す（等倍のホロサイト）・戻す（3倍）。' },
+    acog: { name: '4倍スコープ（ACOG TA31 4x32）', zoom: 4.0, ads: 0.05, scope: true, desc: 'トリジコンの4倍の固定スコープ。照準は赤い山形（シェブロン）と、下に5.56mmの距離の目盛り。遠くの頭を狙える。近くは見づらい。' },
+    lpvo: { name: '等倍〜4倍スコープ（SpecterDR 1-4x）', zoom: 4.0, zooms: [4, 1], ads: 0.06, scope: true, wide1: true, desc: 'ELCAN の等倍と4倍を上のレバーで切り替えるスコープ。構えている間に射撃モードのボタンで切り替える。照準は十字と赤い点。' },
+    scope6: { name: '6倍スコープ（ACOG TA648 6x48）', zoom: 6.0, ads: 0.08, scope: true, desc: '7.62mm NATO の小銃のための大きなACOG（全長23cm・1.1kg）。照準は赤い馬蹄形と点、下に .308 の距離の目盛り。' },
+    lpvo8: { name: '等倍〜8倍スコープ（NX8 1-8x24）', zoom: 8.0, zooms: [8, 1], ads: 0.07, scope: true, wide1: true, desc: 'ナイトフォースの選抜射手向けのスコープ（全長22cm）。構えている間に射撃モードのボタンで等倍と8倍を切り替える。照準は赤い円と点、細い十字に2ミルごとの目盛り。' },
+    sniper: { name: '狙撃用スコープ（PM II 3-12x50）', zoom: 8.0, zooms: [4, 8], ads: 0.08, scope: true, desc: 'シュミット＆ベンダーの狙撃用スコープ（34mmの胴・50mmの対物レンズ）。射撃モードのボタンで4倍と8倍を切り替える。照準はミルドットの十字。' },
     rmr: { name: 'ピストル用ドットサイト（RMR）', zoom: 1.05, ads: 0.01 },
     sro: { name: 'ピストル用広窓ドット（SRO）', zoom: 1.05, ads: 0.012, desc: '丸い大きな窓で、ドットを見失いにくい。' },
   },
@@ -317,6 +330,24 @@ export const ATTACH = {
 export const SLOT_NAME = { sight: '照準器', muzzle: 'マズル', grip: 'グリップ', side: 'ライト・レーザー', mag: '弾倉', stock: '銃床', finish: '色' };
 // 銃の種類ごとに付けられるもの（はじめの物が既定）
 // 見た目と合わせる: 前の握りが元から付いている銃（AUG・MP9・MP5K・MP7）はグリップなし、レールのない拳銃はライトなし など
+// 小銃の照準器（実銃の取り付け方に合わせる）:
+//  上がレールの小銃（AR-15 の仲間・SCAR・SA58・AUG A3・Tavor X95・vz.58 の短いレール）はドット・ホロ・2倍・4倍・等倍〜4倍。
+//  ブースター（ホロ＋3倍）は上のレールが長い物だけ（vz.58 は短いので付かない）。
+//  等倍〜8倍は銃身が長めの物（M4A1・HK416・AUG・Tavor・SCAR-H・HK417）。6倍の ACOG（TA648）は 7.62mm NATO 用（SCAR-H・HK417・G3）。
+//  G3 は爪の台（クローマウント）にドット・2倍・4倍・6倍。G36C は持ち手の上の短いレールにドット・ホロ・2倍。AK・SKS・Mini-14・RPK は照準器なし
+function rifleSights(wid, W) {
+  const m = W.model, md = W.mdl || {};
+  if (m === 'g36') return ['reddot', 'holo', 'acog2', 'iron'];
+  if (m === 'g3') return ['iron', 'reddot', 'acog2', 'acog', 'scope6'];
+  const rail = !(m === 'ak' && !md.vz) && m !== 'sks' && m !== 'mini14';
+  if (!rail) return ['iron'];
+  const out = ['iron', 'reddot', 'srs', 'holo', 'acog2'];
+  if (!md.vz) out.push('mag3');
+  out.push('acog', 'lpvo');
+  if (['m4a1', 'hk416', 'aug', 'tavor', 'scarh', 'hk417'].includes(wid)) out.push('lpvo8');
+  if (W.cal === '762x51' && ['scarh', 'hk417'].includes(wid)) out.push('scope6');
+  return out;
+}
 export function attachOptions(wid) {
   const W = WEAPONS[wid];
   if (!W) return {};
@@ -327,7 +358,7 @@ export function attachOptions(wid) {
     const box = W.mag >= 20 && !md.rpk;
     const fg = (rail && m !== 'aug' && !md.vz) || m === 'g3';
     return {
-      sight: m === 'g36' ? ['reddot', 'holo', 'iron'] : rail ? ['iron', 'reddot', 'srs', 'holo', 'acog', 'lpvo'] : m === 'g3' ? ['iron', 'reddot', 'acog'] : ['iron'],
+      sight: rifleSights(wid, W),
       muzzle: ['none', 'supp', 'comp', 'brake', 'flash'],
       grip: fg ? ['none', 'vert', 'angled', 'stubby', 'handstop'] : ['none'],
       side: ['none', 'light', 'laser', 'combo', 'ir'],
@@ -336,12 +367,24 @@ export function attachOptions(wid) {
       finish: ['ak', 'sks', 'mini14', 'g36', 'aug', 'g3'].includes(m) ? ['blk'] : fin,
     };
   }
+  if (c === 'sniper') {
+    return {
+      sight: ['sniper', 'lpvo8', 'scope6', 'acog', 'lpvo'],
+      muzzle: ['none', 'brake', 'supp'],
+      grip: ['none'],
+      side: ['none', 'light', 'laser', 'combo', 'ir'],
+      mag: ['std'],
+      stock: ['std'],
+      finish: fin,
+    };
+  }
   if (c === 'smg') {
     const rail = ['mp7', 'ump', 'mpx', 'vector', 'mp9', 'evo', 'mp5'].includes(m) && !md.sd;
     const fg = rail && m !== 'mp9' && m !== 'mp7' && !md.k;
     const gripMag = ['mac10', 'mp9', 'mp7', 'uzi'].includes(m);
     return {
-      sight: rail || m === 'mp5' ? ['iron', 'reddot', 'srs', 'holo'] : ['iron'],
+      // 9mm の銃でも 2倍の ACOG（TA47 には 9mm 用の目盛りの型がある）。上のレールが長い MPX・UMP・Vector はブースターも
+      sight: rail || m === 'mp5' ? ['iron', 'reddot', 'srs', 'holo', 'acog2'].concat(['mpx', 'ump', 'vector'].includes(m) ? ['mag3'] : []) : ['iron'],
       muzzle: W.integral ? ['none'] : ['none', 'supp', 'comp', 'flash'],
       grip: fg ? ['none', 'vert', 'angled', 'stubby', 'handstop'] : ['none'],
       side: m === 'tec9' ? ['none'] : ['none', 'light', 'laser', 'combo', 'ir'],
@@ -384,4 +427,15 @@ export function capOf(wid, mag) {
   if (mag === 'ext') return W.tube ? W.mag + 2 : W.cat === 'pistol' ? W.mag + (W.mag >= 12 ? 5 : 3) : Math.round(W.mag * 1.33);
   return W.mag;
 }
-export const CAT_NAME = { rifle: '小銃', smg: '短機関銃', shotgun: '散弾銃', pistol: '拳銃', less: '非致死' };
+export const CAT_NAME = { rifle: '小銃', sniper: '狙撃銃', smg: '短機関銃', shotgun: '散弾銃', pistol: '拳銃', less: '非致死' };
+// スコープの倍率（倍率を切り替えられるスコープは、銃ごとに選んだ倍率 wi.zi）
+export function zoomsOf(att) { const x = att && ATTACH.sight[att.sight]; return x && x.zooms ? x.zooms : null; }
+export function zoomOf(wi) { if (!wi) return 1; const zs = zoomsOf(wi.att); if (zs) return zs[(wi.zi || 0) % zs.length]; const x = ATTACH.sight[wi.att && wi.att.sight]; return x && x.zoom ? x.zoom : 1; }
+// 今の照準器の状態（HUD・一人称の見え方）: kind 照準の模様、scope 倍率の像（銃を描かずに HUD のスコープの像）、wide 等倍のスコープ（広い視野）
+export function opticOf(wi) {
+  const sid = wi && wi.att ? wi.att.sight : 'iron', x = ATTACH.sight[sid];
+  if (!x) return { kind: 'iron', zoom: 1, scope: false, wide: false };
+  const zoom = zoomOf(wi);
+  if (x.flip && zoom <= 1) return { kind: 'holo', zoom: 1, scope: false, wide: false };
+  return { kind: sid, zoom, scope: !!x.scope, wide: !!(x.wide1 && zoom <= 1) };
+}

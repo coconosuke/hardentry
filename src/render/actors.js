@@ -64,7 +64,7 @@ export class ActorView {
     const g = gunModel(wid, att);
     if (!g) return null;
     let m = this.guns.get(g.key);
-    if (!m) { m = { body: makeWorldMesh(this.gl, g.body), mag: g.mag ? makeWorldMesh(this.gl, g.mag) : null, pump: g.pump ? makeWorldMesh(this.gl, g.pump) : null, g }; this.guns.set(g.key, m); }
+    if (!m) { m = { body: makeWorldMesh(this.gl, g.body), mag: g.mag ? makeWorldMesh(this.gl, g.mag) : null, pump: g.pump ? makeWorldMesh(this.gl, g.pump) : null, flip: g.flip ? makeWorldMesh(this.gl, g.flip) : null, g }; this.guns.set(g.key, m); }
     return m;
   }
   // このこまの準備: S（エンジンの状態）、alpha（補間）
@@ -145,7 +145,7 @@ export class ActorView {
       M[12] = g.p[0]; M[13] = g.p[1]; M[14] = g.p[2]; M[15] = 1;
       gl.uniformMatrix4fv(W.u.uModel, false, M);
       gl.uniform1f(W.u.uRoomOverride, Math.max(0, e.room));
-      drawMesh(gl, gm.body); if (gm.mag && e.a.ws.st !== 'reload') drawMesh(gl, gm.mag); if (gm.pump) drawMesh(gl, gm.pump);
+      drawMesh(gl, gm.body); if (gm.mag && e.a.ws.st !== 'reload') drawMesh(gl, gm.mag); if (gm.pump) drawMesh(gl, gm.pump); if (gm.flip) drawMesh(gl, gm.flip);
       r.stats.draws++;
     }
     // 結束バンド: 手首から手首へ（白い帯と、手首ごとの輪）
@@ -173,7 +173,7 @@ export class ActorView {
       M[12] = it.x; M[13] = it.y + 0.02; M[14] = it.z; M[15] = 1;
       gl.uniformMatrix4fv(W.u.uModel, false, M);
       gl.uniform1f(W.u.uRoomOverride, Math.max(0, roomOf(r.w0, it.x, it.y + 0.3, it.z)));
-      drawMesh(gl, gm.body); if (gm.mag) drawMesh(gl, gm.mag);
+      drawMesh(gl, gm.body); if (gm.mag) drawMesh(gl, gm.mag); if (gm.pump) drawMesh(gl, gm.pump); if (gm.flip) drawMesh(gl, gm.flip);
     }
     // 飛んでいる投げ物（回りながら）
     for (const n of this.nades || []) {

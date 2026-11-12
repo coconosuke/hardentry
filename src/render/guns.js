@@ -278,6 +278,44 @@ const MODELS = {
     P.pump = (M) => { sbx(M, 0.021, -0.037, 0.15, 0.008, 0.29, furn, LAYER.rubber); };
     P.pumpZ = 0.08;
   },
+  // ボルトアクションの狙撃銃（AT308）: 丸い機関部・骨組みの銃床（頬当てを高く）・太い銃身・たたんだ二脚・箱弾倉。
+  // ボルト（後ろの覆いと右の槓桿）は別の部品で、撃つたびに右手で起こして引き、押して倒す（P.bolt）
+  bolt(B, P, o) {
+    const c = K.blk;
+    tz(B, -0.13, 0.11, 0.0178, 0.002, K.dg, 12);                     // 機関部（丸い）
+    bx(B, -0.0165, -0.002, -0.07, -0.0182, 0.012, -0.015, hex('#121316')); // 排莢口（右）
+    sbx(B, 0.011, 0.018, -0.135, 0.03, 0.125, c);                      // 上のレール（スコープ）
+    sbx(B, 0.024, -0.058, -0.12, -0.004, 0.12, c, LAYER.metal);       // 銃床の骨組み（機関部の下）
+    sbx(B, 0.02, -0.07, -0.005, -0.04, 0.088, c, LAYER.metal);        // 弾倉の差し込み口
+    sbx(B, 0.025, -0.034, 0.12, 0.024, 0.4, c, LAYER.metal);          // 先台（銃身に触れない筒）
+    sbx(B, 0.011, 0.024, 0.12, 0.032, 0.3, c);                        // 先台の上のレール
+    for (const sx of [1, -1]) for (const z of [0.17, 0.23, 0.29, 0.35]) bx(B, sx * 0.0252, -0.018, z, sx * 0.0256, 0.008, z + 0.035, hex('#17181b')); // 横の穴
+    tz(B, 0.11, 0.625, 0.0128, 0, K.dg, 10, 0.0105);                  // 太い銃身（先へ細く）
+    tz(B, 0.625, 0.64, 0.0112, 0, K.blk, 8);                          // ねじの覆い
+    // 二脚（たたんで銃身の下へ）
+    sbx(B, 0.014, -0.048, 0.355, -0.032, 0.395, c, LAYER.metal);
+    for (const sx of [1, -1]) bx(B, sx * 0.003, -0.05, 0.38, sx * 0.0135, -0.04, 0.58, K.dg, LAYER.metal);
+    // 握りと用心金・引き金
+    grip(B, -0.052, -0.058, -0.155, -0.1, 0.015, 0.02, c);
+    sbx(B, 0.004, -0.083, -0.07, -0.077, 0.004, c);
+    sbx(B, 0.0025, -0.072, -0.045, -0.058, -0.039, K.steel);
+    // 銃床: 骨組みの背と、高い頬当て、床尾（ゴム）、下の支え
+    sbx(B, 0.016, -0.036, -0.4, -0.006, -0.12, c, LAYER.metal);
+    sbx(B, 0.019, -0.006, -0.36, 0.036, -0.2, c, LAYER.rubber);
+    sbx(B, 0.021, -0.125, -0.428, 0.04, -0.4, hex('#1d1e20'), LAYER.rubber);
+    grip(B, -0.036, -0.24, -0.118, -0.4, 0.012, 0.011, c);
+    P.boreY = 0; P.sightY = 0.07; P.eyeZ = -0.27; P.muzzle = 0.64; P.railZ = [-0.12, 0.12]; P.railY = 0.03; P.rail2 = [0.16, 0.36]; P.foreY = -0.034;
+    P.gripR = [0, -0.1, -0.1]; P.gripL = [0, -0.046, 0.27]; P.magWell = [0, -0.065, 0.04];
+    P.mag = (M) => sbx(M, 0.0155, -0.068, 0.006, -0.128, 0.08, c);
+    // ボルト（動く部品）: 後ろの覆いと、右へ出た槓桿・先の丸い握り
+    P.pump = (M) => {
+      tz(M, -0.168, -0.13, 0.0135, 0.002, c, 10);
+      const u = nrm([-1, -0.62, -0.18]), v = nrm(cross([0, 0, 1], u)), w = cross(u, v);
+      obox(M, [-0.032, -0.006, -0.088], u, v, w, 0.019, 0.0035, 0.0035, LAYER.metal, K.steel);
+      M.tube([-0.05, -0.016, -0.093], [-0.061, -0.023, -0.096], 0.0068, 0.0068, 8, LAYER.metal, c, { caps: true });
+    };
+    P.pumpZ = 0.085; P.bolt = true; P.boltPt = [-0.056, -0.02, -0.095];
+  },
   pepper(B, P, o) {
     sbx(B, 0.022, -0.04, -0.12, 0.04, 0.16, K.blk, LAYER.rubber);
     sbx(B, 0.02, -0.03, 0.16, 0.025, 0.24, K.yel, LAYER.rubber);
@@ -651,31 +689,106 @@ function addSight(B, P, kind) {
     P.sightY = ry + 0.033; P.eyeZ = z - 0.2; P.optic = { kind: 'srs', z, r: 0.017, y: ry + 0.033 };
   } else if (kind === 'holo') {
     const z = (z0 + z1) / 2;
-    sbx(B, 0.019, ry, z - 0.045, ry + 0.02, z + 0.04, K.blk);
-    // 窓の枠（左右の柱と屋根）。中は空いている
-    for (const sx of [1, -1]) bx(B, sx * 0.02, ry + 0.02, z - 0.045, sx * 0.0145, ry + 0.062, z + 0.04, K.blk);
-    sbx(B, 0.02, ry + 0.056, z - 0.045, ry + 0.062, z + 0.04, K.blk);
-    sbx(B, 0.0145, ry + 0.02, z + 0.034, ry + 0.024, z + 0.04, K.dg);
+    holoBody(B, ry, z);
     P.sightY = ry + 0.04; P.eyeZ = z - 0.2; P.optic = { kind, z, r: 0.017, y: ry + 0.04 };
+  } else if (kind === 'acog2') {
+    // トリジコン ACOG TA47 2x20（全長135mm）: 細い胴と一体の台、上に赤い光ファイバー、左にねじ
+    const z = (z0 + z1) / 2, y = ry + 0.028, zb = z - 0.07, zf = z + 0.065;
+    sbx(B, 0.0115, ry, z - 0.045, ry + 0.013, z + 0.035, K.blk);
+    B.tube([0.0115, ry + 0.0065, z - 0.01], [0.0175, ry + 0.0065, z - 0.01], 0.0042, 0.0042, 8, LAYER.metal, K.dg, { caps: true });
+    B.tube([0, y, zb + 0.015], [0, y, zf - 0.02], 0.0128, 0.0128, 12, LAYER.metal, K.blk, { caps: false });
+    B.tube([0, y, zf - 0.02], [0, y, zf], 0.0128, 0.0146, 12, LAYER.metal, K.blk, { caps: true });
+    B.tube([0, y, zb], [0, y, zb + 0.015], 0.0142, 0.0128, 12, LAYER.metal, K.blk, { caps: true });
+    sbx(B, 0.0042, y + 0.0118, z - 0.04, y + 0.0165, z + 0.03, hex('#a8382a'));
+    P.sightY = y; P.eyeZ = zb - 0.053; P.optic = { kind, z, r: 0.011, y, scope: true };
+  } else if (kind === 'mag3') {
+    // EOTech EXPS3（前）＋ G33 3倍ブースター（後ろ）。ブースターは STS の台の左の蝶番で横へ倒れる（別の部品 P.flip）
+    const z = (z0 + z1) / 2, zh = z + 0.045, zm = z - 0.07, y = ry + 0.04;
+    holoBody(B, ry, zh);
+    sbx(B, 0.0145, ry, zm - 0.026, ry + 0.012, zm + 0.026, K.blk);                  // STS の台
+    bx(B, 0.0145, ry + 0.004, zm - 0.02, 0.0215, ry + 0.015, zm + 0.02, K.blk);      // 蝶番（左）
+    P.flip = (M) => {
+      M.tube([0, y, zm - 0.05], [0, y, zm + 0.046], 0.0152, 0.0152, 12, LAYER.metal, K.blk, { caps: false });
+      M.tube([0, y, zm - 0.062], [0, y, zm - 0.05], 0.0172, 0.0152, 12, LAYER.metal, K.blk, { caps: true });
+      M.tube([0, y, zm + 0.046], [0, y, zm + 0.053], 0.0162, 0.0162, 12, LAYER.metal, K.dg, { caps: true });
+      M.tube([0, y, zm - 0.013], [0, y, zm + 0.013], 0.0182, 0.0182, 12, LAYER.metal, K.blk, { caps: false }); // 輪
+      bx(M, 0.004, ry + 0.012, zm - 0.012, 0.0195, y, zm + 0.012, K.blk);                                   // 輪から蝶番への腕
+    };
+    P.flipPivot = [0.0185, ry + 0.012];
+    P.sightY = y; P.eyeZ = zh - 0.2; P.optic = { kind, z: zh, r: 0.017, y, scope: true };
   } else if (kind === 'acog') {
-    // 4倍の固定スコープ: 短い胴、太い対物レンズ、上の光ファイバー
-    const z = (z0 + z1) / 2, y = ry + 0.034;
-    sbx(B, 0.012, ry, z - 0.04, ry + 0.018, z + 0.03, K.blk);
-    B.tube([0, y, z - 0.06], [0, y, z + 0.03], 0.0165, 0.0165, 10, LAYER.metal, K.blk, { caps: false });
-    B.tube([0, y, z + 0.03], [0, y, z + 0.075], 0.0175, 0.0215, 10, LAYER.metal, K.blk, { caps: true });
-    B.tube([0, y, z - 0.088], [0, y, z - 0.06], 0.0195, 0.0165, 10, LAYER.metal, K.blk, { caps: true });
-    sbx(B, 0.0035, y + 0.0165, z - 0.045, y + 0.022, z + 0.022, hex('#3e7a3a'));
+    // トリジコン ACOG TA31 4x32（全長150mm）: 角ばった後ろと太い対物レンズ、上に緑の光ファイバー、TA51 の台（左に2つのねじ）
+    const z = (z0 + z1) / 2, y = ry + 0.034, zb = z - 0.08, zf = z + 0.07;
+    sbx(B, 0.0125, ry, z - 0.045, ry + 0.018, z + 0.035, K.blk);
+    for (const dz of [-0.03, 0.02]) B.tube([0.0125, ry + 0.009, z + dz], [0.019, ry + 0.009, z + dz], 0.0045, 0.0045, 8, LAYER.metal, K.dg, { caps: true });
+    sbx(B, 0.0158, y - 0.012, zb + 0.022, y + 0.0165, z + 0.02, K.blk);              // 後ろの角ばった胴
+    B.tube([0, y, z + 0.02], [0, y, zf - 0.03], 0.0165, 0.0175, 12, LAYER.metal, K.blk, { caps: false });
+    B.tube([0, y, zf - 0.03], [0, y, zf], 0.0175, 0.0215, 12, LAYER.metal, K.blk, { caps: true });
+    B.tube([0, y, zb], [0, y, zb + 0.022], 0.0185, 0.016, 12, LAYER.metal, K.blk, { caps: true });
+    sbx(B, 0.0042, y + 0.0165, z - 0.05, y + 0.022, z + 0.035, hex('#3e7a3a'));
     sbx(B, 0.006, y + 0.016, z - 0.012, y + 0.026, z + 0.004, K.dg);                // 上のつまみ
-    bx(B, -0.0165, y - 0.006, z - 0.012, -0.026, y + 0.006, z + 0.004, K.dg);       // 右のつまみ
-    P.sightY = y; P.eyeZ = z - 0.088 - 0.05; P.optic = { kind: 'acog', z, r: 0.014, y, scope: true };
+    bx(B, -0.0158, y - 0.006, z - 0.012, -0.025, y + 0.006, z + 0.004, K.dg);        // 右のつまみ
+    P.sightY = y; P.eyeZ = zb - 0.038 - 0.04; P.optic = { kind: 'acog', z, r: 0.014, y, scope: true };
+  } else if (kind === 'scope6') {
+    // トリジコン ACOG TA648 6x48（全長229mm・1.1kg）: 太い48mmの対物レンズ、長い光ファイバー、TA75 の大きな台（左にレバー2本）
+    const z = (z0 + z1) / 2, y = ry + 0.043, zb = z - 0.105, zf = z + 0.124;
+    sbx(B, 0.016, ry, z - 0.075, ry + 0.02, z + 0.045, K.blk);
+    for (const dz of [-0.055, 0.02]) bx(B, 0.016, ry + 0.004, z + dz, 0.025, ry + 0.012, z + dz + 0.03, K.dg);
+    sbx(B, 0.0185, y - 0.02, zb + 0.016, y + 0.019, z + 0.03, K.blk);
+    B.tube([0, y, z + 0.03], [0, y, zf - 0.036], 0.019, 0.0285, 14, LAYER.metal, K.blk, { caps: false });
+    B.tube([0, y, zf - 0.036], [0, y, zf], 0.0285, 0.0285, 14, LAYER.metal, K.blk, { caps: true });
+    B.tube([0, y, zb], [0, y, zb + 0.016], 0.021, 0.0185, 12, LAYER.metal, K.blk, { caps: true });
+    sbx(B, 0.0045, y + 0.019, z - 0.08, y + 0.025, z + 0.06, hex('#a8382a'));
+    sbx(B, 0.0065, y + 0.019, z - 0.02, y + 0.03, z - 0.002, K.dg);
+    bx(B, -0.0185, y - 0.008, z - 0.02, -0.028, y + 0.006, z - 0.002, K.dg);
+    P.sightY = y; P.eyeZ = zb - 0.069; P.optic = { kind: 'scope6', z, r: 0.016, y, scope: true };
   } else if (kind === 'lpvo') {
-    const z = (z0 + z1) / 2;
-    for (const dz of [-0.04, 0.04]) sbx(B, 0.012, ry, z + dz - 0.01, ry + 0.03, z + dz + 0.01, K.blk);
-    B.tube([0, ry + 0.04, z - 0.08], [0, ry + 0.04, z + 0.08], 0.015, 0.015, 10, LAYER.metal, K.blk, { caps: false });
-    B.tube([0, ry + 0.04, z + 0.08], [0, ry + 0.04, z + 0.13], 0.016, 0.022, 10, LAYER.metal, K.blk, { caps: true });
-    B.tube([0, ry + 0.04, z - 0.13], [0, ry + 0.04, z - 0.08], 0.021, 0.016, 10, LAYER.metal, K.blk, { caps: true });
-    P.sightY = ry + 0.04; P.eyeZ = z - 0.13 - 0.085; P.optic = { kind, z, r: 0.014, y: ry + 0.04, scope: true };
+    // ELCAN SpecterDR 1-4x: 箱形の胴、丸い対物レンズ、上の倍率のレバー、一体の台（左にレバー）
+    const z = (z0 + z1) / 2, y = ry + 0.04;
+    sbx(B, 0.0135, ry, z - 0.05, ry + 0.014, z + 0.045, K.blk);
+    bx(B, 0.0135, ry + 0.004, z - 0.03, 0.022, ry + 0.012, z + 0.005, K.dg);
+    sbx(B, 0.022, ry + 0.014, z - 0.056, ry + 0.063, z + 0.046, K.blk);
+    B.tube([0, y, z + 0.046], [0, y, z + 0.082], 0.0215, 0.0238, 14, LAYER.metal, K.blk, { caps: true });
+    B.tube([0, y, z - 0.088], [0, y, z - 0.056], 0.0195, 0.019, 12, LAYER.metal, K.blk, { caps: true });
+    bx(B, 0.003, ry + 0.063, z - 0.035, 0.021, ry + 0.068, z + 0.012, K.dg);          // 倍率のレバー
+    B.tube([0.012, ry + 0.068, z + 0.01], [0.012, ry + 0.076, z + 0.01], 0.0055, 0.0055, 8, LAYER.metal, K.dg, { caps: true });
+    B.tube([-0.022, y, z - 0.012], [-0.03, y, z - 0.012], 0.009, 0.009, 10, LAYER.metal, K.dg, { caps: true });
+    P.sightY = y; P.eyeZ = z - 0.088 - 0.07; P.optic = { kind, z, r: 0.015, y, scope: true };
+  } else if (kind === 'lpvo8') {
+    // ナイトフォース NX8 1-8x24（全長218mm・30mmの胴）: 片持ちの台に2つの輪、小さな対物、倍率の輪とつまみ、ふたつきのつまみ
+    const z = (z0 + z1) / 2, y = ry + 0.04, zb = z - 0.108, zf = z + 0.11;
+    sbx(B, 0.0125, ry, z - 0.045, ry + 0.012, z + 0.06, K.blk);
+    for (const zr of [-0.035, 0.045]) { sbx(B, 0.0125, ry + 0.012, z + zr - 0.009, y - 0.01, z + zr + 0.009, K.blk); B.tube([0, y, z + zr - 0.009], [0, y, z + zr + 0.009], 0.0172, 0.0172, 12, LAYER.metal, K.blk, { caps: false }); }
+    B.tube([0, y, z - 0.07], [0, y, zf - 0.025], 0.015, 0.015, 12, LAYER.metal, K.blk, { caps: false });
+    B.tube([0, y, zf - 0.025], [0, y, zf], 0.015, 0.0168, 12, LAYER.metal, K.blk, { caps: true });
+    B.tube([0, y, z - 0.086], [0, y, z - 0.07], 0.0185, 0.0185, 12, LAYER.metal, K.dg, { caps: false });   // 倍率の輪
+    bx(B, -0.004, y + 0.017, z - 0.084, -0.016, y + 0.024, z - 0.074, K.dg);                              // 倍率のつまみ
+    B.tube([0, y, zb], [0, y, z - 0.086], 0.0195, 0.0188, 12, LAYER.metal, K.blk, { caps: true });
+    B.tube([0, y + 0.012, z + 0.005], [0, y + 0.026, z + 0.005], 0.0105, 0.0105, 10, LAYER.metal, K.blk, { caps: true });
+    B.tube([-0.012, y, z + 0.005], [-0.026, y, z + 0.005], 0.0105, 0.0105, 10, LAYER.metal, K.blk, { caps: true });
+    B.tube([0.012, y, z + 0.005], [0.024, y, z + 0.005], 0.0118, 0.0118, 10, LAYER.metal, K.dg, { caps: true });
+    P.sightY = y; P.eyeZ = zb - 0.09; P.optic = { kind, z, r: 0.013, y, scope: true };
+  } else if (kind === 'sniper') {
+    // シュミット＆ベンダー PM II 3-12x50（34mmの胴・50mmの対物）: 2つの輪、太い対物、高い上のつまみ・右・左（距離）
+    const z = (z0 + z1) / 2, y = ry + 0.048, zb = z - 0.17, zf = z + 0.18;
+    for (const dz of [-0.06, 0.065]) { sbx(B, 0.0125, ry, z + dz - 0.012, ry + 0.032, z + dz + 0.012, K.blk); B.tube([0, y, z + dz - 0.01], [0, y, z + dz + 0.01], 0.0192, 0.0192, 12, LAYER.metal, K.blk, { caps: false }); }
+    B.tube([0, y, z - 0.12], [0, y, z + 0.1], 0.017, 0.017, 14, LAYER.metal, K.blk, { caps: false });
+    B.tube([0, y, z + 0.1], [0, y, zf - 0.04], 0.017, 0.029, 14, LAYER.metal, K.blk, { caps: false });
+    B.tube([0, y, zf - 0.04], [0, y, zf], 0.029, 0.029, 14, LAYER.metal, K.blk, { caps: true });
+    B.tube([0, y, z - 0.136], [0, y, z - 0.12], 0.0205, 0.0205, 12, LAYER.metal, K.dg, { caps: false });
+    B.tube([0, y, zb], [0, y, z - 0.136], 0.0215, 0.0205, 12, LAYER.metal, K.blk, { caps: true });
+    B.tube([0, y + 0.015, z], [0, y + 0.041, z], 0.0135, 0.0135, 12, LAYER.metal, K.dg, { caps: true });
+    B.tube([-0.015, y, z], [-0.038, y, z], 0.013, 0.013, 12, LAYER.metal, K.dg, { caps: true });
+    B.tube([0.015, y, z - 0.004], [0.034, y, z - 0.004], 0.0152, 0.0152, 12, LAYER.metal, K.dg, { caps: true });
+    P.sightY = y; P.eyeZ = zb - 0.09; P.optic = { kind: 'sniper', z, r: 0.017, y, scope: true };
   }
+}
+// ホロサイト（EOTech EXPS3）: 台と窓の枠（左右の柱と屋根）。中は空いている
+function holoBody(B, ry, z) {
+  sbx(B, 0.019, ry, z - 0.045, ry + 0.02, z + 0.04, K.blk);
+  for (const sx of [1, -1]) bx(B, sx * 0.02, ry + 0.02, z - 0.045, sx * 0.0145, ry + 0.062, z + 0.04, K.blk);
+  sbx(B, 0.02, ry + 0.056, z - 0.045, ry + 0.062, z + 0.04, K.blk);
+  sbx(B, 0.0145, ry + 0.02, z + 0.034, ry + 0.024, z + 0.04, K.dg);
 }
 function addMuzzle(B, P, kind, cat) {
   const z = P.muzzle, y = P.boreY ?? 0;
@@ -912,10 +1025,11 @@ export function gunModel(wid, att = {}) {
   addSide(B, P, side);
   magVariant(P, att.mag, W);
   if (P.extTube) P.extTube(B);
-  let mag = null, pump = null;
+  let mag = null, pump = null, flip = null;
   if (P.mag) { mag = new MeshBuilder(); P.mag(mag); }
   if (P.pump) { pump = new MeshBuilder(); P.pump(pump); }
-  g = { key, wid, body: B, mag, pump, pts: P, len: P.muzzle };
+  if (P.flip) { flip = new MeshBuilder(); P.flip(flip); }
+  g = { key, wid, body: B, mag, pump, flip, pts: P, len: P.muzzle };
   cache.set(key, g);
   return g;
 }

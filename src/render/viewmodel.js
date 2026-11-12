@@ -2,7 +2,7 @@
 import { MeshBuilder, hex, mulc } from './build.js';
 import { LAYER } from './textures.js';
 import { makeWorldMesh, drawMesh } from './renderer.js';
-import { WEAPONS } from '../engine/data/weapons.js';
+import { WEAPONS, opticOf } from '../engine/data/weapons.js';
 import { GEAR } from '../engine/data/equipment.js';
 import { curWeapon } from '../engine/actor.js';
 import { WV } from './build.js';
@@ -80,7 +80,11 @@ export class ViewModel {
     const P = gm ? gm.g.pts : { sightY: 0.05, eyeZ: -0.3, muzzle: 0.3, gripR: [0, -0.08, -0.05], gripL: [0, -0.04, 0.2] };
     const pistol = !!P.pistol;
     // 倍率スコープをのぞいている: 銃（筒とレンズのふた）は描かず、HUD のスコープの像に任せる（筒の中から見ると視界がふさがれていた）
-    this.scoped = !!(P.optic && P.optic.scope && a.ads > 0.8);
+    const os = P.optic && wi ? opticOf(wi) : null;
+    this.scoped = !!(os && os.scope && a.ads > 0.8);
+    // ブースター（ホロ＋3倍）: 等倍のときは横へ倒す（0.25秒）
+    this.flipK = lerp(this.flipK || 0, os && P.optic.kind === 'mag3' && !os.scope ? 1 : 0, 1 - Math.exp(-dt * 12));
+    this.flipP = P.flipPivot || null;
     // 状態の重み
     const ads = sm(a.ads), low = sm(a.low), spr = a.sprint ? 1 : 0;
     this.sprK = lerp(this.sprK || 0, spr, 1 - Math.exp(-dt * 10));
@@ -101,7 +105,7 @@ export class ViewModel {
     // 腰だめ: 画面の右下に収まり、銃口が画面の中央の少し下へ向く（スマホの小さい画面で大きすぎないよう、少し遠く・低く）
     const hip = P.heavy ? [0.05, -0.25, 0.5] : L3 === 'wand' ? [0.09, -0.2, 0.4] : pistol ? [0.105, -0.112, 0.4] : [0.128, -0.128, 0.36];
     // 照準の窓が画面に対して大きすぎないよう、目を少し後ろに（スマホの小さい画面向け）
-    const adsP = [0, -P.sightY, -P.eyeZ + (P.optic && !P.optic.scope ? (pistol ? 0.03 : 0.09) : 0.04)];
+    const adsP = [0, -P.sightY, -P.eyeZ + (P.optic && !(os && os.scope) ? (pistol ? 0.03 : 0.09) : 0.04)];
     let px = lerp(hip[0], adsP[0], ads), py = lerp(hip[1], adsP[1], ads) - bell(a.ads) * 0.012, pz = lerp(hip[2], adsP[2], ads);
     let yaw = lerp(pistol ? 0.03 : 0.05, 0, ads), pitch = 0, roll = 0;
     // 破城槌は体の前で斜めに抱える
@@ -141,7 +145,7 @@ export class ViewModel {
       else if (L3 === 'wand') { pitch -= 0.6 * sm(t); py -= 0.1 * sm(t); }
     }
     // リロード
-    let magOff = 0, magHide = false, pumpOff = 0, lhand = null, rel = -1;
+    let magOff = 0, magHide = false, pumpOff = 0, pumpRot = 0, boltHand = 0, lhand = null, rel = -1;
     const longRl = ws.slot === 3 && ws.lt > 0 && ws.rd > 0;
     if ((ws.st === 'reload' || longRl) && ws.rd > 0) {
       rel = 1 - (longRl ? ws.lt : ws.t) / ws.rd;
@@ -159,7 +163,15 @@ export class ViewModel {
       roll -= 0.55; pitch += 0.1; px -= 0.02; rel = 1 - c;
     } else if (ws.st === 'pump') {
       const pr = 1 - clamp(ws.t / (W && W.pump ? W.pump : 0.5), 0, 1);
-      pumpOff = -(P.pumpZ || 0.08) * bell(pr);
+      if (P.bolt) {
+        // ボルト: 右手を握りから槓桿へ（〜0.16）→ 起こす（〜0.26）→ 引く（〜0.46）→ 押す（〜0.64）→ 倒す（〜0.74）→ 握りへ戻る
+        boltHand = pr < 0.16 ? sm(pr / 0.16) : pr > 0.74 ? 1 - sm((pr - 0.74) / 0.26) : 1;
+        const lift = pr < 0.16 ? 0 : pr < 0.26 ? sm((pr - 0.16) / 0.1) : pr < 0.64 ? 1 : pr < 0.74 ? 1 - sm((pr - 0.64) / 0.1) : 0;
+        pumpRot = -1.2 * lift; // 銃身の軸のまわりに右から上へ約70°
+        pumpOff = pr < 0.26 ? 0 : pr < 0.46 ? -P.pumpZ * sm((pr - 0.26) / 0.2) : pr < 0.64 ? -P.pumpZ * (1 - sm((pr - 0.46) / 0.18)) : 0;
+        // 銃を少し左へ傾けて前・下へ出す（引いた右手が顔に近づきすぎないように）
+        roll -= 0.14 * bell(pr); yaw -= 0.05 * bell(pr); py -= 0.035 * bell(pr); pz += 0.06 * bell(pr);
+      } else pumpOff = -(P.pumpZ || 0.08) * bell(pr);
     }
     // 投げ物を持っている
     const nade = ws.slot === 2 && ws.gear && GEAR[ws.gear] && GEAR[ws.gear].kind === 'nade';
@@ -175,7 +187,7 @@ export class ViewModel {
     M[4] = gU[0]; M[5] = gU[1]; M[6] = gU[2]; M[7] = 0;
     M[8] = gF[0]; M[9] = gF[1]; M[10] = gF[2]; M[11] = 0;
     M[12] = org[0]; M[13] = org[1]; M[14] = org[2]; M[15] = 1;
-    this.gm = nade ? null : gm; this.magOff = magOff; this.magHide = magHide; this.pumpOff = pumpOff;
+    this.gm = nade ? null : gm; this.magOff = magOff; this.magHide = magHide; this.pumpOff = pumpOff; this.pumpRot = pumpRot;
     const toW = (p) => [org[0] - gR[0] * p[0] + gU[0] * p[1] + gF[0] * p[2], org[1] - gR[1] * p[0] + gU[1] * p[1] + gF[1] * p[2], org[2] - gR[2] * p[0] + gU[2] * p[1] + gF[2] * p[2]];
     const camP = (x, y, z) => [cx + R[0] * x + U[0] * y + F[0] * z, cy + R[1] * x + U[1] * y + F[1] * z, cz + R[2] * x + U[2] * y + F[2] * z];
     this.out.muzzle = toW([0, 0, P.muzzle]); this.out.fwd = gF; this.out.right = gR; this.out.up = gU;
@@ -224,7 +236,12 @@ export class ViewModel {
         const below = [port[0] - gU[0] * 0.12, port[1] - gU[1] * 0.12, port[2] - gU[2] * 0.12];
         hL = lerpV(below, port, bell(1 - rel));
       }
-      if (pumpOff) hL = [hL[0] + gF[0] * pumpOff, hL[1] + gF[1] * pumpOff, hL[2] + gF[2] * pumpOff];
+      if (pumpOff && !P.bolt) hL = [hL[0] + gF[0] * pumpOff, hL[1] + gF[1] * pumpOff, hL[2] + gF[2] * pumpOff];
+      // ボルト: 右手は槓桿の丸い握り（回して引いた位置）
+      if (boltHand > 0 && P.boltPt) {
+        const c = Math.cos(pumpRot), sn = Math.sin(pumpRot), b = P.boltPt;
+        hR = lerpV(hR, toW([b[0] * c - b[1] * sn, b[0] * sn + b[1] * c, b[2] + pumpOff]), boltHand);
+      }
       if (this.sprK > 0.5 && pistol) hL = camP(-0.15, -0.35, 0.2);
       if (shieldHand) hL = shieldHand;
     }
@@ -395,9 +412,21 @@ export class ViewModel {
       if (this.gm.pump) {
         const M2 = this.Mm, M = this.M;
         M2.set(M);
+        // ボルトは銃身の軸（ローカルの Z）のまわりに回す
+        if (this.pumpRot) { const c = Math.cos(this.pumpRot), sn = Math.sin(this.pumpRot); for (let i = 0; i < 3; i++) { const x = M[i], y = M[4 + i]; M2[i] = c * x + sn * y; M2[4 + i] = -sn * x + c * y; } }
         M2[12] += M[8] * this.pumpOff; M2[13] += M[9] * this.pumpOff; M2[14] += M[10] * this.pumpOff;
         gl.uniformMatrix4fv(P.u.uModel, false, M2);
         drawMesh(gl, this.gm.pump);
+      }
+      // ブースターの倒し: 左の蝶番（flipPivot）のまわりに、上から左へ 90°
+      if (this.gm.flip) {
+        const M2 = this.Mm, M = this.M, th = -Math.PI / 2 * sm(this.flipK || 0), c = Math.cos(th), sn = Math.sin(th), pv = this.flipP || [0, 0];
+        M2.set(M);
+        for (let i = 0; i < 3; i++) { const x = M[i], y = M[4 + i]; M2[i] = c * x + sn * y; M2[4 + i] = -sn * x + c * y; }
+        const tx = pv[0] - (pv[0] * c - pv[1] * sn), ty = pv[1] - (pv[0] * sn + pv[1] * c);
+        M2[12] += M[0] * tx + M[4] * ty; M2[13] += M[1] * tx + M[5] * ty; M2[14] += M[2] * tx + M[6] * ty;
+        gl.uniformMatrix4fv(P.u.uModel, false, M2);
+        drawMesh(gl, this.gm.flip);
       }
     } else if (this.nade) {
       gl.uniformMatrix4fv(P.u.uModel, false, this.Mm);

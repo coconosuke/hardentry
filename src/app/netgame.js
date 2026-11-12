@@ -10,7 +10,7 @@ import { setSalt } from '../engine/rng.js';
 // 手元でも先に行う動作（ホストにも送る）
 const LOCAL_ACTS = new Set(['switch', 'reload', 'mode', 'light', 'melee']);
 // ゲストが手元で出す出来事（ホストから来た同じものは捨てる）
-const LOCAL_EV = new Set(['shot', 'reload', 'reloaded', 'shell', 'pumped', 'dry', 'draw', 'fmode', 'lightsw', 'step', 'holster', 'melee']);
+const LOCAL_EV = new Set(['shot', 'reload', 'reloaded', 'shell', 'pumped', 'bolt', 'zoom', 'dry', 'draw', 'fmode', 'lightsw', 'step', 'holster', 'melee']);
 
 export function netMixin(Match) {
   const P = Match.prototype;
