@@ -1,8 +1,8 @@
-HARD ENTRY ソース一式（2026-11-12T08:36:10.017Z）
+HARD ENTRY ソース一式（2026-11-12T13:07:59.775Z）
 復元: node tools/unbundle.mjs source-bundle.txt <出力先>
 （tools/unbundle.mjs がない場合は、下の "@@@@ FILE " の区切りごとにファイルへ書き出す。base64 と書かれたものはデコードする）
 
-@@@@ FILE DESIGN.md text 87860
+@@@@ FILE DESIGN.md text 93533
 # HARD ENTRY（仮タイトル）設計メモ
 
 ## 文脈が消えたら最初に読む
@@ -54,6 +54,10 @@ HARD ENTRY ソース一式（2026-11-12T08:36:10.017Z）
 - 2026-11-12 14:44 スナイパーライフルを実装（→ 武器のデータ・スコープ・見た目・音まで作るので、0.1.9 の次の版で出す）。
 - 2026-11-12 14:47 壁に貼られた絵がドアの部分まではみ出している／ガソリンスタンドで窓枠を乗り越えて屋上に出られない。
 - 2026-11-12 16:33〜16:34 2倍・3倍・4倍・6倍・8倍のサイトやスコープも実装。付けられる銃は実際の銃の仕様に合わせて。実際のスコープ・サイトをモデルに（→ 下の「倍率の照準器」）。
+- 2026-11-12 17:44〜17:50 片側だけ使える物（狙撃銃）はチームデスマッチではない方がいい → チームデスマッチでは両方使えるべき、という意味（→ TDM では両方のチームが使える）。
+- 2026-11-12 21:11 ダッシュ中はほかの操作を受け付けないのを直して。ダッシュを入力していても、操作したアクションが先。リーンならリーンをやめたら再びダッシュ、ADS も同じ。リロードはリロードが先になるが、ダッシュを入力し直したらリロードをキャンセルできるように（→ 下の「ダッシュ中の操作」）。
+- 2026-11-12 21:59 「続きから」はなくしていい。どのモードでも（→ 次の版）。
+- 2026-11-12 22:05 スコープをのぞいたときに UI が隠れるのを改善。スコープやサイトをのぞいたときの視点の表現や揺れも現実に沿って。ただし程よいリアルさで、ゲームのバランスに合わせて（→ 次の版）。
 
 ## 約束（仕様・数値）— 必ず守る。守れなくなったら先に言う
 - 仮に決めて伝えたこと（15:20 送信）: ゲーム名「HARD ENTRY」（仮）。PvP は「SWAT 対 立てこもり犯」の攻守（シージの攻撃／防衛に相当）。掛け声・無線は英語の音声＋日本語字幕。血の表現あり（設定で消せる）。アプリ版のリポジトリはユーザーに作ってもらう（`hardentry`、Settings → Pages で main / root）。
@@ -139,6 +143,7 @@ HARD ENTRY ソース一式（2026-11-12T08:36:10.017Z）
 ### 移動（2026-10-29 20時 決定）
 - 速さ（m/s。RoNの値）: 歩き 2.4、ゆっくり 0.96、しゃがみ 1.2、しゃがみゆっくり 0.48、伏せ 0.45、ローレディ ×1.2、ADS ×0.7、横 ×0.9・後ろ ×0.8。加速 5 m/s²（防具で下がる）。ダッシュ 4.6 m/s は作戦・対戦とも（11-06 13:20 の要望で作戦にも。もとは RoN に合わせて作戦はなし）。対戦は防具で 軽×1.08・中×1.0・重×0.9（R6の3段階）。盾を構えている・拘束・投降中は走れない。
 - リーン（左右 0.35m、傾き12°、壁にめり込まない）、しゃがみ0.25秒、伏せ0.8秒。足を負傷すると遅くなる。
+- ダッシュ中の操作（11-12 21:11 の要望。move.js・weapon.js）: ダッシュを押していても、ほかの操作が先。構える・リーンの間は走らず、やめると（押したままなら）また走る。撃つと走るのをやめて銃を上げ（重い銃ほど長い 0.1〜0.25秒。その間に引いた引き金は覚えておき、上がったら撃つ）、引き金を離して0.4秒でまた走る。リロードは走っていても始まり、終わるまで走らない（終わるとまた走る）。ダッシュを入れ直す（スティックを押し込み直す・固定ならスティックに触れて押し込む・Shift を押し直す）とリロードをやめて走る（弾倉は替わらない。1発ずつ込める銃は込めた分が残り、薬室が空なら送り込んでから）。しゃがむ・伏せるとダッシュはやめる（今までどおり）。押しているのに走れない間は、スティックの「ダッシュ」の印が点線になる。入れ直しは手元が動作 'sprint' として送る（オンラインでも抜けない）。
 - 乗り越え（11-12）: 前1mまでの物の高さが0.4〜1.45mなら、種類を問わず越える（家具・低い壁・手すり・窓・車・ゴミ箱など。約0.6〜0.9秒）。向こうに降りる所があれば越える。向こうが低ければ飛び降りる（2階の窓・外廊下や吹き抜けの手すり。下の車の屋根などにも降りる）。降りる所がなければ物の上に乗る（壁ぎわの机・カウンター・車の屋根。天井まで1.84mないとかがむ、1.24mないと伏せる）。割れていない窓は割って越える（+0.22秒。割る音は AI に聞こえる）。板を打った窓（バリケード）は崩れるまで越えられない。高い壁・フェンス（1.9m以上）は物の上に乗っても越えない。正面から最大0.45mずれて立っていても、斜め17°までなら通れる線を探す。ボタンは乗り越えられるときだけ明るくなる（文字は出さない。11-12 06:53 の要望）。
 - 落下（11-12）: 2mまでは傷なし。そこからは 14×(高さ−2)^1.3（1階分＝約3mで15、4.5mで46、6mで86）。かがんで着地すると傷0.7倍・怯み0.6倍。怯み 0.25＋0.2×(高さ−2) 秒（最大1.3秒。足が遅くなり体がかがむ）。3.5mより高いと脚を痛める。重い防具ほど傷が大きい（対戦: 軽0.9・中1・重1.15倍。作戦: ベストなし0.9・軽1・重1.12倍、鋼の板はさらに1.06倍）。着地の音は高いほど遠くまで聞こえる（AI にも）。キルログは「落下」。
 
@@ -152,7 +157,7 @@ HARD ENTRY ソース一式（2026-11-12T08:36:10.017Z）
 - 副武器（拳銃）も 照準器（アイアン／RMR）・マズル・弾薬・ライト を選べる（レールのない拳銃はライトなし、マカロフとリボルバーは RMR なし）。
 - 11-07 武器を増やした（計56丁）: SWAT に M4A1・MCX VIRTUS・AUG A3・Tavor X95・SCAR-H・HK417、Vector・MP5K-PDW・MP9・Scorpion EVO 3、KSG、M17・Glock 19・Beretta 92FS・Desert Eagle、両方に Saiga-12K・SPAS-12。犯人側に SKS・Mini-14・vz.58・RPK、PP-19 Bizon・vz.61 Skorpion。対戦で選べるのは陣営ごとの一覧（npc.js PVP_ALLOWED。HK417 は2発で倒せる連射になるので対戦には入れない）。容疑者の持ち物にも混ぜた。
 - 11-07 アタッチメントは RoN のように7つの枠: 照準器（アイアン・ドット・広窓ドット SRS・ホロ・4倍 ACOG・等倍〜4倍／拳銃は RMR・SRO）、マズル（消音器・コンペンセイター・マズルブレーキ・フラッシュハイダー／散弾はチョーク）、グリップ（縦・斜め・短い縦・ハンドストップ）、ライト・レーザー（ライト・赤のレーザー・両方・赤外線レーザー）、弾倉（標準・長い・2本つなぎ・ドラム）、銃床（標準・縮める・重い・たたむ）、色（標準・タン・OD・グレー）。数値は weapons.js の ATTACH（反動・構える時間・リロード・歩く速さ・腰だめ・音・発射炎・散弾の広がり）。付けられる物は銃ごと（attachOptions。見た目と合わせる: 前の握りが元からある AUG・MP9・MP5K・MP7 はグリップなし、レールのない拳銃はライトなし など）。
-- 狙撃銃（11-12 の要望で追加。計57丁）: AT308（アキュラシー・インターナショナルの警察向けのボルトアクション。7.62x51mm・10発の箱弾倉・SWAT）。1発ごとに右手でボルトを起こして引き、押して倒す（0.95秒。この間は撃てない。見た目は右手が槓桿へ行きボルトが回って下がる、音は起こす・引く・押す・倒す、薬莢はボルトを引ききったときに飛ぶ）。照準器は狙撃用スコープ（シュミット＆ベンダー PM II 3-12x50 を元に。4倍・8倍を射撃モードのボタンで切り替え、HUDのボタンに ×4/×8。像はミルドットの十字と中心の赤い点）・等倍〜8倍・6倍・4倍・等倍〜4倍。8倍の見回しの速さは4倍の半分（画面の上で同じ速さ）、エイムアシストの範囲も倍率に合わせて狭い。構えると照準がゆっくり揺れる（立ち 約0.2°、しゃがみ半分、伏せ4分の1、動くと大きい、腕のけがで大きい。弾も揺れた向きへ飛ぶ）。腰だめ 6°、構える 0.5秒、動きやすさ 88%。作戦の威力は同じ弾の小銃と同じ（7.62x51mm）。対戦: 胴 115（軽装100・中装110は1発、重装125は耐える）、頭は即死（ほかの銃と同じ）。対戦では SWAT 側だけが選べる（ボットは使わない）。
+- 狙撃銃（11-12 の要望で追加。計57丁）: AT308（アキュラシー・インターナショナルの警察向けのボルトアクション。7.62x51mm・10発の箱弾倉・SWAT）。1発ごとに右手でボルトを起こして引き、押して倒す（0.95秒。この間は撃てない。見た目は右手が槓桿へ行きボルトが回って下がる、音は起こす・引く・押す・倒す、薬莢はボルトを引ききったときに飛ぶ）。照準器は狙撃用スコープ（シュミット＆ベンダー PM II 3-12x50 を元に。4倍・8倍を射撃モードのボタンで切り替え、HUDのボタンに ×4/×8。像はミルドットの十字と中心の赤い点）・等倍〜8倍・6倍・4倍・等倍〜4倍。8倍の見回しの速さは4倍の半分（画面の上で同じ速さ）、エイムアシストの範囲も倍率に合わせて狭い。構えると照準がゆっくり揺れる（立ち 約0.2°、しゃがみ半分、伏せ4分の1、動くと大きい、腕のけがで大きい。弾も揺れた向きへ飛ぶ）。腰だめ 6°、構える 0.5秒、動きやすさ 88%。作戦の威力は同じ弾の小銃と同じ（7.62x51mm）。対戦: 胴 115（軽装100・中装110は1発、重装125は耐える）、頭は即死（ほかの銃と同じ）。対戦では SWAT 側だけが選べる（ボットは使わない）。両チームが同じ条件で戦う TDM では、両方のチームが使える（11-12 17:44〜17:50 の要望。犯人側の装備にも選べ、「TDMだけ（爆弾・殲滅戦は SWAT 側だけ）」と出る。攻守のモードで犯人側の装備に入っていたら既定の主武器になる）。
 - 倍率の照準器（11-12 の要望で追加。実在の照準器の形と照準の模様を元に）: 2倍 ACOG TA47 2x20（細い胴・赤い十字）、3倍 EXPS3＋G33（ホロサイトの後ろの3倍ブースター。STS の台の左の蝶番で横へ倒すと等倍のホロサイト）、4倍 ACOG TA31 4x32（赤い山形と 5.56mm の距離の目盛り。TA51 の台）、等倍〜4倍 ELCAN SpecterDR 1-4x（箱形・上の倍率レバー。十字と赤い点）、6倍 ACOG TA648 6x48（大きな48mmの対物・TA75 の台。赤い馬蹄形と点・.308 の距離の目盛り）、等倍〜8倍 Nightforce NX8 1-8x24（片持ちの台・2ミルごとの目盛りと赤い円）、狙撃用 PM II 3-12x50（4倍・8倍）。倍率を切り替えられる物は、構えている間に射撃モードのボタンで切り替える（射撃モードが1つの銃はいつも。構えていないときは連射・単発）。等倍のスコープは丸い窓が広い。像は SVG（style.css）、形は guns.js addSight。付けられる銃は実銃の取り付け方に合わせる（weapons.js rifleSights）: 上がレールの小銃はドット・ホロ・2倍・4倍・等倍〜4倍、ブースターは上のレールが長い物（vz.58 は短いので付かない）、等倍〜8倍は銃身が長めの物（M4A1・HK416・AUG・Tavor・SCAR-H・HK417）、6倍（7.62mm 用）は SCAR-H・HK417・G3（爪の台）。G3 はドット・2倍・4倍・6倍、G36C はドット・ホロ・2倍。短機関銃はレールがあれば2倍まで（9mm の目盛りの型もある）、上のレールが長い MPX・UMP・Vector はブースターも。散弾銃と拳銃に倍率の照準器はない。AK・SKS・Mini-14・RPK は照準器なし。見回しの速さ: 倍率の照準器は「スコープ」の感度（4倍が基準）を倍率に合わせて変える（2倍は約1.6倍、8倍は半分。画面の上で同じ速さ）。
 - レーザー: ライトのボタンで点ける。点けている間だけ腰だめの散らばりが小さくなる。赤は線と点が誰にでも見える、赤外線は暗視装置でだけ見える。照準器を載せるとレールの上の照門はたたむ。
 - 特殊装備の使い方（2026-10-30 決定）: 盾は副武器に持ち替えると構える（左手で胸の前。前からの弾を止める・7.62×51mmの徹甲弾だけ抜ける・ADSでは盾を下げて拳銃を構える）。M320・オプティワンド・破城槌・ブリーチング用散弾銃は「装備」の長押しメニューから構える（4番目の持ち物）。射撃ボタンで使う: M320 は撃つ（1発ずつ自動で込める2.6秒、射撃モードのボタンで弾の種類）、オプティワンドは扉を見ていれば扉の下から、そうでなければ角の先をのぞく、破城槌と散弾銃は閉じた扉を見て使う。扉の操作メニューからも使える。
@@ -165,7 +170,7 @@ HARD ENTRY ソース一式（2026-11-12T08:36:10.017Z）
 - 枠: 主武器・副武器・特殊装備1つ（盾・破城槌・ブリーチングショットガン・オプティワンド・M320）・小さな装備3枠（閃光・スティンガー・CS・C2・ウェッジ・ロックピックガン・ペッパースプレー・テーザー）・防具（なし/軽/重 × ケブラー/セラミック/スチール）・ヘルメット・頭（暗視装置・ガスマスク・防閃光ゴーグル・防弾マスク）。いつも持つ物: 手錠（結束バンド）・マルチツール・ケミライト・ミラーガン（扉の下）。
 
 ### 操作とHUD（スマホ）
-- 左: 移動スティック（左45%のどこでも／固定）。右: ドラッグで視点、射撃（右・左にも出せる）、ADS（タップで切替／押している間／両方）、リロード（タップで通常、長押しで速い）、しゃがみ（タップ、長押しで伏せ）、乗り越え、左右リーン（PUBGM式）、警告（大きいボタン。呼びかけ）、調べる（その時できること: 開ける・拘束・拾う・報告・解除。長押しで扉の操作の円形メニュー。手が届かないほど遠いときは何も出さない。間に物があるときは「回り込む」）、命令（タップで見ている物への既定の命令、長押しで円形メニュー。金/赤/青の選択）、装備（タップで持ち替え、長押しで選ぶ。射撃ボタンで投げる・置く）、武器2つ（下の中央、タップで切替）、射撃モード・ライト・暗視・ローレディの小ボタン、地図（タブレット）、一時停止。スティックを上へ押し込むとダッシュ（作戦・対戦とも。ダッシュの印より上。真上から±40°で始まり、走っている間は±52°・印の0.25下まで続く。`ui/stick.js`）。任意で「ダッシュの固定」（その所で離すと走り続け、スティックかボタンに触れるとやめる）。スティックの位置（配置の編集でドラッグ）・大きさ・濃さ・ダッシュの判定位置（半径の1〜2.4倍、既定1.25）は HUD の設定で。長押しの円形メニューはいちばん上の層に出し、大きさ（80〜160%）を設定で変えられる。対戦はスコア表のボタン（右上。タブキーでも）でキル・デス・アシスト・K/D を見られる（オンラインのゲストにも成績を送る）。
+- 左: 移動スティック（左45%のどこでも／固定）。右: ドラッグで視点、射撃（右・左にも出せる）、ADS（タップで切替／押している間／両方）、リロード（タップで通常、長押しで速い）、しゃがみ（タップ、長押しで伏せ）、乗り越え、左右リーン（PUBGM式）、警告（大きいボタン。呼びかけ）、調べる（その時できること: 開ける・拘束・拾う・報告・解除。長押しで扉の操作の円形メニュー。手が届かないほど遠いときは何も出さない。間に物があるときは「回り込む」）、命令（タップで見ている物への既定の命令、長押しで円形メニュー。金/赤/青の選択）、装備（タップで持ち替え、長押しで選ぶ。射撃ボタンで投げる・置く）、武器2つ（下の中央、タップで切替）、射撃モード・ライト・暗視・ローレディの小ボタン、地図（タブレット）、一時停止。スティックを上へ押し込むとダッシュ（作戦・対戦とも。ダッシュの印より上。真上から±40°で始まり、走っている間は±52°・印の0.25下まで続く。`ui/stick.js`）。任意で「ダッシュの固定」（その所で離すと走り続け、スティックかボタンに触れるとやめる。撃つ・構える・リーン・リロード・射撃モード・ライト・暗視・ローレディ・持ち替え・乗り越え・命令の班（金/赤/青）・スコア表・地図・一時停止のボタンではやめず、その操作の間だけ止まる）。スティックの位置（配置の編集でドラッグ）・大きさ・濃さ・ダッシュの判定位置（半径の1〜2.4倍、既定1.25）は HUD の設定で。長押しの円形メニューはいちばん上の層に出し、大きさ（80〜160%）を設定で変えられる。対戦はスコア表のボタン（右上。タブキーでも）でキル・デス・アシスト・K/D を見られる（オンラインのゲストにも成績を送る）。
 - 画面: 左上ミニマップ、上の中央に方位と時間・目的、右上に出来事（キル・拘束・TOC）、左に隊員の状態、下の中央に体力・防具・弾倉、字幕。
 - 設定: 感度（見回し・ADS・倍率ごと・ジャイロ（オフ／ADS中だけ／いつも）・射撃中）、エイムアシスト（オフ／弱／標準、PvEの既定は弱、PvPは部屋の設定）、HUDのボタンごとの位置・大きさ・濃さ、照準の形と色、ミニマップ、画質（3段階・解像度・FPS上限・視野角・血）、音量（全体・効果音・声・BGM・UI、消音モードでも鳴らす）、字幕。
 
@@ -301,7 +306,9 @@ HARD ENTRY ソース一式（2026-11-12T08:36:10.017Z）
 - 11-12 壁の絵（14:47 の要望）: 扉の口にはみ出していた → 壁の板がとぎれない所にだけ、収まる幅で掛ける（上の「壁の絵」）。
 - 11-12 版 0.1.9（郊外の家の拡張・階段の手すりの当たり・カクつきとエイム・遠いときの表記・壁の絵・ガソリンスタンドの屋上）。互換5（郊外の家の扉が増えたので、古い遊びかけは捨てる）。テスト一式 78/80（単体52件。作戦のAIだけの試合（60こま）完了24/35＝0.1.8 は 27/35。対戦ボット 27試合すべて決着）。落ちた2つはミラーの項目で、テストの手順の問題: 郊外の家の扉の並びが変わって最初に選ぶ扉が作業小屋の中の扉になり、向きを変えた同じこまでミラーを使っていた（動作は前のステップの向きで見ている物に対して行う）のと、この環境の描画が1こま1.5秒前後でミラーが出る前に待ちが切れていた。向きがエンジンに入るのを待ってから使い、待ちを長くして、単独で2項目とも合格。
 - 11-12 版 0.1.10（狙撃銃 AT308・倍率の照準器 2・3・4・6・8倍。実在の照準器を元にした形と照準の模様）。互換6（新しい銃の番号。古い版とはオンラインで遊べない）。テスト一式 79/80（単体60件。作戦のAIだけの試合（60こま）完了24/35＝0.1.9 と同じ（AIは変えていない）。対戦ボット 27試合すべて決着）。落ちた1つは「命令の長押しで円形のメニュー」で、テストの待ち方の問題（この環境の描画が1こま1.5秒前後で、長押しが決まる前の0.7秒で見ていた）。出るまで待つように直して、単独で2回とも合格（8項目）。
-- 次: 実機での確認をお願いする → その結果で直す。残り: ほかのマップの拡張（港・アパート・オフィス・銀行・モーテル）。AI の弱いところ（後で）: 小さい部屋の中から外へ突入すると、入った隊員が向こう側にいる味方に詰まり、突入した扉を自分で閉めて戻る、をくり返す（ガソリンスタンドの2階の物置）。
+- 11-12 港を広げた（「マップが単調で狭い」への対応の続き）: 倉庫を屋根まで吹き抜け（6m）にした。西に中2階（冷蔵室の上の事務所・作業場の上の休憩室・トイレの上の更衣室と、吹き抜けを見下ろす通路）、北の壁ぞいのキャットウォーク（手すり）、現場事務所の上の物置（窓から倉庫を見下ろす）。倉庫の南の壁ぞいの鉄の階段（西へ上がる）から上がる。倉庫の高い窓。天井灯は屋根の高さ（強め）。部屋 13 → 18、扉 18 → 22、置き物 104 → 129。
+- 11-12 版 0.1.11（ダッシュ中の操作・港の拡張・TDM の狙撃銃は両チーム）。互換7（港の部屋と扉が増え、オンラインの動作 'sprint' が増えた）。オンラインのゲストは、自分のリロードと倍率の切り替えを手元で先に動かしていなかった（リロードの動きと音が出ず、倍率が切り替わらず、リロード中に走れるずれもできる）→ 手元でも動かす（ダッシュの直しで見つけた）。テスト一式 82/83（単体68件。ダッシュ中の操作をブラウザで3項目追加）。落ちた1つは「ダッシュの固定」の項目のうちリーンの見方で、固定で走り続けて壁ぎわにいると傾く量が小さくなるのに、傾きの量で見ていた。リーンの入力が効いて走らないことを見るように直し、同じ手順を単独で回して 13/13。作戦の AI だけの試合（2シード×7マップ×5作戦・60こま）: 完了 44/70（0.1.10 は 48/70。シード7だけなら 22/35、0.1.10 は 24/35）。違いは港だけで 9 → 5/10: 隊長役の AI が、何度も通る倉庫を「入れない部屋」としてふさいで中2階へ行かないまま見回りを打ち切る、中2階から撃ち下ろされて倉庫で隊員がやられる。対戦ボット（港、シード1〜6と11〜16の12試合ずつ）: 爆弾の攻撃側 53%（27/51）・殲滅戦の SWAT 側 41%（25/61）・TDM のチーム0 42%（5/12）（広げる前はシード11〜16で 11%・13%・33%）。ダッシュの直しでボットも撃つ・リロードの間は走らなくなったが、ガソリンスタンドで比べて大きな違いはない（爆弾の攻撃 52→50%・殲滅戦 12→12%）。
+- 次: 「続きから」をなくす（21:59）・スコープをのぞいたときの UI と、のぞいたときの見え方・揺れ（22:05）→ アパートの拡張（できている）。実機での確認をお願いする → その結果で直す。残り: ほかのマップの拡張（オフィス・銀行・モーテル）。AI の弱いところ（後で）: 隊長役の AI は「移動の空振り」を続けての回数でなく通った回数で数えていて、何度も通る部屋（港の倉庫）をふさぐ（入れた部屋で数え直すやり方は、途中まで比べたところ、ほかのマップで終わるのが遅くなり完了も増えなかったので、別のやり方を試す）。小さい部屋の中から外へ突入すると、入った隊員が向こう側にいる味方に詰まり、突入した扉を自分で閉めて戻る、をくり返す（ガソリンスタンドの2階の物置）。
 
 @@@@ FILE dev/view.html text 446
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -386,7 +393,7 @@ export async function getAssetURL(name, type) {
   return URL.createObjectURL(new Blob([buf], { type }));
 }
 
-@@@@ FILE src/app/game.js text 89767
+@@@@ FILE src/app/game.js text 90290
 // 1回の試合: エンジンを進め、入力を命令にし、出来事を音・効果・HUDへ。カメラ（一人称）と描画。
 import { createGame, step, dump, load } from '../engine/engine.js';
 import { eyeOf, capsOf } from '../engine/combat.js';
@@ -586,6 +593,8 @@ export class Match {
   // ボタンの出来事 → 状態と命令
   _edges(inp) {
     const st = this.app.settings, p = this.p;
+    // ダッシュを入れ直した（押し直した・スティックを押し込み直した）: リロードの最中ならやめて走る（11-12。エンジンが決める。weapon.js）
+    if (inp.sprPress && p && p.alive) this.acts.push({ a: 'sprint' });
     for (const e of inp.edges) {
       const b = e.b, k = e.k;
       switch (b) {
@@ -1384,7 +1393,9 @@ export class Match {
     const c = this.ctx;
     const wi = curWeapon(p);
     const v = {
-      p, wi, pvp: S.pvp, yaw: this.cam ? this.cam.yaw : p.yaw, adsOn: this.adsOn, leanL: this.leanSide < 0, leanR: this.leanSide > 0, lowOn: this.lowOn, nvgOn: this.nvgOn, hasNvg: p.armor.head === 'nvg',
+      p, wi, pvp: S.pvp, yaw: this.cam ? this.cam.yaw : p.yaw, adsOn: this.adsOn,
+      // ダッシュを押しているが、ほかの操作（構える・リーン・撃つ・リロード）が先で走っていない
+      sprWait: !!(p.alive && !p.sprint && this.app.input && (this.app.input.sprintArm || this.app.input.sprintLock)), leanL: this.leanSide < 0, leanR: this.leanSide > 0, lowOn: this.lowOn, nvgOn: this.nvgOn, hasNvg: p.armor.head === 'nvg',
       gearSel: this.gearSel, gearId: p.ws.gear, team: this.team,
       spread: wi ? spreadDeg(S, p, WEAPONS[wi.id], wi) : 2,
       optic: null, canVault: this.vaultOK !== false,
@@ -2152,7 +2163,7 @@ export function netMixin(App) {
   };
 }
 
-@@@@ FILE src/app/netgame.js text 8725
+@@@@ FILE src/app/netgame.js text 9145
 // オンラインの試合の動かし方（Match に混ぜる）。
 //  ホスト: エンジンを動かし、ゲストの入力と動作をエンジンへ渡し、写しを配る。ゲストが切れたら止めて待つ。
 //  ゲスト: エンジンは動かさず、ホストの写しを補間して表示する。自分の移動と銃（反動・弾の見た目）だけは手元で先に動かし、ホストの位置へなめらかに寄せる。
@@ -2163,7 +2174,7 @@ import { doAction } from '../engine/interact.js';
 import { setSalt } from '../engine/rng.js';
 
 // 手元でも先に行う動作（ホストにも送る）
-const LOCAL_ACTS = new Set(['switch', 'reload', 'mode', 'light', 'melee']);
+const LOCAL_ACTS = new Set(['switch', 'reload', 'mode', 'light', 'melee', 'sprint']);
 // ゲストが手元で出す出来事（ホストから来た同じものは捨てる）
 const LOCAL_EV = new Set(['shot', 'reload', 'reloaded', 'shell', 'pumped', 'bolt', 'zoom', 'dry', 'draw', 'fmode', 'lightsw', 'step', 'holster', 'melee']);
 
@@ -2278,7 +2289,9 @@ export function netMixin(Match) {
       // 描くときの補間用（ステップの前の自分の位置）
       { const P = this._prev || (this._prev = new Map()); let q = P.get(me.id); if (!q) P.set(me.id, q = [0, 0, 0]); q[0] = me.x; q[1] = me.y; q[2] = me.z; }
       if (me.alive && !me.down && !me.cuffed) {
-        me._inp = { ...cmd, act: null };
+        // 銃の動作も手元で先にやる（リロード・倍率。ダッシュの入れ直しでやめるのは上の doAction）。でないとリロード中の動き（走らない）がホストとずれ、リロードの動きと音も出ない
+        me._inp = { ...cmd, act: cmd.act ? cmd.act.filter(ac => ac.a === 'reload' || (ac.a === 'mode' && ac.zoom)) : null };
+        if (me._inp.act && !me._inp.act.length) me._inp.act = null;
         try { moveActor(S, this.w, me, me._inp, S.dt, ev); stepWeapon(S, this.w, me, me.melee ? { ...me._inp, fire: false, ads: false } : me._inp, S.dt, ev); } catch (e) { console.warn('predict', e); }
       }
       S.bullets.length = 0;
@@ -6422,7 +6435,7 @@ export const EVIDENCE = {
   drugs: { name: '麻薬の包み' }, phone: { name: '携帯電話' }, docs: { name: '書類' }, cash: { name: '現金の束' }, drive: { name: 'ハードディスク' }, guns: { name: '銃のケース' },
 };
 
-@@@@ FILE src/engine/data/npc.js text 7332
+@@@@ FILE src/engine/data/npc.js text 7453
 // 人の性格と装備の種類（容疑者・市民・隊員）。資料室はここから作る。
 // morale: 士気の範囲（0で必ず投降）、aggr: 攻撃的（撃ち始めやすさ）、hidden: 隠し武器（投降のふりから撃つ）、
 // hide: 隠れる、flee: 逃げる、ambush: 待ち伏せ、armor: 防弾ベストの確率、react: 反応時間の倍率、acc: 命中の良さ
@@ -6473,7 +6486,8 @@ export const PVP_LOADOUTS = {
 };
 export const PVP_ALLOWED = {
   swat: { primary: ['mk18', 'hk416', 'm4a1', 'mcx', 'g36c', 'scarl', 'aug', 'tavor', 'sa58', 'scarh', 'at308', 'mp5', 'mp5sd', 'mp5k', 'ump45', 'mpx', 'mp7', 'mp9', 'vector', 'evo3', 'm4super', 'r870', 'ksg', 'saiga', 'spas12'], secondary: ['g17', 'g19', 'm17', 'm45a1', 'usp', 'm92', 'fiveseven', 'python', 'deagle'], gear: ['flash', 'stinger', 'cs', 'smoke', 'c2', 'frame', 'bandage', 'wedge'] },
-  sus: { primary: ['akm', 'aks74u', 'vz58', 'rpk', 'g3', 'sks', 'mini14', 'uzi', 'mac10', 'p90', 'bizon', 'skorpion', 'm590', 'saiga', 'spas12', 'sawedoff', 'tec9'], secondary: ['m1911', 'makarov', 'g18', 'g19', 'm92', 'fiveseven', 'python', 'deagle'], gear: ['dshield', 'wire', 'claymore', 'stinger', 'cs', 'bandage', 'wedge', 'flash'] },
+  // 犯人側の at308 は TDM だけ（攻守のモードでは SWAT 側だけ。modes/pvp.js resetFighter）
+  sus: { primary: ['akm', 'aks74u', 'vz58', 'rpk', 'g3', 'sks', 'mini14', 'uzi', 'mac10', 'p90', 'bizon', 'skorpion', 'm590', 'saiga', 'spas12', 'sawedoff', 'tec9', 'at308'], secondary: ['m1911', 'makarov', 'g18', 'g19', 'm92', 'fiveseven', 'python', 'deagle'], gear: ['dshield', 'wire', 'claymore', 'stinger', 'cs', 'bandage', 'wedge', 'flash'] },
 };
 
 @@@@ FILE src/engine/data/props.js text 8696
@@ -6544,11 +6558,11 @@ export const PROPS = {
 
 @@@@ FILE src/engine/data/version.js text 210
 // 版番号: 互換（セーブ・オンラインの相性。上げたら古いセーブは捨てる）と表示用
-export const VERSION = '0.1.10';
-export const COMPAT = 6;
+export const VERSION = '0.1.11';
+export const COMPAT = 7;
 export const TITLE = 'HARD ENTRY';
 
-@@@@ FILE src/engine/data/weapons.js text 52458
+@@@@ FILE src/engine/data/weapons.js text 52667
 // 銃のデータ（実銃の諸元＋ゲームの扱い）。資料室はここから作る。
 // rpm: 発射速度（毎分）、vel: 銃口の弾の速さ m/s、kg: 重さ、mag: 装弾数、spare: 予備の弾倉の数
 // ads/draw: 構える・持ち替えの時間（秒）、move: 移動の速さの倍率
@@ -6634,7 +6648,8 @@ export const WEAPONS = {
     desc: 'HK416を7.62mm NATOにした選抜射手の小銃。遠くまでとてもよく当たる。重く長いので、室内では振り回しにくい。' }),
   // ---------- SWAT: 狙撃銃（11-12 追加。ボルトアクション: 1発ごとに手でボルトを引いて次の弾を込める） ----------
   // bolt: ボルトを操作する時間（秒）。この間は撃てない（ポンプと同じ扱い。見た目と音はボルト）。sway: 構えたときの照準の揺れ（度。立ち）
-  at308: W({ name: 'AT308', cat: 'sniper', side: 'swat', cal: '762x51', ammo: ['ap', 'jhp'], mag: 10, spare: 4, chamber: true, bolt: true, pump: 0.95, modes: ['semi'], rpm: 60, vel: 850, kg: 6.4, len: 1.13,
+  // tdmBoth: 攻守のモード（爆弾・殲滅戦）では SWAT 側だけの銃。両チームが同じ条件で戦う TDM では、両方のチームが使える（11-12 17:50 の要望）
+  at308: W({ name: 'AT308', cat: 'sniper', side: 'swat', tdmBoth: true, cal: '762x51', ammo: ['ap', 'jhp'], mag: 10, spare: 4, chamber: true, bolt: true, pump: 0.95, modes: ['semi'], rpm: 60, vel: 850, kg: 6.4, len: 1.13,
     ads: 0.5, draw: 0.85, move: 0.88, sway: 0.2, rc: { v: 3.0, h: 0.45, bias: 0.05, first: 1, ctrl: 7, kick: 2.2 }, sp: { hip: 6.0, ads: 0.012, move: 3.0 }, rl: { tac: 3.1, fast: 2.5, empty: 0.6 },
     pvp: { dmg: 115, fall: [70, 110, 0.9] }, model: 'bolt', mdl: {}, snd: 'r308',
     desc: '英国アキュラシー・インターナショナル社の警察向けのボルトアクション狙撃銃（7.62mm NATO・10発の箱弾倉）。1発ごとに手でボルトを引く（約1秒）。狙撃用スコープは4倍と8倍を切り替えられる（射撃モードのボタン）。構えると照準がわずかに揺れる（しゃがむ・伏せると小さい）。腰だめはまず当たらない。' }),
@@ -7546,7 +7561,7 @@ export function load(o) {
 }
 export { CS, LH };
 
-@@@@ FILE src/engine/interact.js text 55902
+@@@@ FILE src/engine/interact.js text 56198
 // 調べる・使う: 見ている物（扉・人・落ちている物・爆弾・壁）と、そのときできる操作。時間のかかる動作の進み。
 import { raycast, los, CS, LH, levelOfY, NB, isWallish, C, leafEnd, pushOut, rayBox } from './world.js';
 import { M, MATS } from './data/materials.js';
@@ -7556,7 +7571,7 @@ import { eyeOf, dropWeapon, capsOf, wristsOf, startMelee } from './combat.js';
 import { throwNade, launchNade } from './nades.js';
 import { placeBar, clearBar, bashBar } from './barricade.js';
 import { curW } from './actor.js';
-import { startReload, switchTo, m320Next } from './weapon.js';
+import { startReload, switchTo, m320Next, cancelReload } from './weapon.js';
 import { ACT_POSE, REACH_D, STAND_D, ALIGN_T } from './data/acts.js';
 import { depSpot, placeDep, removeDep, DEP_WHY } from './deploy.js';
 
@@ -8103,6 +8118,8 @@ export function doAction(S, w, a, ac, ev) {
   if (kind === 'cmd') { S.orders.push({ ...ac, by: a.id, t: S.t, n: ++S.cmdSeq }); ev.push({ e: 'cmd', id: a.id, cmd: ac.cmd, team: ac.team || 'gold' }); return; }
   if (kind === 'det') { detonateMine(S, w, a, ev); return; }
   if (kind === 'reload') return; // 銃の側で処理
+  // ダッシュを入れ直した（手元が、押し直した・スティックを押し込み直した瞬間に送る）: リロードの最中ならやめる。動くより先なので、そのステップから走る
+  if (kind === 'sprint') { cancelReload(a, ev); return; }
   if (kind === 'melee') { startMelee(S, w, a, ev); return; }
   if (kind === 'unlockDoor') { if (a.kind === 'sus' || a.kind === 'civ') doorOp(S, w, a, ac.id, 'unlock', ev); return; }
   if (a.down || a.cuffed || a.comply) return;
@@ -10228,10 +10245,11 @@ export default {
   missions: { barricade: {}, hostage: {}, bomb: { time: 780 }, raid: {}, active: { civMul: 1.1 } },
 };
 
-@@@@ FILE src/engine/maps/port.js text 9973
+@@@@ FILE src/engine/maps/port.js text 13641
 // 第7埠頭の倉庫（夕方）: 港の倉庫と、2階建ての事務所棟・守衛小屋。北はコンテナ置き場と岸壁。
 //  倉庫: 棚の通路・荷さばき場・冷蔵室・作業場・トイレ・現場事務所。搬入口が北に3つ、南に通用口と大扉、東に扉
 //  事務所棟: 1階 受付・事務室・階段、2階 所長室・会議室
+//  11-12 追加: 倉庫は屋根まで吹き抜け（6m）。西に中2階（事務所・休憩室・更衣室と、吹き抜けを見下ろす通路）、北の壁ぞいのキャットウォーク、現場事務所の上の物置。倉庫の南の壁ぞいの鉄の階段から上がる
 import { canvas } from './draw.js';
 
 const W = 104, D = 80;
@@ -10254,6 +10272,7 @@ a.door(66, 30, 'h'); a.win(63, 24, 'v', 4); a.win(69, 30, 'h', 4);
 a.door(32, 20, 'h', 4, 'M'); a.door(42, 20, 'h', 4, 'M'); a.door(52, 20, 'h', 4, 'M'); a.door(60, 20, 'h', 2, 'M');
 a.door(40, 58, 'h'); a.door(48, 58, 'h', 4, 'M'); a.door(74, 40, 'v', 2, 'M');
 a.win(14, 36, 'v', 3); a.win(14, 46, 'v', 2); a.win(74, 24, 'v', 3); a.win(30, 58, 'h', 3); a.win(60, 58, 'h', 3);
+a.stairs(30, 55, 8, 3);                     // 中2階への鉄の階段（南の壁ぞい。西へ上がる）
 // ---- 事務所棟（2階建て）
 a.room(80, 26, 96, 48, 'C', '~');
 a.v(87, 27, 39, '='); a.h(81, 95, 40, '=');
@@ -10274,6 +10293,20 @@ b.v(84, 30, 37, 'L'); b.h(81, 83, 38, 'L');
 b.rect(88, 27, 95, 39, '_');
 b.door(87, 33, 'v'); b.door(85, 40, 'h');
 b.win(96, 30, 'v', 4); b.win(96, 42, 'v', 3); b.win(83, 48, 'h', 3); b.win(91, 48, 'h', 3); b.win(90, 26, 'h', 4); b.win(80, 43, 'v', 3); b.win(80, 32, 'v', 3);
+// ---- 倉庫の上（11-12 追加）: 屋根まで吹き抜け。西に中2階、北の壁ぞいにキャットウォーク、現場事務所の上に物置
+b.rect(15, 21, 73, 57, '^');                      // 吹き抜け（下は倉庫の床）
+b.h(14, 74, 20, 'C'); b.h(14, 74, 58, 'C'); b.v(14, 20, 58, 'C'); b.v(74, 20, 58, 'C');
+b.rect(15, 21, 29, 57, '-');                      // 中2階の床
+b.v(26, 21, 57, '='); b.h(15, 25, 31, '='); b.h(15, 25, 43, '=');
+b.door(26, 25, 'v'); b.door(26, 36, 'v'); b.door(26, 48, 'v');
+b.v(30, 24, 54, 'L');                             // 通路の手すり（吹き抜けの側）
+b.rect(30, 21, 62, 22, '-'); b.h(30, 62, 23, 'L'); // 北のキャットウォークと手すり
+b.room(63, 20, 74, 30, 'C', '-');                  // 現場事務所の上の物置
+b.door(63, 21, 'v', 2); b.win(66, 30, 'h', 3); b.win(74, 25, 'v', 2);
+b.stairs(30, 55, 8, 3);                            // 階段の吹き抜け
+// 高い窓（夕方の光が入る）と中2階の窓
+b.win(38, 20, 'h', 4); b.win(50, 20, 'h', 4); b.win(46, 58, 'h', 4); b.win(58, 58, 'h', 4); b.win(74, 44, 'v', 4);
+b.win(14, 25, 'v', 3); b.win(14, 37, 'v', 3);
 
 // ---- 棚の列（東西に長い。途中に横の通路）
 const props = [];
@@ -10281,7 +10314,7 @@ for (const z of [29, 35, 41, 47, 53]) for (const [x, w] of [[33.4, 2.8], [39.2, 
 props.push(
   // 荷さばき場（搬入口の内側）
   ['pallet', 33.5, 24.5, 0, 0], ['pallet', 37, 24.4, 0, 1], ['pallet', 48, 24, 0, 0], ['pallet', 55.6, 24.6, 0, 1], ['forklift', 41.0, 24.8, 0, 3], ['forklift', 59.4, 26.4, 0, 2],
-  ['crates', 37.5, 56.2, 0, 0], ['crates', 65.5, 56.2, 0, 0], ['barrel', 44, 56.6, 0, 0], ['barrel', 45.3, 56.8, 0, 0], ['boxes', 35, 56.6, 0, 0], ['pallet', 57, 44, 0, 1], ['pallet', 59.6, 50, 0, 0], ['crate', 42.6, 38, 0, 0], ['boxes', 42.6, 44, 0, 1],
+  ['crates', 65.5, 56.2, 0, 0], ['barrel', 44, 56.6, 0, 0], ['barrel', 45.3, 56.8, 0, 0], ['pallet', 57, 44, 0, 1], ['pallet', 59.6, 50, 0, 0], ['crate', 42.6, 38, 0, 0], ['boxes', 42.6, 44, 0, 1],
   // 冷蔵室
   ['shelf', 16, 25, 0, 1, { w: 2.4, d: 0.6 }], ['shelf', 21, 21.8, 0, 0, { w: 2.4, d: 0.6 }], ['crates', 23.5, 28.6, 0, 0], ['pallet', 18.4, 29, 0, 0],
   // 作業場
@@ -10296,6 +10329,11 @@ props.push(
   // 2階: 所長室・会議室
   ['desk', 92, 30, 1, 0], ['chair', 92, 31.4, 1, 2, { office: true }], ['sofa', 90.2, 37.6, 1, 0], ['cabinet', 95.0, 36.2, 1, 3], ['bookshelf', 88.4, 28.6, 1, 1], ['plant', 95, 38.6, 1, 0],
   ['table', 88, 44.6, 1, 0, { w: 2.8, d: 1.0 }], ['chair', 86, 43.0, 1, 0], ['chair', 88, 43.0, 1, 0], ['chair', 90, 43.0, 1, 0], ['chair', 86, 46.2, 1, 2], ['chair', 88, 46.2, 1, 2], ['chair', 90, 46.2, 1, 2], ['tvstand', 93.4, 41.3, 1, 0],
+  // 中2階: 事務所（冷蔵室の上）・休憩室（作業場の上）・更衣室（トイレの上）・物置（現場事務所の上）
+  ['desk', 18, 23.4, 1, 2], ['chair', 18, 22, 1, 0, { office: true }], ['desk', 22.6, 23.4, 1, 2], ['chair', 22.6, 22, 1, 0, { office: true }], ['cabinet', 15.4, 28.6, 1, 1], ['cabinet', 24.8, 29.4, 1, 3], ['plant', 15.6, 30.2, 1, 0],
+  ['table', 19.5, 37, 1, 0, { w: 2.0, d: 1.0 }], ['chair', 18.6, 35.6, 1, 0], ['chair', 20.4, 35.6, 1, 0], ['chair', 18.6, 38.4, 1, 2], ['chair', 20.4, 38.4, 1, 2], ['fridge', 15.6, 33, 1, 1], ['counter', 23.4, 32.8, 1, 0, { w: 2.0 }], ['sofa', 23.4, 41.6, 1, 2],
+  ['locker', 15.4, 46, 1, 1], ['locker', 15.4, 48, 1, 1], ['locker', 15.4, 50, 1, 1], ['locker', 15.4, 52, 1, 1], ['stool', 20, 48.4, 1, 0], ['stool', 20, 50.2, 1, 0], ['locker', 24.8, 55.6, 1, 3],
+  ['shelf', 69.0, 21.6, 1, 0, { w: 1.8, d: 0.5 }], ['crates', 72.6, 22.4, 1, 0], ['boxes', 64.8, 25.4, 1, 0], ['pallet', 72.0, 28.8, 1, 0], ['barrel', 64.6, 28.6, 1, 0],
   // 守衛小屋
   ['table', 89.3, 63.2, 0, 1, { w: 1.0, d: 0.6 }], ['chair', 90.5, 63.2, 0, 3, { office: true }],
   // 外: コンテナ置き場・車・街灯・柵
@@ -10309,16 +10347,19 @@ props.push(
 
 export default {
   id: 'port', name: '第7埠頭の倉庫', en: 'PIER 7 WAREHOUSE', time: 'dusk', floor: 1,
-  desc: '港の倉庫と、2階建ての事務所棟。倉庫の中は背の高い棚が並ぶ通路で、角ごとに撃ち合いになる。北の搬入口の外はコンテナ置き場、南は門と駐車場。事務所棟の2階に所長室がある。',
+  desc: '港の倉庫と、2階建ての事務所棟。倉庫の中は背の高い棚が並ぶ通路で、角ごとに撃ち合いになる。倉庫は屋根まで吹き抜けで、西の中2階と北のキャットウォークから棚の通路を見下ろせる。北の搬入口の外はコンテナ置き場、南は門と駐車場。事務所棟の2階に所長室がある。',
   levels: [{ rows: a.rows() }, { rows: b.rows() }],
-  stairs: [{ i: 81, j: 30, w: 3, len: 8, dir: 'n', L: 0 }],
-  paint: { '倉庫': '#b7b3aa', '冷蔵室': '#cfd6d8', '作業場': '#a9a59c', '男子トイレ': '#c4ccd0', '女子トイレ': '#cfc6cc', '現場事務所': '#cdc8bb', '受付': '#d6d0c4', '事務室': '#d4d2ca', '階段': '#c4c2bc', '2階階段': '#c4c2bc', '所長室': '#c9bca6', '会議室': '#d2d6d8', '守衛小屋': '#c8c2b4' },
+  stairs: [{ i: 81, j: 30, w: 3, len: 8, dir: 'n', L: 0 }, { i: 30, j: 55, w: 3, len: 8, dir: 'w', L: 0 }],
+  paint: { '倉庫': '#b7b3aa', '冷蔵室': '#cfd6d8', '作業場': '#a9a59c', '男子トイレ': '#c4ccd0', '女子トイレ': '#cfc6cc', '現場事務所': '#cdc8bb', '受付': '#d6d0c4', '事務室': '#d4d2ca', '階段': '#c4c2bc', '2階階段': '#c4c2bc', '所長室': '#c9bca6', '会議室': '#d2d6d8', '中2階の事務所': '#cdc8bb', '休憩室': '#d3cdbf', '更衣室': '#c4ccd0', '中2階の通路': '#9a978f', '上の物置': '#b4b0a6', '守衛小屋': '#c8c2b4' },
   floorCol: { '倉庫': '#8a8780' },
   extConcrete: '#a8a59e', extWood: '#8a7a62', ceiling: 'tile', carpet: '#4f5862', winFrame: '#3b3e43', rawConcrete: true,
   props,
   lights: [
     // 倉庫の天井灯
-    ...[31, 44, 57].flatMap(x => [[x, 25, 0, 'fluo'], [x, 38, 0, 'fluo', 0.9], [x, 50, 0, 'fluo', 0.9]]), [67, 40, 0, 'fluo', 0.8], [67, 52, 0, 'dim'],
+    // （倉庫は屋根まで吹き抜けなので、天井灯は2階の高さ。下まで届くように強め）
+    ...[34, 46, 58].flatMap(x => [[x, 27, 1, 'fluo', 1.5], [x, 39, 1, 'fluo', 1.4], [x, 51, 1, 'fluo', 1.4]]), [68, 40, 1, 'fluo', 1.3], [68, 52, 1, 'dim', 1.4],
+    // 中2階・キャットウォーク・物置
+    [20, 26, 1, 'fluo', 0.8], [20, 37, 1, 'fluo', 0.8], [20, 50, 1, 'dim'], [28, 40, 1, 'dim', 0.8], [46, 21.5, 1, 'dim', 0.8], [68, 25, 1, 'dim'],
     [21, 26, 0, 'fluo', 0.6], [21, 37, 0, 'fluo', 0.8], [21, 47, 0, 'dim'], [21, 54, 0, 'dim'], [68, 25, 0, 'lamp'],
     // 事務所棟
     [84, 34, 0, 'fluo', 0.6], [91, 33, 0, 'fluo'], [88, 44, 0, 'fluo'], [85, 34, 1, 'dim'], [91, 33, 1, 'lamp'], [88, 44, 1, 'fluo'],
@@ -10329,6 +10370,7 @@ export default {
     ['倉庫', 'WAREHOUSE FLOOR', 44, 38], ['冷蔵室', 'COLD STORAGE', 20, 26], ['作業場', 'WORKSHOP', 20, 37], ['男子トイレ', "MEN'S ROOM", 20, 47], ['女子トイレ', "WOMEN'S ROOM", 20, 54], ['現場事務所', "FOREMAN'S OFFICE", 68, 26],
     ['階段', 'STAIRWELL', 85, 34], ['事務室', 'OFFICE', 91, 35], ['受付', 'RECEPTION', 88, 45], ['守衛小屋', 'GUARD BOOTH', 91, 62],
     ['2階階段', 'STAIRWELL 2F', 85, 34, 1], ['所長室', "DIRECTOR'S OFFICE", 91, 35, 1], ['会議室', 'MEETING ROOM', 88, 46, 1],
+    ['中2階の事務所', 'MEZZANINE OFFICE', 20, 26, 1], ['休憩室', 'BREAK ROOM', 20, 37, 1], ['更衣室', 'LOCKER ROOM', 20, 50, 1], ['中2階の通路', 'CATWALK', 28, 40, 1], ['上の物置', 'LOFT STORAGE', 68, 25, 1],
   ],
   doors: { '32,20,0': { outer: true, locked: true }, '42,20,0': { outer: true }, '52,20,0': { outer: true, locked: true }, '60,20,0': { outer: true }, '40,58,0': { outer: true }, '48,58,0': { outer: true, locked: true }, '74,40,0': { outer: true }, '87,48,0': { outer: true }, '80,43,0': { outer: true }, '90,60,0': { outer: true }, '27,25,0': { locked: true } },
   spawn: {
@@ -10337,14 +10379,14 @@ export default {
       { name: '岸壁', en: 'PIER', x: 46, z: 2, yaw: 0 },
       { name: '東の通路', en: 'EAST LANE', x: 99, z: 58, yaw: -Math.PI / 2 },
     ],
-    sus: [[35.5, 26.5], [50, 26], [62, 24], [34, 32], [44, 32], [58, 32], [44, 38], [34, 44], [52, 44], [44, 50], [62, 50], [36, 56], [56, 56], [20, 27], [20, 37], [22, 46], [68, 27], [91, 36], [85, 44], [93, 42.5], [91, 36, 1], [88, 47.4, 1], [85, 28, 1], [91.5, 63]],
-    civ: [[40, 32], [56, 38], [40, 50], [66, 44], [22, 36], [70, 27], [92, 33], [86, 45], [93, 36, 1], [92, 46, 1], [91.5, 63], [24, 52]],
-    hostage: [[20, 27], [22, 39], [68, 27], [93, 37, 1], [24, 53]],
-    bomb: [[20, 25], [44, 44], [62, 27], [71, 25], [92, 36, 1], [22, 35]],
-    evidence: [[69, 23.4], [92, 30, 1], [88.9, 30], [21, 32.8], [91.6, 45.3], [89.3, 63.2]],
-    pvp: { a: [[50, 75], [46, 75], [54, 75], [44, 2], [48, 2], [99, 56], [99, 60], [60, 75]], b: [[44, 38], [20, 37], [68, 27], [91, 36, 1], [85, 44], [52, 44], [35.5, 26.5], [62, 50]] },
+    sus: [[35.5, 26.5], [50, 26], [62, 24], [34, 32], [44, 32], [58, 32], [44, 38], [34, 44], [52, 44], [44, 50], [62, 50], [36, 56], [56, 56], [20, 27], [20, 37], [22, 46], [68, 27], [91, 36], [85, 44], [93, 42.5], [91, 36, 1], [88, 47.4, 1], [85, 28, 1], [91.5, 63], [20, 25.5, 1], [21, 39.6, 1], [19, 54, 1], [28, 30, 1], [45, 21.6, 1], [68, 26, 1]],
+    civ: [[40, 32], [56, 38], [40, 50], [66, 44], [22, 36], [70, 27], [92, 33], [86, 45], [93, 36, 1], [92, 46, 1], [91.5, 63], [24, 52], [22.4, 39.6, 1], [21, 27, 1]],
+    hostage: [[20, 27], [22, 39], [68, 27], [93, 37, 1], [24, 53], [17.4, 39.6, 1], [67.6, 25.6, 1]],
+    bomb: [[20, 25], [44, 44], [62, 27], [71, 25], [92, 36, 1], [22, 35], [21.6, 53.6, 1], [69.6, 24.6, 1]],
+    evidence: [[69, 23.4], [92, 30, 1], [88.9, 30], [21, 32.8], [91.6, 45.3], [89.3, 63.2], [18, 23.4, 1], [23.4, 32.8, 1]],
+    pvp: { a: [[50, 75], [46, 75], [54, 75], [44, 2], [48, 2], [99, 56], [99, 60], [60, 75]], b: [[44, 38], [20, 37], [68, 27], [91, 36, 1], [85, 44], [52, 44], [35.5, 26.5], [62, 50], [20, 26, 1], [28, 44, 1]] },
     sites: [{ name: 'A 冷蔵室', x: 20, z: 26, r: 3.0 }, { name: 'B 所長室', x: 91, z: 34, L: 1, r: 3.0 }],
-    tdm: [[8, 40], [96, 66], [46, 3], [86, 4], [50, 68], [44, 38], [20, 37], [68, 27], [91, 36, 1], [93, 43, 1], [62, 50], [35.5, 26.5]],
+    tdm: [[8, 40], [96, 66], [46, 3], [86, 4], [50, 68], [44, 38], [20, 37], [68, 27], [91, 36, 1], [93, 43, 1], [62, 50], [35.5, 26.5], [28, 40, 1], [20, 38.4, 1]],
   },
   missions: { barricade: {}, hostage: {}, bomb: { time: 780 }, raid: { susMul: 1.1 }, active: {} },
 };
@@ -10867,7 +10909,7 @@ export function scoreMission(S) {
   return out;
 }
 
-@@@@ FILE src/engine/modes/pvp.js text 29173
+@@@@ FILE src/engine/modes/pvp.js text 29554
 // 対戦（PvP）: リスポーンありTDM・殲滅戦（リスポーンなし）・爆弾（シージ式の攻守）
 // 陣営: チーム0/1。見た目は SWAT（攻撃・チーム0のTDM）と立てこもり犯（防衛）。空きはボット。
 import { createActor, makeInventory, makeArmor } from '../actor.js';
@@ -11104,6 +11146,8 @@ function resetFighter(S, w, a, pt, side) {
   a.inj = { arm: 0, leg: 0, head: 0 };
   // 装備は陣営ごと（防護の重さも、選んだ陣営の物）
   const lo = Object.assign({}, PVP_LOADOUTS[side], a.pvpLo && a.pvpLo[side] ? a.pvpLo[side] : {});
+  // TDM だけ両方のチームが使える銃（狙撃銃）: 攻守のモードで相手の側の装備に入っていたら、既定の主武器に替える（11-12 17:50 の要望）
+  { const W0 = lo.primary && WEAPONS[lo.primary.id]; if (W0 && W0.tdmBoth && W0.side !== 'both' && W0.side !== side && !(S.m && S.m.kind === 'tdm')) lo.primary = PVP_LOADOUTS[side].primary; }
   a.pvpArmor = PVP_ARMOR[lo.armor] ? lo.armor : 'medium';
   const A = PVP_ARMOR[a.pvpArmor];
   a.hp = a.maxHp = A.hp;
@@ -11508,7 +11552,7 @@ export function placeActors(S, w, def) {
   for (let i = 0; i < Math.min(2, civ.length); i++) { const [x, z] = civ[(i + S.m.resets) % civ.length]; spawnCivilian(S, w, x, z, 0, i ? 'adult' : 'staff'); }
 }
 
-@@@@ FILE src/engine/move.js text 24115
+@@@@ FILE src/engine/move.js text 24937
 // 移動: RoN の速さ（歩き2.4・ゆっくり0.96・しゃがみ1.2）、しゃがみ・伏せ・リーン・乗り越え・飛び降り・落下・階段・PvPのダッシュ
 import { groundAt, standAt, ceilAt, pushOut, raycast, STEP, CS, LH, BH, NB, levelOfY, cellType, C, leafEnd, inMap, isWallish } from './world.js';
 import { hurt, pvpDamage, breakGlass } from './combat.js';
@@ -11516,11 +11560,13 @@ import { M } from './data/materials.js';
 import { OPEN_ANG, isOpen } from './doors.js';
 import { KNEEL_ACT } from './data/acts.js';
 import { curW, bodyHeight, curWeapon } from './actor.js';
-import { attMods } from './weapon.js';
+import { attMods, canAim } from './weapon.js';
 import { PLATE, LONG } from './data/equipment.js';
 import { FLOORS } from './data/materials.js';
 import { DEP, wireAt, stepWire } from './deploy.js';
 
+// 撃つのをやめてから、また走れるまで（秒。続けて撃つ間に銃が下がらないように）
+export const SPRINT_HOLD = 0.4;
 export const SPEED = { walk: 2.4, crouch: 1.2, prone: 0.45, low: 1.2, ads: 0.7, sprint: 4.6, back: 0.8, side: 0.9 };
 export const RADIUS = 0.28;
 const _po = [0, 0, 0];
@@ -11593,6 +11639,8 @@ export function moveActor(S, w, a, inp, dt, ev) {
   if (a.peek && want < 1) want = 1;
   if (a.down || a.cuffed || a.comply === 2) want = 0;
   if (a.sprint && want) a.sprint = false;
+  // 引き金を離してからの時間（撃ったあと少しは走らない）。ダッシュを入れ直してリロードをやめるのは、手元が送る動作 'sprint'（interact.js doAction → weapon.js cancelReload）
+  a.trigT = inp.fire ? 0 : Math.min(9, (a.trigT ?? 9) + dt);
   const rate = (a.st < 1 && want <= 1) || (a.st <= 1 && want === 0) ? 4.0 : 1.25;
   if (want !== Math.round(a.st) || Math.abs(a.st - want) > 1e-3) {
     // 立ち上がる前に頭がつかえないか
@@ -11606,9 +11654,9 @@ export function moveActor(S, w, a, inp, dt, ev) {
     a.st = Math.abs(d) <= stp ? want : a.st + Math.sign(d) * stp;
   }
   a.stance = want;
-  // リーン（壁にめり込まない）
+  // リーン（壁にめり込まない）。ダッシュより先（リーンしている間は走らない）
   let lw = inp.lean || 0;
-  if (a.sprint || a.st > 1.3 || a.vault || a.down || a.comply || a.cuffed) lw = 0;
+  if (a.st > 1.3 || a.vault || a.down || a.comply || a.cuffed) lw = 0;
   if (lw) {
     const rx = -Math.cos(a.yaw) * lw, rz = Math.sin(a.yaw) * lw;
     const hy = a.y + bodyHeight(a) - 0.25;
@@ -11625,9 +11673,11 @@ export function moveActor(S, w, a, inp, dt, ev) {
   // 速さ
   let mx = inp.mx || 0, mz = inp.mz || 0;
   let mag = Math.hypot(mx, mz); if (mag > 1) { mx /= mag; mz /= mag; mag = 1; }
-  // ダッシュ（PvPだけ。立って前へ）
-  // ダッシュ: 作戦・対戦とも（スティックを上へ押し込む・Shift）。盾を構えている・運んでいる・拘束されているときは走れない
-  a.sprint = !!(inp.sprint && a.st < 0.2 && mz > 0.55 && !a.adsOn && !a.down && !a.act && !a.cuffed && !a.comply && !(a.ws && a.ws.slot === 1 && a.inv && a.inv.long === 'shield') && !(S.deps && S.deps.length && wireAt(S, a.x, a.z, a.y)));
+  // ダッシュ: 作戦・対戦とも（スティックを上へ押し込む・Shift）。立って前へ。盾を構えている・運んでいる・拘束されているときは走れない。
+  // 押していても、ほかの操作が先（11-12）: 構える・リーン・撃つ（離して0.4秒まで）・リロードの間は走らず、やめるとまた走る
+  const reloading = !!a.ws && (a.ws.st === 'reload' || a.ws.st === 'shell');
+  const busy = (inp.ads && canAim(a)) || !!inp.lean || a.trigT < SPRINT_HOLD || reloading;
+  a.sprint = !!(inp.sprint && !busy && a.st < 0.2 && mz > 0.55 && !a.down && !a.act && !a.cuffed && !a.comply && !(a.ws && a.ws.slot === 1 && a.inv && a.inv.long === 'shield') && !(S.deps && S.deps.length && wireAt(S, a.x, a.z, a.y)));
   const vmax = maxSpeed(S, a, inp);
   // 後ろ・横は遅い
   let dirMul = 1;
@@ -12710,7 +12760,7 @@ export function stepStatus(S, w, dt, ev) {
   }
 }
 
-@@@@ FILE src/engine/weapon.js text 14108
+@@@@ FILE src/engine/weapon.js text 16137
 // 銃の動き: 撃つ・弾倉（1本ずつ残弾）・通常/速いリロード・1発ずつ込める・ポンプ・持ち替え・反動（BattleBit式）・散らばり
 import { WEAPONS, AMMO, ATTACH, zoomsOf } from './data/weapons.js';
 import { LONG, HAND_LONG } from './data/equipment.js';
@@ -12777,9 +12827,9 @@ export function stepWeapon(S, w, a, inp, dt, ev) {
   }
   a.fireK = Math.max(0, a.fireK - dt * 9);
   a.throwT = Math.max(0, a.throwT - dt * 1.8);
-  // ADS とローレディ
+  // ADS とローレディ（構えるのはダッシュより先: 構えたい間は走らない。move.js）
   const busy = ws.st === 'draw' || ws.st === 'holster' || a.sprint || a.vault || (a.act && a.act.noAds);
-  a.adsOn = !!inp.ads && !busy && ws.slot >= 0 && (ws.slot < 2 || (ws.slot === 3 && a.inv.long === 'm320')) && !a.down && !a.peek;
+  a.adsOn = !!inp.ads && !busy && canAim(a);
   a.lowOn = !!inp.low && !a.adsOn;
   const adsT = W ? W.ads + attMods(wi).ads : 0.25;
   a.ads = Math.max(0, Math.min(1, a.ads + (a.adsOn ? dt / adsT : -dt / (adsT * 0.8))));
@@ -12792,6 +12842,10 @@ export function stepWeapon(S, w, a, inp, dt, ev) {
     ws.sx = A * (Math.sin(t * 0.83) * 0.65 + Math.sin(t * 1.91 + 1.3) * 0.35);
     ws.sy = A * (Math.sin(t * 1.17 + 2.1) * 0.6 + Math.sin(t * 0.57 + 0.4) * 0.4);
   } else { ws.sx = 0; ws.sy = 0; }
+  // 走るのをやめた: 銃を上げるまで撃てない（重い銃ほど長い 0.1〜0.25秒）。その間に引いた引き金は覚えておき、上がったら撃つ
+  if (ws.sprWas && !a.sprint) ws.so = sprintOutT(W);
+  ws.sprWas = !!a.sprint;
+  if (ws.so > 0) ws.so = Math.max(0, ws.so - dt);
   // 状態の時間
   if (ws.t > 0) ws.t -= dt;
   if (ws.t <= 0) finishState(S, a, ev);
@@ -12809,9 +12863,30 @@ export function stepWeapon(S, w, a, inp, dt, ev) {
   if (wi) { a.light = !!(wi.lightOn && wi.att.light); a.laser = wi.lightOn && wi.att.laser ? wi.att.laser : null; } else { a.light = false; a.laser = null; }
   // 撃つ
   const trig = !!inp.fire;
-  if (W && wi && trig) tryFire(S, w, a, W, wi, inp, ev);
+  if (W && wi && (trig || ws.pend)) tryFire(S, w, a, W, wi, inp, ev);
   if (!trig) ws.burstN = 0;
+  if (!(ws.so > 0)) ws.pend = false; // 銃が上がったときに撃てなかった（リロード中など）: 覚えていた引き金は捨てる
   ws.trigWas = trig;
+}
+
+// 構えられる物を持っている（銃・M320）
+export function canAim(a) {
+  const ws = a.ws;
+  return !!ws && ws.slot >= 0 && (ws.slot < 2 || (ws.slot === 3 && a.inv.long === 'm320')) && !a.down && !a.peek;
+}
+// 走るのをやめてから撃てるまで（秒）。重い銃ほど長い（拳銃 0.1・小銃 0.15・狙撃銃 0.24）
+export function sprintOutT(W) { return W ? Math.min(0.25, 0.08 + 0.025 * (W.kg || 3)) : 0.1; }
+
+// リロードをやめる（ダッシュを入れ直したとき）。弾倉を替えるのは終わったときなので、替えていない。
+// 1発ずつ込める銃は込めた分が残る。薬室が空で弾があれば、送り込んでから（ポンプ）
+export function cancelReload(a, ev) {
+  const ws = a.ws, W = curW(a), wi = curWeapon(a);
+  if (!ws || (ws.st !== 'reload' && ws.st !== 'shell')) return false;
+  if (ws.st === 'shell' && W && wi && W.chamber && !wi.ch && wi.mag > 0) { ws.st = 'pump'; ws.t = W.pump || 0.35; }
+  else { ws.st = 'ready'; ws.t = 0; }
+  ws.rk = null; ws.stopShell = false;
+  if (ev) ev.push({ e: 'reloadx', id: a.id });
+  return true;
 }
 
 function finishState(S, a, ev) {
@@ -12860,16 +12935,18 @@ export function startReload(S, a, fast, ev) {
     return true;
   }
   if (!wi || !W || (ws.st !== 'ready' && ws.st !== 'pump')) return false;
-  if (a.sprint || a.vault) return false;
+  if (a.vault) return false;
+  // 走っていても、リロードが先（走るのをやめる。リロードの間は走らない。ダッシュを入れ直すとやめる。move.js）
+  const run = a.sprint;
   if (W.tube) {
     if (wi.mag >= magCap(wi) || wi.res <= 0) return false;
-    ws.st = 'shell'; ws.t = W.rl.start + W.rl.shell; ws.stopShell = false;
+    ws.st = 'shell'; ws.t = W.rl.start + W.rl.shell; ws.stopShell = false; if (run) a.sprint = false;
     if (ev) ev.push({ e: 'reload', id: a.id, k: 'shell' });
     return true;
   }
   if (W.revolver || W.breakAction) {
     if (wi.mag >= magCap(wi) || wi.res <= 0) return false;
-    ws.st = 'reload'; ws.rk = W.revolver ? 'rev' : 'break'; ws.t = W.rl.tac; ws.rd = ws.t;
+    ws.st = 'reload'; ws.rk = W.revolver ? 'rev' : 'break'; ws.t = W.rl.tac; ws.rd = ws.t; if (run) a.sprint = false;
     if (ev) ev.push({ e: 'reload', id: a.id, k: ws.rk, dur: ws.t });
     return true;
   }
@@ -12879,7 +12956,7 @@ export function startReload(S, a, fast, ev) {
   ws.rk = fast ? 'fast' : 'tac';
   ws.t = ((fast ? W.rl.fast : W.rl.tac) + (empty ? W.rl.empty : 0)) * attMods(wi).reload;
   if (a.inj.arm) ws.t *= 1.15;
-  ws.rd = ws.t; ws.st = 'reload';
+  ws.rd = ws.t; ws.st = 'reload'; if (run) a.sprint = false;
   if (ev) ev.push({ e: 'reload', id: a.id, k: ws.rk, dur: ws.t, empty });
   return true;
 }
@@ -12909,17 +12986,18 @@ export function m320Next(a, ev) {
 function tryFire(S, w, a, W, wi, inp, ev) {
   const ws = a.ws;
   if (a.sprint || a.vault || a.low > 0.5 || (a.act && !a.act.canFire) || a.comply || a.down && !S.pvp) return;
+  if (ws.so > 0) { if (inp.fire && !ws.trigWas) ws.pend = true; return; } // 走るのをやめて銃を上げている間
   if (ws.st === 'shell') { if (wi.ch || wi.mag > 0) { ws.stopShell = true; ws.st = 'ready'; ws.t = 0; } else return; }
   if (ws.st !== 'ready') return;
   if (ws.cd > 0) return;
   const mode = W.modes[wi.mode] || 'semi';
-  if (mode === 'semi' && ws.trigWas) return;
+  if (mode === 'semi' && ws.trigWas && !ws.pend) return;
   if (W.range && a.ai == null) { /* テーザーの射程は弾で判定 */ }
   // 弾があるか
   const hasRound = W.chamber ? wi.ch > 0 : wi.mag > 0;
   if (!hasRound) {
-    if (!ws.trigWas) ev.push({ e: 'dry', id: a.id });
-    ws.cd = 0.25;
+    if (!ws.trigWas || ws.pend) ev.push({ e: 'dry', id: a.id });
+    ws.cd = 0.25; ws.pend = false;
     return;
   }
   // 撃つ
@@ -12956,7 +13034,7 @@ function tryFire(S, w, a, W, wi, inp, ev) {
   if (S.rules && S.rules.recoil) mul *= S.rules.recoil;
   ws.rp += kv * mul; ws.ry += kh * mul;
   ws.bloom = Math.min(W.sp.hip * 0.8, ws.bloom + W.sp.hip * 0.1 * (1 - 0.7 * a.ads));
-  ws.shots++; ws.lastShot = S.t; a.stats.sh++;
+  ws.shots++; ws.lastShot = S.t; a.stats.sh++; ws.pend = false;
   a.fireK = 1;
   // 音と光（AIは聞く）
   const supp = wi.att.muzzle === 'supp';
@@ -20727,7 +20805,7 @@ export function makeTextures() {
 }
 function vnoiseLine(x, y) { return (Math.sin(y * 1.7 + Math.sin(x * 0.05) * 3) * 0.5 + 0.5); }
 
-@@@@ FILE src/render/viewmodel.js text 32313
+@@@@ FILE src/render/viewmodel.js text 32443
 // 一人称の腕と銃: 腰だめ↔ADS（照準の線を目に合わせる）、揺れ（向きの慣性・歩き・呼吸）、撃った跳ね、リロード・ポンプ・持ち替え・ローレディ・ダッシュ・投げ物
 import { MeshBuilder, hex, mulc } from './build.js';
 import { LAYER } from './textures.js';
@@ -20817,7 +20895,8 @@ export class ViewModel {
     this.flipP = P.flipPivot || null;
     // 状態の重み
     const ads = sm(a.ads), low = sm(a.low), spr = a.sprint ? 1 : 0;
-    this.sprK = lerp(this.sprK || 0, spr, 1 - Math.exp(-dt * 10));
+    // 走るのをやめたら速く上げる（エンジンは 0.1〜0.25秒で撃てる。weapon.js sprintOutT）
+    this.sprK = lerp(this.sprK || 0, spr, 1 - Math.exp(-dt * (spr ? 10 : 22)));
     let draw = 0;
     if (ws.st === 'holster') draw = 1 - clamp(ws.t / 0.22, 0, 1);
     else if (ws.st === 'draw') draw = clamp(ws.t / Math.max(0.2, W ? W.draw : 0.3), 0, 1);
@@ -21276,7 +21355,7 @@ export class Book {
 // 爆弾の制限時間（マップで違う）: 「10〜15分」
 function bombMin(M) { const ts = MAP_LIST.filter(id => MAPS[id].missions && MAPS[id].missions.bomb).map(id => MAPS[id].missions.bomb.time || M.time); if (!ts.length) ts.push(M.time); const a = Math.floor(Math.min(...ts) / 60), b = Math.floor(Math.max(...ts) / 60); return a === b ? `${a}分` : `${a}〜${b}分・マップによる`; }
 
-@@@@ FILE src/ui/hud.js text 34107
+@@@@ FILE src/ui/hud.js text 34261
 // HUD（CODモバイル／PUBGモバイル風）: ボタン、ミニマップ、方位、目的、出来事、隊員、体力、弾、字幕、照準、命中、被弾の向き、円形メニュー、HUDの編集
 import { BTN, INFO, ICONS } from './hudlayout.js';
 import { onTap } from './input.js';
@@ -21489,6 +21568,7 @@ export class Hud {
   update(v) {
     if (!this.on) return;
     const p = v.p;
+    if (this.stickEl && this.cache.sprWait !== !!v.sprWait) { this.cache.sprWait = !!v.sprWait; this.stickEl.classList.toggle('spr-wait', !!v.sprWait); }
     // 照準
     const ads = p ? p.ads : 0;
     const optic = v.optic;
@@ -21887,7 +21967,7 @@ export const ICONS = {
   wpn: '',
 };
 
-@@@@ FILE src/ui/input.js text 17946
+@@@@ FILE src/ui/input.js text 19199
 // 入力: タッチ（スティック・視点・ボタン、2本指以上の同時操作）、長押し、円形メニュー、ジャイロ、キーボードとマウス
 // タップは pointerup で判定し、続く click は捨てる（iPhoneは2本目の指に click が来ない）
 import { sprintZone } from './stick.js';
@@ -21921,6 +22001,9 @@ export function onRepeat(el, fn) {
 }
 
 const LONG = 420; // 長押し（ms）
+// ダッシュの固定を続けるボタン（11-12）: 撃つ・構える・リーン・リロードの間は走らず、終わるとまた走る（押したままのダッシュと同じ）。
+// 持ち替え・乗り越えも走ったまま。ほかのボタン（調べる・命令・装備・しゃがむなど）は、今までどおり固定をやめる
+const KEEP_LOCK = new Set(['map', 'pause', 'fire', 'fireL', 'ads', 'leanL', 'leanR', 'reload', 'fmode', 'light', 'nvg', 'low', 'team', 'board', 'wpn1', 'wpn2', 'vault']);
 // 出来事の時刻（performance.now と同じ基準）。古いブラウザで 0 や Date 基準なら今の時刻
 const evT = (e) => { const t = e && e.timeStamp; const n = performance.now(); return t > 0 && t <= n + 50 && t > n - 60000 ? t : n; };
 
@@ -21937,6 +22020,8 @@ export class Input {
     this.keys = new Set();
     this.mouseBtn = { l: false, r: false };
     this.touchUsed = false;
+    // ダッシュを入れた回数（押し直した・スティックを押し込み直した。このこまの分）。リロードの最中ならやめる（game.js が動作 'sprint' を送る）
+    this.sprintArm = false; this.sprintLock = false; this.sprPress = 0;
     this.toggles = { ads: false, leanL: false, leanR: false, crouch: false, prone: false, low: false };
     this.gyro = { on: false, ok: false, x: 0, y: 0, last: 0 };
     this.onStick = null; this.onRadial = null; this.onBtn = null;
@@ -21948,7 +22033,7 @@ export class Input {
   reset() {
     this.mx = this.mz = this.lookDX = this.lookDY = 0;
     this.ptr.clear(); this.stick = null; this.hold.clear(); this.edges.length = 0; this.keys.clear();
-    this.sprintArm = false; this.sprintLock = false;
+    this.sprintArm = false; this.sprintLock = false; this.sprPress = 0;
     this.mouseBtn = { l: false, r: false };
     this.radial = null; if (this.onRadial) this.onRadial(null);
     if (this.onStick) this.onStick(null);
@@ -21972,8 +22057,9 @@ export class Input {
         // 時刻は出来事の起きた時（重いこまで処理が遅れても、短く押したのを長押しにしない）
         const p = { kind: 'btn', btn: b, el, x: sx, y: sy, x0: sx, y0: sy, t0: evT(e), tp: performance.now(), moved: 0, long: false };
         this.ptr.set(e.pointerId, p);
-        if (this.sprintLock && b !== 'map' && b !== 'pause') { this.sprintLock = false; this.sprintArm = false; if (this.onStick) this.onStick(null); }
+        if (this.sprintLock && !KEEP_LOCK.has(b)) { this.sprintLock = false; this.sprintArm = false; if (this.onStick) this.onStick(null); }
         this.hold.add(b); el.classList.add('down');
+        if (b === 'sprint') this.sprPress++;
         this.edges.push({ b, k: 'down', sub: el.dataset.sub || null });
         if (this.onBtn) this.onBtn(b, 'down', p);
         return;
@@ -21987,7 +22073,8 @@ export class Input {
       const leftZone = this.S.handed === 'left' ? sx > this.stage.w * 0.55 : sx < this.stage.w * 0.45;
       const onStick = fixed ? Math.hypot(sx - home.x, sy - home.y) < 95 * (home.s || 1) : leftZone;
       if (onStick && !this.stick) {
-        this.sprintLock = false;
+        // 触れたら固定をやめる。もう一度ダッシュの所まで押し込むと「入れ直し」（リロードをやめて走る）
+        this.sprintLock = false; this.sprintArm = false;
         this.stick = { id: e.pointerId, ox: fixed ? home.x : sx, oy: fixed ? home.y : sy, x: sx, y: sy, fixed: !!fixed };
         this.ptr.set(e.pointerId, { kind: 'stick' });
         if (this.onStick) this.onStick(this.stick, 0, 0);
@@ -22018,7 +22105,7 @@ export class Input {
       this.ptr.delete(e.pointerId);
       if (!p) return;
       if (p.kind === 'stick') {
-        // ダッシュの所で離した: 「ダッシュの固定」がオンなら走り続ける（PUBGM・CODM のように。スティックかボタンに触れるとやめる）
+        // ダッシュの所で離した: 「ダッシュの固定」がオンなら走り続ける（PUBGM・CODM のように。スティックか、撃つ・構える・リーン・リロード以外のボタンに触れるとやめる）
         const lock = !cancel && this.sprintArm && this.S.stickLock === true;
         this.stick = null; this.mx = 0; this.mz = 0; this.sprintArm = lock; this.sprintLock = lock;
         if (this.onStick) this.onStick(null, 0, 0, lock, lock); return;
@@ -22053,6 +22140,7 @@ export class Input {
       const k = e.code;
       if (this.keys.has(k)) return;
       this.keys.add(k);
+      if (k === 'ShiftLeft') this.sprPress++;
       const map = { KeyR: 'reload', KeyC: 'crouch', KeyZ: 'prone', KeyQ: 'leanL', KeyE: 'leanR', KeyF: 'shout', KeyV: 'use', KeyG: 'gear', KeyX: 'fmode', KeyT: 'light', KeyN: 'nvg', KeyB: 'low', KeyM: 'map', Escape: 'pause', KeyP: 'pause', Space: 'vault', Digit1: 'wpn1', Digit2: 'wpn2', Digit3: 'gear', KeyH: 'cmd', Tab: 'team', KeyK: 'drone', KeyY: 'melee' };
       const b = map[k];
       if (b) { e.preventDefault(); this.edges.push({ b, k: 'down', key: true }); this._keyT = this._keyT || {}; this._keyT[k] = performance.now(); }
@@ -22080,7 +22168,9 @@ export class Input {
     let dx = (sx - st.ox) / R, dy = (sy - st.oy) / R;
     const l = Math.hypot(dx, dy);
     // スティックを上へ押し込む（ダッシュの印より上）とダッシュ（CODM・PUBGM）。作戦・対戦とも。少し斜めでもよい（stick.js）
-    this.sprintArm = this.S.stickSprint !== false && sprintZone(dx, dy, spr, this.sprintArm);
+    const arm = this.S.stickSprint !== false && sprintZone(dx, dy, spr, this.sprintArm);
+    if (arm && !this.sprintArm) this.sprPress++;
+    this.sprintArm = arm;
     if (l > 1) { dx /= l; dy /= l; }
     // 可変のスティック: 大きく離れたら土台がついてくる（ダッシュの印より外で）
     const follow = Math.max(1.9, spr + 0.45);
@@ -22147,12 +22237,12 @@ export class Input {
     const out = {
       mx, mz, lookDX: this.lookDX, lookDY: this.lookDY, gyroX: this.gyro.x, gyroY: this.gyro.y,
       fire: this.hold.has('fire') || this.hold.has('fireL') || this.mouseBtn.l,
-      sprint: this.sprintArm || this.sprintLock || K.has('ShiftLeft') || this.hold.has('sprint'),
+      sprint: this.sprintArm || this.sprintLock || K.has('ShiftLeft') || this.hold.has('sprint'), sprPress: this.sprPress,
       hold: this.hold, edges: this.edges.slice(),
       mouse: !!document.pointerLockElement, touch: this.touchUsed,
     };
     this.lookDX = 0; this.lookDY = 0; this.gyro.x = 0; this.gyro.y = 0;
-    this.edges.length = 0;
+    this.edges.length = 0; this.sprPress = 0;
     // 長押しの判定（押している最中）。こまが大きく遅れたとき（0.25秒より長い）は次のこまで判定する
     // （遅れている間に指を離した出来事が待っているかもしれない。離していれば短押し）
     const now = performance.now();
@@ -22174,7 +22264,7 @@ export class Input {
   }
 }
 
-@@@@ FILE src/ui/loadout.js text 15890
+@@@@ FILE src/ui/loadout.js text 16031
 // 装備の画面: 左に枠（主武器・照準・…）、右にその枠の候補と説明。作戦は自分とAI隊員4人、対戦は陣営ごと。
 import { onTap } from './input.js';
 import { Scroller, esc } from './widgets.js';
@@ -22251,7 +22341,7 @@ export class LoadoutEditor {
     const ak = slot.replace(/2$/, '');
     if (PSLOTS.includes(ak)) return att(slot.endsWith('2') ? S2 : P, ak);
     switch (slot) {
-      case 'primary': return allowedP.map(id => ({ v: id, label: WEAPONS[id].name, sub: CAT_NAME[WEAPONS[id].cat] + ' · ' + (CAL[WEAPONS[id].cal] ? CAL[WEAPONS[id].cal].name : ''), on: P.id === id }));
+      case 'primary': return allowedP.map(id => ({ v: id, label: WEAPONS[id].name, sub: CAT_NAME[WEAPONS[id].cat] + ' · ' + (CAL[WEAPONS[id].cal] ? CAL[WEAPONS[id].cal].name : '') + (this.kind === 'pvp' && WEAPONS[id].tdmBoth && WEAPONS[id].side !== side ? ' · TDMだけ（爆弾・殲滅戦は SWAT 側だけ）' : ''), on: P.id === id }));
       case 'secondary': return allowedS.map(id => ({ v: id, label: WEAPONS[id].name, sub: CAT_NAME[WEAPONS[id].cat], on: S2.id === id }));
       case 'ammo': return (W ? W.ammo : []).map(k => ({ v: k, label: AMMO_NAME[k] || k, on: (P.ammo || W.ammo[0]) === k, sub: ammoSub(W, k) }));
       case 'ammo2': return (W2 ? W2.ammo : []).map(k => ({ v: k, label: AMMO_NAME[k] || k, on: (S2.ammo || W2.ammo[0]) === k, sub: ammoSub(W2, k) }));
@@ -22371,7 +22461,7 @@ export function weaponCard(spec, kind) {
     <p class="desc">${esc(W.desc || '')}</p><p class="note">初速 ${W.vel || '-'} m/s · 重さ ${W.kg || '-'} kg</p>`;
 }
 
-@@@@ FILE src/ui/screens.js text 49511
+@@@@ FILE src/ui/screens.js text 49658
 // 画面: 読み込み・タイトル・作戦の準備（マップ・作戦・難易度・人数・突入口）・ブリーフィング・装備・対戦の準備・
 // オンライン（ルームを作る/参加・ロビー）・一時停止・地図（タブレット）・結果・設定・資料室（手順書と資料）
 import { onTap } from './input.js';
@@ -22813,7 +22903,7 @@ export class Screens {
       row('リーン', '', 'leanMode'); ch('leanMode', [['toggle', '切替'], ['hold', '長押し']]);
       row('移動スティック', '', 'stickMode'); ch('stickMode', [['float', '可変'], ['fixed', '固定']]);
       row('スティックでダッシュ', '上へ押し込む（作戦・対戦とも）', 'stickSprint'); ch('stickSprint', [[true, 'オン'], [false, 'オフ']]);
-      row('ダッシュの固定', 'ダッシュの所で指を離すと走り続ける', 'stickLock'); ch('stickLock', [[false, 'オフ'], [true, 'オン']]);
+      row('ダッシュの固定', 'ダッシュの所で指を離すと走り続ける（撃つ・構える・リーン・リロードの間は止まり、終わるとまた走る。スティックかほかのボタンでやめる）', 'stickLock'); ch('stickLock', [[false, 'オフ'], [true, 'オン']]);
       row('射撃ボタン（左）', '', 'leftFire'); ch('leftFire', [[true, '表示'], [false, '非表示']]);
       row('射撃ボタンで視点移動', '押したままドラッグ', 'fireLook'); ch('fireLook', [[true, 'オン'], [false, 'オフ']]);
       row('利き手', 'ボタンの左右を反転', 'handed'); ch('handed', [['right', '右'], ['left', '左']]);
@@ -23012,7 +23102,7 @@ export function sprintZone(dx, dy, spr, armed) {
   return armed ? (dy < -(spr - SPRINT_ZONE.drop) && ang <= SPRINT_ZONE.keep) : (dy < -spr && ang <= SPRINT_ZONE.start);
 }
 
-@@@@ FILE src/ui/style.css text 46910
+@@@@ FILE src/ui/style.css text 47061
 /* HARD ENTRY — 見た目の決まり（色・枠・書体）。雰囲気より読みやすさを優先。自分の側はいつも青、相手は赤 */
 :root {
   --bg: #07090c; --panel: rgba(12, 16, 22, 0.9); --panel2: rgba(22, 28, 36, 0.92); --line: rgba(255, 255, 255, 0.13); --line2: rgba(255, 255, 255, 0.28);
@@ -23252,6 +23342,7 @@ table.board small { color: var(--dim); font-size: max(11px, .72em); margin-left:
 .hud-stick .spr { position: absolute; left: 50%; transform: translate(-50%, -50%); font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 4px; background: rgba(0,0,0,.5); border: 1px dashed rgba(255,255,255,.45); white-space: nowrap; opacity: 0; transition: opacity .12s; }
 .hud-stick.show-spr .spr { opacity: .8; }
 .hud-stick.spr-on .spr { opacity: 1; background: var(--accent); color: #111; border-style: solid; border-color: var(--accent2); }
+.hud-stick.spr-on.spr-wait .spr { opacity: .9; background: rgba(0,0,0,.55); color: var(--accent); border-style: dashed; border-color: var(--accent); }
 #hud.editing .hud-stick { pointer-events: auto; touch-action: none; }
 .hud-mm { position: absolute; width: 120px; height: 120px; border-radius: 50%; overflow: hidden; border: 1.5px solid rgba(255,255,255,.35); transform-origin: 50% 50%; pointer-events: auto; touch-action: none; }
 .hud-mm.down { border-color: var(--accent); filter: brightness(1.25); }
@@ -23802,7 +23893,7 @@ export async function runTests(filter) {
   return res;
 }
 
-@@@@ FILE tests/run_all.mjs text 56045
+@@@@ FILE tests/run_all.mjs text 61770
 // テスト一式: node tests/run_all.mjs [--quick] [--no-sizes] [--no-net] → test-results/summary.md
 //  1 ビルド  2 単体  3 マップ  4 音  5 自動の試合（作戦・対戦・同じシードで同じ結果・途中保存）
 //  6 ブラウザ（起動・タップ・音の開始・回した画面・2本指・射撃/ADS/リロード/リーン/しゃがみ・ミニマップ→地図・ミラーの視点・HUDの編集・撤収→結果・保存と続きから・2回押し・WebGL）
@@ -24139,6 +24230,65 @@ try {
     const slot = await page.evaluate(() => window.__app.game.p.ws.slot);
     await tapAt(await btn('wpn1'), 34);
     rec('操作', '副武器のボタンで持ち替える', slot === 1, `持っている武器 ${slot}`);
+  }
+  // ダッシュ中もほかの操作が先（11-12）: 走っていてもリロード・ADS・リーン・射撃ができ、その間は走らない。終わると（押したまま・固定なら）また走る。
+  // リロードはスティックを押し込み直すとやめて走る。CDP の touchEnd は書いた指だけ離す（スティックは押したまま）
+  {
+    await page.waitForFunction(() => window.__app.game.p.ws.st === 'ready' && window.__app.game.p.ws.slot === 0, null, { timeout: 15000 }).catch(() => {});
+    const sst = () => page.evaluate(() => { const g = window.__app.game, p = g.p, wi = p.inv.w[p.ws.slot]; return { spr: !!p.sprint, ws: p.ws.st, mag: wi ? wi.mag : -1, ads: +p.ads.toFixed(2), lean: +p.lean.toFixed(2), sh: p.stats.sh, lock: !!window.__app.input.sprintLock, wait: document.querySelector('#hud .hud-stick').classList.contains('spr-wait') }; });
+    const wf = (fn, t = 60000) => page.waitForFunction(fn, null, { timeout: t }).then(() => true).catch(() => false);
+    const at = (dy, id = 41) => ({ x: 150, y: 290 - dy, id });
+    const push = async (id) => { await touch('touchStart', [at(0, id)]); for (let k = 1; k <= 20; k++) { await touch('touchMove', [at(k * 5, id)]); await page.waitForTimeout(30); } };
+    const tapWith = async (b, id, sid = 41) => { await touch('touchStart', [at(100, sid), { x: b.x, y: b.y, id }]); await page.waitForTimeout(80); await touch('touchEnd', [{ x: b.x, y: b.y, id }]); await page.waitForTimeout(150); };
+    // 描画が遅い環境では、押し込み直す前にリロードが終わってしまうので長くしておく（やめるのを確かめる）
+    const longReload = () => page.evaluate(() => { const ws = window.__app.game.p.ws; ws.t = 30; ws.rd = 30; });
+    const R = await btn('reload'), A = await btn('ads'), LR = await btn('leanR'), F = await btn('fire');
+    await page.evaluate(() => { window.__app.game.p.inv.w[0].mag = 3; });
+    // スティックを押したまま
+    await push(41);
+    const run1 = await wf(() => window.__app.game.p.sprint);
+    await tapWith(R, 42);
+    const rl = await wf(() => window.__app.game.p.ws.st === 'reload'); await longReload();
+    await page.waitForTimeout(300);
+    const s1 = await sst();
+    for (const d of [80, 50, 30, 50, 80, 100]) { await touch('touchMove', [at(d)]); await page.waitForTimeout(20); }
+    const cx = await wf(() => window.__app.game.p.ws.st === 'ready' && window.__app.game.p.sprint);
+    const s2 = await sst();
+    rec('操作', 'ダッシュ中もリロードできる（その間は走らない・印は点線）。スティックを押し込み直すと、やめて走る', run1 && rl && !s1.spr && s1.wait && cx && s2.mag === 3, `走る${run1 ? '○' : '×'}・リロード中 ${JSON.stringify(s1)}・押し込み直し ${JSON.stringify(s2)}`);
+    await tapWith(A, 43);
+    const ad = await wf(() => window.__app.game.p.ads > 0.6 && !window.__app.game.p.sprint);
+    await tapWith(A, 44);
+    const ad2 = await wf(() => !window.__app.game.adsOn && window.__app.game.p.sprint);
+    rec('操作', 'ダッシュ中も ADS が先（構える）。戻すとまた走る', ad && ad2, JSON.stringify(await sst()));
+    await touch('touchEnd', []);
+    await wf(() => !window.__app.game.p.sprint, 20000);
+    // ダッシュの固定: 撃つ・リーン・リロードでやめず、その間だけ走らない
+    await page.evaluate(() => { window.__app.input.S.stickLock = true; window.__app.game.p.inv.w[0].mag = 30; });
+    await push(45); await touch('touchEnd', []);
+    const lk = await wf(() => window.__app.input.sprintLock && window.__app.game.p.sprint);
+    const sh0 = (await sst()).sh;
+    await holdAt(F, 500, 46);
+    const fired = await wf(() => window.__app.game.p.stats.sh > 0);
+    const sf = await sst();
+    const fb = await wf(() => window.__app.game.p.sprint && window.__app.input.sprintLock);
+    // リーン（傾く量は壁しだい: 走り続けて壁ぎわにいると傾けない。見るのはリーンの入力が効いて走らないこと）
+    await tapAt(LR, 47);
+    const ln = await wf(() => window.__app.game.leanSide > 0 && !window.__app.game.p.sprint && window.__app.input.sprintLock);
+    const sl = await sst();
+    await tapAt(LR, 48);
+    const lb = await wf(() => window.__app.game.p.sprint && window.__app.game.leanSide === 0);
+    await tapAt(R, 49);
+    const rl2 = await wf(() => window.__app.game.p.ws.st === 'reload' && !window.__app.game.p.sprint && window.__app.input.sprintLock); await longReload();
+    await push(50);
+    const cx2 = await wf(() => window.__app.game.p.ws.st === 'ready' && window.__app.game.p.sprint);
+    await touch('touchEnd', []);
+    const lk2 = await wf(() => window.__app.input.sprintLock);
+    await tapAt(at(0, 51), 51);
+    const off = await wf(() => !window.__app.input.sprintLock && !window.__app.game.p.sprint, 30000);
+    await page.evaluate(() => { window.__app.input.S.stickLock = false; });
+    rec('操作', 'ダッシュの固定: 撃つ・リーン・リロードの間だけ止まり、終わるとまた走る（押し込み直すとリロードをやめる・触れると固定をやめる）', lk && fired && sf.sh > sh0 && fb && ln && lb && rl2 && cx2 && lk2 && off,
+      `固定${lk ? '○' : '×'}・撃つ${fired && sf.sh > sh0 ? '○' : '×'}→また走る${fb ? '○' : '×'}・リーン${ln ? '○' : '×'}（傾き ${sl.lean}）→${lb ? '○' : '×'}・リロード${rl2 ? '○' : '×'}→押し込み直し${cx2 ? '○' : '×'}・離すと固定${lk2 ? '○' : '×'}・触れてやめる${off ? '○' : '×'}`);
+    await page.waitForFunction(() => window.__app.game.p.ws.st === 'ready', null, { timeout: 60000 }).catch(() => {});
   }
   // ボタンは押した瞬間に1回だけ（ライト）
   {
@@ -25567,7 +25717,7 @@ console.log(`\n${all.length - bad.length}/${all.length} 合格`);
 if (process.env.UNIT_JSON) fs.writeFileSync(process.env.UNIT_JSON, JSON.stringify(all, null, 1));
 process.exit(bad.length ? 1 : 0);
 
-@@@@ FILE tests/unit/sniper.test.mjs text 9232
+@@@@ FILE tests/unit/sniper.test.mjs text 10470
 import { test, ok, eq, near } from '../lib/t.mjs';
 import { createGame, step } from '../../src/engine/engine.js';
 import { WEAPONS, zoomOf, attachOptions, opticOf, ATTACH } from '../../src/engine/data/weapons.js';
@@ -25701,6 +25851,146 @@ test('optics: 付けられる銃は実銃の取り付け方に合わせる', () 
   ok(!S('m4super').some(k => ATTACH.sight[k].scope), '散弾銃に倍率の照準器はない');
   ok(!S('vz58').includes('mag3'), 'vz.58 の短いレールにブースターは付かない');
   eq(S('at308')[0], 'sniper', '狙撃銃の既定は狙撃用スコープ');
+});
+
+test('sniper: TDM では両方のチームが狙撃銃を使える。爆弾・殲滅戦は SWAT 側だけ（犯人側の装備に入れていても既定の主武器）', () => {
+  const lo = { swat: { primary: { id: 'at308', sight: 'sniper' }, secondary: { id: 'g17' } }, sus: { primary: { id: 'at308', sight: 'sniper' }, secondary: { id: 'm1911' } } };
+  const mk = (mode, team, seed) => createGame({ map: 'gasstation', mode, teams: [1, 1], roster: [{ pid: 0, name: 'P', team, lo }], rules: { botLevel: 1, wins: 3, time: 480 }, seed });
+  for (const team of [0, 1]) { const p = mk('tdm', team, 3).S.actors.find(a => a.pid === 0); eq(p.inv.w[0] && p.inv.w[0].id, 'at308', `TDM のチーム${team}`); }
+  let swat = false, sus = false;
+  for (const seed of [3, 4, 5, 6, 7, 8]) for (const team of [0, 1]) {
+    const G = mk('bomb', team, seed), p = G.S.actors.find(a => a.pid === 0), isSwat = p.team === G.S.m.att;
+    if (isSwat) { eq(p.inv.w[0].id, 'at308', '爆弾の SWAT 側は狙撃銃'); swat = true; }
+    else { ok(p.inv.w[0].id !== 'at308', `爆弾の犯人側は使えない（${p.inv.w[0].id}）`); sus = true; }
+  }
+  ok(swat && sus, '両方の側で確かめた');
+  ok(WEAPONS.at308.tdmBoth, 'TDM では両方の印');
+});
+
+@@@@ FILE tests/unit/sprint.test.mjs text 6860
+import { test, ok, eq } from '../lib/t.mjs';
+import { createGame, step } from '../../src/engine/engine.js';
+import { WEAPONS } from '../../src/engine/data/weapons.js';
+import { makeWeapon } from '../../src/engine/actor.js';
+import { SPRINT_HOLD } from '../../src/engine/move.js';
+import { sprintOutT } from '../../src/engine/weapon.js';
+
+// 訓練場で、ダッシュを押したまま走っている人（11-12: ダッシュ中もほかの操作を受け付ける）
+function mkRunner(gun = { id: 'mk18', ammo: 'ap' }) {
+  const G = createGame({ map: 'training', mode: 'train', seed: 7, team: 1, house: false });
+  const p = G.S.actors.find(a => a.pid === 0);
+  p.inv.w[0] = makeWeapon(gun);
+  p.ws.slot = 0; p.ws.st = 'draw'; p.ws.t = 0.1;
+  const run = (o = {}) => step(G, { [p.id]: { mx: 0, mz: 1, yaw: p.yaw, pitch: 0, stance: 0, sprint: true, ...o } });
+  for (let i = 0; i < 30; i++) run();
+  return { G, p, wi: p.inv.w[0], run };
+}
+const shotsOf = (ev, p) => ev.filter(e => e.e === 'shot' && e.id === p.id).length;
+
+test('sprint: ダッシュを押していても ADS が先。構えをやめるとまた走る', () => {
+  const { p, run } = mkRunner();
+  ok(p.sprint, '走っている');
+  for (let i = 0; i < 40; i++) run({ ads: true });
+  ok(!p.sprint, '構えている間は走らない');
+  ok(p.ads > 0.9, `構えられる ${p.ads.toFixed(2)}`);
+  for (let i = 0; i < 3; i++) run();
+  ok(p.sprint, '構えをやめたらまた走る');
+});
+
+test('sprint: ダッシュを押していてもリーンが先。リーンをやめるとまた走る', () => {
+  const { p, run } = mkRunner();
+  for (let i = 0; i < 30; i++) run({ lean: 1 });
+  ok(!p.sprint, 'リーンしている間は走らない');
+  ok(p.lean > 0.2, `傾く ${p.lean.toFixed(2)}`);
+  for (let i = 0; i < 3; i++) run();
+  ok(p.sprint, 'リーンをやめたらまた走る');
+});
+
+test('sprint: 引き金を引くと走るのをやめ、銃が上がったら撃つ（短く押しただけでも単発で1発）。少しして、また走る', () => {
+  const { G, p, wi, run } = mkRunner();
+  wi.mode = Math.max(0, WEAPONS.mk18.modes.indexOf('semi'));
+  let ev = run({ fire: true });
+  ok(!p.sprint, '走るのをやめる');
+  eq(shotsOf(ev, p), 0, '銃を上げている間は撃たない');
+  let shots = 0, at = -1;
+  for (let i = 1; i <= 20; i++) { ev = run(); const n = shotsOf(ev, p); if (n && at < 0) at = i; shots += n; }
+  eq(shots, 1, '引き金は離していても、覚えていた1発を撃つ');
+  const T = sprintOutT(WEAPONS.mk18);
+  ok(at * G.S.dt >= T - 0.02 && at * G.S.dt <= T + 0.03, `銃を上げる時間 ${(at * G.S.dt).toFixed(2)}秒（${T.toFixed(2)}）`);
+  ok(!p.sprint, `撃ってすぐ（${SPRINT_HOLD}秒まで）は走らない`);
+  for (let i = 0; i < 12; i++) run();
+  ok(p.sprint, 'また走る');
+  // 押し続ける（連射）: 押している間は走らない
+  wi.mode = Math.max(0, WEAPONS.mk18.modes.indexOf('auto'));
+  shots = 0;
+  for (let i = 0; i < 40; i++) { ev = run({ fire: true }); shots += shotsOf(ev, p); }
+  ok(!p.sprint && shots >= 5, `押している間は撃ち続ける（${shots}発）`);
+});
+
+test('sprint: リロードが先（押したままでは走らない）。ダッシュを入れ直すとリロードをやめて走る', () => {
+  const { p, wi, run } = mkRunner();
+  wi.mag = 5; const n0 = wi.mags.length;
+  let ev = run({ act: [{ a: 'reload' }] });
+  ok(ev.some(e => e.e === 'reload' && e.id === p.id), 'リロードが始まる');
+  eq(p.ws.st, 'reload'); ok(!p.sprint, '走るのをやめる');
+  for (let i = 0; i < 30; i++) run();
+  eq(p.ws.st, 'reload', '押したままではリロードを続ける'); ok(!p.sprint, 'リロードの間は走らない');
+  // 押したままの間は何も起きない。入れ直す（手元が動作 'sprint' を送る）とやめる
+  ev = run({ act: [{ a: 'sprint' }] });
+  ok(ev.some(e => e.e === 'reloadx' && e.id === p.id), '入れ直すとリロードをやめる');
+  eq(p.ws.st, 'ready'); ok(p.sprint, 'すぐ走る');
+  eq(wi.mag, 5, '弾倉は替わっていない'); eq(wi.mags.length, n0, '予備の弾倉もそのまま');
+  // 最後までリロードすると、押したままのダッシュに戻る
+  run({ act: [{ a: 'reload' }] });
+  for (let i = 0; i < 260 && p.ws.st === 'reload'; i++) run();
+  eq(p.ws.st, 'ready'); ok(wi.mag > 5, '弾倉を替えた');
+  run();
+  ok(p.sprint, 'リロードが終わるとまた走る');
+});
+
+test('sprint: 1発ずつ込める散弾銃は、入れ直してやめても込めた分が残る', () => {
+  const { p, wi, run } = mkRunner({ id: 'm4super', ammo: 'buck' });
+  wi.mag = 1;
+  run({ act: [{ a: 'reload' }] });
+  eq(p.ws.st, 'shell', '1発ずつ込める');
+  for (let i = 0; i < 200 && wi.mag < 3; i++) run();
+  ok(wi.mag >= 3, `込めた ${wi.mag}`);
+  const m = wi.mag;
+  run({ act: [{ a: 'sprint' }] }); run();
+  ok(p.ws.st === 'ready' || p.ws.st === 'pump', `やめる（${p.ws.st}）`);
+  ok(wi.mag >= m, '込めた分は残る');
+});
+
+test('sprint: ダッシュの入れ直しは、リロードしていなければ何もしない（撃てる・ポンプもそのまま）', () => {
+  const { p, wi, run } = mkRunner();
+  const st0 = p.ws.st, mag0 = wi.mag;
+  const ev = run({ act: [{ a: 'sprint' }] });
+  ok(!ev.some(e => e.e === 'reloadx'), 'やめる物がない');
+  eq(p.ws.st, st0); eq(wi.mag, mag0); ok(p.sprint, '走ったまま');
+});
+
+test('sprint: オンラインの手元の先読み（ゲスト）でも、リロードを始めて・入れ直してやめる（ホストと同じ動き）', async () => {
+  const { doAction } = await import('../../src/engine/interact.js');
+  const { moveActor } = await import('../../src/engine/move.js');
+  const { stepWeapon } = await import('../../src/engine/weapon.js');
+  const { G, p, wi } = mkRunner();
+  const S = G.S, w = G.w; S.predict = true;
+  wi.mag = 5;
+  // netgame.js の guestFrame と同じ: 動作は doAction（手元でやるもの）と、銃の動作だけ stepWeapon へ
+  const frame = (o = {}) => {
+    const cmd = { mx: 0, mz: 1, yaw: p.yaw, pitch: 0, stance: 0, sprint: true, fire: false, ads: false, ...o };
+    const ev = [];
+    if (cmd.act) for (const ac of cmd.act) doAction(S, w, p, ac, ev);
+    const inp = { ...cmd, act: cmd.act ? cmd.act.filter(ac => ac.a === 'reload' || (ac.a === 'mode' && ac.zoom)) : null };
+    moveActor(S, w, p, inp, S.dt, ev); stepWeapon(S, w, p, inp, S.dt, ev);
+    return ev;
+  };
+  let ev = frame({ act: [{ a: 'reload' }] });
+  eq(p.ws.st, 'reload', '手元でもリロードが始まる'); ok(ev.some(e => e.e === 'reload'), '音を出す出来事');
+  for (let i = 0; i < 10; i++) frame();
+  ok(!p.sprint, '手元でも走らない（ホストと同じ速さ）');
+  ev = frame({ act: [{ a: 'sprint' }] });
+  eq(p.ws.st, 'ready', '手元でもやめる'); ok(p.sprint, '走る');
 });
 
 @@@@ FILE tests/unit/stick.test.mjs text 1456
