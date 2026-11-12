@@ -1,8 +1,8 @@
-HARD ENTRY ソース一式（2026-11-12T03:09:04.599Z）
+HARD ENTRY ソース一式（2026-11-12T05:40:27.736Z）
 復元: node tools/unbundle.mjs source-bundle.txt <出力先>
 （tools/unbundle.mjs がない場合は、下の "@@@@ FILE " の区切りごとにファイルへ書き出す。base64 と書かれたものはデコードする）
 
-@@@@ FILE DESIGN.md text 73760
+@@@@ FILE DESIGN.md text 76578
 # HARD ENTRY（仮タイトル）設計メモ
 
 ## 文脈が消えたら最初に読む
@@ -48,6 +48,8 @@ HARD ENTRY ソース一式（2026-11-12T03:09:04.599Z）
 - 2026-11-12 05:52 乗り越えは2階以上の窓でも使えるように。高さの条件さえ満たしていれば、どの物でも乗り越えられるように。落下ダメージをほどよく入れてバランスを取る。（00:45〜01:33 の作業＝全マップの置き物の直し・飛び降りと落下の下地・テストは保存されていたが、報告の前に止まっていた。05:52 以降に続きとして仕上げた）
 - 2026-11-12 06:53 乗り越えのボタンの表記はいらない（→ 文字と色の変化を消した）。
 - 2026-11-12 11:04 「続きから」（既存マップの拡張・作り込みの続き。ガソリンスタンドの2階から）。
+- 2026-11-12 13:52 マップの拡張は終わったか → まだ（ガソリンスタンドのみ）。残りのマップを1つずつ広げて、できるごとに公開する。
+- 2026-11-12 14:15 ダッシュは完全にまっすぐでしか判定にならない → もう少し快適に走れる判定の範囲に（→ 真上から±40°で始まり、走っている間は±52°まで続く）。
 
 ## 約束（仕様・数値）— 必ず守る。守れなくなったら先に言う
 - 仮に決めて伝えたこと（15:20 送信）: ゲーム名「HARD ENTRY」（仮）。PvP は「SWAT 対 立てこもり犯」の攻守（シージの攻撃／防衛に相当）。掛け声・無線は英語の音声＋日本語字幕。血の表現あり（設定で消せる）。アプリ版のリポジトリはユーザーに作ってもらう（`hardentry`、Settings → Pages で main / root）。
@@ -107,6 +109,7 @@ HARD ENTRY ソース一式（2026-11-12T03:09:04.599Z）
 - 置き物の決まり（11-12。`tools/propaudit.mjs`、テスト一式の「マップ」で全マップ0件を確かめる）: 扉の前1.25m（板が回る所を含む）・開口とガラスの壁の前1.0m・窓の前0.9m・階段の上がり口と下り口の前1.25mに、歩きを止める置き物を置かない。扉の口に当たりのない小物（椅子）も置かない。扉・開口・窓・階段・出現位置・目標・部屋の広い所どうしは、置き物があっても幅0.9m以上の道でつながる（置き物がなくても狭い所は対象外）。壁ぎわの家具（本棚・テレビ台・ベッド・冷蔵庫・流し・便器など）は背中を壁につけ、正面を壁に向けない。椅子は机・テーブルの方を向く（`back`）。
 - 家具の向き（地図の数）: 正面（本の見える側・画面・引き出し・座る側・ベッドの足の側）が 0=+z（南） 1=+x（東） 2=−z（北） 3=−x（西）。11-12 に 1 と 3 の回し方を入れ替えた（地図はほとんどこの意味で書かれていたのに、組み立てが逆に回していて、全10マップで約340個の家具が壁を向いていた。モーテルのベッドは足を壁につけていた）。
 - 階段: 8マス（4m）で3m上がる。体の当たりは滑らかな坂、見た目は段。
+- 吹き抜け（11-12）: 地図の文字 '^'（2階より上）。床の板がなく、下の階の部屋の上が上の階の天井まで開いている（屋根の下・屋内あつかい。まわりの壁は屋内の壁）。上の階の手すり（'L'）の向こうに置き、ギャラリーから下を見下ろせる。弾・視線は通り、上へ撃つと上の階の天井に当たる。照明は上の階の天井に付ける（下まで届くように強め）。
 - 光: 読み込み時に「光の格子」（マスの角×高さ3段×階）を計算する。各点に6方向の明るさ（RGB）を持ち、壁・床・人・小物すべてがこれで照らされる（壁の向こうに光が漏れない作り）。光源は天井灯・窓からの日光・空・月。跳ね返りの光は部屋の中でならす。動く光は懐中電灯（銃のライト）と発砲の光。夜のマップは暗い（ライトと暗視装置に意味がある）。
 - 質感: 材質ごとの小さな手続きテクスチャ（コンクリ・レンガ・石膏・木の床・タイル・カーペット・アスファルト・草・金属・布）＋面ごとの色。BattleBitのように、ローポリ＋平らな色＋かすかなノイズ＋もや（大気のかすみ）＋光で本物らしく見せる。
 
@@ -154,7 +157,7 @@ HARD ENTRY ソース一式（2026-11-12T03:09:04.599Z）
 - 枠: 主武器・副武器・特殊装備1つ（盾・破城槌・ブリーチングショットガン・オプティワンド・M320）・小さな装備3枠（閃光・スティンガー・CS・C2・ウェッジ・ロックピックガン・ペッパースプレー・テーザー）・防具（なし/軽/重 × ケブラー/セラミック/スチール）・ヘルメット・頭（暗視装置・ガスマスク・防閃光ゴーグル・防弾マスク）。いつも持つ物: 手錠（結束バンド）・マルチツール・ケミライト・ミラーガン（扉の下）。
 
 ### 操作とHUD（スマホ）
-- 左: 移動スティック（左45%のどこでも／固定）。右: ドラッグで視点、射撃（右・左にも出せる）、ADS（タップで切替／押している間／両方）、リロード（タップで通常、長押しで速い）、しゃがみ（タップ、長押しで伏せ）、乗り越え、左右リーン（PUBGM式）、警告（大きいボタン。呼びかけ）、調べる（その時できること: 開ける・拘束・拾う・報告・解除。長押しで扉の操作の円形メニュー）、命令（タップで見ている物への既定の命令、長押しで円形メニュー。金/赤/青の選択）、装備（タップで持ち替え、長押しで選ぶ。射撃ボタンで投げる・置く）、武器2つ（下の中央、タップで切替）、射撃モード・ライト・暗視・ローレディの小ボタン、地図（タブレット）、一時停止。スティックを上へ押し込むとダッシュ（作戦・対戦とも。ダッシュの印より上）。任意で「ダッシュの固定」（その所で離すと走り続け、スティックかボタンに触れるとやめる）。スティックの位置（配置の編集でドラッグ）・大きさ・濃さ・ダッシュの判定位置（半径の1〜2.4倍、既定1.25）は HUD の設定で。長押しの円形メニューはいちばん上の層に出し、大きさ（80〜160%）を設定で変えられる。対戦はスコア表のボタン（右上。タブキーでも）でキル・デス・アシスト・K/D を見られる（オンラインのゲストにも成績を送る）。
+- 左: 移動スティック（左45%のどこでも／固定）。右: ドラッグで視点、射撃（右・左にも出せる）、ADS（タップで切替／押している間／両方）、リロード（タップで通常、長押しで速い）、しゃがみ（タップ、長押しで伏せ）、乗り越え、左右リーン（PUBGM式）、警告（大きいボタン。呼びかけ）、調べる（その時できること: 開ける・拘束・拾う・報告・解除。長押しで扉の操作の円形メニュー）、命令（タップで見ている物への既定の命令、長押しで円形メニュー。金/赤/青の選択）、装備（タップで持ち替え、長押しで選ぶ。射撃ボタンで投げる・置く）、武器2つ（下の中央、タップで切替）、射撃モード・ライト・暗視・ローレディの小ボタン、地図（タブレット）、一時停止。スティックを上へ押し込むとダッシュ（作戦・対戦とも。ダッシュの印より上。真上から±40°で始まり、走っている間は±52°・印の0.25下まで続く。`ui/stick.js`）。任意で「ダッシュの固定」（その所で離すと走り続け、スティックかボタンに触れるとやめる）。スティックの位置（配置の編集でドラッグ）・大きさ・濃さ・ダッシュの判定位置（半径の1〜2.4倍、既定1.25）は HUD の設定で。長押しの円形メニューはいちばん上の層に出し、大きさ（80〜160%）を設定で変えられる。対戦はスコア表のボタン（右上。タブキーでも）でキル・デス・アシスト・K/D を見られる（オンラインのゲストにも成績を送る）。
 - 画面: 左上ミニマップ、上の中央に方位と時間・目的、右上に出来事（キル・拘束・TOC）、左に隊員の状態、下の中央に体力・防具・弾倉、字幕。
 - 設定: 感度（見回し・ADS・倍率ごと・ジャイロ（オフ／ADS中だけ／いつも）・射撃中）、エイムアシスト（オフ／弱／標準、PvEの既定は弱、PvPは部屋の設定）、HUDのボタンごとの位置・大きさ・濃さ、照準の形と色、ミニマップ、画質（3段階・解像度・FPS上限・視野角・血）、音量（全体・効果音・声・BGM・UI、消音モードでも鳴らす）、字幕。
 
@@ -201,6 +204,7 @@ HARD ENTRY ソース一式（2026-11-12T03:09:04.599Z）
 - 2026-10-30: GitHub のリリースから落とした実行ファイル（sherpa-onnx）を動かすのは許可されなかった（外部のコード）。声は ffmpeg 内蔵の flite で作る。聞き取りの確認は tools/asr.py（numpy＋onnxruntime で Whisper base.en の ONNX を自前で推論。モデルは /home/claude/tts/sherpa-onnx-whisper-base.en、GitHub の asr-models リリースから）。
 
 ## バランス変更の記録（1つずつ戻せるように）
+- 11-12 ナイトクラブの2階（吹き抜けとギャラリー・非常階段）: 対戦ボット 4v4（シード11〜・各6試合）: 爆弾の攻撃側 25%（3/12・3試合）→ 38%（10/26。非常階段から2階へ回れる）、殲滅戦の SWAT 側 43% → 38%、TDM は1試合が長くなった（215s → 352s）。作戦のAIだけの試合（60こま・シード7・8）: 完了 9/10 → 6/10。強制捜査（容疑者9〜10人）はシード7〜14で 5/8 → 3/8（正面の前室の両開きの扉が、北と東のギャラリーから見下ろされる。正面以外の入り口を使うと楽）。籠城の1回は、西の路地へ逃げて隠れた容疑者を見つけられず時間切れ（外の隠れ場所を探すのは前からの弱み）。
 - 11-12 AI の詰まりの判定（`ai/common.js` の NAV.stuckV）: 1こまで2cm未満しか動かないと「詰まり」とみなしていた。ゲームは毎秒60こま、AIだけの試合は30こまで測っていたため、ゲームの中でだけ毎秒1.2m未満の動き（しゃがみ歩き・構えたままの歩き・家具の角をすべる動き）がいつも詰まり扱いになり、横へよけ直すのを繰り返していた。毎秒0.6m未満に直した（30こまの測定では前と同じ）。作戦のAIだけの試合（7マップ×5作戦×シード7・8、ゲームと同じ毎秒60こま）: 完了 16/70 → 56/70（爆弾 0/14 → 9/14、オフィス 0/10 → 8/10、アパート 0/10 → 5/10）。毎秒30こま（シード7〜9）は 62/105 → 64/105。あわせて、爆弾の解除に向かう途中で倒れた隊員の受け持ちを数えない（ほかの隊員がその爆弾へ行かず、時間切れになっていた）。容疑者の投降・偽の投降で銃を抜く確率は1秒あたりの値に（ゲームの60こまのときと同じ。30こまの試合では半分になっていた）。`tools/sim.mjs` の作戦は既定で60こま、テスト一式の作戦も60こまで回す。
 - 11-12 ガソリンスタンドの2階・家具の向き（対戦ボット 4v4、同じシード11〜・各3試合）: 爆弾の攻撃側ラウンド勝率 35%（38/108）→ 40%（42/105。ガソリンスタンドは 29% → 58%: 裏の外階段から2階へ回れる）、殲滅戦の SWAT 側 29% → 25%、TDM のチーム0 52% → 56%。殲滅戦は前から守る側（時間切れ）に寄っている（オフィス・港）。
 - 11-12 対戦の守る側に置ける盾・有刺鉄線（ボットは準備の初めに入口へ置く。そのぶん補強は減る）: 同じシード（9マップ×3モード×3試合）で、爆弾の攻撃側ラウンド勝率 27%（32/117）→ 35%（38/108）、殲滅戦のSWAT側 27% → 29%、TDM のチーム0 26% → 52%。守りが固くなりすぎてはいない（AI の攻撃側は盾に詰まると乗り越える）。
@@ -275,7 +279,9 @@ HARD ENTRY ソース一式（2026-11-12T03:09:04.599Z）
 - 11-12 ガソリンスタンドを広げた（「マップが単調で狭い」への対応の続き）: 2階に店主の住まい（倉庫・事務所・休憩室の上。居間 8.5×7m・寝室・浴室・物置・廊下。21×7m）。休憩室の西の壁ぞいの階段（南へ上がる）と、裏の路地の外階段（2階の踊り場と居間の裏口）から上がる。表の店と食堂の上は平らな屋根（上がれない）。作戦: 容疑者・市民・人質・爆弾・証拠の位置を2階にも、突入口に「裏の外階段」。対戦: 守る側の出現位置を2階にも（攻撃側は裏の路地から外階段を使える）。爆弾の場所は1階のまま（A 事務所の真上が寝室）。作戦の爆弾の制限時間は10分 → 12分（2階の分だけ広くなった。郊外の家と同じ）。2階の廊下（幅2m）には何も置かない（書類棚の角に AI の先頭が引っかかり、突入が始まらなかった）。休憩室の階段の上がり口のまわりも空けた。
 - 11-12 家具の向き: 正面が壁を向いた家具が全10マップで約340個あった（モーテルのベッドは足を壁につけ、テレビ・本棚・冷蔵庫・流しの多くが壁向き）。地図の向きの数の意味（1=東・3=西）と組み立ての回し方が逆だった。回し方を地図に合わせ、それでも逆だった19個を直した。`tools/propaudit.mjs` に向きの決まり（back）を足した（全マップ0件）。
 - 11-12 版 0.1.7（ガソリンスタンドの2階・家具の向き・ゲームの中でだけ AI 隊員が詰まる不具合）。互換3（ガソリンスタンドの扉が増えたので、古い遊びかけは捨てる）。テスト一式 80/80 合格（単体49件。作戦のAIだけの試合はゲームと同じ毎秒60こまで 完了29/35＝前の版は30こまで19/35。対戦ボット 27試合すべて決着）。
-- 次: 実機での確認をお願いする → その結果で直す。残り: ほかのマップの拡張（ナイトクラブ・郊外の家など）。
+- 11-12 ナイトクラブを広げた（「マップが単調で狭い」への対応の続き）: 2階を足した。ホールのダンスフロアとバーの上は吹き抜け（エンジンに吹き抜けを足した）で、北と東のギャラリー（手すりから下が見える・壁ぞいの席）。裏の上にオーナー室（ホールを見下ろす窓）・VIPルーム・金庫室（鍵）・監視室・物置。ホールの北の壁ぞいの階段（東へ上がる）と、東の外の非常階段（踊り場から監視室へ）で上がる。作戦: 容疑者・市民・人質・爆弾・証拠を2階にも。爆弾の制限時間 10分 → 12分。対戦: 守る側の出現を2階にも（爆弾の場所は1階のまま）。
+- 11-12 版 0.1.8（ナイトクラブの2階・吹き抜け・ダッシュの判定を広げた）。互換4。テスト一式 80/80 合格（単体50件。作戦のAIだけの試合（60こま）完了27/35。対戦ボット 27試合すべて決着）。
+- 次: 実機での確認をお願いする → その結果で直す。残り: ほかのマップの拡張（郊外の家・港・アパート・オフィス・銀行・モーテル）。
 
 @@@@ FILE dev/view.html text 446
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -6456,8 +6462,8 @@ export const PROPS = {
 
 @@@@ FILE src/engine/data/version.js text 209
 // 版番号: 互換（セーブ・オンラインの相性。上げたら古いセーブは捨てる）と表示用
-export const VERSION = '0.1.7';
-export const COMPAT = 3;
+export const VERSION = '0.1.8';
+export const COMPAT = 4;
 export const TITLE = 'HARD ENTRY';
 
 @@@@ FILE src/engine/data/weapons.js text 46183
@@ -8401,7 +8407,7 @@ function detonateMine(S, w, a, ev) {
 }
 export { launchNade };
 
-@@@@ FILE src/engine/light.js text 14263
+@@@@ FILE src/engine/light.js text 14362
 // 光の格子: マスの角 × 高さ3段（床0.12・胸1.4・天井2.66）× 階。各点に6方向（+X −X +Y −Y +Z −Z）の明るさ（RGB）。
 // 壁はマスの中央の板なので、角の点は必ず壁のどちらか一方の側にある（光が壁を抜けない）。
 // 描画（壁・床・人の明るさ）とAI（暗いと見えにくい）が同じものを使う。
@@ -8460,7 +8466,7 @@ export function bakeLight(w, def, opt = {}) {
   });
   const pidx = (i, j, ly) => (ly * D1 + j) * W1 + i;
   const cellT = (L, i, j) => (i < 0 || j < 0 || i >= w.W || j >= w.D) ? C.VOID : w.cell[w.idx(L, i, j)];
-  const indoorCell = (L, i, j) => { const t = cellT(L, i, j); return t === C.FLOOR || (t === C.STAIR && w.indoor[w.idx(L, i, j)] === 1) || (isWallish(t) && w.indoor[w.idx(L, i, j)] === 2); };
+  const indoorCell = (L, i, j) => { const t = cellT(L, i, j); if (t === C.VOID) return i >= 0 && j >= 0 && i < w.W && j < w.D && w.indoor[w.idx(L, i, j)] === 1; return t === C.FLOOR || (t === C.STAIR && w.indoor[w.idx(L, i, j)] === 1) || (isWallish(t) && w.indoor[w.idx(L, i, j)] === 2); };
   // 窓・外への開口からの距離（屋内で空を調べる範囲を絞る）
   const nearOpen = new Uint8Array(w.NL * w.W * w.D);
   for (let L = 0; L < w.NL; L++) {
@@ -9047,10 +9053,12 @@ export default {
   missions: {},
 };
 
-@@@@ FILE src/engine/maps/club.js text 10126
-// クラブ・ヴェルヴェット（夜）: 古い倉庫を改装したナイトクラブ。1階建て。
+@@@@ FILE src/engine/maps/club.js text 16018
+// クラブ・ヴェルヴェット（夜）: 古い倉庫を改装したナイトクラブ。2階建て（11-12 に2階を足した）。
 //  ホール（ダンスフロア・バー・DJブース・ボックス席・柱）、表側にトイレ・クローク・入口の前室・VIPラウンジ、
 //  裏に厨房・倉庫・事務所・警備室・控え室。入口: 表の正面・東の搬入口と厨房の裏口・西の非常口
+//  2階: ホールは吹き抜け（ダンスフロアとバーの上）。北と東にギャラリー（手すりから下が見える）。裏の上にオーナー室・VIPルーム・金庫室・監視室・物置。
+//  ホールの北の壁ぞいの階段（東へ上がる）と、東の外の非常階段（監視室へ）から上がる
 import { canvas } from './draw.js';
 
 const W = 96, D = 72;
@@ -9084,6 +9092,36 @@ a.door(71, 36, 'h'); a.door(71, 47, 'h'); a.door(77, 41, 'v'); a.door(66, 51, 'v
 a.door(12, 39, 'v', 2, 'M');              // 西の非常口
 // 窓（少ない）
 a.win(54, 56, 'h', 3); a.win(60, 56, 'h', 3); a.win(84, 40, 'v', 2); a.win(84, 20, 'v', 2);
+// 階段: ホールの北の壁ぞい（東へ上がって北のギャラリーへ）と、東の外の非常階段（北へ上がって2階の踊り場へ）
+a.stairs(22, 13, 8, 3);
+a.stairs(85, 45, 3, 8, 's');
+
+// ---- 2階: 吹き抜けを囲むギャラリーと、裏の上の部屋。表側（トイレ・VIPラウンジの上）は平らな屋根
+const b = canvas(W, D, ' ');
+b.room(12, 12, 66, 44, '#', '^');         // ホールの上（吹き抜け）
+b.room(66, 12, 84, 56, '#', '~');         // 裏の上
+b.v(66, 13, 43, '=');
+b.rect(30, 13, 65, 17, '_');              // 北のギャラリー
+b.rect(57, 18, 65, 43, '_');              // 東のギャラリー
+b.h(29, 56, 18, 'L'); b.v(29, 16, 17, 'L'); b.v(56, 19, 43, 'L'); // 手すり
+b.rect(24, 22, 25, 23, 'C'); b.rect(24, 35, 25, 36, 'C'); b.rect(54, 22, 55, 23, 'C'); b.rect(54, 35, 55, 36, 'C'); // 柱
+b.stairs(22, 13, 8, 3);
+// 裏の上: オーナー室 | VIPルーム | 金庫室・監視室 | 物置
+b.h(67, 83, 25, '='); b.h(67, 83, 36, '='); b.h(67, 83, 47, '='); b.v(77, 37, 46, '=');
+b.rect(67, 26, 83, 35, '_'); b.rect(67, 37, 76, 46, '-'); b.rect(78, 37, 83, 46, ':'); b.rect(67, 48, 83, 55, '-');
+b.door(66, 21, 'v');                      // ギャラリー → オーナー室
+b.win(66, 14, 'v', 4);                    // オーナー室からホールを見下ろす窓
+b.door(66, 29, 'v', 2);                   // ギャラリー → VIPルーム
+b.door(66, 40, 'v');                      // ギャラリー → 金庫室（鍵）
+b.door(70, 25, 'h');                      // オーナー室 → VIPルーム
+b.door(77, 40, 'v');                      // 金庫室 → 監視室
+b.door(80, 47, 'h');                      // 監視室 → 物置
+b.door(84, 42, 'v', 2, 'M');              // 非常階段の踊り場 → 監視室
+b.win(70, 12, 'h', 3); b.win(78, 12, 'h', 3); b.win(84, 29, 'v', 2);
+// 非常階段と踊り場（手すり）
+b.stairs(85, 45, 3, 8, 's');
+b.rect(85, 41, 88, 44, '"');
+b.v(89, 40, 47, 'L'); b.h(85, 88, 40, 'L'); b.v(88, 45, 47, 'L');
 
 const props = [
   // バー（西の壁ぞい）
@@ -9098,10 +9136,10 @@ const props = [
   ['stage', 33, 29.5, 0, 0, { w: 1.6, d: 1.6 }], ['stage', 47, 29.5, 0, 0, { w: 1.6, d: 1.6 }],
   ['table', 22, 40.5, 0, 0, { w: 0.8, d: 0.8 }], ['stool', 20.8, 40.5, 0, 1], ['stool', 23.2, 40.5, 0, 3],
   ['table', 52, 41, 0, 0, { w: 0.8, d: 0.8 }], ['stool', 50.8, 41, 0, 1], ['stool', 53.2, 41, 0, 3],
-  ['table', 30, 16, 0, 0, { w: 0.8, d: 0.8 }], ['stool', 28.8, 16, 0, 1], ['stool', 31.2, 16, 0, 3],
+  ['table', 19, 18, 0, 0, { w: 0.8, d: 0.8 }], ['stool', 17.8, 18, 0, 1], ['stool', 20.2, 18, 0, 3],
   ['table', 52, 16, 0, 0, { w: 0.8, d: 0.8 }], ['stool', 50.8, 16, 0, 1], ['stool', 53.2, 16, 0, 3],
   // ネオンの看板
-  ['neon', 30, 13.3, 0, 0, { color: 1 }], ['neon', 52, 13.3, 0, 0, { color: 2 }], ['neon', 13.3, 18, 0, 1, { color: 0 }], ['neon', 44.5, 56.95, 0, 0, { color: 0 }],
+  ['neon', 35, 13.3, 0, 0, { color: 1 }], ['neon', 52, 13.3, 0, 0, { color: 2 }], ['neon', 13.3, 18, 0, 1, { color: 0 }], ['neon', 44.5, 56.95, 0, 0, { color: 0 }],
   // トイレ
   ['toilet', 14.5, 54.8, 0, 2], ['toilet', 16.5, 54.8, 0, 2], ['sink', 21.2, 48, 0, 3], ['sink', 21.2, 50, 0, 3],
   ['toilet', 24.5, 54.8, 0, 2], ['toilet', 26.5, 54.8, 0, 2], ['toilet', 28.5, 54.8, 0, 2], ['toilet', 30.5, 54.8, 0, 2], ['sink', 23.6, 47.6, 0, 1], ['sink', 23.6, 49.6, 0, 1],
@@ -9119,53 +9157,81 @@ const props = [
   // 控え室
   ['counter', 75, 55.0, 0, 2, { w: 4.0, top: '#e8e4dc', body: '#5a4a52' }], ['chair', 73.6, 53.6, 0, 0], ['chair', 76.4, 53.6, 0, 0], ['wardrobe', 82.6, 50.6, 0, 3], ['wardrobe', 82.6, 53.4, 0, 3], ['sofa', 79, 48.6, 0, 0],
   // 外: 車・ごみ箱・街灯・列の柵
-  ['car', 90, 18, 0, 0, { color: 3 }], ['car', 91, 44, 0, 2, { color: 6 }], ['van', 30, 65, 0, 1], ['car', 60, 64.5, 0, 3, { color: 0 }], ['car', 72, 64.5, 0, 3, { color: 7 }],
+  ['car', 90, 18, 0, 0, { color: 3 }], ['car', 92, 38, 0, 2, { color: 6 }], ['van', 30, 65, 0, 1], ['car', 60, 64.5, 0, 3, { color: 0 }], ['car', 72, 64.5, 0, 3, { color: 7 }],
   ['dumpster', 30, 6, 0, 0], ['dumpster', 70, 6, 0, 0], ['dumpster', 5, 24.5, 0, 1], ['pallet', 5, 20, 0, 1],
   ['lamp', 20, 58.5, 0, 0], ['lamp', 70, 58.5, 0, 0], ['lamp', 90, 30, 0, 1], ['lamp', 6, 50, 0, 1],
   ['jersey', 34, 58.2, 0, 0], ['jersey', 50.6, 58.2, 0, 0],
+  // ---- 2階
+  // 北のギャラリー: 壁ぞいのソファ
+  ['sofa', 40, 14.0, 1, 0], ['table', 46, 13.8, 1, 0, { w: 0.6, d: 0.6 }], ['sofa', 52, 14.0, 1, 0], ['plant', 58, 13.7, 1, 0],
+  // 東のギャラリー: 壁ぞいの席（手すりの側は空ける）
+  ['sofa', 64.7, 25.5, 1, 3], ['table', 62.6, 25.5, 1, 1, { w: 1.2, d: 0.6 }], ['sofa', 64.7, 34.5, 1, 3], ['table', 62.6, 34.5, 1, 1, { w: 1.2, d: 0.6 }],
+  ['speaker', 64.6, 43.1, 1, 2], ['speaker', 57.8, 43.1, 1, 2],
+  // オーナー室: ホールを見下ろす机・ソファ・本棚
+  ['desk', 70.2, 16, 1, 1], ['chair', 71.6, 16, 1, 3, { office: true }], ['cabinet', 75.5, 13.6, 1, 0], ['bookshelf', 83.2, 16.5, 1, 3], ['cabinet', 83.4, 20.6, 1, 3],
+  ['sofa', 79, 23.5, 1, 2], ['table', 79, 21.4, 1, 0, { w: 1.2, d: 0.6 }], ['plant', 82.8, 13.8, 1, 0],
+  // VIPルーム
+  ['sofa', 75, 26.9, 1, 0], ['table', 75, 29.6, 1, 0, { w: 1.6, d: 0.8 }], ['armchair', 72.2, 29.6, 1, 1], ['armchair', 77.8, 29.6, 1, 3],
+  ['counter', 83.3, 33.2, 1, 3, { w: 2.0, top: '#2a2a2e', body: '#3a3a40' }], ['speaker', 67.6, 34.4, 1, 1], ['plant', 82.8, 26.8, 1, 0],
+  // 金庫室: 現金と書類の棚
+  ['shelf', 71.5, 37.6, 1, 0, { w: 3.0, d: 0.5 }], ['shelf', 72, 45.4, 1, 2, { w: 2.4, d: 0.5 }], ['crates', 75.8, 43.4, 1, 0], ['boxes', 68, 44.6, 1, 0],
+  // 監視室
+  ['desk', 81, 38.3, 1, 0], ['chair', 81, 39.8, 1, 2, { office: true }], ['server', 83.2, 45, 1, 3], ['cabinet', 78.6, 45.6, 1, 2],
+  // 2階の物置
+  ['shelf', 71, 54.6, 1, 2, { w: 3.0, d: 0.5 }], ['boxes', 77, 49.2, 1, 0], ['crates', 79.5, 54, 1, 0], ['barrel', 82.6, 49.2, 1, 0], ['pallet', 73.5, 50.5, 1, 0],
 ];
 
 export default {
   id: 'club', name: 'クラブ・ヴェルヴェット', en: 'CLUB VELVET', time: 'night', floor: 3,
-  desc: '古い倉庫を改装したナイトクラブ。広いホールは暗く、色の付いた照明と柱・ボックス席で見通しが悪い。表側にトイレ・クローク・VIPラウンジ、裏に厨房・倉庫・事務所・警備室・控え室。正面のほか、東の搬入口と厨房の裏口、西の非常口から入れる。',
-  levels: [{ rows: a.rows() }],
-  paint: { 'ホール': '#3a3640', '男子トイレ': '#5c5866', '女子トイレ': '#66586a', 'クローク': '#4a4048', '前室': '#4a3a42', 'VIPラウンジ': '#4a3448', '厨房': '#d8d8d2', '倉庫': '#a8a49c', '事務所': '#bfb8aa', '警備室': '#9ea4a8', '控え室': '#c8b8c0' },
-  floorCol: { 'ホール': '#2c2628', 'VIPラウンジ': '#3a2232', '前室': '#3a3638' },
+  desc: '古い倉庫を改装したナイトクラブ。広いホールは暗く、色の付いた照明と柱・ボックス席で見通しが悪い。ホールは吹き抜けで、北と東のギャラリーから下が見える。表側にトイレ・クローク・VIPラウンジ、裏に厨房・倉庫・事務所・警備室・控え室、裏の2階にオーナー室・VIPルーム・金庫室・監視室。正面のほか、東の搬入口と厨房の裏口、西の非常口、東の非常階段（2階）から入れる。',
+  levels: [{ rows: a.rows() }, { rows: b.rows() }],
+  stairs: [{ i: 22, j: 13, w: 3, len: 8, dir: 'e', L: 0 }, { i: 85, j: 45, w: 3, len: 8, dir: 'n', L: 0 }],
+  paint: { 'ホール': '#3a3640', '男子トイレ': '#5c5866', '女子トイレ': '#66586a', 'クローク': '#4a4048', '前室': '#4a3a42', 'VIPラウンジ': '#4a3448', '厨房': '#d8d8d2', '倉庫': '#a8a49c', '事務所': '#bfb8aa', '警備室': '#9ea4a8', '控え室': '#c8b8c0',
+    'ギャラリー': '#3a3640', 'オーナー室': '#6a5248', 'VIPルーム': '#4a3448', '金庫室': '#8a8e90', '監視室': '#5a6068', '2階の物置': '#a8a49c' },
+  floorCol: { 'ホール': '#2c2628', 'VIPラウンジ': '#3a2232', '前室': '#3a3638', 'ギャラリー': '#3a2a24', 'オーナー室': '#4a2a2a', 'VIPルーム': '#3a2232' },
   extBrick: '#5a4044', ceiling: 'plaster', carpet: '#3a2a34', winFrame: '#2a2b2e', lampMul: 1.0,
   props,
   lights: [
     // ホール: ダンスフロアの色の照明、バー、ボックス席
-    [33, 26, 0, 'magenta'], [46, 26, 0, 'cyan'], [33, 34, 0, 'purple'], [46, 34, 0, 'magenta'], [40, 30, 0, 'purple', 1.1],
-    [41, 15, 0, 'cyan', 0.9], [16, 24, 0, 'warm'], [16, 33, 0, 'warm'], [62, 26, 0, 'purple', 0.8], [62, 36, 0, 'magenta', 0.8],
-    [20, 40, 0, 'dim', 0.8], [58, 40, 0, 'dim', 0.8], [20, 16, 0, 'dim', 0.7], [58, 15, 0, 'dim', 0.7],
+    // （ダンスフロアとバーの上は吹き抜けなので、照明は2階の天井。下まで届くように強め）
+    [33, 26, 1, 'magenta', 1.5], [46, 26, 1, 'cyan', 1.5], [33, 34, 1, 'purple', 1.5], [46, 34, 1, 'magenta', 1.5], [40, 30, 1, 'purple', 1.6],
+    [41, 15, 0, 'cyan', 0.9], [16, 24, 1, 'warm', 1.5], [16, 33, 1, 'warm', 1.5], [62, 26, 0, 'purple', 0.8], [62, 36, 0, 'magenta', 0.8],
+    [20, 40, 1, 'dim', 1.3], [58, 40, 0, 'dim', 0.8], [18, 16, 1, 'dim', 1.1], [58, 15, 0, 'dim', 0.7],
     // 表側
     [17, 50, 0, 'fluo', 0.6], [27, 50, 0, 'fluo', 0.6], [36, 50, 0, 'warm', 0.8], [45, 50, 0, 'red', 0.9], [56, 50, 0, 'purple'], [62, 53, 0, 'warm', 0.7],
     // 裏
     [75, 18, 0, 'fluo'], [75, 30, 0, 'fluo', 0.7], [72, 41, 0, 'lamp'], [80, 42, 0, 'dim'], [75, 51, 0, 'warm'],
     // 外
     [44.5, 58, 0, 'magenta', 0.9], [20, 58.5, 0, 'street'], [70, 58.5, 0, 'street'], [90, 30, 0, 'street'], [6, 50, 0, 'street', 0.8], [50, 9, 0, 'dim'],
+    // 2階
+    [38, 15, 1, 'purple', 0.7], [52, 15, 1, 'magenta', 0.7], [61, 22, 1, 'purple', 0.7], [61, 32, 1, 'magenta', 0.7], [61, 41, 1, 'dim', 0.7],
+    [72, 18, 1, 'lamp'], [80, 20, 1, 'warm', 0.8], [72, 30, 1, 'magenta', 0.9], [80, 30, 1, 'purple', 0.9], [72, 41, 1, 'fluo', 0.8], [80, 41, 1, 'cyan', 0.7], [75, 51, 1, 'dim', 0.8],
+    [87, 42, 1, 'dim', 0.8],
   ],
   rooms: [
     ['ホール', 'MAIN HALL', 40, 30], ['男子トイレ', "MEN'S ROOM", 17, 49], ['女子トイレ', "WOMEN'S ROOM", 27, 49], ['クローク', 'COAT CHECK', 36, 50], ['前室', 'VESTIBULE', 45, 50], ['VIPラウンジ', 'VIP LOUNGE', 57, 51],
     ['厨房', 'KITCHEN', 75, 17], ['倉庫', 'STOCKROOM', 75, 30], ['事務所', 'OFFICE', 72, 43], ['警備室', 'SECURITY', 80, 43], ['控え室', 'DRESSING ROOM', 75, 51],
+    ['ギャラリー', 'MEZZANINE', 61, 30, 1], ['オーナー室', "OWNER'S OFFICE", 75, 18, 1], ['VIPルーム', 'VIP ROOM', 75, 31, 1], ['金庫室', 'VAULT', 72, 41, 1], ['監視室', 'CCTV ROOM', 80, 42, 1], ['2階の物置', 'UPSTAIRS STORAGE', 75, 51, 1],
   ],
-  doors: { '43,56,0': { outer: true }, '84,16,0': { outer: true }, '84,29,0': { outer: true, locked: true }, '12,39,0': { outer: true, locked: true }, '77,41,0': { locked: true }, '71,36,0': { locked: true } },
+  doors: { '43,56,0': { outer: true }, '84,16,0': { outer: true }, '84,29,0': { outer: true, locked: true }, '12,39,0': { outer: true, locked: true }, '77,41,0': { locked: true }, '71,36,0': { locked: true }, '84,42,1': { outer: true }, '66,40,1': { locked: true } },
   spawn: {
     swat: [
       { name: '正面', en: 'FRONT', x: 44.5, z: 64, yaw: Math.PI },
       { name: '東の搬入口', en: 'LOADING BAY', x: 90, z: 26, yaw: -Math.PI / 2 },
       { name: '西の路地', en: 'WEST ALLEY', x: 5, z: 40, yaw: Math.PI / 2 },
     ],
-    sus: [[16, 23], [16, 34], [22, 26], [41, 17], [34, 25], [46, 34], [40, 38], [30, 41], [58, 18], [58, 29], [58, 37], [48, 15], [58.5, 52], [63, 48.5], [36, 52], [45, 47], [72, 22], [79, 18], [75, 31], [72, 44], [80, 44], [72, 50], [80, 52]],
-    civ: [[31, 26], [36, 28], [42, 24], [48, 26], [38, 33], [44, 35], [30, 33], [50, 32], [22, 30], [22, 36], [58, 24], [58, 33], [18, 49], [28, 49], [36, 50], [58.5, 50], [70, 15], [74, 52], [44, 48]],
-    hostage: [[72, 44], [81, 43], [74, 51], [78, 31], [35, 52], [16, 50]],
-    bomb: [[41, 16], [72, 32], [79, 21], [63, 51], [72, 42], [27, 52]],
-    evidence: [[71, 40.6], [80.6, 38.2], [55.5, 50], [19, 28.5], [58, 26], [41, 18.2]],
-    pvp: { a: [[44.5, 64], [42, 64], [47, 64], [90, 24], [90, 28], [5, 38], [5, 42], [52, 64]], b: [[72, 42], [80, 44], [72, 30], [41, 16], [58, 22], [58.5, 51], [36, 52], [75, 51]] },
+    sus: [[16, 23], [16, 34], [22, 26], [41, 17], [34, 25], [46, 34], [40, 38], [30, 41], [58, 18], [58, 29], [58, 37], [48, 15], [58.5, 52], [63, 48.5], [36, 52], [45, 47], [72, 22], [79, 18], [75, 31], [72, 44], [80, 44], [72, 50], [80, 52],
+      [61, 21, 1], [60, 38, 1], [45, 15.5, 1], [73, 19, 1], [80, 18, 1], [72, 32, 1], [79, 33, 1], [73, 41, 1], [80, 43, 1], [76, 51, 1]],
+    civ: [[31, 26], [36, 28], [42, 24], [48, 26], [38, 33], [44, 35], [30, 33], [50, 32], [22, 30], [22, 36], [58, 24], [58, 33], [18, 49], [28, 49], [36, 50], [58.5, 50], [70, 15], [74, 52], [44, 48],
+      [60, 28, 1], [61, 36, 1], [49, 15.5, 1], [74, 32, 1], [78, 27.6, 1]],
+    hostage: [[72, 44], [81, 43], [74, 51], [78, 31], [35, 52], [16, 50], [74, 21, 1], [70, 42, 1], [80, 52, 1]],
+    bomb: [[41, 16], [72, 32], [79, 21], [63, 51], [72, 42], [27, 52], [73, 43, 1], [80, 32, 1]],
+    evidence: [[71, 40.6], [80.6, 38.2], [55.5, 50], [19, 28.5], [58, 26], [41, 18.2], [70.2, 16, 1], [81, 38.3, 1]],
+    pvp: { a: [[44.5, 64], [42, 64], [47, 64], [90, 24], [90, 28], [5, 38], [5, 42], [52, 64]], b: [[72, 42], [80, 44], [72, 30], [41, 16], [58, 22], [58.5, 51], [36, 52], [75, 51], [61, 30, 1], [73, 41, 1], [76, 20, 1]] },
     sites: [{ name: 'A 事務所', x: 72, z: 42, r: 3.0 }, { name: 'B DJブース', x: 41, z: 16, r: 3.4 }],
-    tdm: [[5, 16], [90, 50], [44.5, 64], [70, 4], [40, 30], [16, 30], [58, 20], [75, 30], [72, 42], [58.5, 51], [27, 49], [58, 42]],
+    tdm: [[5, 16], [90, 50], [44.5, 64], [70, 4], [40, 30], [16, 30], [58, 20], [75, 30], [72, 42], [58.5, 51], [27, 49], [58, 42], [61, 24, 1], [75, 31, 1], [87, 42.5, 1]],
   },
-  missions: { barricade: {}, hostage: {}, bomb: {}, raid: { susMul: 1.1 }, active: { civMul: 1.4 } },
+  missions: { barricade: {}, hostage: {}, bomb: { time: 720 }, raid: { susMul: 1.1 }, active: { civMul: 1.4 } },
 };
 
 @@@@ FILE src/engine/maps/draw.js text 1764
@@ -12714,7 +12780,7 @@ function tryFire(S, w, a, W, wi, inp, ev) {
   ev.push({ e: 'shot', id: a.id, wid: wi.id, x: a.x, y: a.y, z: a.z, supp, loud: (W.less ? 0.4 : 1) * m.noise, fl: m.flash, n: ws.shots });
 }
 
-@@@@ FILE src/engine/world.js text 54647
+@@@@ FILE src/engine/world.js text 55405
 // マップを組み立てて、当たり・視線・弾の通り道を調べる（DOMなし。ホストとゲストで同じ結果になる）
 // 座標: メートル。マス (i, j) の中心は x = (i+0.5)*CS, z = (j+0.5)*CS。階 L の床は y = L*LH。
 // 壁はマスの中央の板。高さ方向に4つのブロック（0.7mずつ、上の端は天井 2.8m）。
@@ -12739,6 +12805,13 @@ export const isWallish = (t) => WALLISH.has(t);
 const FLOOR_CH = { '.': -1, ':': F.TILE, '_': F.WOOD, '~': F.CARPET, '-': F.CONCRETE, 'm': F.METAL };
 const OUT_CH = { ',': F.ASPHALT, ';': F.GRASS, '`': F.DIRT, '"': F.CONCRETE };
 const WALL_CH = { '#': M.BRICK, 'C': M.CONCRETE, '=': M.DRYWALL, 'W': M.WOOD };
+
+// 吹き抜け（'^'）: 2階より上のマスで、床の板がなく、下の階の部屋とつながっている（屋根の下）
+export function isAtrium(w, k) { return w.cell[k] === C.VOID && w.indoor[k] === 1; }
+// 屋内の床・屋内の階段・吹き抜け（壁が屋内に面しているかを決める）
+export function insideCell(w, k) { const t = w.cell[k]; return t === C.FLOOR || ((t === C.STAIR || t === C.VOID) && w.indoor[k] === 1); }
+// 最上階で屋根の下にあるか（屋内の床・屋内に面した壁・屋内の階段・吹き抜け）
+export function roofed(w, k) { const t = w.cell[k]; return t === C.FLOOR || w.indoor[k] === 2 || ((t === C.STAIR || t === C.VOID) && w.indoor[k] === 1); }
 
 export function compileMap(def) {
   const levels = def.levels;
@@ -12779,6 +12852,7 @@ export function compileMap(def) {
     else if (c === 'F') { w.cell[k] = C.FENCE; w.wallMat[k] = M.FENCE; }
     else if (c === 'S') { w.cell[k] = C.STAIR; w.indoor[k] = 1; w.floorMat[k] = F.WOOD; }
     else if (c === 's') { w.cell[k] = C.STAIR; w.indoor[k] = 0; w.floorMat[k] = F.CONCRETE; } // 外の階段（屋根なし）
+    else if (c === '^') { w.cell[k] = C.VOID; w.indoor[k] = 1; } // 吹き抜け（2階より上。床の板がなく、下の階の部屋の上が屋根まで開いている）
     else if (c !== ' ') w.errors.push(`知らない文字 '${c}' (${L},${i},${j})`);
   }
   const T = (L, i, j) => (L < 0 || L >= NL || i < 0 || j < 0 || i >= W || j >= D) ? C.VOID : w.cell[idx(L, i, j)];
@@ -12792,14 +12866,14 @@ export function compileMap(def) {
   };
   // 屋内に面しているか
   // 屋内の床か（外の階段は屋外）
-  const inCell = (L, i, j) => { const t = T(L, i, j); return t === C.FLOOR || (t === C.STAIR && w.indoor[idx(L, i, j)] === 1); };
+  const inCell = (L, i, j) => (L >= 0 && L < NL && i >= 0 && j >= 0 && i < W && j < D) && insideCell(w, idx(L, i, j));
   const nearIndoor = (L, i, j) => { for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { if (inCell(L, i + di, j + dj)) return true; } return false; };
   // 2) 床の材質（壁マス・扉マスの床は隣の床から）
   for (let L = 0; L < NL; L++) for (let j = 0; j < D; j++) for (let i = 0; i < W; i++) {
     const k = idx(L, i, j), t = w.cell[k];
     if (isWallish(t)) {
       let fm = 0, ind = 0;
-      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const t2 = T(L, i + di, j + dj); if (t2 === C.FLOOR || t2 === C.OUT || t2 === C.STAIR) { const k2 = idx(L, i + di, j + dj); if (!fm || t2 === C.FLOOR) fm = w.floorMat[k2]; if (inCell(L, i + di, j + dj)) ind = 1; } }
+      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const t2 = T(L, i + di, j + dj); if (t2 === C.FLOOR || t2 === C.OUT || t2 === C.STAIR) { const k2 = idx(L, i + di, j + dj); if (!fm || t2 === C.FLOOR) fm = w.floorMat[k2]; if (inCell(L, i + di, j + dj)) ind = 1; } else if (t2 === C.VOID && inCell(L, i + di, j + dj)) ind = 1; } // 吹き抜けに面した壁も屋内
       w.floorMat[k] = fm || F.CONCRETE;
       w.indoor[k] = ind ? 2 : 0; // 2 = 屋内に面した壁（天井の板がある）
       if (!w.wallMat[k]) w.wallMat[k] = nbWallMat(L, i, j);
@@ -12826,7 +12900,7 @@ export function compileMap(def) {
     if (L === 0) { w.slab[k] = w.cell[k] !== C.VOID ? 1 : 0; continue; }
     const t = w.cell[k];
     const st = w.stairAt[k] >= 0 && w.stairs[w.stairAt[k]].L === L - 1;
-    if (st) { w.slab[k] = 0; continue; }
+    if (st || isAtrium(w, k)) { w.slab[k] = 0; continue; }
     const below = idx(L - 1, i, j);
     const belowIndoor = w.cell[below] === C.FLOOR || w.indoor[below] === 2 || w.cell[below] === C.STAIR;
     w.slab[k] = (t !== C.VOID && t !== C.STAIR) || belowIndoor ? 1 : 0;
@@ -12954,7 +13028,7 @@ export function compileMap(def) {
 function buildBarSlots(w) {
   w.bars = []; w.barAt = new Int16Array(w.N).fill(-1);
   const T = (L, i, j) => cellType(w, L, i, j);
-  const inside = (L, i, j) => { const t = T(L, i, j); return t === C.FLOOR || (t === C.STAIR && w.indoor[w.idx(L, i, j)] === 1); };
+  const inside = (L, i, j) => L >= 0 && L < w.NL && inMap(w, i, j) && insideCell(w, w.idx(L, i, j));
   const add = (s) => {
     s.id = w.bars.length; s.N = s.cols * s.rows;
     const h = s.th / 2;
@@ -13017,7 +13091,7 @@ function isIndoorWallLine(w, L, i, j, T, idx) {
     for (let s = 1; s <= 6; s++) {
       const t = T(L, i + di * s, j + dj * s);
       if (!isWallish(t)) break;
-      for (const [ei, ej] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const ii = i + di * s + ei, jj = j + dj * s + ej, t2 = T(L, ii, jj); if (t2 === C.FLOOR || (t2 === C.STAIR && w.indoor[idx(L, ii, jj)] === 1)) return true; }
+      for (const [ei, ej] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const ii = i + di * s + ei, jj = j + dj * s + ej; if (inMap(w, ii, jj) && insideCell(w, idx(L, ii, jj))) return true; }
     }
   }
   return false;
@@ -13160,7 +13234,7 @@ export function ceilAt(w, x, z, y) {
   const L = Math.min(w.NL - 1, levelOfY(y + 0.1)), k = w.idx(L, i, j);
   if (L + 1 < w.NL) return w.slab[w.idx(L + 1, i, j)] ? L * LH + CEIL : 1e9;
   const t = w.cell[k];
-  return t === C.FLOOR || w.indoor[k] === 2 || (t === C.STAIR && w.indoor[k]) ? L * LH + CEIL : 1e9;
+  return roofed(w, k) ? L * LH + CEIL : 1e9;
 }
 // 同じ窓のガラス: 壁の線に沿って続く同じ種類のマス。窓は1枚ぜんぶ（左右8マスまで）、ガラスの壁は左右1マスまで（1.5mの板）
 export function glassPane(w, k) {
@@ -13374,7 +13448,7 @@ export function raycast(w, ox, oy, oz, dx, dy, dz, max, doorsState, opt = {}) {
         if (r && r[0] < stopAt && r[1] > 0) { hits.push({ t0: Math.max(0, r[0]), t1: r[1], kind: 'slab', mat: L === 0 ? M.CONCRETE : M.CONCRETE, k, nx: r[2], ny: r[3], nz: r[4], L }); }
       }
       // 最上階の屋根
-      if (L === w.NL - 1 && (w.cell[k] === C.FLOOR || w.indoor[k] === 2 || (w.cell[k] === C.STAIR && w.indoor[k]))) {
+      if (L === w.NL - 1 && roofed(w, k)) {
         const r = rayBox(ox, oy, oz, dx, dy, dz, i * CS, base + CEIL, j * CS, (i + 1) * CS, base + LH, (j + 1) * CS);
         if (r && r[1] > 0) hits.push({ t0: Math.max(0, r[0]), t1: r[1], kind: 'slab', mat: M.CONCRETE, k, nx: r[2], ny: r[3], nz: r[4], L: L + 1 });
       }
@@ -13597,7 +13671,7 @@ export function occluded(w, ax, ay, az, bx, by, bz, doorsState = null, props = t
         if (segBox(ax, ay, az, dx, dy, dz, t, tN, i * CS, base - SLAB, j * CS, (i + 1) * CS, base, (j + 1) * CS)) return true;
       }
       if (Lv === 0 && ylo < 0 && tt !== C.VOID) return true;
-      if (Lv === w.NL - 1 && yhi > base + CEIL && (tt === C.FLOOR || w.indoor[k] === 2 || (tt === C.STAIR && w.indoor[k]))) {
+      if (Lv === w.NL - 1 && yhi > base + CEIL && roofed(w, k)) {
         if (segBox(ax, ay, az, dx, dy, dz, t, tN, i * CS, base + CEIL, j * CS, (i + 1) * CS, base + LH, (j + 1) * CS)) return true;
       }
       if (WALLISH.has(tt)) {
@@ -16627,7 +16701,7 @@ export function gunModel(wid, att = {}) {
 }
 export const GUN_COLORS = K;
 
-@@@@ FILE src/render/level.js text 52764
+@@@@ FILE src/render/level.js text 52877
 // マップの見た目を組み立てる: 床・天井・屋根・壁（ブロックと穴）・階段・扉と窓の枠・ガラス・金網・家具・照明の器具
 // 塊（チャンク）ごとに作り、壁が壊れたらその塊だけ作り直す。
 import { MeshBuilder, hex, mixc, mulc } from './build.js';
@@ -16947,7 +17021,7 @@ function faceSide(ctx, L, x, z, nx, nz) {
     const k = w.idx(L, i, j), t = w.cell[k];
     if (t === C.FLOOR || (t === C.STAIR && w.indoor[k])) return { side: 'in', room: w.roomAt[k] };
     if (t === C.OUT || t === C.STAIR) return { side: 'out', room: w.roomAt[k] };
-    if (t === C.VOID) return { side: 'out', room: -1 };
+    if (t === C.VOID) return w.indoor[k] === 1 && L > 0 ? { side: 'in', room: w.roomAt[w.idx(L - 1, i, j)] } : { side: 'out', room: -1 }; // 吹き抜けは下の部屋
   }
   return { side: 'in', room: -1 };
 }
@@ -21428,9 +21502,10 @@ export const ICONS = {
   wpn: '',
 };
 
-@@@@ FILE src/ui/input.js text 17856
+@@@@ FILE src/ui/input.js text 17946
 // 入力: タッチ（スティック・視点・ボタン、2本指以上の同時操作）、長押し、円形メニュー、ジャイロ、キーボードとマウス
 // タップは pointerup で判定し、続く click は捨てる（iPhoneは2本目の指に click が来ない）
+import { sprintZone } from './stick.js';
 let lastTapUp = 0;
 export const tapHooks = [];
 export const tapGuard = { drag: false };
@@ -21619,8 +21694,8 @@ export class Input {
     const R = 58 * ((home && home.s) || 1), spr = (home && home.spr) || 1.25;
     let dx = (sx - st.ox) / R, dy = (sy - st.oy) / R;
     const l = Math.hypot(dx, dy);
-    // スティックを上へ押し込む（ダッシュの印より上）とダッシュ（CODM・PUBGM）。作戦・対戦とも
-    this.sprintArm = this.S.stickSprint !== false && dy < -spr && Math.abs(dx) < 0.8;
+    // スティックを上へ押し込む（ダッシュの印より上）とダッシュ（CODM・PUBGM）。作戦・対戦とも。少し斜めでもよい（stick.js）
+    this.sprintArm = this.S.stickSprint !== false && sprintZone(dx, dy, spr, this.sprintArm);
     if (l > 1) { dx /= l; dy /= l; }
     // 可変のスティック: 大きく離れたら土台がついてくる（ダッシュの印より外で）
     const follow = Math.max(1.9, spr + 0.45);
@@ -22536,6 +22611,19 @@ export class Stage {
     if (!this.rotated) return [cx, cy];
     return [cy, this.viewport().W - cx];
   }
+}
+
+@@@@ FILE src/ui/stick.js text 1064
+// 移動スティックのダッシュの判定（DOM なし。テストできるように分けた）
+// 指の位置は土台の中心から、スティックの半径を1とした値（上が dy<0）。spr = ダッシュの印の高さ（半径の倍数）
+// 始める: 指が印より上で、真上から ±40° 以内。走っている間: 印の 0.25 下まで・±52° まで続く（親指が少し斜めにずれても、曲がりながらでも走れる）
+// （11-12 まで: 印より上で、横のずれが半径の0.8未満。土台がついてくる所では真上から約25°までしか走れなかった）
+// エンジンは前への入力が 0.55 より大きいとき（真上から約56°以内）だけ走る
+export const SPRINT_ZONE = { start: 40, keep: 52, drop: 0.25 };
+export function sprintZone(dx, dy, spr, armed) {
+  if (!(dy < 0)) return false;
+  const ang = Math.atan2(Math.abs(dx), -dy) * 180 / Math.PI;
+  return armed ? (dy < -(spr - SPRINT_ZONE.drop) && ang <= SPRINT_ZONE.keep) : (dy < -spr && ang <= SPRINT_ZONE.start);
 }
 
 @@@@ FILE src/ui/style.css text 41509
@@ -25057,6 +25145,28 @@ console.log(`\n${all.length - bad.length}/${all.length} 合格`);
 if (process.env.UNIT_JSON) fs.writeFileSync(process.env.UNIT_JSON, JSON.stringify(all, null, 1));
 process.exit(bad.length ? 1 : 0);
 
+@@@@ FILE tests/unit/stick.test.mjs text 1456
+import { test, ok } from '../lib/t.mjs';
+import { sprintZone, SPRINT_ZONE } from '../../src/ui/stick.js';
+
+// 指の位置を、真上からの角度（度）と中心からの距離（半径の倍数）で
+const at = (deg, d) => [Math.sin(deg * Math.PI / 180) * d, -Math.cos(deg * Math.PI / 180) * d];
+
+test('stick: ダッシュは真上から少し斜め（±40°）に倒しても始まり、走っている間は ±52° まで続く', () => {
+  const spr = 1.25, d = 1.9; // d = 可変スティックの土台がついてくる距離
+  ok(sprintZone(...at(0, d), spr, false), '真上');
+  ok(sprintZone(...at(30, d), spr, false) && sprintZone(...at(-30, d), spr, false), '30°（前の判定では走れなかった）');
+  ok(sprintZone(...at(38, d), spr, false), '38°');
+  ok(!sprintZone(...at(46, d), spr, false), '46°では始まらない');
+  ok(sprintZone(...at(48, d), spr, true), '走っている間は48°でも続く');
+  ok(!sprintZone(...at(58, d), spr, true), '58°（エンジンが走らない向き）では止まる');
+  ok(!sprintZone(...at(10, 1.1), spr, false), '印より下では始まらない');
+  ok(sprintZone(...at(5, 1.1), spr, true), '走っている間は印の少し下でも続く');
+  ok(!sprintZone(...at(5, 0.9), spr, true), '印から大きく下がると止まる');
+  ok(!sprintZone(...at(170, 2), spr, true), '下向きは走らない');
+  ok(SPRINT_ZONE.keep < 56, 'エンジンが走る範囲の内側');
+});
+
 @@@@ FILE tests/unit/vault.test.mjs text 11024
 import { test, ok, eq, near } from '../lib/t.mjs';
 import { createGame, step } from '../../src/engine/engine.js';
@@ -25717,13 +25827,13 @@ export function listModules(entry, root) {
   return out;
 }
 
-@@@@ FILE tools/mapcheck.mjs text 8379
+@@@@ FILE tools/mapcheck.mjs text 8555
 // マップの点検: node tools/mapcheck.mjs [mapId ...]
 //  - 世界の組み立ての誤り（部屋の名前・階段）
 //  - 家具が壁・扉・窓にめり込んでいないか、扉の前をふさいでいないか、家具どうしが重なっていないか
 //  - 出現位置（SWAT・容疑者・市民・人質・爆弾・PvP・TDM・目標地点）が歩ける床にあるか、家具の中でないか
 //  - SWATの出現位置から、すべての出現位置と部屋へ歩いて行けるか（扉は通れるものとする）
-import { compileMap, C, CS, nearestFloor } from '../src/engine/world.js';
+import { compileMap, C, CS, nearestFloor, isAtrium } from '../src/engine/world.js';
 import { MAPS } from '../src/engine/maps/index.js';
 import { buildNav } from '../src/engine/ai/nav.js';
 
@@ -25818,10 +25928,11 @@ export function checkMap(id) {
     if (!ok) out.warn.push(`部屋 ${r.name} (${r.L},${r.x0}-${r.x1},${r.z0}-${r.z1}) へ歩いて行けない`);
     if (/^部屋\d/.test(r.name) && r.cells.length >= 12) out.warn.push(`名前のない部屋 ${r.name} (${r.L},${r.x0}-${r.x1},${r.z0}-${r.z1}, ${r.cells.length}マス)`);
   }
-  // 4) 明かり: 屋内の床の上か
+  // 4) 明かり: 屋内の床の上か（吹き抜けの天井の明かりは、下の階の床の上）
   for (const lt of def.lights || []) {
     const [x, z, L = 0] = lt; const k = cellK(x, z, L);
-    if (k < 0 || !(w.cell[k] === C.FLOOR || w.cell[k] === C.OUT || w.cell[k] === C.STAIR)) out.warn.push(`明かり (${x},${z},${L}) が床の上でない`);
+    const atr = k >= 0 && L > 0 && isAtrium(w, k) && w.cell[cellK(x, z, L - 1)] === C.FLOOR;
+    if (k < 0 || !(w.cell[k] === C.FLOOR || w.cell[k] === C.OUT || w.cell[k] === C.STAIR || atr)) out.warn.push(`明かり (${x},${z},${L}) が床の上でない`);
   }
   // 5) 扉のオプションのキーが実在の扉か
   for (const key of Object.keys(def.doors || {})) {
