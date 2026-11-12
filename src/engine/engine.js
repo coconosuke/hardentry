@@ -16,6 +16,7 @@ import { thinkAll, collectNoise } from './ai/brain.js';
 import { buildNav } from './ai/nav.js';
 import { bakeLight, HS } from './light.js';
 import { initBars, barGlass, linkBars } from './barricade.js';
+import { WAR_MAPS, warWorld } from '../war/maps/index.js';
 
 const worldCache = new Map();
 // マップの組み立ては重いので1回だけ。試合ごとに壊れる物（ブロック）だけ写す
@@ -62,7 +63,7 @@ export function instWorld(mapId) {
 
 // 試合を作る。o: { map, mode, mission, rules, seed, roster: [{pid?, name, team, kind, lo, bot?}] }
 export function createGame(o) {
-  const w = instWorld(o.map);
+  const w = WAR_MAPS[o.map] ? warWorld(o.map) : instWorld(o.map);
   const S = {
     v: COMPAT, t: 0, dt: o.dt || 1 / 60, seed: o.seed ?? 1, rng: rngNew(o.seed ?? 1), map: o.map, mode: o.mode, mission: o.mission || null,
     rules: Object.assign({ cap: 44, diff: 'normal', ff: true, dbno: false, recoil: 1 }, o.rules || {}),
@@ -91,7 +92,8 @@ export function step(G, inputs = {}) {
   const mod = MODES[S.mode];
   hooks.canDown = mod.canDown || null;
   // AI の判断（入力を作る）
-  const aiIn = thinkAll(S, w, dt, ev);
+  // 大規模戦のボットは M3（それまで AI はいない）
+  const aiIn = S.war ? (mod.think ? mod.think(S, w, dt, ev) : {}) : thinkAll(S, w, dt, ev);
   for (const a of S.actors) {
     if (a.isDrone) continue;
     let inp = a.pid != null ? (inputs[a.id] || idle(a)) : (aiIn[a.id] || idle(a));

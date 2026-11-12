@@ -112,7 +112,7 @@ ul, ol { margin: 4px 0; padding-left: 1.3em; line-height: 1.55; }
 #stage[data-size="s"] .t-logo h1 { font-size: 2.2em; }
 #stage[data-size="l"] .t-logo h1 { font-size: 3.2em; }
 .t-logo p { color: #cfd6dc; margin: 0; font-size: .9em; }
-.t-menu { position: absolute; left: calc(var(--sl) + 18px); top: calc(var(--st) + 104px); bottom: calc(var(--sb) + 26px); display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; width: min(310px, 42%); }
+.t-menu { position: absolute; left: calc(var(--sl) + 18px); top: calc(var(--st) + 114px); bottom: calc(var(--sb) + 26px); display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; width: min(310px, 42%); }
 #stage[data-size="l"] .t-menu { top: calc(var(--st) + 140px); }
 .mi { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex: 0 1 40px; min-height: 36px; padding: 0 14px; border-radius: 6px; background: rgba(10,14,20,.72); border: 1px solid var(--line); text-align: left; }
 .mi .mi-l { font-weight: 800; font-size: 1.05em; white-space: nowrap; }

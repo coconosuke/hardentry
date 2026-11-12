@@ -1,5 +1,6 @@
 // 人・持っている銃・落ちている物を描く（renderer のフックに入れる）
 import { personMeshData, lookFor, boneMatrices, SV } from './people.js';
+import { sunVisAt } from '../war/render.js';
 import { gunModel, longModel, shieldModel } from './guns.js';
 import { makeWorldMesh, drawMesh } from './renderer.js';
 import { computePose, NBONE } from '../engine/pose.js';
@@ -269,6 +270,7 @@ export class ActorView {
 }
 
 export function roomOf(w, x, y, z) {
+  if (w.war) return sunVisAt(w, x, y - 0.5, z); // 大規模戦: 日の当たり方（建物の中は暗い）
   const i = Math.floor(x / CS), j = Math.floor(z / CS);
   if (i < 0 || j < 0 || i >= w.W || j >= w.D) return 0;
   const L = Math.max(0, Math.min(w.NL - 1, Math.floor((y + 0.05) / LH)));

@@ -19,7 +19,7 @@ export function makeWarWorld(o) {
     cellBox: null, cellRamp: null, cellCyl: null, cellMaxH: null,
     stamp: new Uint32Array(0), stampN: 1,
     // engine の w と同じ名前で持つ物（使わない物は空）
-    NL: 1, W: Math.ceil(sx / 0.5), D: Math.ceil(sz / 0.5), rooms: [], doors: [], windows: [], props: [], stairs: [], errors: [],
+    NL: 1, W: Math.ceil(sx / 0.5), D: Math.ceil(sz / 0.5), rooms: [], doors: [], windows: [], props: [], stairs: [], bars: [], errors: [],
   };
   return ww;
 }
@@ -195,7 +195,7 @@ export function pushOut(ww, x, z, y0, y1, r, out = [0, 0, 0]) {
   return out;
 }
 
-// ---- 光線: 当たった物を近い順に { t0, t1, kind:'block'|'stair'|'prop'|'ground'|'edge', mat, id, nx, ny, nz }
+// ---- 光線: 当たった物を近い順に { t0, t1, kind:'box'|'stair'|'prop'|'ground'|'edge', mat, id, nx, ny, nz }
 // opt.stopOpaque: 視線用（最初の見えない物で止める）、opt.out: 返す配列
 function rayCyl(ox, oy, oz, dx, dy, dz, c) {
   const fx = ox - c.x, fz = oz - c.z;
@@ -295,7 +295,7 @@ export function raycast(ww, ox, oy, oz, dx, dy, dz, max, opt = {}) {
       const tg = rayTerrain(ww, ox, oy, oz, dx, dy, dz, t, tNext);
       if (tg >= 0 && tg < stopAt) {
         const n = normalAt(ww, ox + dx * tg, oz + dz * tg);
-        hits.push({ t0: tg, t1: tg + 50, kind: 'ground', mat: M.CONCRETE, nx: n[0], ny: n[1], nz: n[2] });
+        hits.push({ t0: tg, t1: tg + 50, kind: 'ground', mat: M.EARTH, nx: n[0], ny: n[1], nz: n[2] });
         if (tg < stopAt) stopAt = tg; // 地面の向こうは調べない
       }
     }
@@ -305,7 +305,7 @@ export function raycast(ww, ox, oy, oz, dx, dy, dz, max, opt = {}) {
       if (!b.alive) continue;
       const r = rayBoxF(ox, oy, oz, dx, dy, dz, b.x0, b.y0, b.z0, b.x1, b.y1, b.z1);
       if (r && r[0] < stopAt) {
-        hits.push({ t0: r[0], t1: r[1], kind: 'block', mat: b.mat, id, nx: r[2], ny: r[3], nz: r[4] });
+        hits.push({ t0: r[0], t1: r[1], kind: 'box', mat: b.mat, id, nx: r[2], ny: r[3], nz: r[4] });
         if (opt.stopOpaque && b.opaque && r[0] < stopAt) stopAt = r[0];
       }
     }
@@ -337,7 +337,7 @@ export function los(ww, ax, ay, az, bx, by, bz) {
   const dx = bx - ax, dy = by - ay, dz = bz - az, d = Math.hypot(dx, dy, dz);
   if (d < 1e-6) return true;
   const hits = raycast(ww, ax, ay, az, dx / d, dy / d, dz / d, d, { stopOpaque: true, out: _losHits });
-  for (const h of hits) { if (h.t0 >= d - 0.05) break; if (h.kind === 'ground' || h.kind === 'edge' || h.kind === 'stair') return false; if (h.kind === 'block' && ww.boxes[h.id].opaque) return false; if (h.kind === 'prop' && ww.cyls[h.cyl].opaque) return false; }
+  for (const h of hits) { if (h.t0 >= d - 0.05) break; if (h.kind === 'ground' || h.kind === 'edge' || h.kind === 'stair') return false; if (h.kind === 'box' && ww.boxes[h.id].opaque) return false; if (h.kind === 'prop' && ww.cyls[h.cyl].opaque) return false; }
   return true;
 }
 const _losHits = [];

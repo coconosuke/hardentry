@@ -10,6 +10,7 @@ import { ACT_POSE } from './data/acts.js';
 import { hrand } from './rng.js';
 import { hitBar, bashBar } from './barricade.js';
 import { meleeDeps } from './deploy.js';
+import { warGun, warFall } from '../war/guns.js';
 
 const G = 9.81;
 // モードのきまり（engine が入れる）: canDown(S, a)
@@ -97,7 +98,7 @@ export function stepBullets(S, w, dt, ev) {
 
 function stepBullet(S, w, b, dt, ev) {
   b.t += dt;
-  if (b.t > 2.0 || b.dist > 400) return false;
+  if (w.war ? (b.t > 4.0 || b.dist > 1500) : (b.t > 2.0 || b.dist > 400)) return false;
   const vx = b.vx, vy = b.vy - G * dt * 0.5, vz = b.vz;
   const sp = Math.hypot(vx, vy, vz);
   const segL = sp * dt;
@@ -267,6 +268,7 @@ export function applyBulletHit(S, w, a, b, part, hx, hy, hz, dx, dy, dz, dist, e
   const W = WEAPONS[b.wid];
   if (part === 'drone') { killDrone(S, a, b.owner, ev); return; }
   if (a.dead) { ev.push({ e: 'blood', x: hx, y: hy, z: hz, dx, dy, dz, n: 1, id: a.id }); return; }
+  if (S.war) return applyWar(S, w, a, b, shooter, W, part, hx, hy, hz, dx, dy, dz, dist, ev);
   if (S.pvp) return applyPvP(S, w, a, b, shooter, W, part, hx, hy, hz, dx, dy, dz, dist, ev);
   return applyPvE(S, w, a, b, shooter, W, part, hx, hy, hz, dx, dy, dz, dist, ev);
 }
@@ -522,6 +524,21 @@ function applyPvP(S, w, a, b, shooter, W, part, hx, hy, hz, dx, dy, dz, dist, ev
   if (part === 'arm') a.inj.arm = 1; else if (part === 'leg') a.inj.leg = Math.min(2, (a.inj.leg || 0) + 1);
   ev.push({ e: 'hit', id: a.id, by: b.owner, part, d: Math.min(d, a.hp + (a.down ? 20 : 0)), x: hx, y: hy, z: hz, hs: head });
   pvpDamage(S, a, d, shooter, part, dx, dz, ev, head ? 'head' : 'bullet');
+}
+
+// 大規模戦（BattleBit 寄り。src/war/guns.js）: 頭は倍率（即死ではない）、距離で減衰、狙撃は遠いほど上がる。味方には当たらない（規則 ff）
+function applyWar(S, w, a, b, shooter, W, part, hx, hy, hz, dx, dy, dz, dist, ev) {
+  if (shooter && shooter.team === a.team && shooter.id !== a.id && !S.rules.ff) return;
+  if (a.spawnProt > 0) return;
+  const g = warGun(b.wid);
+  let d = g.dmg * b.k * warFall(g, dist);
+  const head = part === 'head';
+  if (head) d *= g.head; else if (part === 'arm' || part === 'leg') d *= 0.75; else if (part === 'neck') d *= 1.2;
+  ev.push({ e: 'blood', x: hx, y: hy, z: hz, dx, dy, dz, n: Math.min(4, 1 + d / 25), id: a.id });
+  a.flinch = Math.max(a.flinch, Math.min(1, 1 - Math.exp(-d / 30)));
+  if (part === 'leg') a.inj.leg = Math.min(2, (a.inj.leg || 0) + 1);
+  ev.push({ e: 'hit', id: a.id, by: b.owner, part, d: Math.min(d, a.hp + (a.down ? 20 : 0)), x: hx, y: hy, z: hz, hs: head });
+  pvpDamage(S, a, d, shooter, part, dx, dz, ev, 'bullet');
 }
 
 export function pvpDamage(S, a, d, shooter, part, dx, dz, ev, kind) {

@@ -22,6 +22,11 @@ import { roomGraph } from '../engine/ai/nav.js';
 import { LINES } from '../audio/lines.js';
 import { vfovOf } from './settings.js';
 import { gfxOf } from '../render/renderer.js';
+import { sunVisAt } from '../war/render.js';
+import { OUT_LIMIT } from '../engine/modes/war.js';
+
+// 大規模戦の描く距離（画質ごと）: 低 550m・中 800m・高 1050m（遠くはもやに溶かす）
+function warView(st) { const g = gfxOf(st); return { viewDist: { low: 550, medium: 800, high: 1050, max: 1200 }[g.detail] || 800, nearDist: g.detail === 'low' ? 130 : 170, shadowR: g.shadow === 'high' ? 48 : 40 }; }
 
 const DEG = Math.PI / 180;
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
@@ -35,19 +40,19 @@ export class Match {
   constructor(app, o) {
     this.app = app; this.o = o;
     this.r = app.renderer; this.au = app.audio; this.hud = app.hud;
-    this.G = o.mirror ? { S: o.mirror.S, w: o.mirror.w } : o.dump ? load(o.dump) : createGame({ map: o.map, mode: o.mode, mission: o.mission, diff: o.diff, entry: o.entry, team: o.team, roster: o.roster, rules: o.rules, seed: o.seed, teams: o.teams, aiLoadouts: o.aiLoadouts, start: o.start, house: o.house });
+    this.G = o.mirror ? { S: o.mirror.S, w: o.mirror.w } : o.dump ? load(o.dump) : createGame({ map: o.map, mode: o.mode, mission: o.mission, diff: o.diff, entry: o.entry, team: o.team, roster: o.roster, rules: o.rules, seed: o.seed, teams: o.teams, aiLoadouts: o.aiLoadouts, start: o.start, house: o.house, size: o.size });
     this.S = this.G.S; this.w = this.G.w;
-    this.def = MAPS[this.S.map];
+    this.def = this.S.war ? null : MAPS[this.S.map];
     this.pid = o.pid ?? 0;
     this.p = this.S.actors.find(a => a.pid === this.pid) || this.S.actors[0];
     if (app.titleScene) app.titleScene.detach();
-    this.r.setMap(this.w, this.def, this.S);
+    this._setWorld();
     this.av = new ActorView(this.r); this.fx = new FX(this.r); this.vm = new ViewModel(this.r, this.av);
     this.fx.blood = app.settings.blood !== false;
     { const g = gfxOf(app.settings); this.fx.amount = { low: 0.5, normal: 1, high: 1.5 }[g.fx] || 1; this.fx.shells = g.shells !== false; }
     this.av.hidden.add(this.p.id);
-    this.hud.setPlan(this.w, this.def);
-    this.hud.setMode({ pve: !this.S.pvp, pvp: this.S.pvp, drone: false });
+    if (this.S.war) this.hud.setWarPlan(this.w, this.S.m); else this.hud.setPlan(this.w, this.def);
+    this.hud.setMode({ pve: !this.S.pvp, pvp: this.S.pvp, drone: false, war: !!this.S.war });
     this.yaw = o.cam ? o.cam.yaw : this.p.yaw; this.pitch = o.cam ? o.cam.pitch : 0;
     this.acc = 0; this.time = 0; this.dead = false; this.done = false;
     this.adsOn = false; this.leanSide = 0; this.stance = 0; this.team = 'gold'; this.nvgOn = false;
@@ -75,10 +80,15 @@ export class Match {
     this.au.playMusic(this.S.pvp ? 'pvp' : this.S.mode === 'pve' ? 'op' : 'menu', { fade: 3, vol: this.S.pvp ? 0.55 : this.S.mode === 'pve' ? 0.6 : 0.35 });
     if (!o.dump && !this.S.pvp && this.S.mode === 'pve') setTimeout(() => this._say(null, 'toc_start', false, 'TOC'), 900);
   }
+  // 世界を描く物を用意する（大規模戦は地形の塊、ほかは建物のマス）
+  _setWorld() {
+    if (this.S.war) { this.r.setWar(this.w, warView(this.app.settings)); this.r.warmWar(this.p.x, this.p.z); }
+    else this.r.setMap(this.w, this.def, this.S);
+  }
   destroy() { this.r.clearMap(); this.fx.clear(); this.av.dispose(); this.fx.dispose(); this.vm.dispose(); this.au.occluder = null; this.au.ambience(false); this.au.stopMusic(1.5); this.au.loop('heart', false, { fade: 0.3 }); this.au.setHurt(0); }
   rebind(r) {
     if (r) { if (this.av) { this.av.dispose(); this.fx.dispose(); this.vm.dispose(); } this.r = r; this.av = new ActorView(r); this.fx = new FX(r); this.vm = new ViewModel(r, this.av); this.fx.blood = this.app.settings.blood !== false; { const g = gfxOf(this.app.settings); this.fx.amount = { low: 0.5, normal: 1, high: 1.5 }[g.fx] || 1; this.fx.shells = g.shells !== false; } this.av.hidden.add(this.p.id); this.vm.setColors(this.av.look(this.p).pal.slice(3, 6), [0.02, 0.02, 0.025]); this.fx.onClink = (x, y, z) => this.au.sfx('shell', [x, y, z], { vol: 0.35 }); }
-    this.r.setMap(this.w, this.def, this.S);
+    this._setWorld();
   }
   applySettings() { this.fx.blood = this.app.settings.blood !== false; }
   // 止まっている間の描き直し（画面の大きさが変わったときなど）
@@ -689,7 +699,7 @@ export class Match {
   _onDeath() {
     this.dead = true; this.deathK = 1;
     this._resetControls();
-    this.hud.showBanner(this.S.pvp ? (this.S.m.kind === 'tdm' ? 'KIA — 4秒後に復帰' : 'KIA — 観戦中') : 'KIA — 観戦中', 3000, 'bad');
+    this.hud.showBanner(this.S.war ? 'KIA — 5秒後に本陣から出撃' : this.S.pvp ? (this.S.m.kind === 'tdm' ? 'KIA — 4秒後に復帰' : 'KIA — 観戦中') : 'KIA — 観戦中', 3000, 'bad');
     this.au.deafen(1.5);
   }
 
@@ -790,7 +800,7 @@ export class Match {
     if (this._envT <= 0) {
       this._envT = 0.3;
       const ci = Math.floor(cam.x / CS), cj = Math.floor(cam.z / CS), cL = Math.max(0, Math.min(this.w.NL - 1, Math.floor(cam.y / LH)));
-      const ind = ci >= 0 && cj >= 0 && ci < this.w.W && cj < this.w.D && this.w.indoor[this.w.idx(cL, ci, cj)] ? 1 : 0;
+      const ind = this.S.war ? (sunVisAt(this.w, cam.x, cam.y - 1.6, cam.z) < 0.5 ? 1 : 0) : ci >= 0 && cj >= 0 && ci < this.w.W && cj < this.w.D && this.w.indoor[this.w.idx(cL, ci, cj)] ? 1 : 0;
       this._ind = this._ind == null ? ind : this._ind + (ind - this._ind) * 0.5;
       this.au.setEnv(this._ind);
       this.au.ambience(true, this._ind);
@@ -867,11 +877,13 @@ export class Match {
     let smk = 0;
     for (const c of S.clouds || []) { if (c.type !== 'smoke' || c.r < 0.6) continue; const d = Math.hypot(cam.x - c.x, (cam.y - c.y) * 1.4, cam.z - c.z); if (d < c.r) smk = Math.max(smk, Math.min(0.95, (c.r - d) / Math.max(0.4, c.r * 0.45))); }
     const lowHp = p.alive && p.hp < p.maxHp * 0.3 ? 0.35 : 0;
+    // 範囲の外（大規模戦）: 色が抜けてざらつく（Battlefield の境界の画面）
+    const oobK = S.war && p.alive && (p.oob || 0) > 0 ? Math.min(1, 0.5 + p.oob / OUT_LIMIT) : 0;
     // 部屋（一人称の光の届き方）
     const room = roomOf(this.w, cam.x, cam.y - 1, cam.z);
     r.render({
       cam, doors: S.doors, lights, dt,
-      post: { smoke: smk, exposure: this.exposure * (st.bright || 1), nvg: nvg && !p.peek, flash, damage: Math.max(this.dmgK * 0.8, lowHp), supp: this.suppK * 0.8, gas, blur: Math.max(this.blurK, gas * 0.5, p.stun > 0 ? 0.4 : 0, flash * 0.6), vig: (p.peek ? 0.15 : (st.vignette === false ? 0.08 : 0.32)) + 0.22 * (this.hpK || 0), sat: (st.sat ?? 1.08) * (1 - 0.45 * (this.hpK || 0)) * (1 - 0.7 * (this.deathK || 0)), peek: p.peek ? (p.peek.k === 'mirror' ? 2 : 1) : 0 },
+      post: { smoke: smk, exposure: this.exposure * (st.bright || 1) * (S.war ? 1 : 1), nvg: nvg && !p.peek, flash, damage: Math.max(this.dmgK * 0.8, lowHp), supp: Math.max(this.suppK * 0.8, oobK * 0.7), gas, blur: Math.max(this.blurK, gas * 0.5, p.stun > 0 ? 0.4 : 0, flash * 0.6), vig: (p.peek ? 0.15 : (st.vignette === false ? 0.08 : 0.32)) + 0.22 * (this.hpK || 0), sat: (st.sat ?? 1.08) * (S.war ? 0.9 : 1) * (1 - 0.85 * oobK) * (1 - 0.45 * (this.hpK || 0)) * (1 - 0.7 * (this.deathK || 0)), peek: p.peek ? (p.peek.k === 'mirror' ? 2 : 1) : 0 },
       vm: fp ? { fov: (st.vmFov || 54) * DEG, room } : null, shadows: st.shadows !== 'off' && st.quality !== 'low',
       ambMin: nvg ? 0.02 : 0,
     });
@@ -973,6 +985,7 @@ export class Match {
   }
   // カメラのまわり（5×5マス、床のマスだけ）の焼いた明るさの平均
   _localBright(cam) {
+    if (this.S.war) return null;
     const w = this.w, b = w._bright; if (!b) return null;
     const ci = Math.floor(cam.x / CS), cj = Math.floor(cam.z / CS), L = Math.max(0, Math.min(w.NL - 1, Math.floor((cam.y - 0.3) / LH)));
     let s = 0, n = 0;
@@ -985,6 +998,7 @@ export class Match {
     return n ? s / n : null;
   }
   _localDark(cam) {
+    if (this.S.war) return false;
     const b = this.w._bright; if (!b) return false;
     const i = Math.floor(cam.x / CS), j = Math.floor(cam.z / CS), L = Math.max(0, Math.min(this.w.NL - 1, Math.floor(cam.y / LH)));
     if (i < 0 || j < 0 || i >= this.w.W || j >= this.w.D) return false;
@@ -993,6 +1007,7 @@ export class Match {
   // 動く光が届く部屋（今いる部屋＋開いた扉・開口・窓でつながる部屋、2段まで）
   _lightRooms(x, y, z, R) {
     const w = this.w, S = this.S;
+    if (S.war) return [0];
     const r0 = roomOf(w, x, y - 1, z);
     const out = [r0];
     const rg = roomGraph(w);
@@ -1020,7 +1035,7 @@ export class Match {
     const S = this.S, p = this.p, hud = this.hud;
     this.ctxT -= dt;
     if (this.ctxT <= 0) {
-      this.ctxT = 0.12; this.ctx = p.alive ? contextOf(S, this.w, p) : null;
+      this.ctxT = 0.12; this.ctx = p.alive && !S.war ? contextOf(S, this.w, p) : null;
       // 乗り越えられるか（ボタンを明るくするだけ。文字は出さない）
       const vp = p.alive && !p.vault ? vaultPlan(S, this.w, p, this._vp || (this._vp = {})) : null;
       this.vaultOK = !!vp;
@@ -1112,16 +1127,21 @@ export class Match {
   // スコア表の中身: 自分のチームが先。キル×2＋アシストの順。爆弾・殲滅戦は倒れている人を薄く
   _boardData() {
     const S = this.S, m = S.m || {}, p = this.p;
-    const MODE = { tdm: 'チームデスマッチ', elim: '殲滅戦', bomb: '爆弾' };
+    const MODE = { tdm: 'チームデスマッチ', elim: '殲滅戦', bomb: '爆弾', war: '大規模戦' };
     const sideName = (t) => { const a = S.actors.find(x => x.team === t && !x.isDrone); return a && a.pvpSide === 'swat' ? 'SWAT' : a && a.pvpSide === 'sus' ? '立てこもり犯' : 'チーム' + (t + 1); };
-    const score = (t) => m.kind === 'tdm' ? (m.score || [0, 0])[t] : (m.wins || [0, 0])[t];
+    const score = (t) => m.kind === 'war' ? S.actors.filter(a => a.team === t).reduce((s, a) => s + a.stats.k, 0) : m.kind === 'tdm' ? (m.score || [0, 0])[t] : (m.wins || [0, 0])[t];
     const rows = (t) => S.actors.filter(a => !a.isDrone && a.team === t).map(a => ({ name: a.name || '?', k: a.stats.k, d: a.stats.d, a: a.stats.a, me: a === p, bot: a.pid == null, out: m.kind !== 'tdm' && !a.staged && (!a.alive || a.down) })).sort((x, y) => (y.k * 2 + y.a) - (x.k * 2 + x.a) || x.d - y.d);
     const mine = p.team, foe = 1 - p.team;
-    const sub = m.kind === 'tdm' ? `目標 ${m.limit} キル` : `ラウンド ${m.round || 1}・先に ${m.winsNeeded} 勝`;
+    const sub = m.kind === 'war' ? (this.w.areas[m.size] || {}).name || '' : m.kind === 'tdm' ? `目標 ${m.limit} キル` : `ラウンド ${m.round || 1}・先に ${m.winsNeeded} 勝`;
     return { title: `${MODE[m.kind] || '対戦'}　${sub}`, teams: [{ name: sideName(mine) + '（味方）', score: score(mine), cls: 'mine', rows: rows(mine) }, { name: sideName(foe), score: score(foe), cls: 'foe', rows: rows(foe) }] };
   }
   _objectives() {
     const S = this.S, m = S.m || {};
+    if (S.war) {
+      const p = this.p, A = this.w.areas[m.size] || {};
+      const oob = p.alive && (p.oob || 0) > 0 ? Math.max(0, OUT_LIMIT - Math.floor(p.oob)) : 0;
+      return { key: m.size + '|' + oob, html: `<div class="ob"><b>WAR BIT 試作</b><span>　${A.name || ''}・リバーベンド${oob ? `<br><em class="bad">範囲の外 ― ${oob} 秒で死亡</em>` : ''}</span></div>` };
+    }
     if (S.pvp) {
       const p = this.p;
       const el = (S.t - m.phaseT) * S.dt;
@@ -1163,7 +1183,7 @@ function fmtT(s) { s = Math.max(0, Math.ceil(s)); return `${Math.floor(s / 60)}:
 function nm(a) { return a ? (a.pid != null ? a.name : a.kind === 'sus' ? '容疑者' : a.kind === 'civ' ? '市民' : a.name) : '?'; }
 function feedKill(k, v, e, p) {
   const kn = k ? nm(k) : '?', vn = nm(v);
-  const wpn = e.kind === 'melee' ? '近接' : e.kind === 'fall' ? '落下' : k && curWeapon(k) ? WEAPONS[curWeapon(k).id].name : e.kind === 'bleed' ? '出血' : e.kind === 'blast' ? '爆発' : '';
+  const wpn = e.kind === 'oob' ? '範囲の外' : e.kind === 'melee' ? '近接' : e.kind === 'fall' ? '落下' : k && curWeapon(k) ? WEAPONS[curWeapon(k).id].name : e.kind === 'bleed' ? '出血' : e.kind === 'blast' ? '爆発' : '';
   return `<b class="${k && k.team === p.team ? 'ally' : 'enemy'}">${kn}</b> <i>${wpn}${e.hs ? '・頭' : ''}</i> <b class="${v.team === p.team ? 'ally' : 'enemy'}">${vn}</b>`;
 }
 function ctxName(c, S) { return c.k === 'bar' ? (c.ops && c.ops[0] && c.ops[0].op === 'bar' ? '窓' : 'バリケード') : c.k === 'door' ? (S.doors[c.id] && S.doors[c.id].bar > 0 ? 'バリケード' : '扉') : c.k === 'person' ? (S.byId[c.id] ? (S.byId[c.id].kind === 'sus' ? '容疑者' : S.byId[c.id].kind === 'civ' ? '市民' : '隊員') : '人') : c.k === 'item' ? '物' : c.k === 'bomb' ? '爆弾' : c.k === 'site' ? '爆弾の場所' : c.k === 'wall' ? '壁' : ''; }

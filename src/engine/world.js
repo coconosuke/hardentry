@@ -3,6 +3,8 @@
 // 壁はマスの中央の板。高さ方向に4つのブロック（0.7mずつ、上の端は天井 2.8m）。
 import { M, MATS, F } from './data/materials.js';
 import { PROPS } from './data/props.js';
+import { groundAt as wGroundAt, ceilAt as wCeilAt, pushOut as wPushOut, raycast as wRaycast, los as wLos } from '../war/world.js';
+// 大規模戦の世界（w.war）: 調べる道具はみな src/war/world.js へ回す（体の動き・弾・投げ物・視線をそのまま使う）
 
 export const CS = 0.5, LH = 3.0, CEIL = 2.8, BH = 0.7, NB = 4, SLAB = 0.2, STEP = 0.36;
 // 置ける盾（対戦の守る側。シージの Deployable Shield）: 幅1m・高さ1.4mの鋼の板。のぞき窓（高さ s0〜s1、幅 ±shw）は、かがんだ目の高さ（1.32m）。
@@ -406,7 +408,7 @@ function buildRooms(w, def) {
 export function cellOf(w, x, z) { return [Math.floor(x / CS), Math.floor(z / CS)]; }
 export function levelOfY(y) { return Math.max(0, Math.floor((y + 0.4) / LH)); }
 export function inMap(w, i, j) { return i >= 0 && j >= 0 && i < w.W && j < w.D; }
-export function cellType(w, L, i, j) { if (L < 0 || L >= w.NL || !inMap(w, i, j)) return C.VOID; return w.cell[w.idx(L, i, j)]; }
+export function cellType(w, L, i, j) { if (w.war) return L === 0 && inMap(w, i, j) ? C.OUT : C.VOID; if (L < 0 || L >= w.NL || !inMap(w, i, j)) return C.VOID; return w.cell[w.idx(L, i, j)]; }
 
 // 階段の坂の高さ（その階段の上にいるとき）
 export function stairHeight(w, s, x, z) {
@@ -421,6 +423,7 @@ export function stairHeight(w, s, x, z) {
 
 // 足元の高さ: y（足の高さ）から STEP 以内で上にある、いちばん高い床
 export function groundAt(w, x, z, y) {
+  if (w.war) return wGroundAt(w, x, z, y);
   const i = Math.floor(x / CS), j = Math.floor(z / CS);
   if (!inMap(w, i, j)) return -100;
   let best = -100;
@@ -444,6 +447,7 @@ export function groundAt(w, x, z, y) {
 
 // 立てる高さ: 床・階段に加えて、家具や車の上面（乗り越えで上に乗る）。y（足の高さ）から STEP 以内で上にある、いちばん高いもの
 export function standAt(w, x, z, y) {
+  if (w.war) return wGroundAt(w, x, z, y);
   let g = groundAt(w, x, z, y);
   const i = Math.floor(x / CS), j = Math.floor(z / CS);
   if (!inMap(w, i, j)) return g;
@@ -461,6 +465,7 @@ export function standAt(w, x, z, y) {
 }
 // 頭の上の天井（屋内・上の階の床の下）。外は 1e9。家具の上に乗ったとき、立てるか・かがむかを決める
 export function ceilAt(w, x, z, y) {
+  if (w.war) return wCeilAt(w, x, z, y);
   const i = Math.floor(x / CS), j = Math.floor(z / CS);
   if (!inMap(w, i, j)) return 1e9;
   const L = Math.min(w.NL - 1, levelOfY(y + 0.1)), k = w.idx(L, i, j);
@@ -488,6 +493,7 @@ export function glassPane(w, k) {
 // mode: 1 = 宙にいる（2階より上の何もないマスは空気。飛び降りの最中・乗り越えの見込み）、2 = 窓のバリケードも当たり（乗り越えの見込み）、
 //       4 = 割れていないガラスも通れる（乗り越えの見込み。越えるときに割る）
 export function pushOut(w, x, z, y0, y1, r, doorsState, ignoreProp = -1, out = [0, 0, 0], mode = 0) {
+  if (w.war) return wPushOut(w, x, z, y0, y1, r, out);
   let px = x, pz = z, hit = 0, pm = 0, pass = 0;
   const i0 = Math.floor((x - r - 0.3) / CS), i1 = Math.floor((x + r + 0.3) / CS);
   const j0 = Math.floor((z - r - 0.3) / CS), j1 = Math.floor((z + r + 0.3) / CS);
@@ -677,6 +683,7 @@ function circleSeg(px, pz, r, ax, az, bx, bz) {
 // opt.stopOpaque: 視線用（最初の見えない物で止める）、opt.max: 距離
 const _seenP = new Set(), _seenD = new Set(), _seenB = new Set();
 export function raycast(w, ox, oy, oz, dx, dy, dz, max, doorsState, opt = {}) {
+  if (w.war) return wRaycast(w, ox, oy, oz, dx, dy, dz, max, opt);
   const hits = opt.out || [];
   hits.length = 0;
   const seenBar = opt.seenBar || _seenB; seenBar.clear();
@@ -813,6 +820,7 @@ function rayShield(d, ox, oy, oz, dx, dy, dz, max) {
 // 視線が通るか（見えない物にさえぎられないか）
 const _losOpt = { stopOpaque: true, out: [], seenProp: new Set(), seenDoor: new Set() };
 export function los(w, ax, ay, az, bx, by, bz, doorsState) {
+  if (w.war) return wLos(w, ax, ay, az, bx, by, bz);
   const dx = bx - ax, dy = by - ay, dz = bz - az, L = Math.hypot(dx, dy, dz);
   if (L < 1e-4) return true;
   const hits = raycast(w, ax, ay, az, dx / L, dy / L, dz / L, L - 0.05, doorsState, _losOpt);
@@ -881,6 +889,7 @@ function rayStair(w, st, ox, oy, oz, dx, dy, dz, ta, tb, i, j) {
 
 // その階でいちばん近い床のマス（湧き位置の補正など）
 export function nearestFloor(w, L, x, z, maxR = 6) {
+  if (w.war) return [x, z];
   const ci = Math.floor(x / CS), cj = Math.floor(z / CS);
   // 同じ部屋（床のつながり）を先に探す: 家具をよけるときに壁の向こうへ移さない
   const k0 = L >= 0 && L < w.NL && inMap(w, ci, cj) ? w.idx(L, ci, cj) : -1;
@@ -906,6 +915,7 @@ export function nearestFloor(w, L, x, z, maxR = 6) {
 // 速い見通しの判定（物を作らない）: a から b までに見えない物があれば true
 // props: 家具も調べるか、doorsState: 扉を調べるか（null なら開いているものとして扱う）
 export function occluded(w, ax, ay, az, bx, by, bz, doorsState = null, props = true) {
+  if (w.war) return !wLos(w, ax, ay, az, bx, by, bz);
   const dx0 = bx - ax, dy0 = by - ay, dz0 = bz - az;
   const L = Math.hypot(dx0, dy0, dz0);
   if (L < 1e-4) return false;

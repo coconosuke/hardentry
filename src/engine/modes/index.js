@@ -2,7 +2,8 @@
 import train from './train.js';
 import pve from './pve.js';
 import { makePvpMode } from './pvp.js';
-export const MODES = { train, pve, tdm: makePvpMode('tdm'), elim: makePvpMode('elim'), bomb: makePvpMode('bomb') };
+import war from './war.js';
+export const MODES = { train, pve, war, tdm: makePvpMode('tdm'), elim: makePvpMode('elim'), bomb: makePvpMode('bomb') };
 export const PVP_MODES = ['tdm', 'elim', 'bomb'];
 export const MODE_INFO = {
   tdm: { name: 'チームデスマッチ', en: 'TEAM DEATHMATCH', desc: '倒されても4秒後に復帰。先に上限キル数に達するか、時間切れでキルが多いチームの勝ち。' },

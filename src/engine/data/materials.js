@@ -2,7 +2,7 @@
 // hp = ブロック1つ（0.5m×0.7m）の耐久。0は壊れない。see = 視線が通るか。
 export const M = {
   NONE: 0, BRICK: 1, CONCRETE: 2, DRYWALL: 3, WOOD: 4, GLASS: 5, METAL: 6, DOORWOOD: 7, DOORMETAL: 8,
-  BARRICADE: 9, REINF: 10, FURN: 11, FABRIC: 12, METALFURN: 13, CAR: 14, CERAMIC: 15, FENCE: 16, BODY: 17, GLASSBROKEN: 18,
+  BARRICADE: 9, REINF: 10, FURN: 11, FABRIC: 12, METALFURN: 13, CAR: 14, CERAMIC: 15, FENCE: 16, BODY: 17, GLASSBROKEN: 18, EARTH: 19,
 };
 export const MATS = [
   null,
@@ -24,6 +24,7 @@ export const MATS = [
   { key: 'fence', name: '金網', pen: 50, hp: 0, see: true, snd: 'metal', thick: 0.04 },
   { key: 'body', name: '人', pen: 0, hp: 0, see: false, snd: 'flesh', thick: 0 },
   { key: 'glassbroken', name: '割れたガラス', pen: 0, hp: 0, see: true, snd: 'glass', thick: 0 },
+  { key: 'earth', name: '地面', pen: 1e9, hp: 0, see: false, snd: 'dirt', thick: 0 },
 ];
 // 床の材質（足音と見た目）
 export const F = { NONE: 0, CONCRETE: 1, TILE: 2, WOOD: 3, CARPET: 4, ASPHALT: 5, GRASS: 6, DIRT: 7, METAL: 8 };

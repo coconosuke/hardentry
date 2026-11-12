@@ -1,5 +1,6 @@
 // アプリ全体: 起動・画面の切り替え・試合の開始と終了・保存・画面の作り直し（WebGLが落ちたとき）
 import { Stage } from '../ui/stage.js';
+import { WAR_LOADOUT } from '../engine/modes/war.js';
 import { Input, tapHooks } from '../ui/input.js';
 import { Hud } from '../ui/hud.js';
 import { Screens } from '../ui/screens.js';
@@ -242,6 +243,13 @@ class App {
     const roster = [{ pid: 0, name: this.profile.name, team: side, lo }];
     const rules = { botLevel: cfg.botLevel, wins: cfg.wins, time: (cfg.time || 8) * 60, aimAssist: cfg.aimAssist, ff: cfg.ff };
     return this._start({ mode: cfg.mode, map: cfg.map, teams, roster, rules, seed: this._seed() }, '準備中…');
+  }
+  // 大規模戦（試作）
+  startWar(cfg) {
+    if (!cfg) return;
+    this.lastWar = { ...cfg };
+    const roster = [{ pid: 0, name: this.profile.name, team: 0, lo: WAR_LOADOUT.assault }];
+    return this._start({ mode: 'war', map: 'riverbend', size: cfg.size || 'small', roster, seed: this._seed() }, '戦場へ向かっています…');
   }
   startTrain(o) {
     const roster = [{ pid: 0, name: this.profile.name, lo: this.loadouts.player }];

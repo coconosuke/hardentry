@@ -41,7 +41,7 @@ test('war world: 光線（壁の箱・木・地形）と見通し', () => {
   const ww = mk();
   // 壁に向かって
   let h = raycast(ww, 2, 1.5, 15, 1, 0, 0, 30);
-  ok(h.length >= 1 && h[0].kind === 'block' && Math.abs(h[0].t0 - 8) < 1e-6 && Math.abs(h[0].t1 - 8.3) < 1e-6 && h[0].mat === M.BRICK, `壁 ${JSON.stringify(h[0])}`);
+  ok(h.length >= 1 && h[0].kind === 'box' && Math.abs(h[0].t0 - 8) < 1e-6 && Math.abs(h[0].t1 - 8.3) < 1e-6 && h[0].mat === M.BRICK, `壁 ${JSON.stringify(h[0])}`);
   // 木
   h = raycast(ww, 0, 1.5, 40, 1, 0, 0, 20);
   ok(h.length >= 1 && h[0].kind === 'prop' && Math.abs(h[0].t0 - 4.7) < 1e-3, `木 ${h[0] && h[0].t0}`);

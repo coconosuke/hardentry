@@ -62,6 +62,7 @@ export function roadDist(x, z) {
 }
 const sstep = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
+export const RIVERBEND_AREAS = AREAS;
 export function buildRiverbend(seed = 7) {
   const ww = makeWarWorld({ sx: SIZE, sz: SIZE, hs: 2 });
   ww.mapId = 'riverbend'; ww.areas = AREAS; ww.flagDefs = FLAGS; ww.roads = ROADS; ww.riverX = riverX; ww.roadDist = roadDist;

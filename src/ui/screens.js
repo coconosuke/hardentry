@@ -12,6 +12,9 @@ import { CS } from '../engine/world.js';
 import { LoadoutEditor } from './loadout.js';
 import { Book } from './book.js';
 import { QUALITY, GFX_PRESET, gfxOf } from '../render/renderer.js';
+import { WAR_MAPS } from '../war/maps/index.js';
+import { RIVERBEND_AREAS } from '../war/maps/riverbend.js';
+import { warPlanImage, drawWarMarks } from './warplan.js';
 
 export function fmtTime(t) { t = Math.max(0, Math.floor(t)); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); }
 const BACK = `<button class="back" data-back aria-label="戻る"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>戻る</span></button>`;
@@ -76,7 +79,8 @@ export class Screens {
     const el = this._mk('title', `
       <div class="t-logo"><div class="t-badge">SWAT · CQB</div><h1>HARD<b>ENTRY</b></h1><p>突入。制圧。確保。</p></div>
       <nav class="t-menu" aria-label="メニュー">
-        <button class="mi main" data-a="pve"><span class="mi-l">作戦</span><span class="mi-d">PvE · ソロ／協力</span></button>
+        <button class="mi main war" data-a="war"><span class="mi-l">WAR BIT（試作）</span><span class="mi-d">大規模戦 · 作り替え中</span></button>
+        <button class="mi" data-a="pve"><span class="mi-l">作戦</span><span class="mi-d">PvE · ソロ／協力</span></button>
         <button class="mi" data-a="pvp"><span class="mi-l">対戦</span><span class="mi-d">PvP · 1v1〜4v4</span></button>
         <button class="mi" data-a="train"><span class="mi-l">訓練</span><span class="mi-d">射撃場・キルハウス</span></button>
         <button class="mi" data-a="settings"><span class="mi-l">設定</span></button>
@@ -84,6 +88,7 @@ export class Screens {
       </nav>
       <div class="t-foot"><span>ヘッドホン推奨</span><span class="ver">互換${COMPAT} · v${VERSION}</span></div>`);
     this._acts(el, {
+      war: () => this.open('warSetup'),
       pve: () => this.open('pveMenu'),
       pvp: () => this.open('pvpMenu'),
       train: () => this.open('train'),
@@ -92,6 +97,17 @@ export class Screens {
     });
     this.show('title');
     a.scene('title');
+  }
+  // ---- 大規模戦（試作）: 人数（範囲）を選んで出撃
+  _warSetup() {
+    const a = this.app, M = WAR_MAPS.riverbend;
+    const sizes = Object.entries(RIVERBEND_AREAS);
+    const el = this._mk('warSetup', `<div class="sc-wrap"><header class="sc-head">${BACK}<h2>WAR BIT（試作）</h2><span class="hint">${esc(M.name)}</span></header>
+      <p class="note war-note">${esc(M.desc)}<br>今は「広い戦場を歩いて撃てる」ところまで。拠点の奪い合い・分隊・兵科・ボットは順に入れていきます。</p>
+      <div class="big-choice three">${sizes.map(([k, s]) => `<button class="bc" data-a="go" data-k="${k}"><b>${esc(s.name)}</b><span>範囲 ${s.rect[2] - s.rect[0]}m 四方・拠点 ${s.flags.length}</span></button>`).join('')}</div></div>`, 'dim');
+    el.querySelectorAll('[data-a="go"]').forEach(b => onTap(b, () => a.startWar({ size: b.dataset.k })));
+    this._acts(el, {});
+    this.show('warSetup'); a.scene('menu');
   }
   _pveMenu() {
     const a = this.app;
@@ -359,6 +375,7 @@ export class Screens {
   _tablet() {
     const a = this.app, g = a.game;
     if (!g) { this.back(); return; }
+    if (g.S.war) return this._warTablet();
     const S = g.S, p = g.p, def = MAPS[S.map];
     const ob = g._objectives();
     const el = this._mk('tablet', `<div class="sc-wrap"><header class="sc-head">${BACK}<h2>地図</h2><span class="hint">${esc(def.name)}</span></header>
@@ -376,6 +393,38 @@ export class Screens {
     }
     if (S.m && S.m.bombs) for (const b of S.m.bombs) if (b.found && !b.done) marks.push({ x: b.x, z: b.z, L: b.L || 0, col: '#ff9a20', sq: true });
     this._drawPlan(el.querySelector('.planbox'), S.map, { marks, level: Math.max(0, Math.floor((p.y + 0.4) / 3)) });
+    this.show('tablet');
+  }
+
+  // 大規模戦の地図: 全体の絵・拠点・本陣・自分と味方
+  _warTablet() {
+    const a = this.app, g = a.game, S = g.S, p = g.p;
+    const ob = g._objectives();
+    const el = this._mk('tablet', `<div class="sc-wrap"><header class="sc-head">${BACK}<h2>地図</h2><span class="hint">${esc(WAR_MAPS[S.map].name)}</span></header>
+      <div class="split brief"><div class="pane planbox"><canvas class="plan"></canvas></div>
+      <div class="pane rows scroll"><h3>状況</h3><div class="tab-obj">${ob.html}</div>
+      <p class="note">黄: 自分　青: 味方　赤: 敵　四角: 本陣（取れない出撃地点）　丸: 拠点　赤い点線: 範囲（外に10秒いると死亡）</p></div></div></div>`, 'dim');
+    const box = el.querySelector('.planbox'), cv = box.querySelector('canvas');
+    const img = this._warImg && this._warImg.w === g.w && this._warImg.size === S.m.size ? this._warImg.img : (this._warImg = { w: g.w, size: S.m.size, img: warPlanImage(g.w, S.m) }).img;
+    requestAnimationFrame(() => {
+      const r = box.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1), side = Math.max(120, Math.min(r.width, r.height) - 8);
+      cv.width = Math.round(side * dpr); cv.height = Math.round(side * dpr); cv.style.width = side + 'px'; cv.style.height = side + 'px';
+      const ctx = cv.getContext('2d');
+      // 範囲（少し外まで）を切り出して描く
+      const R = S.m.rect, pad = 60, x0 = Math.max(0, R[0] - pad), z0 = Math.max(0, R[1] - pad), span = Math.max(R[2] - R[0], R[3] - R[1]) + pad * 2;
+      const k = cv.width / span;
+      ctx.drawImage(img, x0 / 2, z0 / 2, span / 2, span / 2, 0, 0, cv.width, cv.height);
+      const toXY = (x, z) => [(x - x0) * k, (z - z0) * k];
+      drawWarMarks(ctx, S.m, p.team, toXY, dpr * 1.2);
+      for (const b of S.actors) {
+        if (!b.alive) continue;
+        const [x, y] = toXY(b.x, b.z);
+        ctx.fillStyle = b === p ? '#ffd34a' : b.team === p.team ? '#4aa8ff' : '#ff4a3a';
+        if (b !== p && b.team !== p.team && !(b.spot > 0 || g._visCache(b))) continue;
+        ctx.beginPath(); ctx.arc(x, y, (b === p ? 5 : 3.5) * dpr, 0, Math.PI * 2); ctx.fill();
+        if (b === p) { ctx.strokeStyle = '#ffd34a'; ctx.lineWidth = 2 * dpr; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.sin(b.yaw) * 14 * dpr, y + Math.cos(b.yaw) * 14 * dpr); ctx.stroke(); }
+      }
+    });
     this.show('tablet');
   }
 

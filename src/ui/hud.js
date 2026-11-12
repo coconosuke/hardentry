@@ -6,6 +6,7 @@ import { M } from '../engine/data/materials.js';
 import { WEAPONS, zoomsOf, zoomOf } from '../engine/data/weapons.js';
 import { GEAR, LONG } from '../engine/data/equipment.js';
 import { ammoCount } from '../engine/actor.js';
+import { warPlanImage, drawWarMarks, WAR_PX } from './warplan.js';
 
 // 移動スティックの既定の場所（左下から。左利きは左右が入れ替わる）
 const STICK_DEF = { name: '移動スティック', ax: 'l', ay: 'b', x: 118, y: 96 };
@@ -406,8 +407,32 @@ export class Hud {
     this.plan = buildPlan(w, def);
     this.planW = w;
   }
+  // 大規模戦: 地図全体の絵（1画素 2m）を回して切り出す
+  setWarPlan(ww, m) { this.plan = { war: true, img: warPlanImage(ww, m), m }; this.planW = ww; }
+  _drawWarMinimap(v) {
+    const ctx = this.mmCtx, Wc = 240, p = v.p, P = this.plan;
+    const ppm = 1.25 * (v.mmZoom || 1), a = Math.PI + (v.yaw || 0), c = Math.cos(a), s = Math.sin(a);
+    ctx.save();
+    ctx.clearRect(0, 0, Wc, Wc);
+    ctx.beginPath(); ctx.arc(Wc / 2, Wc / 2, Wc / 2 - 2, 0, Math.PI * 2); ctx.clip();
+    ctx.fillStyle = 'rgba(10,14,18,0.78)'; ctx.fillRect(0, 0, Wc, Wc);
+    ctx.translate(Wc / 2, Wc / 2); ctx.rotate(a); ctx.scale(ppm * WAR_PX, ppm * WAR_PX);
+    ctx.globalAlpha = 0.92; ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(P.img, -p.x / WAR_PX, -p.z / WAR_PX);
+    ctx.globalAlpha = 1;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    const toXY = (x, z) => { const u = (x - p.x) * ppm, w = (z - p.z) * ppm; return [Wc / 2 + u * c - w * s, Wc / 2 + u * s + w * c]; };
+    drawWarMarks(ctx, P.m, p.team, toXY, 1);
+    for (const mk of v.marks || []) { const [x, y] = toXY(mk.x, mk.z); ctx.fillStyle = mk.col; ctx.beginPath(); if (mk.sq) ctx.rect(x - 3, y - 3, 6, 6); else ctx.arc(x, y, mk.r ? Math.min(4, mk.r) : 3.2, 0, Math.PI * 2); ctx.fill(); }
+    ctx.restore();
+    ctx.fillStyle = '#ffd34a';
+    ctx.beginPath(); ctx.moveTo(Wc / 2, Wc / 2 - 9); ctx.lineTo(Wc / 2 + 6, Wc / 2 + 6); ctx.lineTo(Wc / 2, Wc / 2 + 2); ctx.lineTo(Wc / 2 - 6, Wc / 2 + 6); ctx.closePath(); ctx.fill();
+    const n = this.info.minimap.querySelector('.hud-mm-n'), yw = v.yaw || 0;
+    n.style.transform = `translate(-50%,-50%) translate(${-Math.sin(yw) * 54}px, ${Math.cos(yw) * 54}px)`;
+  }
   drawMinimap(v) {
     if (!this.plan || !v.p || this.S.minimap === false) return;
+    if (this.plan.war) return this._drawWarMinimap(v);
     const ctx = this.mmCtx, Wc = 240, s = this.plan.s;
     const p = v.p, L = Math.max(0, Math.min(this.planW.NL - 1, Math.floor((p.y + 0.4) / LH)));
     ctx.save();
@@ -430,7 +455,7 @@ export class Hud {
     ctx.fillStyle = '#ffd34a';
     ctx.beginPath(); ctx.moveTo(Wc / 2, Wc / 2 - 9); ctx.lineTo(Wc / 2 + 6, Wc / 2 + 6); ctx.lineTo(Wc / 2, Wc / 2 + 2); ctx.lineTo(Wc / 2 - 6, Wc / 2 + 6); ctx.closePath(); ctx.fill();
     // 北の印の位置
-    const n = this.info.minimap.lastChild;
+    const n = this.info.minimap.querySelector('.hud-mm-n');
     const yw = v.yaw || 0;
     n.style.transform = `translate(-50%,-50%) translate(${-Math.sin(yw) * 54}px, ${Math.cos(yw) * 54}px)`;
   }

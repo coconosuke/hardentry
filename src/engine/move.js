@@ -7,12 +7,16 @@ import { KNEEL_ACT } from './data/acts.js';
 import { curW, bodyHeight, curWeapon } from './actor.js';
 import { attMods, canAim } from './weapon.js';
 import { PLATE, LONG } from './data/equipment.js';
-import { FLOORS } from './data/materials.js';
+import { FLOORS, F as FF } from './data/materials.js';
+import { heightAt, raycast as wRaycast } from '../war/world.js';
 import { DEP, wireAt, stepWire } from './deploy.js';
 
 // 撃つのをやめてから、また走れるまで（秒。続けて撃つ間に銃が下がらないように）
 export const SPRINT_HOLD = 0.4;
 export const SPEED = { walk: 2.4, crouch: 1.2, prone: 0.45, low: 1.2, ads: 0.7, sprint: 4.6, back: 0.8, side: 0.9 };
+// 大規模戦（research/WARBIT.md の 5）: Battlefield V の速さ（歩き 3.4・しゃがみ 2.1・伏せ 0.85・走る 6.0、ADS の歩きは半分）に近く、
+// BattleBit のように、まっすぐ走り続けると数秒で少し速くなる（sprintUp 秒で sprint → sprint2）
+export const WAR_SPEED = { walk: 3.3, crouch: 2.0, prone: 0.8, ads: 0.52, sprint: 5.9, sprint2: 6.6, sprintUp: 3.0, back: 0.75, side: 0.9 };
 export const RADIUS = 0.28;
 const _po = [0, 0, 0];
 const _rc = { out: [], seenProp: new Set(), seenDoor: new Set() };
@@ -39,6 +43,7 @@ export const PVP_ARMOR = { light: { hp: 100, speed: 1.08 }, medium: { hp: 110, s
 
 export function maxSpeed(S, a, inp) {
   const st = Math.round(a.st);
+  if (S.war) return warSpeed(S, a, st);
   let v = st === 0 ? SPEED.walk : st === 1 ? SPEED.crouch : SPEED.prone;
   const W = curW(a);
   if (W) v *= W.move * attMods(curWeapon(a)).move; // ドラム弾倉は重く、縮めた銃床は少し軽い
@@ -60,6 +65,18 @@ export function maxSpeed(S, a, inp) {
   return v;
 }
 
+function warSpeed(S, a, st) {
+  const P = WAR_SPEED, W = curW(a);
+  let v = st === 0 ? P.walk : st === 1 ? P.crouch : P.prone;
+  if (W) v *= W.move * attMods(curWeapon(a)).move;
+  if (a.ads > 0.3) v *= 1 - (1 - P.ads) * a.ads;
+  if (a.sprint) v = (P.sprint + (P.sprint2 - P.sprint) * Math.min(1, (a.sprT || 0) / P.sprintUp)) * (W ? Math.min(1, W.move + 0.03) : 1);
+  v *= 1 - 0.04 * Math.min(4, a.inj.leg);
+  if (a.stun > 0 || a.flash > 0.5) v *= 0.45;
+  if (a.down || a.dead) v = a.down && a.dbno ? 0.35 : 0;
+  if (a.act && a.act.still) v = 0;
+  return v;
+}
 function accelOf(S, a) {
   let ac = 9.0; // 歩き出しは約0.27秒で全速（重さは残しつつ、指に遅れない）
   if (!S.pvp && a.armor.vest !== 'none') { const P = PLATE[a.armor.plate]; const n = a.armor.vest === 'heavy' ? 2 : 1; ac *= 1 - (P ? P.accel : 0) * n * 0.6; }
@@ -125,10 +142,13 @@ export function moveActor(S, w, a, inp, dt, ev) {
   const reloading = !!a.ws && (a.ws.st === 'reload' || a.ws.st === 'shell');
   const busy = (inp.ads && canAim(a)) || !!inp.lean || a.trigT < SPRINT_HOLD || reloading;
   a.sprint = !!(inp.sprint && !busy && a.st < 0.2 && mz > 0.55 && !a.down && !a.act && !a.cuffed && !a.comply && !(a.ws && a.ws.slot === 1 && a.inv && a.inv.long === 'shield') && !(S.deps && S.deps.length && wireAt(S, a.x, a.z, a.y)));
+  // まっすぐ走り続けた時間（大規模戦: 走る速さが少し上がる。向きを大きく変えると戻る）
+  if (S.war) { const turn = Math.abs(Math.atan2(Math.sin(a.yaw - (a._sprYaw ?? a.yaw)), Math.cos(a.yaw - (a._sprYaw ?? a.yaw)))); a._sprYaw = a.yaw; a.sprT = a.sprint && Math.abs(mx) < 0.35 ? Math.max(0, (a.sprT || 0) + dt - turn * 1.5) : 0; }
   const vmax = maxSpeed(S, a, inp);
   // 後ろ・横は遅い
   let dirMul = 1;
-  if (mag > 0.01) { const fz = mz / mag, fx = mx / mag; dirMul = fz >= 0 ? 1 - (1 - SPEED.side) * Math.abs(fx) : SPEED.back + (SPEED.side - SPEED.back) * Math.abs(fx); }
+  const SP = S.war ? WAR_SPEED : SPEED;
+  if (mag > 0.01) { const fz = mz / mag, fx = mx / mag; dirMul = fz >= 0 ? 1 - (1 - SP.side) * Math.abs(fx) : SP.back + (SP.side - SP.back) * Math.abs(fx); }
   const tgt = vmax * mag * dirMul;
   // ローカル → 世界（前 = (sin yaw, cos yaw)、右 = (-cos yaw, sin yaw)）
   const sy = Math.sin(a.yaw), cy = Math.cos(a.yaw);
@@ -184,7 +204,7 @@ export function moveActor(S, w, a, inp, dt, ev) {
   if (after !== before && ev && a.spd > 0.25) {
     const L = levelOfY(a.y + 0.1);
     const i = Math.floor(a.x / CS), j = Math.floor(a.z / CS);
-    const fm = (L < w.NL && i >= 0 && j >= 0 && i < w.W && j < w.D) ? w.floorMat[w.idx(L, i, j)] : 0;
+    const fm = w.war ? warFloor(w, a) : (L < w.NL && i >= 0 && j >= 0 && i < w.W && j < w.D) ? w.floorMat[w.idx(L, i, j)] : 0;
     const F = FLOORS[fm] || FLOORS[1];
     // 音の大きさ: 速さ・姿勢・床・防具（重いと大きい）
     let loud = (a.sprint ? 1.6 : a.spd > 1.8 ? 1.0 : a.spd > 0.9 ? 0.6 : 0.3) * F.loud * (a.st > 0.5 ? 0.6 : 1);
@@ -194,6 +214,12 @@ export function moveActor(S, w, a, inp, dt, ev) {
   a.stateT += dt;
 }
 
+// 大規模戦の足もとの材質（足音）: 箱の上なら箱の材質、地面なら道・草
+function warFloor(w, a) {
+  const g = heightAt(w, a.x, a.z);
+  if (a.y > g + 0.08) { const r = wRaycast(w, a.x, a.y + 0.3, a.z, 0, -1, 0, 0.6, {}); const h = r[0]; if (h && h.kind === 'box') return h.mat === M.WOOD ? FF.WOOD : h.mat === M.METAL ? FF.METAL : FF.CONCRETE; }
+  return w.roadDist && w.roadDist(a.x, a.z) < 4 ? FF.ASPHALT : FF.GRASS;
+}
 // 死体が床に落ち着く（階段など）
 function settle(S, w, a, dt) {
   const g = standAt(w, a.x, a.z, a.y + 0.2);
@@ -208,6 +234,7 @@ const _vp = { top: 0, far: 0, x1: 0, z1: 0, y1: 0, drop: 0, onto: 0, crouch: 0, 
 function freeAt(S, w, x, z, y0, y1, r, mode) { pushOut(w, x, z, y0, y1, r, S.doors, -1, _pv, mode); return !_pv[2]; }
 // 越える体の帯が、高い壁・フェンスの「上」を通るか（窓のように上に壁が残っていれば、開いた所を通るのでよい）
 function overTall(w, x, z, yb) {
+  if (w.war) return false;
   const i = Math.floor(x / CS), j = Math.floor(z / CS);
   if (!inMap(w, i, j)) return true;
   const L = Math.max(0, Math.min(w.NL - 1, Math.floor((yb + 0.02) / LH))), k = w.idx(L, i, j);
@@ -286,7 +313,7 @@ function planAlong(S, w, a, sx, sz, fx, fz, out) {
   for (let d = d0; d <= far; d += 0.1) if (overTall(w, sx + fx * d, sz + fz * d, y + top)) return false;
   // 割るガラス（帯が通る所）
   let gk = -1;
-  for (let d = Math.max(0.3, d0 - 0.1); d <= Math.min(far, d0 + 0.9) && gk < 0; d += 0.1) {
+  for (let d = Math.max(0.3, d0 - 0.1); !w.war && d <= Math.min(far, d0 + 0.9) && gk < 0; d += 0.1) {
     const x = sx + fx * d, z = sz + fz * d, i = Math.floor(x / CS), j = Math.floor(z / CS);
     if (!inMap(w, i, j)) continue;
     const L = Math.max(0, Math.min(w.NL - 1, Math.floor((y + top + 0.02) / LH))), k = w.idx(L, i, j), base = L * LH;
@@ -387,6 +414,7 @@ export function separateActors(S, w) {
 
 // 体で扉の板を押す: 閉じた扉（掛け金がかかっている）は押せない。板は押す速さに合わせて、蝶番を中心に体から離れる向きへ回る
 function pushLeaves(S, w, a, vx, vz, dt) {
+  if (w.war) return;
   const L = levelOfY(a.y + 0.3);
   const k = w.idx(L, Math.floor(a.x / CS), Math.floor(a.z / CS));
   const dn = w.doorNear.get(k);
