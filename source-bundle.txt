@@ -1,8 +1,8 @@
-HARD ENTRY ソース一式（2026-11-12T05:40:27.736Z）
+HARD ENTRY ソース一式（2026-11-12T07:45:44.667Z）
 復元: node tools/unbundle.mjs source-bundle.txt <出力先>
 （tools/unbundle.mjs がない場合は、下の "@@@@ FILE " の区切りごとにファイルへ書き出す。base64 と書かれたものはデコードする）
 
-@@@@ FILE DESIGN.md text 76578
+@@@@ FILE DESIGN.md text 83609
 # HARD ENTRY（仮タイトル）設計メモ
 
 ## 文脈が消えたら最初に読む
@@ -50,6 +50,9 @@ HARD ENTRY ソース一式（2026-11-12T05:40:27.736Z）
 - 2026-11-12 11:04 「続きから」（既存マップの拡張・作り込みの続き。ガソリンスタンドの2階から）。
 - 2026-11-12 13:52 マップの拡張は終わったか → まだ（ガソリンスタンドのみ）。残りのマップを1つずつ広げて、できるごとに公開する。
 - 2026-11-12 14:15 ダッシュは完全にまっすぐでしか判定にならない → もう少し快適に走れる判定の範囲に（→ 真上から±40°で始まり、走っている間は±52°まで続く）。
+- 2026-11-12 14:23 手すりに物理的な判定がない／操作中に引っかかり・カクつきが出る、エイムがスムーズに動かない／インタラクトの距離が遠いときの表記は出さなくていい。
+- 2026-11-12 14:44 スナイパーライフルを実装（→ 武器のデータ・スコープ・見た目・音まで作るので、0.1.9 の次の版で出す）。
+- 2026-11-12 14:47 壁に貼られた絵がドアの部分まではみ出している／ガソリンスタンドで窓枠を乗り越えて屋上に出られない。
 
 ## 約束（仕様・数値）— 必ず守る。守れなくなったら先に言う
 - 仮に決めて伝えたこと（15:20 送信）: ゲーム名「HARD ENTRY」（仮）。PvP は「SWAT 対 立てこもり犯」の攻守（シージの攻撃／防衛に相当）。掛け声・無線は英語の音声＋日本語字幕。血の表現あり（設定で消せる）。アプリ版のリポジトリはユーザーに作ってもらう（`hardentry`、Settings → Pages で main / root）。
@@ -108,7 +111,9 @@ HARD ENTRY ソース一式（2026-11-12T05:40:27.736Z）
 - 窓: 下のブロックは腰壁、真ん中2つがガラス（撃つと割れる）、上は壁。ガラスは1枚ぜんぶ割れる（窓は左右に続くマスまで、ガラスの壁は1.5mの板）。窓は割れていなくても乗り越えられる（越えるときに割る）。
 - 置き物の決まり（11-12。`tools/propaudit.mjs`、テスト一式の「マップ」で全マップ0件を確かめる）: 扉の前1.25m（板が回る所を含む）・開口とガラスの壁の前1.0m・窓の前0.9m・階段の上がり口と下り口の前1.25mに、歩きを止める置き物を置かない。扉の口に当たりのない小物（椅子）も置かない。扉・開口・窓・階段・出現位置・目標・部屋の広い所どうしは、置き物があっても幅0.9m以上の道でつながる（置き物がなくても狭い所は対象外）。壁ぎわの家具（本棚・テレビ台・ベッド・冷蔵庫・流し・便器など）は背中を壁につけ、正面を壁に向けない。椅子は机・テーブルの方を向く（`back`）。
 - 家具の向き（地図の数）: 正面（本の見える側・画面・引き出し・座る側・ベッドの足の側）が 0=+z（南） 1=+x（東） 2=−z（北） 3=−x（西）。11-12 に 1 と 3 の回し方を入れ替えた（地図はほとんどこの意味で書かれていたのに、組み立てが逆に回していて、全10マップで約340個の家具が壁を向いていた。モーテルのベッドは足を壁につけていた）。
-- 階段: 8マス（4m）で3m上がる。体の当たりは滑らかな坂、見た目は段。
+- 階段: 8マス（4m）で3m上がる。体の当たりは滑らかな坂、見た目は段。手すりは開いている側（横のマスが壁でない所。金網の横も）に付け、体が当たる（段の面から0.95m。11-12。それまで見た目だけで、横から落ちられた。弾と視線は通る。上の階の床にいる人と、段の高さが0.6mまでの上がり口のあたりには当たらない）。
+- 壁の絵（11-12）: 部屋の壁の絵は、壁の板がとぎれない（扉・開口・窓・角にかからない）所にだけ掛け、幅もそこに収まるまで縮める（左右に0.1m以上あける。0.2mに足りなければ掛けない）。それまで扉の口にはみ出していた。
+- 平らな屋根（11-12）: 2階の高さに歩ける床（'"'）を敷き、ふちを低い立ち上がり（'L'）で囲むと屋上になる。屋上へは2階の窓を乗り越えて出る（ガソリンスタンドの店・食堂・厨房の上）。AI は窓を越えないので屋上には来ない。地図の点検（`tools/mapcheck.mjs`）の到達は、窓を越える所もつながりとみなす。
 - 吹き抜け（11-12）: 地図の文字 '^'（2階より上）。床の板がなく、下の階の部屋の上が上の階の天井まで開いている（屋根の下・屋内あつかい。まわりの壁は屋内の壁）。上の階の手すり（'L'）の向こうに置き、ギャラリーから下を見下ろせる。弾・視線は通り、上へ撃つと上の階の天井に当たる。照明は上の階の天井に付ける（下まで届くように強め）。
 - 光: 読み込み時に「光の格子」（マスの角×高さ3段×階）を計算する。各点に6方向の明るさ（RGB）を持ち、壁・床・人・小物すべてがこれで照らされる（壁の向こうに光が漏れない作り）。光源は天井灯・窓からの日光・空・月。跳ね返りの光は部屋の中でならす。動く光は懐中電灯（銃のライト）と発砲の光。夜のマップは暗い（ライトと暗視装置に意味がある）。
 - 質感: 材質ごとの小さな手続きテクスチャ（コンクリ・レンガ・石膏・木の床・タイル・カーペット・アスファルト・草・金属・布）＋面ごとの色。BattleBitのように、ローポリ＋平らな色＋かすかなノイズ＋もや（大気のかすみ）＋光で本物らしく見せる。
@@ -157,7 +162,7 @@ HARD ENTRY ソース一式（2026-11-12T05:40:27.736Z）
 - 枠: 主武器・副武器・特殊装備1つ（盾・破城槌・ブリーチングショットガン・オプティワンド・M320）・小さな装備3枠（閃光・スティンガー・CS・C2・ウェッジ・ロックピックガン・ペッパースプレー・テーザー）・防具（なし/軽/重 × ケブラー/セラミック/スチール）・ヘルメット・頭（暗視装置・ガスマスク・防閃光ゴーグル・防弾マスク）。いつも持つ物: 手錠（結束バンド）・マルチツール・ケミライト・ミラーガン（扉の下）。
 
 ### 操作とHUD（スマホ）
-- 左: 移動スティック（左45%のどこでも／固定）。右: ドラッグで視点、射撃（右・左にも出せる）、ADS（タップで切替／押している間／両方）、リロード（タップで通常、長押しで速い）、しゃがみ（タップ、長押しで伏せ）、乗り越え、左右リーン（PUBGM式）、警告（大きいボタン。呼びかけ）、調べる（その時できること: 開ける・拘束・拾う・報告・解除。長押しで扉の操作の円形メニュー）、命令（タップで見ている物への既定の命令、長押しで円形メニュー。金/赤/青の選択）、装備（タップで持ち替え、長押しで選ぶ。射撃ボタンで投げる・置く）、武器2つ（下の中央、タップで切替）、射撃モード・ライト・暗視・ローレディの小ボタン、地図（タブレット）、一時停止。スティックを上へ押し込むとダッシュ（作戦・対戦とも。ダッシュの印より上。真上から±40°で始まり、走っている間は±52°・印の0.25下まで続く。`ui/stick.js`）。任意で「ダッシュの固定」（その所で離すと走り続け、スティックかボタンに触れるとやめる）。スティックの位置（配置の編集でドラッグ）・大きさ・濃さ・ダッシュの判定位置（半径の1〜2.4倍、既定1.25）は HUD の設定で。長押しの円形メニューはいちばん上の層に出し、大きさ（80〜160%）を設定で変えられる。対戦はスコア表のボタン（右上。タブキーでも）でキル・デス・アシスト・K/D を見られる（オンラインのゲストにも成績を送る）。
+- 左: 移動スティック（左45%のどこでも／固定）。右: ドラッグで視点、射撃（右・左にも出せる）、ADS（タップで切替／押している間／両方）、リロード（タップで通常、長押しで速い）、しゃがみ（タップ、長押しで伏せ）、乗り越え、左右リーン（PUBGM式）、警告（大きいボタン。呼びかけ）、調べる（その時できること: 開ける・拘束・拾う・報告・解除。長押しで扉の操作の円形メニュー。手が届かないほど遠いときは何も出さない。間に物があるときは「回り込む」）、命令（タップで見ている物への既定の命令、長押しで円形メニュー。金/赤/青の選択）、装備（タップで持ち替え、長押しで選ぶ。射撃ボタンで投げる・置く）、武器2つ（下の中央、タップで切替）、射撃モード・ライト・暗視・ローレディの小ボタン、地図（タブレット）、一時停止。スティックを上へ押し込むとダッシュ（作戦・対戦とも。ダッシュの印より上。真上から±40°で始まり、走っている間は±52°・印の0.25下まで続く。`ui/stick.js`）。任意で「ダッシュの固定」（その所で離すと走り続け、スティックかボタンに触れるとやめる）。スティックの位置（配置の編集でドラッグ）・大きさ・濃さ・ダッシュの判定位置（半径の1〜2.4倍、既定1.25）は HUD の設定で。長押しの円形メニューはいちばん上の層に出し、大きさ（80〜160%）を設定で変えられる。対戦はスコア表のボタン（右上。タブキーでも）でキル・デス・アシスト・K/D を見られる（オンラインのゲストにも成績を送る）。
 - 画面: 左上ミニマップ、上の中央に方位と時間・目的、右上に出来事（キル・拘束・TOC）、左に隊員の状態、下の中央に体力・防具・弾倉、字幕。
 - 設定: 感度（見回し・ADS・倍率ごと・ジャイロ（オフ／ADS中だけ／いつも）・射撃中）、エイムアシスト（オフ／弱／標準、PvEの既定は弱、PvPは部屋の設定）、HUDのボタンごとの位置・大きさ・濃さ、照準の形と色、ミニマップ、画質（3段階・解像度・FPS上限・視野角・血）、音量（全体・効果音・声・BGM・UI、消音モードでも鳴らす）、字幕。
 
@@ -204,6 +209,8 @@ HARD ENTRY ソース一式（2026-11-12T05:40:27.736Z）
 - 2026-10-30: GitHub のリリースから落とした実行ファイル（sherpa-onnx）を動かすのは許可されなかった（外部のコード）。声は ffmpeg 内蔵の flite で作る。聞き取りの確認は tools/asr.py（numpy＋onnxruntime で Whisper base.en の ONNX を自前で推論。モデルは /home/claude/tts/sherpa-onnx-whisper-base.en、GitHub の asr-models リリースから）。
 
 ## バランス変更の記録（1つずつ戻せるように）
+- 11-12 郊外の家の拡張・ガソリンスタンドの屋上・階段の手すりの当たり・AI の見る目を軽く（0.1.9）: 作戦のAIだけの試合（60こま・シード7・8。ガソリンスタンドと郊外の家）: 完了 17/20 → 15/20（ガソリンスタンド 10 → 8。1つは寝室に隠れた容疑者に隊員が2人倒され、残りの2人が小さい物置の中からの突入をくり返して打ち切り。屋上で部屋の番号がずれ、番号から決まる乱数の選び方が変わるので、1回ごとの結果は大きく動く。郊外の家は 7 → 7）。対戦ボット 4v4（郊外の家・シード11〜・各6試合）: 爆弾の攻撃側 36%（8/22）→ 40%（10/25）、殲滅戦の SWAT 側 42% → 27%（時間切れ 4 → 6。隠れる所が増えた。全マップの殲滅戦は前から守る側に寄っていて、0.1.7 で 25%）、TDM のチーム0 83% → 67%。
+- 11-12 試して戻したもの: ①「見回り済み」を部屋の中に入ってからにする（入口から見ただけで済みにしない）→ 邸の作戦 8/10 → 2/10 に下がったので戻した ②手すりの当たりの最初の形（上の階の床にいる人にも、段の下のほうにも当たる）→ 邸の人質の作戦で 677秒 → 1287秒 かかった。上の階の床にいる人と、段の高さ0.6mまでの所は当たらないようにして 825秒。
 - 11-12 ナイトクラブの2階（吹き抜けとギャラリー・非常階段）: 対戦ボット 4v4（シード11〜・各6試合）: 爆弾の攻撃側 25%（3/12・3試合）→ 38%（10/26。非常階段から2階へ回れる）、殲滅戦の SWAT 側 43% → 38%、TDM は1試合が長くなった（215s → 352s）。作戦のAIだけの試合（60こま・シード7・8）: 完了 9/10 → 6/10。強制捜査（容疑者9〜10人）はシード7〜14で 5/8 → 3/8（正面の前室の両開きの扉が、北と東のギャラリーから見下ろされる。正面以外の入り口を使うと楽）。籠城の1回は、西の路地へ逃げて隠れた容疑者を見つけられず時間切れ（外の隠れ場所を探すのは前からの弱み）。
 - 11-12 AI の詰まりの判定（`ai/common.js` の NAV.stuckV）: 1こまで2cm未満しか動かないと「詰まり」とみなしていた。ゲームは毎秒60こま、AIだけの試合は30こまで測っていたため、ゲームの中でだけ毎秒1.2m未満の動き（しゃがみ歩き・構えたままの歩き・家具の角をすべる動き）がいつも詰まり扱いになり、横へよけ直すのを繰り返していた。毎秒0.6m未満に直した（30こまの測定では前と同じ）。作戦のAIだけの試合（7マップ×5作戦×シード7・8、ゲームと同じ毎秒60こま）: 完了 16/70 → 56/70（爆弾 0/14 → 9/14、オフィス 0/10 → 8/10、アパート 0/10 → 5/10）。毎秒30こま（シード7〜9）は 62/105 → 64/105。あわせて、爆弾の解除に向かう途中で倒れた隊員の受け持ちを数えない（ほかの隊員がその爆弾へ行かず、時間切れになっていた）。容疑者の投降・偽の投降で銃を抜く確率は1秒あたりの値に（ゲームの60こまのときと同じ。30こまの試合では半分になっていた）。`tools/sim.mjs` の作戦は既定で60こま、テスト一式の作戦も60こまで回す。
 - 11-12 ガソリンスタンドの2階・家具の向き（対戦ボット 4v4、同じシード11〜・各3試合）: 爆弾の攻撃側ラウンド勝率 35%（38/108）→ 40%（42/105。ガソリンスタンドは 29% → 58%: 裏の外階段から2階へ回れる）、殲滅戦の SWAT 側 29% → 25%、TDM のチーム0 52% → 56%。殲滅戦は前から守る側（時間切れ）に寄っている（オフィス・港）。
@@ -281,7 +288,16 @@ HARD ENTRY ソース一式（2026-11-12T05:40:27.736Z）
 - 11-12 版 0.1.7（ガソリンスタンドの2階・家具の向き・ゲームの中でだけ AI 隊員が詰まる不具合）。互換3（ガソリンスタンドの扉が増えたので、古い遊びかけは捨てる）。テスト一式 80/80 合格（単体49件。作戦のAIだけの試合はゲームと同じ毎秒60こまで 完了29/35＝前の版は30こまで19/35。対戦ボット 27試合すべて決着）。
 - 11-12 ナイトクラブを広げた（「マップが単調で狭い」への対応の続き）: 2階を足した。ホールのダンスフロアとバーの上は吹き抜け（エンジンに吹き抜けを足した）で、北と東のギャラリー（手すりから下が見える・壁ぞいの席）。裏の上にオーナー室（ホールを見下ろす窓）・VIPルーム・金庫室（鍵）・監視室・物置。ホールの北の壁ぞいの階段（東へ上がる）と、東の外の非常階段（踊り場から監視室へ）で上がる。作戦: 容疑者・市民・人質・爆弾・証拠を2階にも。爆弾の制限時間 10分 → 12分。対戦: 守る側の出現を2階にも（爆弾の場所は1階のまま）。
 - 11-12 版 0.1.8（ナイトクラブの2階・吹き抜け・ダッシュの判定を広げた）。互換4。テスト一式 80/80 合格（単体50件。作戦のAIだけの試合（60こま）完了27/35。対戦ボット 27試合すべて決着）。
-- 次: 実機での確認をお願いする → その結果で直す。残り: ほかのマップの拡張（郊外の家・港・アパート・オフィス・銀行・モーテル）。
+- 11-12 郊外の家を広げた（「マップが単調で狭い」への対応の続き）: 車庫の上に2階（7×10m。ゲーム部屋 6.5×5m と車庫の上の物置。家の2階の廊下の東の扉から入る）。車庫の東に外階段（金網ぞい・手すりつき）と踊り場（金属の扉でゲーム部屋へ）。裏庭（北）に作業小屋（6.5×4m。作業場と小屋の物置）。部屋 16 → 20、扉 19 → 24、置き物 76 → 91。作戦のAIだけの試合（60こま・シード7・8）: 完了 7/10（前と同じ）。
+- 11-12 ガソリンスタンドの屋上（14:47 の要望）: 店・食堂・厨房の上の平らな屋根を歩けるようにした（2階の居間と廊下の窓を乗り越えて出る。ふちは低い立ち上がり）。それまで窓の外は何もない空中で、乗り越えられなかった。
+- 11-12 手すり・カクつき・エイム・遠いときの表記（14:23 の要望）:
+  - 手すり: 階段の開いている側の手すりに体が当たる（上の「階段」）。郊外の家の外階段は金網の横にも手すりを付けた。
+  - カクつき: ①画質の自動調整（解像度）が上げ下げを繰り返し、そのたびに画面を作り直して一瞬止まっていた → 下げるのは3秒遅れが続いたとき、上げるのは20秒速いままのときだけ。上げて30秒以内にまた下げたら、それからは上げない（画質の設定を変えると初めから）。1こまだけの遅れ（読み込み・ごみ集め）は平均に入れない ②遅れが続くと毎秒30こまに固定して戻さなかった → もう固定しない ③AI の歩ける所の格子を試合の最初のこまで作っていた（76〜146ms 止まる）→ マップを読むときに1回だけ作る ④AI の見る目の位置（骨の姿勢の計算）を毎こま全員分計算していた → 4〜8こまごとに計算し、その間は体の動いた分だけずらす（見えるかどうかの判定だけ。撃つときは毎回の正しい位置）。
+  - エイム: エイムアシストで敵の近くに入る・出るときに視点の速さが急に変わっていた → 0.12秒かけてなめらかに変わる。
+  - 調べるの表記: 手が届かないほど遠いときは何も出さない（押しても小さな音だけ）。間に物があるときは「回り込む」。
+- 11-12 壁の絵（14:47 の要望）: 扉の口にはみ出していた → 壁の板がとぎれない所にだけ、収まる幅で掛ける（上の「壁の絵」）。
+- 11-12 版 0.1.9（郊外の家の拡張・階段の手すりの当たり・カクつきとエイム・遠いときの表記・壁の絵・ガソリンスタンドの屋上）。互換5（郊外の家の扉が増えたので、古い遊びかけは捨てる）。テスト一式 78/80（単体52件。作戦のAIだけの試合（60こま）完了24/35＝0.1.8 は 27/35。対戦ボット 27試合すべて決着）。落ちた2つはミラーの項目で、テストの手順の問題: 郊外の家の扉の並びが変わって最初に選ぶ扉が作業小屋の中の扉になり、向きを変えた同じこまでミラーを使っていた（動作は前のステップの向きで見ている物に対して行う）のと、この環境の描画が1こま1.5秒前後でミラーが出る前に待ちが切れていた。向きがエンジンに入るのを待ってから使い、待ちを長くして、単独で2項目とも合格。
+- 次: 実機での確認をお願いする → その結果で直す。残り: ほかのマップの拡張（港・アパート・オフィス・銀行・モーテル）、スナイパーライフル（0.1.9 の次の版）。AI の弱いところ（後で）: 小さい部屋の中から外へ突入すると、入った隊員が向こう側にいる味方に詰まり、突入した扉を自分で閉めて戻る、をくり返す（ガソリンスタンドの2階の物置）。
 
 @@@@ FILE dev/view.html text 446
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -366,7 +382,7 @@ export async function getAssetURL(name, type) {
   return URL.createObjectURL(new Blob([buf], { type }));
 }
 
-@@@@ FILE src/app/game.js text 86585
+@@@@ FILE src/app/game.js text 87047
 // 1回の試合: エンジンを進め、入力を命令にし、出来事を音・効果・HUDへ。カメラ（一人称）と描画。
 import { createGame, step, dump, load } from '../engine/engine.js';
 import { eyeOf, capsOf } from '../engine/combat.js';
@@ -396,6 +412,9 @@ const DEG = Math.PI / 180;
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const TEAMS = ['gold', 'red', 'blue'];
 const TEAMCOL = { gold: '#e8b830', red: '#e5483f', blue: '#3d8cf0' };
+
+// 手が届かない（遠い）ときは、調べるボタン・案内・メニューに何も出さない（11-12 14:23 の要望）。間に物があるときは出す
+function tooFar(c) { return !!(c && c.def && c.def.far && c.def.why !== 'block'); }
 
 export class Match {
   constructor(app, o) {
@@ -501,12 +520,15 @@ export class Match {
     if (ads > 0.5) k *= zoom > 2 ? (st.sensScope || 0.45) : (st.sensAds || 0.75);
     if (inp.fire && !inp.mouse) k *= st.sensFire || 1;
     // エイムアシスト（タッチ）: 敵の近くでは少しゆっくりに。対戦は部屋の設定（0なし・1弱い・2ふつう）
-    let slow = 1;
+    let want = 1;
     const aa = this.S.pvp ? ['off', 'weak', 'strong'][this.S.rules.aimAssist ?? 1] : st.aimAssist;
     if (!inp.mouse && aa && aa !== 'off') {
       const near = this._nearTarget(0.06);
-      if (near) slow = aa === 'strong' ? 0.55 : 0.72;
+      if (near) want = aa === 'strong' ? 0.55 : 0.72;
     }
+    // 急に遅く・速くならないように、0.12秒かけて寄せる（11-12: エイムがなめらかに動かない）
+    this.aaK = this.aaK == null ? want : this.aaK + (want - this.aaK) * (1 - Math.exp(-dt / 0.12));
+    const slow = inp.mouse ? 1 : this.aaK;
     let dx = inp.lookDX * k * slow, dy = inp.lookDY * k * slow * 0.9;
     // ジャイロ
     const gy = st.gyro || 'off';
@@ -648,13 +670,14 @@ export class Match {
   // ---- 調べる（その時できること）
   _useDefault() {
     const c = contextOf(this.S, this.w, this.p);
-    if (!c) { this.app.audio.ui('deny'); return; }
+    if (!c || tooFar(c)) { this.app.audio.ui('deny'); return; }
     this.acts.push({ a: 'use' });
   }
   _useMenu(e) {
     const c = contextOf(this.S, this.w, this.p);
     if (!c) return;
-    const items = c.ops.map(o => ({ label: OP_NAME[o.op] || o.op, sub: o.far ? (o.why === 'block' ? '間に物' : '近づく') : o.t ? o.t.toFixed(1) + '秒' : '', disabled: !!o.far, go: () => this.acts.push({ a: 'op', k: c.k, id: c.id, op: o.op }) }));
+    if (tooFar(c)) return;
+    const items = c.ops.map(o => ({ label: OP_NAME[o.op] || o.op, sub: o.far ? (o.why === 'block' ? '間に物' : '') : o.t ? o.t.toFixed(1) + '秒' : '', disabled: !!o.far, go: () => this.acts.push({ a: 'op', k: c.k, id: c.id, op: o.op }) }));
     if (!items.length) return;
     this.app.input.openRadial('use', items, e.pid, e.x, e.y);
     this.app.input.radial.title = c.k === 'door' ? '扉' : c.k === 'person' ? '人' : c.k === 'item' ? '物' : '';
@@ -905,7 +928,7 @@ export class Match {
           if (e.k === 'locked' && e.id !== me && S.byId[e.id] && S.byId[e.id].kind === 'swat') this._say(S.byId[e.id], 'swat_locked');
           break;
         }
-        case 'deny': if (e.id === me) { const why = { locked: '鍵がかかっている', wedged: 'ウェッジで開かない', barred: 'バリケード', nogear: '残数なし', nodet: '起爆対象なし', open: '開いている', broken: '破損', needdoor: '閉じた扉を見て使う', nolong: '特殊装備なし', noammo: '弾がない', far: '手が届かない（近づく）', blocked: '間に物・人があって届かない', prepout: '準備中は建物の外に出られない', depspace: '前に置く場所がない', depfloor: '平らな床にしか置けない', depperson: '前に人がいる', depair: '立ってから置く' }[e.why]; if (why) hud.showBanner(why, 1400); au.ui('deny'); } break;
+        case 'deny': if (e.id === me) { const why = { locked: '鍵がかかっている', wedged: 'ウェッジで開かない', barred: 'バリケード', nogear: '残数なし', nodet: '起爆対象なし', open: '開いている', broken: '破損', needdoor: '閉じた扉を見て使う', nolong: '特殊装備なし', noammo: '弾がない',  blocked: '間に物・人があって届かない', prepout: '準備中は建物の外に出られない', depspace: '前に置く場所がない', depfloor: '平らな床にしか置けない', depperson: '前に人がいる', depair: '立ってから置く' }[e.why]; if (why) hud.showBanner(why, 1400); au.ui('deny'); } break;
         case 'nade': { if (e.type === 'smoke') { for (let i = 0; i < 6; i++) fx.smoke(e.x, e.y + 0.5, e.z, 0.9, [0.62, 0.63, 0.64], 0.6, 3); au.sfx('gasPop', [e.x, e.y, e.z], { rate: 0.8 }); break; } if (e.type === 'cs') { for (let i = 0; i < 8; i++) fx.smoke(e.x, e.y + 0.4, e.z, 1.2, [0.85, 0.85, 0.8], 0.5, 6); au.sfx('gasPop', [e.x, e.y, e.z]); } else { fx.explosion(e.x, e.y, e.z, 3, e.type === 'flash' ? 'flash' : 'stinger'); au.sfx(e.type === 'flash' ? 'flashbang' : 'stinger', [e.x, e.y, e.z]); } const d = Math.hypot(e.x - this.cam.x, e.z - this.cam.z); this.shake = Math.max(this.shake, Math.max(0, 1 - d / 10) * 0.6); break; }
         case 'boom': case 'c2': { fx.explosion(e.x, e.y, e.z, e.r || 3, e.kind || 'c2'); au.sfx('explosion', [e.x, e.y, e.z], { vol: 1.2 }); const d = Math.hypot(e.x - this.cam.x, e.z - this.cam.z); this.shake = Math.max(this.shake, Math.max(0, 1 - d / 18)); this._heatUp(0.5 * Math.max(0, 1 - d / 40)); break; }
         case 'flashed': if (e.id === me) { this.flashW = Math.max(this.flashW, Math.min(1, 0.4 + e.k * 1.2)); au.deafen(2 + 4 * e.k); } break;
@@ -1344,7 +1367,7 @@ export class Match {
       gearSel: this.gearSel, gearId: p.ws.gear, team: this.team,
       spread: wi ? spreadDeg(S, p, WEAPONS[wi.id], wi) : 2,
       optic: null, canVault: this.vaultOK !== false,
-      ctxLabel: c ? (c.def.far ? (c.def.why === 'block' ? '回り込む' : '近づく') : (OP_NAME[c.def.op] || c.def.op)) : '',
+      ctxLabel: c && !tooFar(c) ? (c.def.far ? '回り込む' : (OP_NAME[c.def.op] || c.def.op)) : '',
       cmdLabel: '命令', mmZoom: this.mmZoom,
       droneOK: S.pvp && S.m.kind !== 'tdm' && p.team === S.m.att && (S.m.phase === 'prep' ? !!p.staged : S.m.phase === 'action' && p.alive && !p.down) && ((p.dronesLeft ?? 2) > 0 || S.actors.some(d => d.isDrone && d.owner === p.id && d.alive)),
       zoneOK: S.pvp && S.m.kind !== 'tdm' && p.team === S.m.att && (S.m.phase === 'pre' || S.m.phase === 'prep'),
@@ -1355,7 +1378,7 @@ export class Match {
     if (this.droneId != null || this.camView != null) v.hideCross = true;
     // 案内
     let prompt = '';
-    if (c) prompt = `${ctxName(c, S)}: ${OP_NAME[c.def.op] || c.def.op}` + (c.def.far ? (c.def.why === 'block' ? '（間に物がある）' : '（近づく）') : c.ops.length > 1 ? '（長押し: メニュー）' : '');
+    if (c && !tooFar(c)) prompt = `${ctxName(c, S)}: ${OP_NAME[c.def.op] || c.def.op}` + (c.def.far ? '（間に物がある）' : c.ops.length > 1 ? '（長押し: メニュー）' : '');
     if (!c && this.depHint) prompt = this.depHint;
     if (p.act) { v.prog = Math.min(1, p.act.t / p.act.dur); v.progLabel = OP_NAME[p.act.k] || ''; prompt = ''; }
     if (this.droneId != null) prompt = S.m && S.m.phase === 'prep' && p.staged ? 'ドローン ― 射撃: 敵にマーク／乗り越え: ジャンプ（準備が終わると出現地点に出る）' : 'ドローン ― 射撃: マーク／乗り越え: ジャンプ／ドローン: 戻る';
@@ -1485,7 +1508,7 @@ function mirrorHTML(e, S) {
 }
 function impSound(m) { return m === M.METAL || m === M.METALFURN || m === M.CAR || m === M.DOORMETAL ? 'impMetal' : m === M.WOOD || m === M.DOORWOOD || m === M.FURN ? 'impWood' : m === M.GLASS ? 'impGlass' : 'impHard'; }
 
-@@@@ FILE src/app/main.js text 17664
+@@@@ FILE src/app/main.js text 18267
 // アプリ全体: 起動・画面の切り替え・試合の開始と終了・保存・画面の作り直し（WebGLが落ちたとき）
 import { Stage } from '../ui/stage.js';
 import { Input, tapHooks } from '../ui/input.js';
@@ -1522,15 +1545,21 @@ class App {
   _dynStep(raw) {
     const D = this.dyn;
     if (this.settings.autoRes === false) { D.i = 0; D.cap = 0; return; }
+    D.t = (D.t || 0) + raw;
     const target = 1 / this.fpsCap();
-    D.ema = D.ema ? D.ema + (raw - D.ema) * 0.08 : raw;
+    // 1こまだけの遅れ（読み込み・ごみ集め）は数えない
+    D.ema = D.ema ? D.ema + (Math.min(raw, target * 3) - D.ema) * 0.08 : raw;
     D.cool -= raw;
     D.slowT = D.ema > target * 1.22 ? D.slowT + raw : 0;
     D.fastT = D.ema < target * 1.06 ? D.fastT + raw : 0;
     if (D.cool > 0) return;
-    if (D.slowT > 2 && D.i < DYN.length - 1) { D.i++; D.cool = 3; D.slowT = 0; D.ema = 0; this._resize(); }
-    else if (D.slowT > 4 && D.i === DYN.length - 1 && !D.cap && this.settings.fps > 30) { D.cap = 30; D.cool = 4; D.slowT = 0; D.ema = 0; }
-    else if (D.fastT > 8 && D.i > 0 && !D.cap) { D.i--; D.cool = 5; D.fastT = 0; this._resize(); }
+    // 解像度を変えると画面を作り直すので一瞬止まる。行ったり来たりしないように:
+    //  下げるのは3秒遅れが続いたとき。上げるのは20秒速いままのときだけで、上げてすぐ（30秒以内）また下げたら、それからは上げない（画質の設定を変えると初めから）。
+    //  （11-12 まで: 遅れが続くと毎秒30こまに固定して戻さなかった → エイムがなめらかでなくなる。もう固定しない）
+    if (D.slowT > 3 && D.i < DYN.length - 1) {
+      if (D.upAt != null && D.t - D.upAt < 30) D.noUp = true;
+      D.i++; D.cool = 3; D.slowT = 0; D.fastT = 0; D.ema = 0; this._resize();
+    } else if (D.fastT > 20 && D.i > 0 && !D.noUp) { D.i--; D.cool = 5; D.fastT = 0; D.upAt = D.t; this._resize(); }
   }
   renderScale() { return (this.settings.scale || 1) * DYN[this.dyn.i]; }
   fpsCap() { return this.dyn.cap ? Math.min(this.dyn.cap, this.settings.fps) : this.settings.fps; }
@@ -3613,12 +3642,12 @@ export function collectNoise(S, ev) {
   S.heard = H;
 }
 
-@@@@ FILE src/engine/ai/common.js text 21491
+@@@@ FILE src/engine/ai/common.js text 21498
 // AIの共通の道具: 見る（明るさ・視野・見通し）、聞く、経路に沿って歩く（扉を開ける）、狙う（反応の遅れ・ぶれ・反動の抑え）
 import { occluded, CS, LH, levelOfY, groundAt, leafEnd } from '../world.js';
 import { reachOK } from '../interact.js';
 import { findPath, smoothPath, navCell, cellCenter, buildNav, leafCells } from './nav.js';
-import { eyeOf } from '../combat.js';
+import { eyeOf, eyeAI } from '../combat.js';
 import { smokeBetween } from '../nades.js';
 import { curW, curWeapon, ammoCount } from '../actor.js';
 import { hrand, rnd } from '../rng.js';
@@ -3660,7 +3689,7 @@ export function brightCell(w, x, y, z) {
 // a から b が見えるか（そのときの見えやすさ 0..1。0は見えない）
 export function visibility(S, w, a, b, opt = {}) {
   if (!b.alive && !opt.dead) return 0;
-  const e = eyeOf(S, a);
+  const e = eyeAI(S, a);
   const bx = b.x, bz = b.z, by = b.y + (b.down || b.dead ? 0.25 : b.st > 1.5 ? 0.3 : b.st > 0.5 ? 0.95 : 1.35);
   const dx = bx - e[0], dy = by - e[1], dz = bz - e[2];
   const d = Math.hypot(dx, dy, dz);
@@ -4528,7 +4557,7 @@ export function roomGraph(w) {
   return w._rg;
 }
 
-@@@@ FILE src/engine/ai/sus.js text 18898
+@@@@ FILE src/engine/ai/sus.js text 19102
 // 容疑者と市民のAI（Ready Or Not のように）: 士気と呼びかけで投降、偽装投降、隠れる・待ち伏せ・逃げる、人質犯、乱射犯
 import { baseInput, pushAct, visibility, detect, lastSeen, seenAgo, goTo, steerToward, aimAt, trigger, hearNearest, randomCellInRoom, roomAtPos, aimingAt, canFight, hasGun, angDiff, yawTo, turnToward, SKILL } from './common.js';
 import { eyeOf, dropWeapon } from '../combat.js';
@@ -4565,9 +4594,14 @@ export function thinkSuspect(S, w, a, dt, ctx) {
   const ai = a.ai;
   const inp = baseInput(a);
   if (!a.alive || a.down || a.cuffed) { inp.stance = 0; return inp; }
-  const sk0 = SKILL[S.rules.diff] || SKILL.normal;
-  const sk = { ...sk0, err: sk0.err / (ai.acc || 1), react: sk0.react.map(r => r * (ai.react || 1)) };
-  if (ai.training) { sk.err *= 1.6; }
+  // 腕前（人ごとに1回だけ作る。毎ステップ作るとごみが増えてカクつく）
+  let sk = ai._sk;
+  if (!sk || ai._skD !== S.rules.diff) {
+    const sk0 = SKILL[S.rules.diff] || SKILL.normal;
+    sk = ai._sk = { ...sk0, err: sk0.err / (ai.acc || 1), react: sk0.react.map(r => r * (ai.react || 1)) };
+    if (ai.training) { sk.err *= 1.6; }
+    ai._skD = S.rules.diff;
+  }
   // 状態の時間
   ai.stT = (ai.stT || 0) + dt;
   if (ai.stagger > 0) ai.stagger -= dt;
@@ -5613,7 +5647,7 @@ export function applyBarsNet(S, w, BR) {
   return changed;
 }
 
-@@@@ FILE src/engine/combat.js text 28834
+@@@@ FILE src/engine/combat.js text 29684
 // 弾と当たり: 弾丸は速さと重力を持ち、1ステップごとの線分で当たりを調べる。材質を貫通して弱まる（RoNの式）。
 // ダメージは PvE（RoN換算・防具・負傷・出血）と PvP（R6寄り・頭は即死・手足75%・ダウン）の2系統。
 import { raycast, CS, LH, levelOfY, glassPane } from './world.js';
@@ -5672,6 +5706,17 @@ export function capsOf(S, a) {
   return a._caps;
 }
 export function wristsOf(S, a) { capsOf(S, a); return a._wr.slice(); }
+// AI が見回すときの目: 体の形（computePose）は重いので、4ステップに1回（人ごとにずらして）だけ計算し、
+// 間は体が動いた分だけずらす（そのステップで計算済みならそれを使う）。撃つ弾の出どころは eyeOf（毎回正確）
+export function eyeAI(S, a) {
+  if (a._capT === S.t && a._eye) return a._eye;
+  const e = a._eyeA || (a._eyeA = [0, 0, 0, 0, 0, 0, 0]);
+  const due = a._eyeAT == null || S.t - a._eyeAT >= 8 || (S.t - a._eyeAT >= 4 && ((S.t + a.id) & 3) === 0) || a.down || a.dead || a.act;
+  if (due) { const ee = eyeOf(S, a); e[0] = ee[0]; e[1] = ee[1]; e[2] = ee[2]; e[3] = a.x; e[4] = a.y; e[5] = a.z; a._eyeAT = S.t; }
+  const o = a._eyeA2 || (a._eyeA2 = [0, 0, 0]);
+  o[0] = e[0] + a.x - e[3]; o[1] = e[1] + a.y - e[4]; o[2] = e[2] + a.z - e[5];
+  return o;
+}
 export function eyeOf(S, a) {
   if (a._capT === S.t && a._eye) return a._eye;
   capsOf(S, a);
@@ -6462,8 +6507,8 @@ export const PROPS = {
 
 @@@@ FILE src/engine/data/version.js text 209
 // 版番号: 互換（セーブ・オンラインの相性。上げたら古いセーブは捨てる）と表示用
-export const VERSION = '0.1.8';
-export const COMPAT = 4;
+export const VERSION = '0.1.9';
+export const COMPAT = 5;
 export const TITLE = 'HARD ENTRY';
 
 @@@@ FILE src/engine/data/weapons.js text 46183
@@ -7236,7 +7281,7 @@ export function detonateC2(S, w, did, ev) {
   return true;
 }
 
-@@@@ FILE src/engine/engine.js text 8203
+@@@@ FILE src/engine/engine.js text 8458
 // エンジン: 状態（関数を含まないデータ）と1ステップの進め方。命令（入力）→ 出来事（イベント）。
 // 固定ステップ 1/60 秒（シミュレーションでは 1/30 も可）。乱数はシード付き。dump/load で丸ごと保存・復元。
 import { compileMap, CS, LH } from './world.js';
@@ -7252,6 +7297,7 @@ import { stepStatus } from './status.js';
 import { MAPS } from './maps/index.js';
 import { MODES } from './modes/index.js';
 import { thinkAll, collectNoise } from './ai/brain.js';
+import { buildNav } from './ai/nav.js';
 import { bakeLight, HS } from './light.js';
 import { initBars, barGlass, linkBars } from './barricade.js';
 
@@ -7265,6 +7311,8 @@ export function baseWorld(mapId) {
     w = compileMap(def);
     if (w.errors.length) throw new Error(`マップ ${mapId} の誤り: ` + w.errors.slice(0, 5).join(' / '));
     lightForAI(w, def);
+    // AI の歩ける所の格子も、マップを読むときに1回だけ作る（試合の最初のこまで作ると一瞬止まっていた）。試合ごとの w は元の w を引き継ぐ
+    buildNav(w);
     worldCache.set(mapId, w);
   }
   return w;
@@ -9258,9 +9306,10 @@ export function canvas(W, D, fill = ' ') {
   return c;
 }
 
-@@@@ FILE src/engine/maps/gasstation.js text 14117
+@@@@ FILE src/engine/maps/gasstation.js text 14592
 // ガソリンスタンド「4U」と食堂（夜）。店・食堂・トイレ・休憩室・倉庫・事務所・厨房・冷蔵室。表の給油所、裏の路地、東の駐車場。
 // 2階（11-12 追加）: 店の奥の上に店主の住まい（居間・寝室・浴室・物置・廊下）。休憩室の階段と、裏の路地の外階段から上がる
+// 屋上（11-12 追加）: 店・食堂・厨房の上は歩ける平らな屋根。2階の窓を乗り越えて出る（ふちは低い立ち上がり）
 import { canvas } from './draw.js';
 
 const c = canvas(110, 84, ',');
@@ -9338,6 +9387,9 @@ b.door(27, 14, 'h', 2, 'M');               // 居間 → 外階段の踊り場
 // 窓（裏の路地・西・東の屋根の側・南の屋根の側）
 b.win(31, 14, 'h', 3); b.win(40, 14, 'h', 4);
 b.win(18, 19, 'v', 3); b.win(61, 26, 'v', 2); b.win(24, 29, 'h', 4); b.win(42, 29, 'h', 3);
+// 平らな屋根（店・食堂・厨房の上）: 2階の窓を乗り越えて出られる。ふちは低い立ち上がり（乗り越えると下へ飛び降りる）
+b.rect(18, 30, 92, 48, '"'); b.rect(62, 14, 92, 29, '"');
+b.v(18, 30, 48, 'L'); b.h(18, 92, 48, 'L'); b.v(92, 14, 48, 'L'); b.h(62, 92, 14, 'L');
 // 外階段と踊り場（手すり）
 b.stairs(26, 4, 3, 8, 's');
 b.rect(25, 12, 30, 13, '"');
@@ -10206,9 +10258,10 @@ export default {
   missions: { barricade: {}, hostage: {}, bomb: { time: 780 }, raid: { susMul: 1.1 }, active: {} },
 };
 
-@@@@ FILE src/engine/maps/suburb.js text 10971
+@@@@ FILE src/engine/maps/suburb.js text 13694
 // 郊外の家（夕方・2階）: メープル通りの一軒家。
 //  1階: 居間・玄関・廊下・書斎・洗濯室・洗面所・食堂・台所・車庫。2階: 主寝室・寝室2〜4・浴室・物置・廊下。前庭・裏のテラス・両脇の通路
+//  11-12 追加: 車庫の上の2階（ゲーム部屋・物置。2階の廊下の東の扉と、車庫の東の外階段から）、裏庭の作業小屋（作業場・物置）
 import { canvas } from './draw.js';
 
 const W = 72, D = 64;
@@ -10257,7 +10310,15 @@ for (let z = 31; z <= 36; z++) a.set(37, z, 'O');   // 玄関 ↔ 台所
 // 窓
 a.win(19, 42, 'h', 6); a.win(40, 42, 'h', 6);
 a.win(14, 24, 'v', 3); a.win(14, 38, 'v', 3); a.win(39, 14, 'h', 3); a.win(24, 14, 'h', 2); a.win(17, 14, 'h', 2); a.win(50, 17, 'v', 3);
-a.win(64, 37, 'v', 3);
+a.win(64, 27, 'v', 2);
+// 車庫の東の外階段（北へ上がって2階の踊り場へ）
+a.stairs(65, 33, 3, 8, 's');
+// 裏庭の作業小屋（板の壁・コンクリートの床）: 作業場 | 物置
+a.room(50, 2, 63, 10, 'W', '-');
+a.v(58, 3, 9, 'W');
+a.door(54, 10, 'h', 2);                   // 作業場の入口（家の側）
+a.door(58, 5, 'v');                       // 作業場 ↔ 物置
+a.win(63, 5, 'v', 2);
 // 庭: 板の塀（西・北・東）と、前庭の低い生け垣
 a.v(8, 0, 44, 'F'); a.v(68, 0, 44, 'F'); a.h(8, 68, 0, 'F');
 a.h(16, 28, 47, 'L'); a.h(37, 48, 47, 'L');
@@ -10285,13 +10346,25 @@ b.door(42, 30, 'h');                      // 寝室4
 b.door(31, 39, 'v');                      // 物置（主寝室から）
 b.win(18, 14, 'h', 4); b.win(33, 14, 'h', 4); b.win(44, 14, 'h', 2);
 b.win(22, 42, 'h', 5); b.win(41, 42, 'h', 5); b.win(14, 17, 'v', 3); b.win(50, 17, 'v', 3);
+// 車庫の上（11-12 追加）: ゲーム部屋 | 物置。2階の廊下の東の扉と、東の外階段の踊り場から
+b.room(50, 22, 64, 42, 'W', '~');
+b.v(50, 22, 42, '#');
+b.h(51, 63, 33, '=');
+b.rect(51, 34, 63, 41, '-');
+b.door(50, 27, 'v', 2);                   // 2階の廊下 → ゲーム部屋
+b.door(61, 33, 'h', 2);                   // ゲーム部屋 ↔ 物置
+b.door(64, 30, 'v', 2, 'M');              // 外階段の踊り場 → ゲーム部屋
+b.win(59, 22, 'h', 3); b.win(55, 42, 'h', 4);
+b.stairs(65, 33, 3, 8, 's');
+b.rect(65, 30, 67, 32, '"');              // 踊り場
+b.h(65, 68, 29, 'L'); b.v(68, 30, 35, 'L'); // 手すり
 
 export default {
   id: 'suburb', name: 'メープル通りの家', en: 'MAPLE STREET HOUSE', time: 'dusk', floor: 3,
-  desc: '静かな住宅街の2階建ての一軒家。1階は居間・台所・食堂・書斎、2階に寝室が4つ。玄関のほかに裏口・勝手口・車庫からも入れる。階段の上は待ち伏せに向くので、上がる前に投げ物を考えること。',
+  desc: '静かな住宅街の2階建ての一軒家。1階は居間・台所・食堂・書斎、2階に寝室が4つと、車庫の上のゲーム部屋。裏庭に作業小屋。玄関のほかに裏口・勝手口・車庫、車庫の東の外階段（2階）からも入れる。階段の上は待ち伏せに向くので、上がる前に投げ物を考えること。',
   levels: [{ rows: a.rows() }, { rows: b.rows() }],
-  stairs: [{ i: 15, j: 30, w: 3, len: 8, dir: 'n', L: 0 }],
-  paint: { '居間': '#d8cfbf', '台所': '#e4e1d6', '食堂': '#d6c8b0', '書斎': '#b8c2b8', '廊下': '#d8d2c4', '玄関': '#d8d2c4', '主寝室': '#c9c2d6', '寝室2': '#cfd9e0', '寝室3': '#e0d6c2', '寝室4': '#d6e0cc', '浴室': '#cfdde2', '洗面所': '#cfdde2', '洗濯室': '#dadada', '車庫': '#b8b4ac', '2階廊下': '#d8d2c4', '物置': '#cfc8ba' },
+  stairs: [{ i: 15, j: 30, w: 3, len: 8, dir: 'n', L: 0 }, { i: 65, j: 33, w: 3, len: 8, dir: 'n', L: 0 }],
+  paint: { '居間': '#d8cfbf', '台所': '#e4e1d6', '食堂': '#d6c8b0', '書斎': '#b8c2b8', '廊下': '#d8d2c4', '玄関': '#d8d2c4', '主寝室': '#c9c2d6', '寝室2': '#cfd9e0', '寝室3': '#e0d6c2', '寝室4': '#d6e0cc', '浴室': '#cfdde2', '洗面所': '#cfdde2', '洗濯室': '#dadada', '車庫': '#b8b4ac', '2階廊下': '#d8d2c4', '物置': '#cfc8ba', 'ゲーム部屋': '#c8d0d8', '車庫の上の物置': '#cfc8ba', '作業小屋': '#c9c4b8', '小屋の物置': '#c9c4b8' },
   extBrick: '#9a6a4e', extWood: '#c9cfcf', ceiling: 'plaster', carpet: '#6a6050', homey: true, winFrame: '#ebe8e1',
   props: [
     // 洗濯室・洗面所
@@ -10308,7 +10381,7 @@ export default {
     // 台所
     ['counter', 49.1, 39.2, 0, 3, { w: 2.6 }], ['stove', 38.9, 40.4, 0, 1], ['fridge', 38.9, 38.2, 0, 1], ['counter', 49.1, 30.5, 0, 3, { w: 2.4 }], ['table', 44, 34, 0, 0, { w: 2, d: 1 }], ['stool', 43, 35.6, 0, 0], ['stool', 45, 35.6, 0, 0],
     // 車庫
-    ['car', 57, 32, 0, 0, { color: 3 }], ['shelf', 63.2, 25.5, 0, 3, { w: 2.4 }], ['crates', 52.5, 24.5, 0, 0], ['barrel', 62.6, 41.1, 0, 0], ['boxes', 52, 28, 0, 1],
+    ['car', 57, 32, 0, 0, { color: 3 }], ['shelf', 63.2, 24.4, 0, 3, { w: 1.6 }], ['crates', 52.5, 24.5, 0, 0], ['barrel', 62.6, 41.1, 0, 0], ['boxes', 52, 28, 0, 1],
     // 2階: 寝室2（北西）
     ['bed', 26.6, 17.3, 1, 0], ['wardrobe', 28.8, 22.6, 1, 3], ['tvstand', 19, 25.4, 1, 2], ['cabinet', 15.6, 22, 1, 1],
     // 寝室3（北）
@@ -10318,20 +10391,28 @@ export default {
     // 主寝室（南西）・物置
     ['bed', 21, 36, 1, 1], ['wardrobe', 35.3, 33, 1, 3], ['desk', 21, 31.8, 1, 0], ['chair', 21, 33.2, 1, 2], ['tvstand', 29.2, 31.5, 1, 0], ['boxes', 16, 41, 1, 0], ['boxes', 35.2, 38.8, 1, 0], ['shelf', 34, 41.3, 1, 2, { w: 1.2, d: 0.4 }],
     // 寝室4（南東）・廊下
-    ['bed', 47.4, 36.4, 1, 3], ['bookshelf', 37.4, 36, 1, 1], ['crates', 48.2, 32.5, 1, 0], ['plant', 48.6, 28, 1, 0],
+    ['bed', 47.4, 36.4, 1, 3], ['bookshelf', 37.4, 36, 1, 1], ['crates', 48.2, 32.5, 1, 0],
     // 外
-    ['car', 57, 49.5, 0, 0, { color: 5 }], ['tree', 4, 30, 0, 0], ['tree', 64, 14, 0, 0], ['tree', 12, 6, 0, 0], ['tree', 58, 6, 0, 0], ['tree', 44, 51, 0, 0], ['tree', 20, 51, 0, 0],
+    ['car', 57, 49.5, 0, 0, { color: 5 }], ['tree', 4, 30, 0, 0], ['tree', 64, 14, 0, 0], ['tree', 12, 6, 0, 0], ['tree', 44, 51, 0, 0], ['tree', 20, 51, 0, 0],
     ['table', 34, 9, 0, 0], ['chair', 32.6, 9, 0, 1], ['chair', 35.4, 9, 0, 3], ['barrel', 47, 7, 0, 0], ['lamp', 27, 55, 0, 0], ['lamp', 65, 55, 0, 0], ['dumpster', 66.5, 47, 0, 1],
+    // 車庫の上: ゲーム部屋（ソファ・テレビ）と物置
+    ['sofa', 56.5, 23.9, 1, 0], ['table', 56.5, 26.4, 1, 0, { w: 1.2, d: 0.6 }], ['tvstand', 56.5, 31.8, 1, 2], ['bookshelf', 51.2, 24.5, 1, 1], ['armchair', 60.6, 27.6, 1, 3],
+    ['table', 56, 37.5, 1, 0, { w: 2.2, d: 1.2 }], ['stool', 54.2, 37.5, 1, 1], ['stool', 57.8, 37.5, 1, 3], ['cabinet', 63.4, 40.9, 1, 3], ['boxes', 51.6, 40.6, 1, 0], ['shelf', 63.3, 38.2, 1, 3, { w: 1.4, d: 0.5 }],
+    // 作業小屋: 作業台・棚・箱
+    ['counter', 53.5, 3.5, 0, 0, { w: 2.4, top: '#8a7a62', body: '#6a5a48' }], ['shelf', 51.2, 6.5, 0, 1, { w: 1.6, d: 0.5 }], ['boxes', 52.8, 8.9, 0, 0],
+    ['barrel', 61.8, 3.8, 0, 0], ['boxes', 60, 8.6, 0, 0], ['boxes', 62, 8.4, 0, 1],
   ],
   lights: [
     [22, 35, 0, 'lamp'], [33, 34, 0, 'warm'], [33, 20, 0, 'lamp'], [21, 25, 0, 'lamp'], [18, 18, 0, 'fluo'], [25, 17, 0, 'dim'], [44, 21, 0, 'lamp'], [44, 35, 0, 'fluo'], [57, 27, 0, 'fluo'], [57, 38, 0, 'dim'],
     [22, 20, 1, 'lamp'], [35, 20, 1, 'lamp'], [45, 20, 1, 'fluo'], [27, 35, 1, 'lamp'], [43, 35, 1, 'warm'], [24, 28, 1, 'dim'], [40, 28, 1, 'dim'], [33.5, 39.5, 1, 'dim', 0.5],
     [27, 55, 0, 'street'], [65, 55, 0, 'street'], [33, 12, 0, 'warm', 0.7], [33, 44, 0, 'warm', 0.7],
+    [56, 28, 1, 'lamp'], [57, 38, 1, 'fluo', 0.8], [66, 31, 1, 'dim', 0.7], [54, 6, 0, 'fluo', 0.8], [60.5, 6, 0, 'dim', 0.6],
   ],
   rooms: [
     ['居間', 'LIVING ROOM', 22, 35], ['玄関', 'FOYER', 33, 34], ['廊下', 'HALLWAY', 33, 20], ['書斎', 'STUDY', 21, 25], ['洗濯室', 'LAUNDRY', 18, 18], ['洗面所', 'BATHROOM', 25, 17],
     ['食堂', 'DINING', 44, 21], ['台所', 'KITCHEN', 44, 36], ['車庫', 'GARAGE', 57, 26],
     ['寝室2', 'BEDROOM 2', 22, 20, 1], ['寝室3', 'BEDROOM 3', 35, 20, 1], ['浴室', 'BATH', 45, 20, 1], ['主寝室', 'MASTER BEDROOM', 27, 35, 1], ['寝室4', 'BEDROOM 4', 43, 35, 1], ['2階廊下', 'UPSTAIRS HALL', 33, 28, 1], ['物置', 'CLOSET', 33, 39, 1],
+    ['ゲーム部屋', 'GAME ROOM', 57, 28, 1], ['車庫の上の物置', 'GARAGE LOFT', 57, 38, 1], ['作業小屋', 'WORKSHOP', 54, 6], ['小屋の物置', 'SHED', 60, 6],
   ],
   doors: { '32,42,0': { outer: true }, '33,14,0': { outer: true }, '44,14,0': { outer: true, locked: true }, '14,17,0': { outer: true }, '64,30,0': { outer: true, locked: true }, '55,42,0': { outer: true, locked: true } },
   spawn: {
@@ -10340,14 +10421,15 @@ export default {
       { name: '裏庭', en: 'BACKYARD', x: 34, z: 7, yaw: 0 },
       { name: '車庫の横', en: 'GARAGE SIDE', x: 66.5, z: 28, yaw: -Math.PI / 2 },
     ],
-    sus: [[24, 35], [26, 39], [33, 37], [44, 31], [47, 38], [41, 17], [18, 25], [25, 25], [17, 18], [57, 25], [60, 39], [33, 22], [22, 21, 1], [36.5, 18, 1], [27, 34, 1], [44, 34, 1], [33, 28, 1], [46, 17, 1]],
-    civ: [[24, 32], [41, 37], [41, 23], [17, 23], [26, 18], [21, 21, 1], [37, 19.5, 1], [29, 36, 1], [45, 35, 1], [33.5, 39.5, 1], [16.5, 39.5, 1]],
-    hostage: [[33.5, 39.5, 1], [38, 17, 1], [26, 23], [61, 25], [16.5, 39.5, 1]],
-    bomb: [[57, 25], [26, 23], [18, 18], [46, 24, 1], [24, 21, 1], [46, 34, 1]],
-    evidence: [[21, 23], [44, 34], [63.2, 25.5], [19, 25.4, 1], [38.6, 22.5, 1], [21, 34]],
-    pvp: { a: [[32, 51], [30, 51], [34, 7], [36, 7], [66.5, 28], [66.5, 32], [24, 50], [40, 50]], b: [[22, 21, 1], [36.5, 18, 1], [27, 34, 1], [44, 31], [24, 35], [44, 17], [44, 34, 1], [18, 25]] },
+    sus: [[24, 35], [26, 39], [33, 37], [44, 31], [47, 38], [41, 17], [18, 25], [25, 25], [17, 18], [57, 25], [60, 39], [33, 22], [22, 21, 1], [36.5, 18, 1], [27, 34, 1], [44, 34, 1], [33, 28, 1], [46, 17, 1],
+      [55, 29, 1], [59, 38, 1], [55, 7], [60.5, 6.5]],
+    civ: [[24, 32], [41, 37], [41, 23], [17, 23], [26, 18], [21, 21, 1], [37, 19.5, 1], [29, 36, 1], [45, 35, 1], [33.5, 39.5, 1], [16.5, 39.5, 1], [58.5, 28.5, 1]],
+    hostage: [[33.5, 39.5, 1], [38, 17, 1], [26, 23], [61, 25], [16.5, 39.5, 1], [53, 39, 1], [60.5, 5.5]],
+    bomb: [[57, 25], [26, 23], [18, 18], [46, 24, 1], [24, 21, 1], [46, 34, 1], [59, 39.5, 1], [55.5, 5.5]],
+    evidence: [[21, 23], [44, 34], [63.2, 24.4], [19, 25.4, 1], [38.6, 22.5, 1], [21, 34], [53.5, 3.5], [56.5, 26.4, 1]],
+    pvp: { a: [[32, 51], [30, 51], [34, 7], [36, 7], [66.5, 26], [66.5, 24], [24, 50], [40, 50]], b: [[22, 21, 1], [36.5, 18, 1], [27, 34, 1], [44, 31], [24, 35], [44, 17], [44, 34, 1], [18, 25], [55, 29, 1], [58, 38, 1]] },
     sites: [{ name: 'A 主寝室', x: 27, z: 34, L: 1, r: 3.2 }, { name: 'B 台所', x: 44, z: 31, r: 3.4 }],
-    tdm: [[5, 50], [66, 50], [4, 8], [64, 8], [24, 35], [47, 24.5], [57, 25], [27, 34, 1], [36.5, 18, 1], [33, 20]],
+    tdm: [[5, 50], [66, 50], [4, 8], [65.5, 12], [24, 35], [47, 24.5], [57, 25], [27, 34, 1], [36.5, 18, 1], [33, 20], [57, 28, 1], [55, 7]],
   },
   missions: { barricade: {}, hostage: {}, bomb: { time: 720 }, raid: { susMul: 0.8 }, active: { civMul: 0.8 } },
 };
@@ -12780,7 +12862,7 @@ function tryFire(S, w, a, W, wi, inp, ev) {
   ev.push({ e: 'shot', id: a.id, wid: wi.id, x: a.x, y: a.y, z: a.z, supp, loud: (W.less ? 0.4 : 1) * m.noise, fl: m.flash, n: ws.shots });
 }
 
-@@@@ FILE src/engine/world.js text 55405
+@@@@ FILE src/engine/world.js text 58497
 // マップを組み立てて、当たり・視線・弾の通り道を調べる（DOMなし。ホストとゲストで同じ結果になる）
 // 座標: メートル。マス (i, j) の中心は x = (i+0.5)*CS, z = (j+0.5)*CS。階 L の床は y = L*LH。
 // 壁はマスの中央の板。高さ方向に4つのブロック（0.7mずつ、上の端は天井 2.8m）。
@@ -12800,6 +12882,8 @@ export function depAxis(d) { return [-Math.cos(d.yaw), Math.sin(d.yaw)]; }
 export const C = { VOID: 0, FLOOR: 1, OUT: 2, WALL: 3, DOOR: 4, WINDOW: 5, GLASSWALL: 6, OPEN: 7, LOW: 8, FENCE: 9, STAIR: 10 };
 const WALLISH = new Set([C.WALL, C.DOOR, C.WINDOW, C.GLASSWALL, C.OPEN, C.LOW, C.FENCE]);
 export const isWallish = (t) => WALLISH.has(t);
+// 階段の横に手すりを付けるか: 横のマスが開いている（壁でない）か、金網（背が低く、階段の上のほうは越えて見える）
+export const railSide = (t) => !WALLISH.has(t) || t === C.FENCE;
 
 // 文字 → [種類, 材質(壁) or 床の材質]
 const FLOOR_CH = { '.': -1, ':': F.TILE, '_': F.WOOD, '~': F.CARPET, '-': F.CONCRETE, 'm': F.METAL };
@@ -12893,6 +12977,19 @@ export function compileMap(def) {
       if (s.L + 1 < NL) { if (T(s.L + 1, i, j) !== C.STAIR) w.errors.push(`階段の上の階が 'S' ではない (${s.L + 1},${i},${j})`); w.stairAt[idx(s.L + 1, i, j)] = s.id; }
     }
     w.stairs.push(s);
+  }
+  // 3b) 階段の手すり（開いている側。描くのと同じ決め方: 横の真ん中のマスが壁でなければ）。体が当たる（11-12 まで見た目だけだった）
+  w.rails = [];
+  for (const s of w.stairs) {
+    const along = s.dir === 'n' || s.dir === 's';
+    for (const [c, sg] of along ? [[s.x0, -1], [s.x1, 1]] : [[s.z0, -1], [s.z1, 1]]) {
+      const ci = along ? Math.floor((c + sg * 0.25) / CS) : Math.floor(((s.x0 + s.x1) / 2) / CS);
+      const cj = along ? Math.floor(((s.z0 + s.z1) / 2) / CS) : Math.floor((c + sg * 0.25) / CS);
+      if (ci < 0 || cj < 0 || ci >= W || cj >= D) continue;
+      if (!railSide(w.cell[idx(s.L, ci, cj)])) continue;
+      const cc = c - sg * RAIL.inset;
+      w.rails.push(along ? { s, ax: cc, az: s.z0, bx: cc, bz: s.z1 } : { s, ax: s.x0, az: cc, bx: s.x1, bz: cc });
+    }
   }
   // 4) 床の板: 階L（L>=1）は、その階の床・壁、または下の階が屋内なら板がある。階段の吹き抜けは除く
   for (let L = 0; L < NL; L++) for (let j = 0; j < D; j++) for (let i = 0; i < W; i++) {
@@ -13162,7 +13259,7 @@ function buildRooms(w, def) {
     w.rooms.push(room);
   }
   for (const [name, en, i, j, L = 0] of named) {
-    const k = w.idx(L, i, j), r = w.roomAt[k];
+    const k = w.idx(L, Math.floor(i), Math.floor(j)), r = w.roomAt[k];
     if (r < 0) { w.errors.push(`部屋の名前の位置が床ではない: ${name} (${L},${i},${j})`); continue; }
     w.rooms[r].name = name; w.rooms[r].en = en;
   }
@@ -13353,10 +13450,38 @@ export function pushOut(w, x, z, y0, y1, r, doorsState, ignoreProp = -1, out = [
     }
     const deps = doorsState && doorsState.deps;
     if (deps && deps.length) { const r2 = pushDeps(deps, px, pz, y0, y1, r); if (r2[2]) { px += r2[0]; pz += r2[1]; hit = 1; if (pass) pm = Math.max(pm, Math.abs(r2[0]) + Math.abs(r2[1])); } }
+    if (w.rails && w.rails.length) { const r2 = pushRails(w, px, pz, y0, y1, r); if (r2[2]) { px += r2[0]; pz += r2[1]; hit = 1; if (pass) pm = Math.max(pm, Math.abs(r2[0]) + Math.abs(r2[1])); } }
   }
   out[0] = px - x; out[1] = pz - z; out[2] = hit; out[3] = pm; // out[3]: 2回目の押し出しの最大（0に近ければ収まっている）
   return out;
 }
+// 階段の手すり: 段の面から RAIL.h の高さまで、床（階段の下の端の階）から立ち上がる細い板として押し出す
+export const RAIL = { h: 0.95, inset: 0.05, th: 0.03, from: 0.6 };
+function pushRails(w, px, pz, y0, y1, r) {
+  let ox = 0, oz = 0, hit = 0;
+  for (const R of w.rails) {
+    const x = px + ox, z = pz + oz, m = r + 0.1;
+    if (x < Math.min(R.ax, R.bx) - m || x > Math.max(R.ax, R.bx) + m || z < Math.min(R.az, R.bz) - m || z > Math.max(R.az, R.bz) + m) continue;
+    const base = R.s.L * LH;
+    // 上の階の床に立っている人には当たらない（上の階の吹き抜けのふちは、その階の手すり（'L'）が受け持つ）
+    if (y0 - STEP >= base + LH - 0.1) continue;
+    // 当たるのは段の高さが RAIL.from（0.6m）より上の所だけ（下の端の近くは、横から寄っても引っかからないように）
+    const vx = R.bx - R.ax, vz = R.bz - R.az, l2 = vx * vx + vz * vz || 1;
+    const t = Math.max(0, Math.min(1, ((x - R.ax) * vx + (z - R.az) * vz) / l2));
+    const h0 = stairHeight(w, R.s, R.ax + vx * t, R.az + vz * t);
+    if (h0 - base < RAIL.from) continue;
+    const top = h0 + RAIL.h;
+    if (y1 <= base || y0 >= top) continue;
+    // 下の端の近くの区間を除いた線分
+    const hA = stairHeight(w, R.s, R.ax, R.az) - base, hB = stairHeight(w, R.s, R.bx, R.bz) - base;
+    const uA = hA < hB ? Math.min(1, RAIL.from / Math.max(0.01, hB - hA)) : 0, uB = hA < hB ? 1 : 1 - Math.min(1, RAIL.from / Math.max(0.01, hA - hB));
+    const r2 = circleSeg(x, z, r + RAIL.th, R.ax + vx * uA, R.az + vz * uA, R.ax + vx * uB, R.az + vz * uB);
+    if (r2) { ox += r2[0]; oz += r2[1]; hit = 1; }
+  }
+  _pr[0] = ox; _pr[1] = oz; _pr[2] = hit;
+  return _pr;
+}
+const _pr = [0, 0, 0];
 // 置ける盾に体が当たったら押し出す（高さ1mなので乗り越えられる）
 function pushDeps(deps, px, pz, y0, y1, r) {
   let ox = 0, oz = 0, hit = 0;
@@ -16701,12 +16826,12 @@ export function gunModel(wid, att = {}) {
 }
 export const GUN_COLORS = K;
 
-@@@@ FILE src/render/level.js text 52877
+@@@@ FILE src/render/level.js text 53681
 // マップの見た目を組み立てる: 床・天井・屋根・壁（ブロックと穴）・階段・扉と窓の枠・ガラス・金網・家具・照明の器具
 // 塊（チャンク）ごとに作り、壁が壊れたらその塊だけ作り直す。
 import { MeshBuilder, hex, mixc, mulc } from './build.js';
 import { LAYER } from './textures.js';
-import { CS, LH, CEIL, BH, NB, C, isWallish } from '../engine/world.js';
+import { CS, LH, CEIL, BH, NB, C, isWallish, railSide } from '../engine/world.js';
 import { M, F } from '../engine/data/materials.js';
 import { buildProp } from './props.js';
 
@@ -17239,12 +17364,12 @@ function stairMesh(ctx, B, s) {
   const along = s.dir === 'n' || s.dir === 's';
   const sides = along ? [[s.x0, -1], [s.x1, 1]] : [[s.z0, -1], [s.z1, 1]];
   for (const [c, sg] of sides) {
-    // 外側のマスが床（開いている）なら手すり
+    // 外側のマスが床（開いている）か金網なら手すり（当たりの w.rails と同じ決め方）
     const ci = along ? Math.floor((c + sg * 0.25) / CS) : Math.floor(((s.x0 + s.x1) / 2) / CS);
     const cj = along ? Math.floor(((s.z0 + s.z1) / 2) / CS) : Math.floor((c + sg * 0.25) / CS);
     if (ci < 0 || cj < 0 || ci >= w.W || cj >= w.D) continue;
     const t = w.cell[w.idx(s.L, ci, cj)];
-    if (isWallish(t)) continue;
+    if (!railSide(t)) continue;
     const off = -sg * 0.05;
     const a0 = s.dir === 'n' ? [c + off, base + LH + railY, s.z0] : s.dir === 's' ? [c + off, base + LH + railY, s.z1] : s.dir === 'e' ? [s.x1, base + LH + railY, c + off] : [s.x0, base + LH + railY, c + off];
     const a1 = s.dir === 'n' ? [c + off, base + railY, s.z1] : s.dir === 's' ? [c + off, base + railY, s.z0] : s.dir === 'e' ? [s.x0, base + railY, c + off] : [s.x1, base + railY, c + off];
@@ -17358,14 +17483,25 @@ function wallFaceDetails(ctx, B, L, i, j, k, b) {
     const hv = h3(i * 2 + (nx + nz > 0 ? 1 : 0), j, L * 7 + 3);
     // コンセント（9マスに1つくらい、腰より下）
     if (hv < 0.11 && a1 - a0 > 0.4) plate(B, fx + nx * 0.001, base + 0.3, fz + nz * 0.001, nx, nz, 0.07, 0.11, false);
-    // 額・ポスター（25マスに1つくらい、目の高さ。部屋ごとの色合い）
-    else if (hv > 0.955 && !blocked && a1 - a0 > 0.45 && w.blocks[k * NB + 2]) picture(ctx, B, fx, base + 1.55, fz, nx, nz, hv, sd.room);
+    // 額・ポスター（25マスに1つくらい、目の高さ。部屋ごとの色合い）。扉・窓・開口・角にはみ出さない幅だけ
+    else if (hv > 0.955 && !blocked && a1 - a0 > 0.45 && w.blocks[k * NB + 2]) {
+      const di = ax === 0 ? 1 : 0, dj = ax === 0 ? 0 : 1;
+      const room2 = (sg) => solidRun(w, L, i + di * sg, j + dj * sg) ? CS : 0;
+      const free = Math.min(am - a0 + room2(-1), a1 - am + room2(1)) - 0.1;
+      if (free >= 0.2) picture(ctx, B, fx, base + 1.55, fz, nx, nz, hv, sd.room, free);
+    }
   }
 }
 
-// 額（絵）とポスター
-function picture(ctx, B, x, y, z, nx, nz, hv, room) {
-  const pr = 0.025, hw = 0.26 + (hv * 37 % 1) * 0.12, hh = 0.2 + (hv * 53 % 1) * 0.1;
+// 隣のマスも、目の高さまでふつうの壁が続いているか（扉・窓・開口・ガラスの壁でない）
+function solidRun(w, L, i, j) {
+  if (i < 0 || j < 0 || i >= w.W || j >= w.D) return false;
+  const k = w.idx(L, i, j);
+  return w.cell[k] === C.WALL && !!w.blocks[k * NB + 2] && !!w.blocks[k * NB + 3];
+}
+// 額（絵）とポスター。maxHw: 横の半分の幅の上限（扉や窓にはみ出さない）
+function picture(ctx, B, x, y, z, nx, nz, hv, room, maxHw = 1) {
+  const pr = 0.025, hw = Math.min(maxHw, 0.26 + (hv * 37 % 1) * 0.12), hh = 0.2 + (hv * 53 % 1) * 0.1;
   const frame = [hex('#2b2622'), hex('#6b4a2c'), hex('#d9d4c8'), hex('#1d1e20')][Math.floor(hv * 997) % 4];
   const bx = (a0, a1, y0, y1, d0, d1, col, r = 0.004) => {
     if (nx) { const x0 = x + nx * d0, x1 = x + nx * d1; B.bbox(Math.min(x0, x1), y0, z + a0, Math.max(x0, x1), y1, z + a1, r, LAYER.plain, col); }
@@ -23407,7 +23543,7 @@ export async function runTests(filter) {
   return res;
 }
 
-@@@@ FILE tests/run_all.mjs text 55067
+@@@@ FILE tests/run_all.mjs text 55716
 // テスト一式: node tests/run_all.mjs [--quick] [--no-sizes] [--no-net] → test-results/summary.md
 //  1 ビルド  2 単体  3 マップ  4 音  5 自動の試合（作戦・対戦・同じシードで同じ結果・途中保存）
 //  6 ブラウザ（起動・タップ・音の開始・回した画面・2本指・射撃/ADS/リロード/リーン/しゃがみ・ミニマップ→地図・ミラーの視点・HUDの編集・撤収→結果・保存と続きから・2回押し・WebGL）
@@ -23805,19 +23941,22 @@ try {
           p.x = x; p.z = z; p.vx = p.vz = 0;
           g.yaw = Math.atan2(d.cx - x, d.cz - z); g.pitch = -0.2;
           for (const b of S.actors) if (b.kind === 'sus' || b.kind === 'civ') { b.x = 1; b.z = 1; }
-          g.acts.push({ a: 'op', k: 'door', id: d.id, op: 'mirror' });
           return d.id;
         }
       }
       return -1;
     });
-    await page.waitForFunction(() => !!window.__app.game.p.peek, null, { timeout: 15000 }).catch(() => {});
+    // 向きがエンジンに入ってから（動作は前のステップの向きで見ている物に対して行う）ミラーを使う
+    await page.waitForFunction(() => { const g = window.__app.game, d = g.p.yaw - g.yaw; return Math.abs(Math.atan2(Math.sin(d), Math.cos(d))) < 0.05 && Math.abs(g.p.pitch - g.pitch) < 0.05; }, null, { timeout: 20000 }).catch(() => {});
+    if (ok >= 0) await page.evaluate((id) => { window.__app.game.acts.push({ a: 'op', k: 'door', id, op: 'mirror' }); }, ok);
+    // ミラーを出すのに 0.8秒（ゲームの時間）。ソフトウェア描画では1こま1秒以上かかるので長めに待つ
+    await page.waitForFunction(() => !!window.__app.game.p.peek, null, { timeout: 60000 }).catch(() => {});
     await page.waitForTimeout(800);
     const pk = await page.evaluate(() => { const g = window.__app.game, el = document.querySelector('#hud .hud-peek'); return { peek: !!g.p.peek, shown: !!el && getComputedStyle(el).display !== 'none', text: el ? el.textContent.trim() : '' }; });
     await shot('作戦-ミラー');
     rec('操作', 'ミラーで扉の下から覗いた映像になり、出るのは「戻る」と短い案内だけ', ok >= 0 && pk.peek && pk.shown && /戻る/.test(pk.text) && !/人影|\d+人/.test(pk.text), `表示「${pk.text}」`);
     await tapAt(await center('#hud [data-btn="peekx"]'), 42);
-    await page.waitForTimeout(600);
+    await page.waitForFunction(() => !window.__app.game.p.peek, null, { timeout: 30000 }).catch(() => {});
     const after = await page.evaluate(() => !!window.__app.game.p.peek);
     rec('操作', 'ミラーの視点は「戻る」で元に戻る', pk.peek && !after);
   }
@@ -25130,6 +25269,28 @@ test('smoke: 発煙弾の煙の向こうは AI から見えない（煙が消え
   ok(made, '投げると煙の雲ができる');
 });
 
+@@@@ FILE tests/unit/rail.test.mjs text 1349
+import { test, ok, near } from '../lib/t.mjs';
+import { compileMap, pushOut, stairHeight, STEP, RAIL } from '../../src/engine/world.js';
+import { MAPS } from '../../src/engine/maps/index.js';
+
+test('world: 階段の手すりに体が当たる（開いている側。段の上からも床からも抜けられない）', () => {
+  const w = compileMap(MAPS.suburb);
+  // 居間の西の壁ぞいの階段（北へ上がる）。東の側が開いていて手すりがある
+  const R = w.rails.find(r => r.s.i0 === 15 && r.s.j0 === 30);
+  ok(R, '手すりがある');
+  const s = R.s, x = R.ax, z = (s.z0 + s.z1) / 2, h = stairHeight(w, s, x - 0.3, z), r = 0.28;
+  // 段の上（真ん中の高さ）から手すりへ寄ると、階段の内側へ押し戻される
+  const o = pushOut(w, x - 0.1, z, h + STEP, h + 1.7, r, null);
+  ok(o[2] && o[0] < -0.1, `段の上から押し戻す ${o[0].toFixed(2)}`);
+  // 床の側から手すりへ寄ると、外へ押し戻される
+  const o2 = pushOut(w, x + 0.1, z, STEP, 1.7, r, null);
+  ok(o2[2] && o2[0] > 0.1, `床の側から押し戻す ${o2[0].toFixed(2)}`);
+  // 手すりの上（段の面 + 手すりの高さ）より上は当たらない
+  const o3 = pushOut(w, x - 0.1, z, h + RAIL.h + 0.05, h + RAIL.h + 1.7, r, null);
+  near(o3[0], 0, 0.001, '手すりより上は当たらない');
+});
+
 @@@@ FILE tests/unit/run.mjs text 842
 // 単体テストをまとめて流す: node tests/unit/run.mjs [絞り込み]
 import { runTests } from '../lib/t.mjs';
@@ -25167,7 +25328,7 @@ test('stick: ダッシュは真上から少し斜め（±40°）に倒しても�
   ok(SPRINT_ZONE.keep < 56, 'エンジンが走る範囲の内側');
 });
 
-@@@@ FILE tests/unit/vault.test.mjs text 11024
+@@@@ FILE tests/unit/vault.test.mjs text 11815
 import { test, ok, eq, near } from '../lib/t.mjs';
 import { createGame, step } from '../../src/engine/engine.js';
 import { vaultPlan, fallDamage, FALL, VAULT } from '../../src/engine/move.js';
@@ -25355,6 +25516,18 @@ test('vault: 車も越えられる（屋根1.45m）。物の上に乗っても�
   const pl2 = vaultPlan(A.S, A.w, q, {});
   VAULT.tall = keep;
   ok(pl2, '（高さの決まりがなければ越えられる位置）');
+});
+
+test('vault: ガソリンスタンドの2階の窓を乗り越えて、平らな屋根に出られる（屋根のふちから飛び降りる）', () => {
+  const { G, S, w, p } = tdm('gasstation');
+  // 居間の南の窓（x 24〜27, z=29）の手前。南（+z）を向く（TDM は窓に板がない）
+  place(G, p, 25.5, 28.0, 0, 3);
+  ok(vaultPlan(S, w, p, {}), '窓を越える道がある');
+  vault(G, p);
+  ok(p.z > 29.6 * CS && Math.abs(p.y - 3) < 0.15 && p.alive, `屋根の上 z=${(p.z / CS).toFixed(1)} y=${p.y.toFixed(2)}`);
+  // 屋根の上を歩ける
+  for (let i = 0; i < 60; i++) step(G, { [p.id]: { mx: 0, mz: 1, yaw: 0, pitch: 0, stance: 0 } });
+  ok(p.z > 31.5 * CS && Math.abs(p.y - 3) < 0.15, `屋根を歩く z=${(p.z / CS).toFixed(1)} y=${p.y.toFixed(2)}`);
 });
 
 @@@@ FILE tests/unit/world.test.mjs text 2775
@@ -25827,7 +26000,7 @@ export function listModules(entry, root) {
   return out;
 }
 
-@@@@ FILE tools/mapcheck.mjs text 8555
+@@@@ FILE tools/mapcheck.mjs text 9291
 // マップの点検: node tools/mapcheck.mjs [mapId ...]
 //  - 世界の組み立ての誤り（部屋の名前・階段）
 //  - 家具が壁・扉・窓にめり込んでいないか、扉の前をふさいでいないか、家具どうしが重なっていないか
@@ -25895,6 +26068,16 @@ export function checkMap(id) {
   const q = [];
   for (const k of starts) if (walkK(k) && !seen[k]) { seen[k] = 1; q.push(k); }
   const WD = w.W * w.D;
+  // 窓は乗り越えて行き来できる（ガソリンスタンドの屋上のように、窓からだけ出られる所も「行ける」）
+  const winLinks = new Map();
+  const addL = (a, b) => { if (!winLinks.has(a)) winLinks.set(a, []); winLinks.get(a).push(b); };
+  for (let L = 0; L < w.NL; L++) for (let j = 1; j < w.D - 1; j++) for (let i = 1; i < w.W - 1; i++) {
+    if (w.cell[w.idx(L, i, j)] !== C.WINDOW) continue;
+    for (const [di, dj] of [[1, 0], [0, 1]]) {
+      const a2 = w.idx(L, i - di, j - dj), b2 = w.idx(L, i + di, j + dj);
+      if (walkK(a2) && walkK(b2)) { addL(a2, b2); addL(b2, a2); }
+    }
+  }
   while (q.length) {
     const k = q.pop(); const L = Math.floor(k / WD), r = k % WD, j = Math.floor(r / w.W), i = r % w.W;
     for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
@@ -25902,6 +26085,7 @@ export function checkMap(id) {
       const k2 = w.idx(L, ni, nj); if (seen[k2] || !walkK(k2)) continue; seen[k2] = 1; q.push(k2);
     }
     const ln = nav.links.get(k); if (ln) for (const k2 of ln) if (!seen[k2]) { seen[k2] = 1; q.push(k2); }
+    const wl = winLinks.get(k); if (wl) for (const k2 of wl) if (!seen[k2]) { seen[k2] = 1; q.push(k2); }
   }
   // 出現位置の点検: 実際に置かれる位置（家具をよけた最寄りの床）で調べる
   const chk = (label, x, z, L, opt = {}) => {
