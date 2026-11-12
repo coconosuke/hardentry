@@ -418,7 +418,9 @@ try {
     // 命令: 長押しで円形のメニュー
     const cb = await btn('cmd');
     await touch('touchStart', [{ x: cb.x, y: cb.y, id: 43 }]);
+    // 長押しは押している間のこまで決まる（ソフトウェア描画では1こま1秒以上かかるので、出るまで待つ）
     await page.waitForTimeout(700);
+    await page.waitForFunction(() => { const e = document.querySelector('#hud .hud-radial'); return !!e && e.classList.contains('on'); }, null, { timeout: 15000 }).catch(() => {});
     const rad = await page.evaluate(() => { const e = document.querySelector('#hud .hud-radial'); return { on: !!e && e.classList.contains('on'), n: e ? e.querySelectorAll('.ri, button, [data-i]').length : 0, txt: e ? e.textContent.slice(0, 60) : '' }; });
     await shot('作戦-命令');
     await touch('touchEnd', []);
