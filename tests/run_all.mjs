@@ -395,19 +395,22 @@ try {
           p.x = x; p.z = z; p.vx = p.vz = 0;
           g.yaw = Math.atan2(d.cx - x, d.cz - z); g.pitch = -0.2;
           for (const b of S.actors) if (b.kind === 'sus' || b.kind === 'civ') { b.x = 1; b.z = 1; }
-          g.acts.push({ a: 'op', k: 'door', id: d.id, op: 'mirror' });
           return d.id;
         }
       }
       return -1;
     });
-    await page.waitForFunction(() => !!window.__app.game.p.peek, null, { timeout: 15000 }).catch(() => {});
+    // 向きがエンジンに入ってから（動作は前のステップの向きで見ている物に対して行う）ミラーを使う
+    await page.waitForFunction(() => { const g = window.__app.game, d = g.p.yaw - g.yaw; return Math.abs(Math.atan2(Math.sin(d), Math.cos(d))) < 0.05 && Math.abs(g.p.pitch - g.pitch) < 0.05; }, null, { timeout: 20000 }).catch(() => {});
+    if (ok >= 0) await page.evaluate((id) => { window.__app.game.acts.push({ a: 'op', k: 'door', id, op: 'mirror' }); }, ok);
+    // ミラーを出すのに 0.8秒（ゲームの時間）。ソフトウェア描画では1こま1秒以上かかるので長めに待つ
+    await page.waitForFunction(() => !!window.__app.game.p.peek, null, { timeout: 60000 }).catch(() => {});
     await page.waitForTimeout(800);
     const pk = await page.evaluate(() => { const g = window.__app.game, el = document.querySelector('#hud .hud-peek'); return { peek: !!g.p.peek, shown: !!el && getComputedStyle(el).display !== 'none', text: el ? el.textContent.trim() : '' }; });
     await shot('作戦-ミラー');
     rec('操作', 'ミラーで扉の下から覗いた映像になり、出るのは「戻る」と短い案内だけ', ok >= 0 && pk.peek && pk.shown && /戻る/.test(pk.text) && !/人影|\d+人/.test(pk.text), `表示「${pk.text}」`);
     await tapAt(await center('#hud [data-btn="peekx"]'), 42);
-    await page.waitForTimeout(600);
+    await page.waitForFunction(() => !window.__app.game.p.peek, null, { timeout: 30000 }).catch(() => {});
     const after = await page.evaluate(() => !!window.__app.game.p.peek);
     rec('操作', 'ミラーの視点は「戻る」で元に戻る', pk.peek && !after);
   }
