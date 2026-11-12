@@ -307,6 +307,8 @@ function isIndoorWallLine(w, L, i, j, T, idx) {
 }
 
 // 家具を置く: [種類, x(マス), z(マス), 階, 向き(0..3), {w,d,h, color, ...}]
+// 向き: 家具の正面（形のローカルの +z。本の見える側・画面・引き出し・座る側・ベッドの足の側）が 0=+z 1=+x 2=-z 3=-x を向く。
+// 壁ぎわに置く物は、背中を壁につける（西の壁ぎわなら正面は東 → 1）。tools/propaudit.mjs の back で調べる
 export function addProp(w, p) {
   const [type, xc, zc, L = 0, rot = 0, o = {}] = p;
   const P = PROPS[type];
@@ -317,11 +319,11 @@ export function addProp(w, p) {
   const boxes = P.boxes.map(b => {
     let [x0, y0, z0, x1, y1, z1, m] = b;
     x0 *= sx; x1 *= sx; z0 *= sz; z1 *= sz; y0 *= sy; y1 *= sy;
-    // 90°ずつ回す
+    // 90°ずつ回す（1: ローカルの +z → +x、ローカルの +x → -z）
     let X0 = x0, X1 = x1, Z0 = z0, Z1 = z1;
-    if (r === 1) { X0 = -z1; X1 = -z0; Z0 = x0; Z1 = x1; }
+    if (r === 1) { X0 = z0; X1 = z1; Z0 = -x1; Z1 = -x0; }
     else if (r === 2) { X0 = -x1; X1 = -x0; Z0 = -z1; Z1 = -z0; }
-    else if (r === 3) { X0 = z0; X1 = z1; Z0 = -x1; Z1 = -x0; }
+    else if (r === 3) { X0 = -z1; X1 = -z0; Z0 = x0; Z1 = x1; }
     return [x + X0, y + y0, z + Z0, x + X1, y + y1, z + Z1, m];
   });
   const fw = (P.foot ? P.foot[0] : P.w) * sx, fd = (P.foot ? P.foot[1] : P.d) * sz;

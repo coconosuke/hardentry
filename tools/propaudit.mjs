@@ -7,9 +7,10 @@
 //   stair : 階段の上がり口・下り口（幅 × STAIR_D）に置き物がある
 //   pinch : 大事な場所（扉・開口・階段・窓の前、出現位置、目標、部屋の広い所）どうしを結ぶ道が、置き物のせいで扉の幅より狭い
 //   stuck : 大事な場所が置き物に埋まっている・置き物で行けない
+//   back  : 壁ぎわに置く物（本棚・テレビ台・ベッド・冷蔵庫など）の正面が壁を向いている（後ろの方が空いている）。椅子が机に背を向けている
 //  細かい格子（1マスを8つに割る＝6.25cm）で「壁・置き物からの距離」を出し、半径ごとのつながりで道の幅を測る。
 import fs from 'node:fs';
-import { compileMap, C, CS, LH, NB, STEP, isWallish } from '../src/engine/world.js';
+import { compileMap, C, CS, LH, NB, STEP, isWallish, raycast } from '../src/engine/world.js';
 import { MAPS } from '../src/engine/maps/index.js';
 
 export const RULE = {
@@ -326,6 +327,28 @@ export function auditMap(id, opt = {}) {
       }
     }
   }
+  // 向き: 正面（形のローカルの +z）が 0=+z 1=+x 2=-z 3=-x
+  for (const p of w.props) {
+    const f = FRONT[p.rot];
+    if (BACKED.has(p.type)) {
+      const half = (p.rot % 2 ? p.w : p.d) / 2, y = p.y + Math.min(0.8, p.h * 0.5);
+      const gap = (sx) => { const h = raycast(w, p.x, y, p.z, f[0] * sx, 0, f[1] * sx, 4, null, {}).find(q => q.kind === 'block' || q.kind === 'door'); return h ? h.t0 - half : 9; };
+      const fr = gap(1), bk = gap(-1);
+      if (fr < bk - 0.05 && fr < 0.9) add('back', p.L, p.x, p.z, `${pname(p)} の正面が壁を向いている（正面の壁まで ${fr.toFixed(2)}m、後ろ ${bk > 8 ? '4m以上' : bk.toFixed(2) + 'm'}）。向きを ${(p.rot + 2) % 4} に`, [p]);
+    } else if (p.type === 'chair') {
+      // 1.3m以内の机・テーブルの一番近い点の方を向いているか
+      let best = null, bd = 1.3;
+      for (const q of w.props) {
+        if (q.L !== p.L || !SEAT_TO.has(q.type)) continue;
+        const d = Math.hypot(Math.max(Math.abs(q.x - p.x) - q.w / 2, 0), Math.max(Math.abs(q.z - p.z) - q.d / 2, 0));
+        if (d < bd) { bd = d; best = q; }
+      }
+      if (!best) continue;
+      const vx = Math.max(best.x - best.w / 2, Math.min(best.x + best.w / 2, p.x)) - p.x, vz = Math.max(best.z - best.d / 2, Math.min(best.z + best.d / 2, p.z)) - p.z;
+      const l = Math.hypot(vx, vz) || 1;
+      if ((f[0] * vx + f[1] * vz) / l < -0.5) add('back', p.L, p.x, p.z, `${pname(p)} が${pname(best)}に背を向けている`, [p, best]);
+    }
+  }
   // 同じ狭い所は1つにまとめる
   const merged = [];
   for (const f of finds) {
@@ -335,6 +358,11 @@ export function auditMap(id, opt = {}) {
   }
   return { id, w, def, finds: merged, levels };
 }
+
+// 背中を壁につけて置く物（正面に人が立つ・座る・見る）と、机の方を向く物
+const BACKED = new Set(['bookshelf', 'tvstand', 'wardrobe', 'cabinet', 'locker', 'vending', 'fridge', 'stove', 'sofa', 'armchair', 'bed', 'bedS', 'desk', 'counter', 'cooler', 'server', 'sink', 'toilet', 'nightstand', 'booth', 'shelf', 'speaker', 'washer', 'ptac', 'mailbox', 'icemaker', 'neon', 'bar']);
+const SEAT_TO = new Set(['desk', 'table', 'counter', 'bar']);
+const FRONT = [[0, 1], [1, 0], [0, -1], [-1, 0]];
 
 // 壁の線から、物の奥の端までの距離（m）
 function sillDepth(p, r, side) {

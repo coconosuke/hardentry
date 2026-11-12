@@ -112,9 +112,9 @@ function unitA(no, x0, side, flip, kind) {
   P('bathtub', 15.1, 12.9, 0); P('toilet', 11.05, 13.5, 1); P('sink', 10.9, 8.2, 0);
   if (kind === 'den') {
     // 売人の部屋: 居間に大きな机と箱、床にマットレス
-    P('bedS', 1.2, 4.2, 0); P('table', 7.5, 3.4, 0, { w: 1.8, d: 0.9 }); P('chair', 7.5, 1.8, 0); P('chair', 9.8, 3.4, 3);
+    P('bedS', 1.2, 4.2, 2); P('table', 7.5, 3.4, 0, { w: 1.8, d: 0.9 }); P('chair', 7.5, 1.8, 0); P('chair', 9.8, 3.4, 3);
     P('boxes', 10.0, 6.4, 0); P('crates', 12.4, 1.4, 0); P('boxes', 3.2, 6.7, 0);
-    P('bed', 1.8, 9.6, 3); P('boxes', 7.8, 13.9, 0); P('boxes', 7.6, 9.4, 1);
+    P('bed', 1.8, 9.6, 1); P('boxes', 7.8, 13.9, 0); P('boxes', 7.6, 9.4, 1);
     f.lt(8, 3.5, 0, 'dim', 1.2); f.lt(11, 2, 0, 'red', 0.8); f.lt(13, 11.5, 0, 'dim', 0.6);
     pts.evidence.push(f.at(7.5, 3.4), f.at(12.4, 1.4));
     pts.sus.push(f.at(9.4, 1.0), f.at(5.5, 10.4), f.at(12.4, 10.8));
@@ -123,7 +123,7 @@ function unitA(no, x0, side, flip, kind) {
     // 年配の住人: ひじ掛け椅子・本棚・テレビ
     P('armchair', 1.2, 3.6, 1); P('table', 3.6, 3.6, 1, { w: 0.9, d: 0.6 }); P('tvstand', 7.2, 3.8, 3); P('bookshelf', 11.6, 0.0, 0); P('plant', 9.4, 6.6, 0);
     P('table', 11.4, 3.8, 0, { w: 1.0, d: 0.8 }); P('chair', 11.4, 5.2, 2);
-    P('bed', 1.8, 9.6, 3); P('wardrobe', 8.2, 12.5, 3); P('cabinet', 7.2, 8.3, 0);
+    P('bed', 1.8, 9.6, 1); P('wardrobe', 8.2, 12.5, 3); P('cabinet', 7.2, 8.3, 0);
     f.lt(8, 3.5, 0, 'lamp', 0.9); f.lt(4.5, 11.5, 0, 'warm', 0.8); f.lt(13, 11.5, 0, 'fluo', 0.5);
     pts.civ.push(f.at(9.0, 1.0), f.at(5.6, 10.4), f.at(12.4, 10.8));
     pts.sus.push(f.at(13.0, 6.6));
@@ -131,7 +131,7 @@ function unitA(no, x0, side, flip, kind) {
     // ふつうの住人
     P('sofa', 1.0, 4.0, 1); P('table', 3.6, 4.0, 1, { w: 1.0, d: 0.6 }); P('tvstand', 7.2, 4.0, 3);
     P('table', 11.2, 3.4, 0, { w: 1.2, d: 0.8 }); P('chair', 11.2, 1.9, 0); P('chair', 11.2, 4.9, 2);
-    P('bed', 1.8, 9.6, 3); P('wardrobe', 8.2, 12.5, 3);
+    P('bed', 1.8, 9.6, 1); P('wardrobe', 8.2, 12.5, 3);
     if (kind === 'home2') { P('boxes', 7.4, 8.4, 0); P('plant', 0.6, 0.6, 0); } else P('bookshelf', 7.6, 14.75, 2);
     f.lt(8, 3.5, 0, 'lamp'); f.lt(4.5, 11.5, 0, 'warm', 0.8); f.lt(13, 11.5, 0, 'fluo', 0.6);
     pts.civ.push(f.at(9.0, 1.0), f.at(5.6, 10.4));
@@ -158,13 +158,13 @@ function unitB(no, x0, side, flip, n, kind) {
     pts.sus.push(f.at(8.0, 6.0, 1), f.at(12.5, 3.0, 1));
     pts.bomb.push(f.at(8.0, 9.0, 1));
   } else if (kind === 'den') {
-    P('bed', n - 1.85, 11.1, 1); P('table', 4.0, 3.4, 0, { w: 1.8, d: 0.9 }); P('chair', 4.0, 1.8, 0); P('chair', 6.3, 3.4, 3); P('boxes', 7.6, 1.0, 0); P('crates', n - 1.0, 3.0, 0); P('bedS', 8.4, 6.4, 1); P('boxes', n - 1.0, 14.3, 0);
+    P('bed', n - 1.85, 11.1, 3); P('table', 4.0, 3.4, 0, { w: 1.8, d: 0.9 }); P('chair', 4.0, 1.8, 0); P('chair', 6.3, 3.4, 3); P('boxes', 7.6, 1.0, 0); P('crates', n - 1.0, 3.0, 0); P('bedS', 8.4, 6.4, 1); P('boxes', n - 1.0, 14.3, 0);
     f.lt(8, 6, 1, 'dim', 1.1); f.lt(4, 3, 1, 'red', 0.7);
     pts.evidence.push(f.at(4.0, 3.4, 1), f.at(n - 1.0, 3.0, 1));
     pts.sus.push(f.at(8.0, 3.8, 1), f.at(11.0, 8.0, 1), f.at(3.0, 11.5, 1));
     pts.bomb.push(f.at(11.5, 4.5, 1));
   } else {
-    P('bed', n - 1.85, 13.4, 1); P('wardrobe', n - 0.22, 9.6, 3);
+    P('bed', n - 1.85, 13.4, 3); P('wardrobe', n - 0.22, 9.6, 3);
     P('fridge', n - 0.75, 0.85, 3); P('counter', n - 0.7, 3.05, 3, { w: 1.4 }); P('stove', n - 0.75, 5.65, 3);
     P('sofa', 4.0, 1.0, 0); P('table', 4.0, 3.6, 0, { w: 1.0, d: 0.6 }); P('tvstand', 4.0, 7.7, 2);
     if (kind === 'home2') { P('desk', 8.6, 4.0, 3); P('chair', 7.3, 4.0, 1, { office: true }); } else P('armchair', 8.6, 4.0, 3);

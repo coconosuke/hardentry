@@ -85,7 +85,8 @@ export function thinkSuspect(S, w, a, dt, ctx) {
   if (ai.st === 'fake') return fakeState(S, w, a, inp, dt, ctx, sk);
   // 武器がない（拾う力もない）: 逃げるか投降
   if (!hasGun(a)) {
-    if (tgt && td < 9) { if (hrand(a.id, S.t, 72) < 0.03) surrender(S, w, a, ctx); }
+    // 確率は1秒あたり（1こまの確率にすると、こまの細かさ（ゲーム60・AIだけの試合30回毎秒）で変わる。値はゲームの60回毎秒のときと同じ）
+    if (tgt && td < 9) { if (hrand(a.id, S.t, 72) < 1.8 * S.dt) surrender(S, w, a, ctx); }
     return fleeOrHide(S, w, a, inp, dt, tgt);
   }
   // 人質犯: 警官を見たら（または近くで突入・銃声を聞いたら）、しばらくして人質を撃つ。足音だけでは数え始めない
@@ -201,7 +202,7 @@ function fakeState(S, w, a, inp, dt, ctx, sk) {
     const watched = aimingAt(b, a, 0.3) && b.ads > 0.3;
     const busy = b.act && b.act.k !== 'restrain';
     const restrainingMe = b.act && b.act.k === 'restrain' && b.act.id === a.id;
-    if ((!watched || busy || restrainingMe) && ai.stT > 2 && hrand(a.id, S.t, 77) < (restrainingMe ? 0.04 : 0.012)) {
+    if ((!watched || busy || restrainingMe) && ai.stT > 2 && hrand(a.id, S.t, 77) < (restrainingMe ? 2.4 : 0.72) * S.dt) {
       // 隠した拳銃を抜く
       a.comply = 0; a.stateT = 0; ai.st = 'fight'; ai.stT = 0;
       gun.hiddenGun = false; a.ws.slot = 1; a.ws.st = 'draw'; a.ws.t = 0.35;
@@ -241,7 +242,7 @@ function fight(S, w, a, inp, dt, ctx, sk, tgt, td) {
     if (ai.wantAmbush && hrand(a.id, Math.floor(S.t / 90), 80) < 0.5) inp.stance = 1;
   }
   // 撃たれて弱った・弾が切れた → 投降・逃げる
-  if ((a.hp < 35 || ai.morale < 0.1) && hrand(a.id, S.t, 81) < 0.004) { surrender(S, w, a, ctx); }
+  if ((a.hp < 35 || ai.morale < 0.1) && hrand(a.id, S.t, 81) < 0.24 * S.dt) { surrender(S, w, a, ctx); }
   return inp;
 }
 function alerted(S, w, a, inp, dt, ctx, sk) {

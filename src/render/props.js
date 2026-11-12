@@ -20,8 +20,8 @@ export function buildProp(B, G, p, def) {
   const P = PROPS[p.type];
   if (!P) return;
   const fn = MODELS[p.type];
-  if (!fn) { B.setXf(xfYaw(p.x, p.y, p.z, -p.rot * Math.PI / 2, p.sx, p.sy, p.sz)); for (const b of P.boxes) B.box(b[0], b[1], b[2], b[3], b[4], b[5], LAYER.wood, C.wood); B.setXf(null); return; }
-  const xf = xfYaw(p.x, p.y, p.z, -p.rot * Math.PI / 2, p.sx, p.sy, p.sz);
+  if (!fn) { B.setXf(xfYaw(p.x, p.y, p.z, p.rot * Math.PI / 2, p.sx, p.sy, p.sz)); for (const b of P.boxes) B.box(b[0], b[1], b[2], b[3], b[4], b[5], LAYER.wood, C.wood); B.setXf(null); return; }
+  const xf = xfYaw(p.x, p.y, p.z, p.rot * Math.PI / 2, p.sx, p.sy, p.sz);
   B.setXf(xf); G.setXf(xf);
   const seed = p.opt.color != null ? p.opt.color : (p.id * 7 + Math.round(p.x * 3 + p.z * 5));
   // 家具の箱は角を落とす（BattleBit のように縁に光が乗る）。2.5cmより細い部品はそのまま
