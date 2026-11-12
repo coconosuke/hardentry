@@ -9,7 +9,7 @@ import { depSpot, DEP_WHY } from '../engine/deploy.js';
 import { raycast, CS, LH, levelOfY, los } from '../engine/world.js';
 import { smokeBetween } from '../engine/nades.js';
 import { sideOf, isOpen } from '../engine/doors.js';
-import { WEAPONS, zoomOf, opticOf } from '../engine/data/weapons.js';
+import { WEAPONS, zoomOf, opticOf, zoomsOf } from '../engine/data/weapons.js';
 import { GEAR, LONG } from '../engine/data/equipment.js';
 import { MAPS } from '../engine/maps/index.js';
 import { MISSIONS } from '../engine/data/missions.js';
@@ -237,7 +237,8 @@ export class Match {
           break;
         case 'wpn1': if (k === 'down' || (k === 'tap' && e.wheel)) this.acts.push({ a: 'switch', slot: 0 }); break;
         case 'wpn2': if (k === 'down' || (k === 'tap' && e.wheel)) this.acts.push({ a: 'switch', slot: 1 }); break;
-        case 'fmode': if (k === 'down') this.acts.push({ a: 'mode' }); break;
+        // 倍率を切り替えるか（構えている間）は手元で決めて送る（オンラインでホストの構えの具合とずれないように）
+        case 'fmode': if (k === 'down') { const wz = curWeapon(this.p), Wz = curW(this.p); this.acts.push({ a: 'mode', zoom: !!(wz && Wz && zoomsOf(wz.att) && (Wz.modes.length <= 1 || this.p.ads > 0.5)) }); } break;
         case 'light': if (k === 'down') this.acts.push({ a: 'light' }); break;
         case 'nvg': if (k === 'down' && p.armor.head === 'nvg') { this.nvgOn = !this.nvgOn; p.nvgOn = this.nvgOn; this.au.sfx('nvg', null, { vol: 0.5 }); } break;
         case 'low': if (k === 'down') this.lowOn = !this.lowOn; break;

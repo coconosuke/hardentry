@@ -88,7 +88,7 @@ export function stepWeapon(S, w, a, inp, dt, ev) {
     else if (ac.a === 'switch') switchTo(S, a, ac.slot, ev);
     else if (ac.a === 'mode' && ws.slot === 3) m320Next(a, ev);
     // 倍率を切り替えられる照準器: 構えている間（射撃モードが1つの銃はいつも）は射撃モードのボタンで倍率を切り替える
-    else if (ac.a === 'mode' && W && wi && zoomsOf(wi.att) && (W.modes.length <= 1 || a.ads > 0.5)) { const zs = zoomsOf(wi.att); wi.zi = ((wi.zi || 0) + 1) % zs.length; ev.push({ e: 'zoom', id: a.id, z: zs[wi.zi], sight: wi.att.sight }); }
+    else if (ac.a === 'mode' && W && wi && zoomsOf(wi.att) && (ac.zoom != null ? ac.zoom : (W.modes.length <= 1 || a.ads > 0.5))) { const zs = zoomsOf(wi.att); wi.zi = ((wi.zi || 0) + 1) % zs.length; ev.push({ e: 'zoom', id: a.id, z: zs[wi.zi], sight: wi.att.sight }); }
     else if (ac.a === 'mode' && W && wi && W.modes.length > 1 && ws.st === 'ready') { wi.mode = (wi.mode + 1) % W.modes.length; ev.push({ e: 'fmode', id: a.id, m: W.modes[wi.mode] }); }
     else if (ac.a === 'light' && wi && (wi.att.light || wi.att.laser)) { wi.lightOn = !wi.lightOn; ev.push({ e: 'lightsw', id: a.id, on: wi.lightOn }); }
   }

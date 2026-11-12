@@ -114,6 +114,9 @@ test('optics: 構えている間は射撃モードのボタンで倍率を、構
   ev = step(G, { [p.id]: { yaw: p.yaw, pitch: 0, ads: true, act: [{ a: 'mode' }] } });
   ok(ev.some(e => e.e === 'zoom' && e.z === 1), '構えている: 等倍へ');
   eq(wi.mode, m1, '射撃モードはそのまま');
+  // 手元で決めた向き（オンラインのゲスト）: 構えていても zoom: false なら射撃モード
+  ev = step(G, { [p.id]: { yaw: p.yaw, pitch: 0, ads: true, act: [{ a: 'mode', zoom: false }] } });
+  ok(ev.some(e => e.e === 'fmode') && wi.mode !== m1, '手元の指示どおり射撃モード');
 });
 
 test('optics: 付けられる銃は実銃の取り付け方に合わせる', () => {
