@@ -1,5 +1,5 @@
 // 1回の試合: エンジンを進め、入力を命令にし、出来事を音・効果・HUDへ。カメラ（一人称）と描画。
-import { createGame, step, dump, load } from '../engine/engine.js';
+import { createGame, step, load } from '../engine/engine.js';
 import { eyeOf, capsOf } from '../engine/combat.js';
 import { curWeapon, curW, ammoCount } from '../engine/actor.js';
 import { contextOf, OP_NAME, doorOps, personOps } from '../engine/interact.js';
@@ -9,7 +9,7 @@ import { depSpot, DEP_WHY } from '../engine/deploy.js';
 import { raycast, CS, LH, levelOfY, los } from '../engine/world.js';
 import { smokeBetween } from '../engine/nades.js';
 import { sideOf, isOpen } from '../engine/doors.js';
-import { WEAPONS, zoomOf, opticOf, zoomsOf } from '../engine/data/weapons.js';
+import { WEAPONS, zoomOf, opticOf, zoomsOf, swayCamK } from '../engine/data/weapons.js';
 import { GEAR, LONG } from '../engine/data/equipment.js';
 import { MAPS } from '../engine/maps/index.js';
 import { MISSIONS } from '../engine/data/missions.js';
@@ -282,6 +282,37 @@ export class Match {
     if (p.peek) { if (cmd.fire || Math.hypot(cmd.mx, cmd.mz) > 0.3) this._peekQuit(); cmd.fire = false; cmd.ads = false; }
     // しゃがみの状態を体に合わせる（伏せられないなど）
     return cmd;
+  }
+
+  // のぞいたときの見え方（11-12 22:05: 実際に沿って、程よく）。HUD へ渡す（hud.js）:
+  //  ・等倍の照準器: 揺れのうち銃が受け持つ分だけ、照準の点が画面の真ん中からずれる（弾が飛ぶ所）
+  //  ・スコープ: 目に寄せる途中（構え 0.7〜0.95）で接眼レンズの像が大きくなりながら現れる。目と筒の軸のずれで、
+  //    丸い視界が少しずれて縁が暗く・ぼやける（スコープの影）: 反動で跳ね、向きを速く変えると遅れ、歩くと揺れ、揺れにもついていく
+  _aimFx(p, wi, cam, kc, swx, swy, cyaw, cpitch, dt) {
+    const H = this.app.stage ? this.app.stage.h : 390, Wd = this.app.stage ? this.app.stage.w : 844;
+    const ppr = (H / 2) / Math.tan(cam.fov / 2); // 画面の真ん中あたりの、1ラジアンあたりの画素
+    const g = 1 - kc;
+    this._retOff = [-g * swx * DEG * ppr, -g * swy * DEG * ppr];
+    // 向きを変える速さ（ラジアン/秒。なめらかに）
+    const lw = this._lastAim || [cyaw, cpitch];
+    let wy = cyaw - lw[0]; wy = Math.atan2(Math.sin(wy), Math.cos(wy));
+    const wp = cpitch - lw[1];
+    this._lastAim = [cyaw, cpitch];
+    const kk = 1 - Math.exp(-dt / 0.08), ww = this._aimW || [0, 0];
+    ww[0] += ((dt > 0 ? wy / dt : 0) - ww[0]) * kk; ww[1] += ((dt > 0 ? wp / dt : 0) - ww[1]) * kk; this._aimW = ww;
+    const o = opticOf(wi);
+    const a = Math.max(0, Math.min(1, (p.ads - 0.7) / 0.25)), k = a * a * (3 - 2 * a);
+    if (!o.scope || k <= 0) { this._scopeFx = null; return; }
+    const R = Math.min(H, Wd) * (0.3 + 0.13 * k); // 接眼レンズの像の半径（目に寄るほど大きい）
+    const m = Math.min(1, (p.spd || 0) / 2.4), ph = p.phase || 0;
+    let dx = ww[0] * 0.05 * R + Math.sin(ph) * m * 0.05 * R + (swx / 0.5) * 0.06 * R;
+    let dy = ww[1] * 0.05 * R + (Math.abs(Math.cos(ph)) - 0.5) * m * 0.06 * R - (swy / 0.5) * 0.06 * R;
+    const fk = Math.max(0, Math.min(1, p.fireK || 0));
+    dy += fk * 0.09 * R; dx += fk * 0.03 * R * ((p.stats.sh || 0) % 2 ? 1 : -1);
+    const d = Math.hypot(dx, dy), mx = 0.14 * R;
+    if (d > mx) { dx *= mx / d; dy *= mx / d; }
+    const off = Math.min(d, mx) / R;
+    this._scopeFx = { k, r: R, dx, dy, e: R * (0.02 + 0.22 * off) };
   }
 
   // のぞくのをやめる（1回だけ送る）
@@ -686,6 +717,7 @@ export class Match {
   _render(dt, inp) {
     const S = this.S, p = this.p, r = this.r, st = this.app.settings;
     let cam;
+    this._scopeFx = null; this._retOff = null; // のぞいたときの見え方（生きて自分の目で見ているときだけ。_aimFx）
     const drone = this.droneId != null ? S.byId[this.droneId] : null;
     if (this._hidDrone != null && this._hidDrone !== this.droneId) { this.av.hidden.delete(this._hidDrone); this._hidDrone = null; }
     const CK = this.camView != null ? mapCams(this.w, this.def)[this.camView] : null;
@@ -726,14 +758,16 @@ export class Match {
       const t = this.time;
       // ボルトの操作中（スコープをのぞいたまま）: 像が少し跳ねて傾く（見た目だけ。狙いは変わらない）
       const bp = W && W.bolt && p.ws.st === 'pump' ? Math.sin(Math.PI * Math.max(0, Math.min(1, 1 - p.ws.t / (W.pump || 1)))) * p.ads : 0;
+      // 照準の揺れ（ws.sx/sy。弾も同じ向きに飛ぶ）のうち視界が受け持つ分: スコープをのぞききると全部、等倍の照準器は35%（残りは銃と点が動く）
+      const kc = swayCamK(wi, p.ads), swx = p.ws.sx || 0, swy = p.ws.sy || 0;
       cam = {
         x: e[0], y: e[1], z: e[2],
-        // 反動と、狙撃銃の照準の揺れ（ws.sx/sy。弾も同じ向きに飛ぶ）
-        yaw: cyaw + ((p.ws.ry + (p.ws.sx || 0)) * DEG) + Math.sin(t * 37) * 0.012 * sh + p.flinch * 0.03 * Math.sin(t * 23),
-        pitch: cpitch + ((p.ws.rp + (p.ws.sy || 0)) * DEG) + Math.sin(t * 41) * 0.012 * sh + p.flinch * 0.04 - bp * 0.006,
+        yaw: cyaw + ((p.ws.ry + kc * swx) * DEG) + Math.sin(t * 37) * 0.012 * sh + p.flinch * 0.03 * Math.sin(t * 23),
+        pitch: cpitch + ((p.ws.rp + kc * swy) * DEG) + Math.sin(t * 41) * 0.012 * sh + p.flinch * 0.04 - bp * 0.006,
         roll: p.lean * 0.16 + Math.sin(t * 29) * 0.01 * sh + bp * 0.03,
         fov: 2 * Math.atan(Math.tan(fov0 / 2) / z),
       };
+      this._aimFx(p, wi, cam, kc, swx, swy, cyaw, cpitch, dt);
       if (!this.av.hidden.has(p.id)) this.av.hidden.add(p.id);
     } else {
       // 倒れた: 味方を見る（PvE は隊員、PvP は味方）
@@ -1012,6 +1046,7 @@ export class Match {
     if (v.zoneOK) { const zs = attackZones(this.w, this.def); v.zoneLabel = (zs[p.zone ?? 0] || zs[0] || {}).name || ''; if (zs.length < 2) v.zoneOK = false; }
     // 照準器の今の状態（倍率を切り替えると、模様・スコープの像・広い視野が変わる）
     if (wi) { const g = gunModel(wi.id, wi.att); if (g && g.pts.optic) { const o = opticOf(wi), key = wi.att.sight + o.kind + o.zoom; if (!this._opt || this._opt.key !== key || this._opt.base !== g.pts.optic) this._opt = { key, base: g.pts.optic, v: { ...g.pts.optic, kind: o.kind, scope: o.scope, wide: o.wide, zoom: o.zoom } }; v.optic = this._opt.v; } }
+    v.retOff = this._retOff; v.scopeFx = this._scopeFx;
     if (this.droneId != null || this.camView != null) v.hideCross = true;
     // 案内
     let prompt = '';
@@ -1117,7 +1152,6 @@ export class Match {
   }
   // 撤収（本部に戻る）
   abort() { step(this.G, { [this.p.id]: { act: [{ a: 'abortMission' }] } }); const m = this.S.m; if (m && m.kind === 'pve' && m.phase === 'play') { import_end(this.S); } }
-  saveState() { if (this.done) return null; try { return { dump: dump(this.G), cam: { yaw: this.yaw, pitch: this.pitch }, o: this.o }; } catch (e) { return null; } }
 }
 import { endMission } from '../engine/modes/pve.js';
 import { attackZones, OUT_GRACE, mapCams, CAM_YAW, CAM_PITCH } from '../engine/modes/pvp.js';

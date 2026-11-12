@@ -2,7 +2,7 @@
 import { MeshBuilder, hex, mulc } from './build.js';
 import { LAYER } from './textures.js';
 import { makeWorldMesh, drawMesh } from './renderer.js';
-import { WEAPONS, opticOf } from '../engine/data/weapons.js';
+import { WEAPONS, opticOf, swayCamK } from '../engine/data/weapons.js';
 import { GEAR } from '../engine/data/equipment.js';
 import { curWeapon } from '../engine/actor.js';
 import { WV } from './build.js';
@@ -81,7 +81,8 @@ export class ViewModel {
     const pistol = !!P.pistol;
     // 倍率スコープをのぞいている: 銃（筒とレンズのふた）は描かず、HUD のスコープの像に任せる（筒の中から見ると視界がふさがれていた）
     const os = P.optic && wi ? opticOf(wi) : null;
-    this.scoped = !!(os && os.scope && a.ads > 0.8);
+    // 構え 0.7〜0.95 で HUD のスコープの像が現れる（game.js _aimFx）。像がほぼ出そろう 0.9 で銃を消す（入れ替わりが目立たないように）
+    this.scoped = !!(os && os.scope && a.ads > 0.9);
     // ブースター（ホロ＋3倍）: 等倍のときは横へ倒す（0.25秒）
     this.flipK = lerp(this.flipK || 0, os && P.optic.kind === 'mag3' && !os.scope ? 1 : 0, 1 - Math.exp(-dt * 12));
     this.flipP = P.flipPivot || null;
@@ -118,6 +119,8 @@ export class ViewModel {
     roll += Math.sin(ph) * 0.02 * amp; pitch += Math.sin(this.t * 1.25) * 0.004 * (1 - 0.7 * ads);
     // 揺れ
     yaw += this.sway[0] * 0.6; pitch += this.sway[1] * 0.6; px -= this.sway[0] * 0.04; py -= this.sway[1] * 0.03;
+    // 構えたときの照準の揺れ（エンジンの ws.sx/sy。度）のうち銃が受け持つ分（等倍の照準器は 65%。視界は残り。HUD の点も同じだけずれる）
+    if (wi && a.ads > 0.01) { const g = 1 - swayCamK(wi, a.ads); yaw += g * (ws.sx || 0) * Math.PI / 180; pitch += g * (ws.sy || 0) * Math.PI / 180; }
     // ローレディ・ダッシュ・動作中・持ち替え
     const lowK = Math.max(low, this.actK * (1 - this.freeK) * 0.9);
     pitch -= 1.25 * this.freeK; py -= 0.32 * this.freeK; px += 0.07 * this.freeK; pz -= 0.05 * this.freeK;

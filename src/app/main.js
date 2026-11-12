@@ -6,7 +6,7 @@ import { Screens } from '../ui/screens.js';
 import { AudioSys } from '../audio/audio.js';
 import { Renderer, QUALITY, gfxOf } from '../render/renderer.js';
 import { loadSettings, saveSettings, loadProfile, saveProfile, loadLoadouts, saveLoadouts } from './settings.js';
-import { load, save, remove, purgeOld, exportCode, importCode, parseCode, loadRun } from './save.js';
+import { load, save, remove, purgeOld, exportCode, importCode, parseCode } from './save.js';
 import { getAsset } from './assets.js';
 import { Match } from './game.js';
 import { TitleScene } from './scenes.js';
@@ -61,6 +61,7 @@ class App {
 
   async boot(hot) {
     purgeOld();
+    remove('run'); // 「続きから」はなくした（11-12 21:59 の要望。どのモードでも）。前の版の遊びかけの保存を捨てる
     this.stageEl = $('#stage'); this.canvas = $('#gl');
     this.stage = new Stage(this.stageEl);
     this.settings = loadSettings(); this.profile = loadProfile(); this.loadouts = loadLoadouts();
@@ -107,18 +108,15 @@ class App {
     this.applySettings(false);
     this._events();
     requestAnimationFrame(this.loop);
-    const run = hot && hot.run ? hot.run : null;
-    if (run) { try { this._openRun(run); return; } catch (e) { console.warn('hot', e); } }
     this.screens.reset('title');
     this.netBoot && this.netBoot();
   }
 
   _events() {
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') { this.hidden = true; this.autosave(); if (this.game && this.mode === 'game' && !this.game.net) this.pauseGame(); this.audio.suspend(); this._releaseWake(); }
+      if (document.visibilityState === 'hidden') { this.hidden = true; if (this.game && this.mode === 'game' && !this.game.net) this.pauseGame(); this.audio.suspend(); this._releaseWake(); }
       else { this.hidden = false; this.audio.resume(); this.last = performance.now(); if (this.net || this.mode === 'game') this._requestWake(); }
     });
-    window.addEventListener('pagehide', () => this.autosave());
     this.canvas.addEventListener('webglcontextlost', (e) => {
       e.preventDefault();
       this.ctxLost = true; this.ctxEl.classList.add('on');
@@ -126,9 +124,6 @@ class App {
       if (this.game && this.mode === 'game' && !this.game.net) this.pauseGame();
     });
     this.canvas.addEventListener('webglcontextrestored', () => this._rebuildGL());
-    if (window.claude && window.claude.hot && window.claude.hot.snapshot) {
-      try { window.claude.hot.snapshot(() => ({ run: this._runState() })); } catch (e) { /* なし */ }
-    }
   }
   // 画面が落ちたら作り直す。続けて落ちたら画質を1段下げる
   _rebuildGL() {
@@ -220,42 +215,10 @@ class App {
   records() { return load('records', {}) || {}; }
   clearRecords() { remove('records'); }
 
-  // ---- 遊びかけ（続きから）
-  savedRun() {
-    const r = loadRun();
-    if (!r) return null;
-    const o = r.o || {};
-    const label = o.mode === 'pve' ? `${MAPS[o.map] ? MAPS[o.map].name : ''} · ${MISSIONS[o.mission] ? MISSIONS[o.mission].name : ''}` : o.mode === 'train' ? '訓練' : (MODE_INFO[o.mode] ? MODE_INFO[o.mode].name : '');
-    return { label };
-  }
-  _runState() {
-    const g = this.game;
-    if (!g || g.done || g.net) return null;
-    const st = g.saveState();
-    if (!st) return null;
-    return { ...st, at: Date.now() };
-  }
-  autosave() { const r = this._runState(); if (r) save('run', r); }
-  continueRun() {
-    const r = loadRun();
-    if (!r) { this.screens.reset('title'); return; }
-    try { this._openRun(r); } catch (e) { console.warn('続きから', e); remove('run'); this.destroyGame(); this.toTitle(); }
-  }
-  _openRun(r) {
-    this.destroyGame();
-    this.game = new Match(this, { ...r.o, dump: r.dump, cam: r.cam });
-    if (r.o && r.o.mode === 'pve') this.lastPve = r.o.sel || null;
-    this.mode = 'pause'; this.paused = true;
-    this.hud.show(false);
-    this.game.redraw();
-    this.screens.reset('pause');
-  }
-
   // ---- 試合の開始
   _seed() { return (Math.floor(Math.random() * 2 ** 31) ^ Date.now()) >>> 0; }
   async _start(o, label) {
     this.destroyGame();
-    remove('run');
     this.screens.loading(label || '現場へ向かっています…', 0.5);
     this.mode = 'loading';
     await nextFrame();
@@ -300,7 +263,6 @@ class App {
     this.input.enabled = false; this.input.reset();
     if (document.pointerLockElement) { try { document.exitPointerLock(); } catch (e) { /* なし */ } }
     this.hud.show(false);
-    this.autosave();
     if (!this.game.net) this._releaseWake();
     this.screens.reset('pause');
   }
@@ -327,7 +289,6 @@ class App {
       rec[k] = r;
     }
     save('records', rec);
-    remove('run');
     this.mode = 'result'; this.paused = true;
     this.input.enabled = false; this.input.reset();
     this.hud.show(false);
@@ -337,7 +298,7 @@ class App {
     this.audio.ambience(false); this.audio.loop('heart', false, { fade: 0.5 }); this.audio.setHurt(0);
     this.screens.reset('result', res);
   }
-  quitToTitle() { remove('run'); this.toTitle(); }
+  quitToTitle() { this.toTitle(); }
   toTitle() {
     if (this.net) { try { this.leaveRoom(true); } catch (e) { /* なし */ } }
     this.destroyGame();

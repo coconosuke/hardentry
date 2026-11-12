@@ -440,3 +440,19 @@ export function opticOf(wi) {
   if (x.flip && zoom <= 1) return { kind: 'holo', zoom: 1, scope: false, wide: false };
   return { kind: sid, zoom, scope: !!x.scope, wide: !!(x.wide1 && zoom <= 1) };
 }
+// 構えたときの照準の揺れ（度。立って止まっているとき。11-12 22:05: 実際に沿って、どの銃も構えると揺れる。強さは程よく）。
+// 重い銃ほど大きい（腕で支える重さ）。拳銃は銃床で肩に当てないので大きい。狙撃銃は銃ごとの値（AT308 は 6.4kg で 0.2）
+export function swayOf(W) {
+  if (!W) return 0;
+  if (W.sway != null) return W.sway;
+  const kg = W.kg || 3;
+  return W.cat === 'pistol' ? 0.11 + 0.02 * kg : (W.cat === 'smg' ? 0.06 : 0.075) + 0.012 * kg;
+}
+// 揺れのうち、視界（カメラ）が受け持つ割合。スコープをのぞききると目と筒が一緒に動くので全部（像ごと揺れ、照準の模様は真ん中のまま）。
+// 等倍の照準器（ドット・ホロ・アイアン）は目はほとんど動かず銃が揺れるので 35%（残りは銃と照準の点が画面の上で動く）
+export const SWAY_CAM_SIGHT = 0.35;
+export function swayCamK(wi, ads) {
+  const o = opticOf(wi);
+  const k = o.scope ? Math.max(0, Math.min(1, (ads - 0.7) / 0.25)) : 0;
+  return SWAY_CAM_SIGHT + (1 - SWAY_CAM_SIGHT) * k * k * (3 - 2 * k);
+}

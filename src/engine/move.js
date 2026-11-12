@@ -84,6 +84,8 @@ export function moveActor(S, w, a, inp, dt, ev) {
   if (a.peek && want < 1) want = 1;
   if (a.down || a.cuffed || a.comply === 2) want = 0;
   if (a.sprint && want) a.sprint = false;
+  // 息の上がり（0〜1）: 走ると5秒で上がりきり、止まると6秒・歩くと9秒で戻る。構えたときの揺れが大きくなる（weapon.js）
+  a.fat = a.sprint ? Math.min(1, (a.fat || 0) + dt / 5) : Math.max(0, (a.fat || 0) - dt / ((a.spd || 0) < 0.3 ? 6 : 9));
   // 引き金を離してからの時間（撃ったあと少しは走らない）。ダッシュを入れ直してリロードをやめるのは、手元が送る動作 'sprint'（interact.js doAction → weapon.js cancelReload）
   a.trigT = inp.fire ? 0 : Math.min(9, (a.trigT ?? 9) + dt);
   const rate = (a.st < 1 && want <= 1) || (a.st <= 1 && want === 0) ? 4.0 : 1.25;

@@ -1,5 +1,5 @@
 // 銃の動き: 撃つ・弾倉（1本ずつ残弾）・通常/速いリロード・1発ずつ込める・ポンプ・持ち替え・反動（BattleBit式）・散らばり
-import { WEAPONS, AMMO, ATTACH, zoomsOf } from './data/weapons.js';
+import { WEAPONS, AMMO, ATTACH, zoomsOf, swayOf } from './data/weapons.js';
 import { LONG, HAND_LONG } from './data/equipment.js';
 import { curWeapon, curW, magCap } from './actor.js';
 import { spawnBullet } from './combat.js';
@@ -71,14 +71,22 @@ export function stepWeapon(S, w, a, inp, dt, ev) {
   const adsT = W ? W.ads + attMods(wi).ads : 0.25;
   a.ads = Math.max(0, Math.min(1, a.ads + (a.adsOn ? dt / adsT : -dt / (adsT * 0.8))));
   a.low = Math.max(0, Math.min(1, a.low + (a.lowOn ? dt * 5 : -dt * 6)));
-  // 狙撃銃の照準の揺れ（度。構えたときだけ）: しゃがむと半分、伏せると4分の1、動くと大きい、腕のけがで大きい。
-  // 時間だけで決まる（乱数なし）ので、オンラインのゲストの手元とホストでほぼ同じになる
-  if (W && W.sway && a.ads > 0.01) {
+  // 構えたときの照準の揺れ（度。弾も揺れた向きへ飛ぶ。11-12 22:05: どの銃も。実際に沿って、強さは程よく）
+  //  ゆっくりした8の字のずれ ＋ 息（約4秒で上下）＋ 手の小さなふるえ。しゃがむと半分、伏せると4分の1、動くと大きい、
+  //  腕のけがで大きい、リーンで少し大きい。走ったあとは息が上がって大きく速くなり（数秒で戻る。move.js a.fat）、
+  //  止まって構えていると1.5秒で少し落ち着く。時間と体の状態だけで決まる（乱数なし）ので、オンラインのゲストの手元とホストでほぼ同じになる
+  if (W && a.ads > 0.01) {
+    const still = (a.spd || 0) < 0.3 && a.ads > 0.95;
+    ws.calm = still ? Math.min(1, (ws.calm || 0) + dt / 1.5) : Math.max(0, (ws.calm || 0) - dt * 4);
+    const fat = a.fat || 0;
+    const A = swayOf(W) * a.ads * a.ads * (a.st > 1.5 ? 0.25 : a.st > 0.5 ? 0.5 : 1) * (1 + Math.min(1.5, (a.spd || 0) / 2.4) * 1.5) * (a.inj && a.inj.arm ? 1.8 : 1)
+      * (Math.abs(a.lean || 0) > 0.3 ? 1.15 : 1) * (1 + 0.4 * fat) * (1 - 0.3 * ws.calm);
     const t = S.t * S.dt + a.id * 7.3;
-    const A = W.sway * a.ads * a.ads * (a.st > 1.5 ? 0.25 : a.st > 0.5 ? 0.5 : 1) * (1 + Math.min(1.5, (a.spd || 0) / 2.4) * 1.5) * (a.inj && a.inj.arm ? 1.8 : 1);
-    ws.sx = A * (Math.sin(t * 0.83) * 0.65 + Math.sin(t * 1.91 + 1.3) * 0.35);
-    ws.sy = A * (Math.sin(t * 1.17 + 2.1) * 0.6 + Math.sin(t * 0.57 + 0.4) * 0.4);
-  } else { ws.sx = 0; ws.sy = 0; }
+    // 息: ふだんは 1.55 rad/秒（約4秒）。走ったあとは大きく、速い息（2.7 rad/秒）が混ざる
+    const br = 0.55 * (1 + 1.2 * fat) * Math.sin(t * 1.55) + 0.75 * fat * Math.sin(t * 2.7 + 0.5);
+    ws.sx = A * (0.7 * (Math.sin(t * 0.83) * 0.65 + Math.sin(t * 1.91 + 1.3) * 0.35) + 0.15 * br + 0.05 * Math.sin(t * 10.3 + a.id));
+    ws.sy = A * (0.5 * (Math.sin(t * 1.17 + 2.1) * 0.6 + Math.sin(t * 0.57 + 0.4) * 0.4) + br + 0.05 * Math.sin(t * 12.1 + 2 * a.id));
+  } else { ws.sx = 0; ws.sy = 0; ws.calm = 0; }
   // 走るのをやめた: 銃を上げるまで撃てない（重い銃ほど長い 0.1〜0.25秒）。その間に引いた引き金は覚えておき、上がったら撃つ
   if (ws.sprWas && !a.sprint) ws.so = sprintOutT(W);
   ws.sprWas = !!a.sprint;

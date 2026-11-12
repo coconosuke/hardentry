@@ -230,7 +230,7 @@ function resetFighter(S, w, a, pt, side) {
   a.spawnAt = [a.x, a.z];
   a.vx = a.vz = a.vy = 0; a.alive = true; a.dead = false; a.down = false; a.dbno = 0; a.dbnoCount = 0; a.cuffed = false; a.comply = 0;
   a.stun = a.flash = a.gas = a.tased = a.deaf = a.supp = a.bleed = 0; a.flinch = 0; a.act = null; a.carry = null; a.st = 0; a.stance = 0; a.vault = null; a.air = false; a.airTop = null; a.vy = 0;
-  a.lean = 0; a.ads = 0; a.low = 0; a.adsOn = false; a.lowOn = false; a.sprint = false; a.peek = null; a.melee = null; a.gest = null; a.outT = 0; a.outSeen = false; a.spot = 0;
+  a.lean = 0; a.ads = 0; a.low = 0; a.adsOn = false; a.lowOn = false; a.sprint = false; a.fat = 0; a.peek = null; a.melee = null; a.gest = null; a.outT = 0; a.outSeen = false; a.spot = 0;
   a.inj = { arm: 0, leg: 0, head: 0 };
   // 装備は陣営ごと（防護の重さも、選んだ陣営の物）
   const lo = Object.assign({}, PVP_LOADOUTS[side], a.pvpLo && a.pvpLo[side] ? a.pvpLo[side] : {});

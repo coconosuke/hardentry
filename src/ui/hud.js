@@ -30,6 +30,8 @@ export class Hud {
   _build() {
     const r = this.root;
     r.innerHTML = '';
+    // スコープの像（外側の黒）はいちばん下に置く。上に置くと、ミニマップ・体力・弾数・味方・方位などが黒に隠れていた（11-12 22:05）
+    this.scope = el('div', 'hud-scope', '<div class="ret"></div>'); r.appendChild(this.scope);
     // 情報
     // ミニマップ: タップで地図を開く（地図のボタンの代わり）
     const mm = el('div', 'hud-mm'); const mc = document.createElement('canvas'); mc.width = 240; mc.height = 240; mm.appendChild(mc); mm.appendChild(el('div', 'hud-mm-n', 'N')); mm.appendChild(el('div', 'hud-mm-x', svg('expand')));
@@ -46,7 +48,6 @@ export class Hud {
     // 中央の物
     this.cross = el('div', 'hud-cross', '<i class="c"></i><i class="t"></i><i class="b"></i><i class="l"></i><i class="r"></i>'); r.appendChild(this.cross);
     this.reticle = el('div', 'hud-reticle'); r.appendChild(this.reticle);
-    this.scope = el('div', 'hud-scope', '<div class="ret"></div>'); r.appendChild(this.scope);
     this.hitm = el('div', 'hud-hit'); r.appendChild(this.hitm);
     this.dmg = el('div', 'hud-dmg'); r.appendChild(this.dmg);
     this.prog = el('div', 'hud-prog', '<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="26" class="bg"/><circle cx="32" cy="32" r="26" class="fg"/></svg><div class="lb"></div>'); r.appendChild(this.prog);
@@ -220,10 +221,24 @@ export class Hud {
       if (this.cache.gap !== g) { this.cache.gap = g; this.cross.style.setProperty('--gap', g + 'px'); }
       this.cross.classList.toggle('dot', this.S.crosshair === 'dot');
     }
-    this.reticle.className = 'hud-reticle' + (optic && ads > 0.85 && !optic.scope ? ' on ' + optic.kind : '');
-    // 倍率スコープ: 銃の像と同じ所（構え 0.8）で切り替える
-    const sk = optic && optic.scope && ads > 0.8 ? 'hud-scope on ' + optic.kind + (optic.wide ? ' wide' : '') : 'hud-scope';
+    const retOn = !!(optic && ads > 0.85 && !optic.scope);
+    this.reticle.className = 'hud-reticle' + (retOn ? ' on ' + optic.kind : '');
+    // 等倍の照準器: 揺れのうち銃が受け持つ分だけ、点が真ん中からずれる（弾が飛ぶ所。game.js _aimFx）
+    const ro = retOn && v.retOff ? 'translate(' + v.retOff[0].toFixed(1) + 'px,' + v.retOff[1].toFixed(1) + 'px)' : '';
+    if (this.cache.retT !== ro) { this.cache.retT = ro; this.reticle.style.transform = ro; }
+    // スコープ: 目に寄せる途中（構え 0.7〜0.95）で接眼レンズの像が大きくなりながら現れ、目と筒のずれで丸い視界がずれて縁が暗くなる
+    const fx = optic && optic.scope ? v.scopeFx : null;
+    const sk = fx ? 'hud-scope on ' + optic.kind + (optic.wide ? ' wide' : '') : 'hud-scope';
     if (this.cache.scope !== sk) { this.cache.scope = sk; this.scope.className = sk; }
+    if (fx) {
+      const key = Math.round(fx.r) + ',' + Math.round(fx.dx * 2) + ',' + Math.round(fx.dy * 2) + ',' + Math.round(fx.e) + ',' + Math.round(fx.k * 50);
+      if (this.cache.sfx !== key) {
+        this.cache.sfx = key;
+        const st = this.scope.style;
+        st.setProperty('--sr', fx.r.toFixed(1) + 'px'); st.setProperty('--scx', fx.dx.toFixed(1) + 'px'); st.setProperty('--scy', fx.dy.toFixed(1) + 'px'); st.setProperty('--se', fx.e.toFixed(1) + 'px');
+        st.opacity = fx.k >= 0.99 ? '' : fx.k.toFixed(2);
+      }
+    } else if (this.cache.sfx) { this.cache.sfx = null; this.scope.style.opacity = ''; }
     // 体力・防具
     if (p) {
       const hp = Math.max(0, Math.round(p.hp)), max = p.maxHp || 100;

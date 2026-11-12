@@ -1,7 +1,6 @@
 // 保存（localStorageは必ずtry/catch、キーに版を持たせる）
-// キーの版（DATA_V）は設定・名前・記録の形の版。遊びかけの作戦（run）は中身にエンジンの互換番号（COMPAT）を持ち、
-// 違えば読み込まずに捨てる（互換番号を上げても設定や記録は消えない）。
-import { COMPAT } from '../engine/data/version.js';
+// キーの版（DATA_V）は設定・名前・記録の形の版（互換番号を上げても設定や記録は消えない）。
+// 遊びかけの作戦の保存（「続きから」）は 0.1.12 でなくした（前の版の 'run' は起動のときに捨てる。main.js）
 
 export const DATA_V = 1;
 const PREFIX = 'hardentry.v' + DATA_V + '.';
@@ -48,11 +47,4 @@ export function importCode(code) {
     for (const k of ['settings', 'profile', 'records', 'loadouts']) if (o[k]) save(k, o[k]);
     return true;
   } catch (e) { return false; }
-}
-// 遊びかけの作戦: 互換番号が今と同じときだけ使う
-export function loadRun() {
-  const r = load('run');
-  if (!r || !r.dump) return null;
-  try { if (r.dump.v !== COMPAT) throw 0; } catch (e) { remove('run'); return null; }
-  return r;
 }

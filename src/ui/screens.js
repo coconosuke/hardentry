@@ -72,12 +72,11 @@ export class Screens {
 
   // ---- タイトル
   _title() {
-    const a = this.app, run = a.savedRun();
+    const a = this.app;
     const el = this._mk('title', `
       <div class="t-logo"><div class="t-badge">SWAT · CQB</div><h1>HARD<b>ENTRY</b></h1><p>突入。制圧。確保。</p></div>
       <nav class="t-menu" aria-label="メニュー">
-        ${run ? `<button class="mi main" data-a="continue"><span class="mi-l">続きから</span><span class="mi-d">${esc(run.label)}</span></button>` : ''}
-        <button class="mi ${run ? '' : 'main'}" data-a="pve"><span class="mi-l">作戦</span><span class="mi-d">PvE · ソロ／協力</span></button>
+        <button class="mi main" data-a="pve"><span class="mi-l">作戦</span><span class="mi-d">PvE · ソロ／協力</span></button>
         <button class="mi" data-a="pvp"><span class="mi-l">対戦</span><span class="mi-d">PvP · 1v1〜4v4</span></button>
         <button class="mi" data-a="train"><span class="mi-l">訓練</span><span class="mi-d">射撃場・キルハウス</span></button>
         <button class="mi" data-a="settings"><span class="mi-l">設定</span></button>
@@ -85,7 +84,6 @@ export class Screens {
       </nav>
       <div class="t-foot"><span>ヘッドホン推奨</span><span class="ver">互換${COMPAT} · v${VERSION}</span></div>`);
     this._acts(el, {
-      continue: () => a.continueRun(),
       pve: () => this.open('pveMenu'),
       pvp: () => this.open('pvpMenu'),
       train: () => this.open('train'),

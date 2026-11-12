@@ -1,6 +1,6 @@
 // テスト一式: node tests/run_all.mjs [--quick] [--no-sizes] [--no-net] → test-results/summary.md
 //  1 ビルド  2 単体  3 マップ  4 音  5 自動の試合（作戦・対戦・同じシードで同じ結果・途中保存）
-//  6 ブラウザ（起動・タップ・音の開始・回した画面・2本指・射撃/ADS/リロード/リーン/しゃがみ・ミニマップ→地図・ミラーの視点・HUDの編集・撤収→結果・保存と続きから・2回押し・WebGL）
+//  6 ブラウザ（起動・タップ・音の開始・回した画面・2本指・射撃/ADS/リロード/リーン/しゃがみ・ミニマップ→地図・ミラーの視点・HUDの編集・撤収→結果・続きからがない・2回押し・WebGL）
 //  7 全サイズの見た目（iPhone各種・iPad・PC、安全領域つき）  8 オンライン（自前の中継で2人: 協力・対戦）  9 アプリ版  10 古い保存から上がる
 import fs from 'node:fs';
 import path from 'node:path';
@@ -563,19 +563,20 @@ try {
   await page.setViewportSize({ width: 844, height: 390 });
   await page.evaluate(() => window.__app.stage.layout());
 
-  // ---- 裏に回ったときの保存から「続きから」・タイトルへ戻るは2回押す・WebGLが落ちても戻る
+  // ---- 「続きから」はない（11-12 21:59 の要望）・タイトルへ戻るは2回押す・WebGLが落ちても戻る
   {
     await page.evaluate(() => window.__app.resumeGame());
     await page.keyboard.down('KeyW'); await page.waitForTimeout(1200); await page.keyboard.up('KeyW');
-    // 止めてから保存（再読み込みの直前にも裏に回った保存が走るので、同じ場面にそろえる）
-    const g1 = await page.evaluate(() => { const a = window.__app, g = a.game; a.freeze = true; a.autosave(); return { t: g.S.t, x: g.p.x, z: g.p.z, map: g.S.map }; });
+    // 裏に回ったときと同じ一時停止（保存はしない）→ 読み込み直すとタイトルで、「続きから」は出ない
+    const s1 = await page.evaluate(() => { const a = window.__app; a.pauseGame(); return { mode: a.mode, run: localStorage.getItem('hardentry.v1.run') }; });
     await page.reload();
     await waitTitle(page, 240000);
-    const cont = await center('.screen.title.on [data-a="continue"]');
-    if (cont) await tapAt(cont, 51);
-    await page.waitForFunction(() => window.__app.screens.cur === 'pause' && window.__app.game, null, { timeout: 120000 }).catch(() => {});
-    const g2 = await page.evaluate(() => { const g = window.__app.game; return g ? { t: g.S.t, x: g.p.x, z: g.p.z, map: g.S.map } : null; });
-    rec('保存', '裏に回ったときの保存から「続きから」で同じ場面に戻る', !!cont && g2 && g2.map === g1.map && g2.t === g1.t && Math.abs(g2.x - g1.x) < 1e-6, g2 ? `t ${g1.t}→${g2.t}` : '戻れない');
+    const s2 = await page.evaluate(() => ({ cont: !!document.querySelector('.screen.title [data-a="continue"]'), game: !!window.__app.game, run: localStorage.getItem('hardentry.v1.run'), first: (document.querySelector('.screen.title .t-menu .mi') || {}).dataset?.a }));
+    rec('保存', '「続きから」はない: 一時停止しても遊びかけを保存せず、読み込み直すとタイトル（作戦が先頭）', s1.mode === 'pause' && s1.run == null && !s2.cont && !s2.game && s2.run == null && s2.first === 'pve', JSON.stringify({ s1, s2 }));
+    await page.evaluate(() => window.__app.startTrain({ start: 'range' }));
+    await waitGame();
+    await page.evaluate(() => window.__app.pauseGame());
+    await page.waitForFunction(() => window.__app.screens.cur === 'pause', null, { timeout: 30000 }).catch(() => {});
     const q = await center('.screen.pause [data-a="quit"]');
     await tapAt(q, 52);
     const after1 = await page.evaluate(() => window.__app.screens.cur);
@@ -679,7 +680,7 @@ try {
   const { ctx, page, logs } = await openPage(env, 'dist/claude/preview.html', { w: 844, h: 390, touch: true, mobile: true, init: OLD });
   await waitTitle(page, 240000);
   const u = await page.evaluate(() => ({ hfov: window.__app.settings.hfov, sens: window.__app.settings.sens, name: window.__app.profile.name, rec: window.__app.records()['suburb:barricade:normal'], cont: !!document.querySelector('.screen.title [data-a="continue"]'), run: localStorage.getItem('hardentry.v1.run'), old: localStorage.getItem('hardentry.v0.settings') }));
-  rec('保存', '古い版の保存から上がる（視野角は横の角度へ直す・名前と記録は残る・互換の違う遊びかけは捨てる）', u.hfov === 82 && u.sens === 1.4 && u.name === 'カナタ' && u.rec && u.rec.plays === 3 && !u.cont && u.run == null && u.old == null && !logs.filter(l => /pageerror/.test(l)).length, JSON.stringify(u));
+  rec('保存', '古い版の保存から上がる（視野角は横の角度へ直す・名前と記録は残る・遊びかけの保存は捨てる）', u.hfov === 82 && u.sens === 1.4 && u.name === 'カナタ' && u.rec && u.rec.plays === 3 && !u.cont && u.run == null && u.old == null && !logs.filter(l => /pageerror/.test(l)).length, JSON.stringify(u));
   await ctx.close();
 } catch (e) { rec('保存', '古い版の保存から上がる', false, e.message.split('\n')[0]); }
 await env.close();
