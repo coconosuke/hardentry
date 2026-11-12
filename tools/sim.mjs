@@ -1,5 +1,7 @@
 // AIだけの試合をまとめて回す（バランスと、マップをAIが歩けるかの確認）。
-//  node tools/sim.mjs pve <map|all> <mission|all> [回数=4] [シード=1] [--diff=normal] [--dt=30] [--max=900] [--log]
+//  node tools/sim.mjs pve <map|all> <mission|all> [回数=4] [シード=1] [--diff=normal] [--dt=60] [--max=900] [--log]
+//  こまの細かさ: 作戦は既定でゲームと同じ毎秒60こま（11-12 まで30こまで回していて、ゲームの中だけ AI が詰まりやすい不具合を見逃した）。
+//  対戦は既定で30こま（バランスの記録と同じ）。--dt=30 / --dt=60 でどちらも変えられる
 //  node tools/sim.mjs pvp <map|all> <tdm|elim|bomb|all> [回数=4] [シード=1] [--size=4v4] [--bot=2] [--swap]
 //  --json=出力.json で1試合ずつの結果を書き出す。--md=出力.md で表にする（同じシードで前後を比べられる）
 import fs from 'node:fs';
@@ -12,11 +14,11 @@ const flags = Object.fromEntries(args.filter(a => a.startsWith('--')).map(a => {
 const pos = args.filter(a => !a.startsWith('--'));
 const kind = pos[0] || 'pve';
 const N = +(pos[3] || 4), seed0 = +(pos[4] || 1);
-const dt = 1 / +(flags.dt || 30);
+const DT_FLAG = flags.dt ? 1 / +flags.dt : null;
 const maxT = +(flags.max || (kind === 'pve' ? 900 : 1500));
 
 export function runPve(map, mission, seed, o = {}) {
-  const G = createGame({ map, mode: 'pve', mission, diff: o.diff || 'normal', team: o.team || 4, allAI: true, seed, dt: o.dt || dt });
+  const G = createGame({ map, mode: 'pve', mission, diff: o.diff || 'normal', team: o.team || 4, allAI: true, seed, dt: o.dt || DT_FLAG || 1 / 60 });
   const S = G.S, w = G.w;
   if (o.log) S.debugLead = [];
   const steps = Math.round((o.max || maxT) / S.dt);
@@ -48,7 +50,7 @@ export function runPve(map, mission, seed, o = {}) {
 
 export function runPvp(map, mode, seed, o = {}) {
   const sizes = (o.size || '4v4').split('v').map(Number);
-  const G = createGame({ map, mode, teams: sizes, roster: [], rules: { botLevel: +(o.bot || 2), wins: o.wins ?? 3, time: 480, ff: false }, seed, dt: o.dt || dt });
+  const G = createGame({ map, mode, teams: sizes, roster: [], rules: { botLevel: +(o.bot || 2), wins: o.wins ?? 3, time: 480, ff: false }, seed, dt: o.dt || DT_FLAG || 1 / 30 });
   const S = G.S, m = S.m;
   const steps = Math.round((o.max || maxT) / S.dt);
   const kills = [0, 0], deaths = [0, 0];
