@@ -1,5 +1,6 @@
 // 入力: タッチ（スティック・視点・ボタン、2本指以上の同時操作）、長押し、円形メニュー、ジャイロ、キーボードとマウス
 // タップは pointerup で判定し、続く click は捨てる（iPhoneは2本目の指に click が来ない）
+import { sprintZone } from './stick.js';
 let lastTapUp = 0;
 export const tapHooks = [];
 export const tapGuard = { drag: false };
@@ -188,8 +189,8 @@ export class Input {
     const R = 58 * ((home && home.s) || 1), spr = (home && home.spr) || 1.25;
     let dx = (sx - st.ox) / R, dy = (sy - st.oy) / R;
     const l = Math.hypot(dx, dy);
-    // スティックを上へ押し込む（ダッシュの印より上）とダッシュ（CODM・PUBGM）。作戦・対戦とも
-    this.sprintArm = this.S.stickSprint !== false && dy < -spr && Math.abs(dx) < 0.8;
+    // スティックを上へ押し込む（ダッシュの印より上）とダッシュ（CODM・PUBGM）。作戦・対戦とも。少し斜めでもよい（stick.js）
+    this.sprintArm = this.S.stickSprint !== false && sprintZone(dx, dy, spr, this.sprintArm);
     if (l > 1) { dx /= l; dy /= l; }
     // 可変のスティック: 大きく離れたら土台がついてくる（ダッシュの印より外で）
     const follow = Math.max(1.9, spr + 0.45);
