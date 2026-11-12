@@ -127,7 +127,7 @@ export function tower(ww, o) {
   const bw = 4, bd = 4, H = 9;
   const B = begin(ww, { ...o, kind: 'tower', floors: 3 }, bw, bd, o.mat ?? M.CONCRETE, o.col || '#9a9890');
   // 柱4本
-  for (const [px, pz] of [[0, 0], [bw - 0.4, 0], [0, bd - 0.4], [bw - 0.4, bd - 0.4]]) box(B, px, 0, pz, px + 0.4, H, pz + 0.4, { kind: 'pillar' });
+  for (const [px, pz] of [[0, 0], [bw - 0.4, 0], [0, bd - 0.4], [bw - 0.4, bd - 0.4]]) box(B, px, 0, pz, px + 0.4, H + 3.2 - SL, pz + 0.4, { kind: 'pillar' });
   // 床（4.5m・9m）と階段（外側に沿って）
   slab(B, 0, 0, bw, bd, 4.5, [0.4, 0.4, 1.5, bd - 0.4]);
   slab(B, 0, 0, bw, bd, H, [0.4, 0.4, 1.5, bd - 0.4]);
@@ -146,7 +146,7 @@ export function wallRun(ww, x0, z0, x1, z1, h = 2.2, o = {}) {
   return addBox(ww, { x0: x0 - th / 2, z0: Math.min(z0, z1), x1: x0 + th / 2, z1: Math.max(z0, z1), y0: y, y1: y + h, mat: o.mat ?? M.CONCRETE, kind: 'fence', col: o.col || '#a9a59b', opaque: o.opaque });
 }
 // 土のうの列（高さ1m）・コンテナ（6×2.4×2.6）
-export function sandbags(ww, x0, z0, x1, z1, y = 0) { return wallRun(ww, x0, z0, x1, z1, 1.0, { th: 0.7, mat: M.FABRIC, col: '#a28f68', y }); }
+export function sandbags(ww, x0, z0, x1, z1, y = 0) { const b = wallRun(ww, x0, z0, x1, z1, 1.0, { th: 0.7, mat: M.FABRIC, col: '#a28f68', y }); b.kind = 'sandbag'; return b; }
 export function container(ww, x, z, rot = 0, y = 0, col = '#3f6f8f') {
   const [w, d] = rot % 2 ? [2.4, 6] : [6, 2.4];
   return addBox(ww, { x0: x - w / 2, z0: z - d / 2, x1: x + w / 2, z1: z + d / 2, y0: y, y1: y + 2.6, mat: M.METAL, kind: 'container', col });

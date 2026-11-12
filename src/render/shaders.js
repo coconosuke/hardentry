@@ -18,7 +18,7 @@ uniform highp sampler2D uDLR;     // 動く光ごとに、届く部屋（光が�
 uniform vec4 uLGd;                // W1, D1, NLy, NL
 uniform vec4 uMapD;               // W, D, CS, LH
 uniform vec3 uSunDir; uniform vec3 uSunCol; uniform float uShadowOn; uniform mat4 uShadowVP; uniform highp sampler2DShadow uShadow; uniform float uShadowTexel;
-uniform vec3 uSkyCol; uniform float uAmbMin; uniform float uOuter;
+uniform vec3 uSkyCol; uniform float uAmbMin; uniform float uOuter; uniform float uWar; uniform float uFogFar;
 uniform vec4 uDLp[${MAX_DL}]; uniform vec4 uDLc[${MAX_DL}]; uniform vec4 uDLd[${MAX_DL}]; uniform int uDLn;
 uniform vec3 uCam; uniform vec3 uFogCol; uniform float uFogD; uniform float uFogIn; uniform float uTime;
 uniform float uRoofY;
@@ -74,7 +74,9 @@ float sunShadow(vec3 p, vec3 n){
   s += texture(uShadow, vec3(q.xy + vec2(0.6, -0.6) * t, q.z - b));
   s += texture(uShadow, vec3(q.xy + vec2(-0.6, 0.6) * t, q.z - b));
   s += texture(uShadow, vec3(q.xy + vec2(0.6, 0.6) * t, q.z - b));
-  return s * 0.25;
+  // 影の範囲の縁では影を薄くして、境目を目立たせない
+  float e = min(min(q.x, 1.0 - q.x), min(q.y, 1.0 - q.y));
+  return mix(1.0, s * 0.25, smoothstep(0.0, 0.12, e));
 }
 vec3 dynLights(vec3 p, vec3 n, float room){
   vec3 acc = vec3(0.0);
@@ -104,6 +106,13 @@ vec3 shade(vec3 p, vec3 n, vec3 alb, float room, float ao, out float outdoor){
   if (uOuter > 0.5) {
     outdoor = 1.0;
     vec3 g0 = uSkyCol * (0.5 + 0.4 * max(n.y, 0.0) + 0.1 * max(-n.y, 0.0));
+    if (uWar > 0.5) {
+      // 大規模戦の世界: room = 日の当たり方（外 1・建物の中 0）。近くは太陽の影
+      float sv = clamp(room, 0.0, 1.0), nds0 = dot(n, uSunDir);
+      if (uShadowOn > 0.5 && nds0 > 0.0 && sv > 0.0) { float s = sunShadow(p, n); if (s >= 0.0) sv *= s; }
+      outdoor = mix(0.45, 1.0, clamp(room, 0.0, 1.0));
+      return alb * ((g0 + uAmbMin) * ao + uSunCol * max(nds0, 0.0) * 0.92 * sv + dynLights(p, n, 0.0));
+    }
     return alb * ((g0 + uAmbMin) * ao + uSunCol * max(dot(n, uSunDir), 0.0) * 0.92);
   }
   vec2 a;
@@ -123,6 +132,8 @@ vec3 fog(vec3 col, vec3 p, float outdoor){
   float d = length(p - uCam);
   float dens = uFogD * mix(uFogIn, 1.0, outdoor);
   float f = 1.0 - exp(-d * dens);
+  // 描く距離の端では、もやに溶かす（遠くの形が急に消えないように）
+  if (uFogFar > 0.0) f = max(f, smoothstep(uFogFar * 0.72, uFogFar, d));
   return mix(col, uFogCol, f);
 }
 `;
@@ -148,6 +159,8 @@ void main(){
   vec3 n = normalize(vNrm);
   if (!gl_FrontFacing) n = -n;
   vec3 alb = texture(uTex, vec3(vUV, vLayer)).rgb * vCol * uTint;
+  // 大規模戦の地面: 大きな模様を重ねて、くり返しを目立たせない
+  if (uWar > 0.5 && abs(vLayer - 8.0) < 0.5) alb *= 0.72 + 0.4 * texture(uTex, vec3(vUV * 0.11 + 0.37, 9.0)).r;
   float yl = vPos.y - floor((vPos.y + 0.05) / uMapD.w) * uMapD.w;
   // 巾木（塗装の内壁の足元）と回り縁（天井ぎわの細い帯）
   if (abs(vLayer - 3.0) < 0.5 && abs(n.y) < 0.5) {
@@ -255,7 +268,7 @@ void main(){
     if (uNight > 0.5) { float s = hash12(floor(d.xz / (h + 0.3) * 260.0)); col += vec3(step(0.9975, s) * 0.8 * smoothstep(0.05, 0.3, h)); }
   }
   // もやと同じ色へ寄せる（地平線）
-  col = mix(col, uFogCol, smoothstep(0.25, 0.0, abs(h)) * 0.6);
+  col = mix(col, uFogCol, uFogFar > 0.0 ? max(smoothstep(0.3, 0.0, h) * 0.97, smoothstep(0.0, -0.05, h)) : smoothstep(0.25, 0.0, abs(h)) * 0.6);
   oCol = vec4(col, 1.0);
 }`;
 
@@ -280,7 +293,7 @@ void main(){
   else { a = smoothstep(1.0, 0.0, abs(q.y)) * smoothstep(1.0, 0.7, abs(q.x)); }
   vec3 col = vCol.rgb;
   if (vUV.w > 0.5) {
-    vec2 aa; vec3 g = gridLight(vPos, vec3(0.0, 1.0, 0.0), aa) * 0.6 + gridLight(vPos, normalize(uCam - vPos), aa) * 0.4;
+    vec2 aa; vec3 g = uOuter > 0.5 ? uSkyCol * 0.7 + uSunCol * 0.32 : gridLight(vPos, vec3(0.0, 1.0, 0.0), aa) * 0.6 + gridLight(vPos, normalize(uCam - vPos), aa) * 0.4;
     col *= g + uAmbMin + dynLights(vPos, vec3(0.0, 1.0, 0.0), 0.0) * 0.0;
     if (k == 3) { float r = length(q); col *= mix(0.25, 1.0, smoothstep(0.3, 0.6, r)); }
   }

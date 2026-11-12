@@ -8,6 +8,10 @@ import { prepareLevel, buildChunk, doorLeafMesh, barPanelMesh, CHUNK } from './l
 import { WV, MeshBuilder, hex } from './build.js';
 import { bakeLight } from '../engine/light.js';
 import { CS, LH, CEIL, NB, DSHIELD } from '../engine/world.js';
+import { buildWarFar, buildWarNear } from '../war/render.js';
+
+// 大規模戦の空（もやを薄く、遠くまで見える。日は少し低めで影が長い）
+export const WAR_SKY = { sky: [0.54, 0.67, 0.9], ground: [0.3, 0.29, 0.24], sun: [2.75, 2.5, 2.12], sunDir: (() => { const v = [0.5, 0.64, 0.36], l = Math.hypot(...v); return v.map(x => x / l); })(), fog: [0.7, 0.77, 0.86], fogD: 0.0011, amb: 0.03, exposure: 0.8, zenith: [0.23, 0.43, 0.86], horizon: [0.73, 0.8, 0.9], night: 0 };
 
 // 画質: まとめて選ぶ（低・中・高）か、細かく選ぶ（カスタム）
 export const QUALITY = { low: { name: '低' }, medium: { name: '中' }, high: { name: '高' }, custom: { name: 'カスタム' } };
@@ -269,7 +273,8 @@ export class Renderer {
   }
   clearMap() {
     const gl = this.gl;
-    for (const ch of this.chunks || []) { delMesh(gl, ch.mesh); delMesh(gl, ch.glass); }
+    for (const ch of this.chunks || []) { if ('far' in ch) { delMesh(gl, ch.far); delMesh(gl, ch.near); } else { delMesh(gl, ch.mesh); delMesh(gl, ch.glass); } }
+    this.war = null;
     for (const d of this.doorMeshes || []) { for (const m of d.leaves) delMesh(gl, m); }
     for (const b of this.barMeshes || []) if (b) delMesh(gl, b.mesh);
     this.barMeshes = null;
@@ -277,6 +282,54 @@ export class Renderer {
     for (const t of [this.lgT, this.wmT, this.aoT, this.dlr]) if (t) gl.deleteTexture(t);
     this.chunks = null; this.doorMeshes = null; this.lgT = this.wmT = this.aoT = this.dlr = null;
   }
+
+  // ---- 大規模戦の世界（src/war）: 光の格子は使わない（空の光＋日の光＋近くの影）。塊は遠い形をいつも持ち、近い形は近づいたときに作る
+  setWar(ww, o = {}) {
+    const gl = this.gl;
+    this.clearMap();
+    const t0 = performance.now();
+    this.war = ww; this.w0 = ww; this.def = null; this.ctx = null;
+    this.sky = o.sky || WAR_SKY;
+    this.viewDist = o.viewDist || 900;
+    this.nearDist = o.nearDist || 170;
+    this.shR = o.shadowR || 44;
+    // 使わない光の格子などは 1 画素の物を置く（シェーダーの決まりのため）
+    const t3 = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_3D, t3);
+    gl.texImage3D(gl.TEXTURE_3D, 0, gl.RGBA16F, 1, 1, 6, 0, gl.RGBA, gl.HALF_FLOAT, new Uint16Array(24));
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    this.lgT = t3; this.lgDim = [1, 1, 1, 1];
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    this.wmT = tex2D(gl, 1, 1, { internal: gl.R8, format: gl.RED, data: new Uint8Array([0]), filter: gl.NEAREST });
+    this.aoT = tex2D(gl, 1, 1, { internal: gl.R8, format: gl.RED, data: new Uint8Array([255]), filter: gl.NEAREST });
+    this.nRooms = 1;
+    this.dlrData = new Uint8Array(MAX_DL);
+    this.dlr = tex2D(gl, 1, MAX_DL, { internal: gl.R8, format: gl.RED, data: this.dlrData, filter: gl.NEAREST });
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+    this.chunks = buildWarFar(ww).map(c => { const m = makeWorldMesh(gl, c.B); return { k: c.k, x0: c.x0, z0: c.z0, x1: c.x1, z1: c.z1, y0: c.y0, y1: c.y1, far: m, farTris: m ? m.n / 3 : 0, near: null, nearTris: 0, mesh: m, glass: null, tris: m ? m.n / 3 : 0, d: 1e9 }; });
+    this.doorMeshes = []; this.barMeshes = []; this.outer = null;
+    this.roofY = 1e9;
+    this.buildMs = performance.now() - t0;
+  }
+  // 近い形を作る・捨てる。budget: 1こまで作る数（-1 で全部）
+  _warSelect(c, budget = 2) {
+    const gl = this.gl, N = this.nearDist;
+    const want = [];
+    for (const ch of this.chunks) {
+      ch.d = Math.hypot((ch.x0 + ch.x1) / 2 - c.x, (ch.z0 + ch.z1) / 2 - c.z);
+      if (ch.d < N && !ch.near) want.push(ch);
+      else if (ch.near && ch.d > N + 110) { delMesh(gl, ch.near); ch.near = null; ch.nearTris = 0; }
+    }
+    want.sort((a, b) => a.d - b.d);
+    const nb = budget < 0 ? want.length : Math.min(want.length, budget);
+    for (let k = 0; k < nb; k++) { const ch = want[k]; ch.near = makeWorldMesh(gl, buildWarNear(this.war, ch.k)); ch.nearTris = ch.near ? ch.near.n / 3 : 0; }
+    for (const ch of this.chunks) {
+      const useNear = ch.near && ch.d < N + 40;
+      ch.mesh = useNear ? ch.near : ch.far; ch.tris = useNear ? ch.nearTris : ch.farTris;
+    }
+  }
+  // 見る位置のまわりの近い形を先に全部作る（出撃のとき）
+  warmWar(x, z) { if (this.war) this._warSelect({ x, z }, -1); }
 
   // ---- 共通のuniform
   _bindLight(P, opts) {
@@ -297,6 +350,9 @@ export class Renderer {
     if (u.uShadowTexel) gl.uniform1f(u.uShadowTexel, this.q.shadow ? 1 / this.q.shadow : 0);
     if (u.uSkyCol) gl.uniform3fv(u.uSkyCol, sky.sky);
     if (u.uAmbMin) gl.uniform1f(u.uAmbMin, opts.ambMin || 0);
+    if (u.uWar) gl.uniform1f(u.uWar, this.war ? 1 : 0);
+    if (u.uOuter) gl.uniform1f(u.uOuter, this.war ? 1 : 0);
+    if (u.uFogFar) gl.uniform1f(u.uFogFar, this.war ? this.viewDist : 0);
     if (u.uCam) gl.uniform3fv(u.uCam, this.camPos);
     if (u.uFogCol) gl.uniform3fv(u.uFogCol, sky.fog);
     if (u.uFogD) gl.uniform1f(u.uFogD, sky.fogD * (opts.fogMul ?? 1));
@@ -329,7 +385,8 @@ export class Renderer {
       this.dlP.set([L.x, L.y, L.z, L.r], i * 4);
       this.dlC.set([L.col[0], L.col[1], L.col[2], L.spot ? 1 : 0], i * 4);
       if (L.spot) this.dlD.set([L.spot.dx, L.spot.dy, L.spot.dz, L.spot.cos], i * 4);
-      if (L.rooms) for (const r of L.rooms) if (r >= 0 && r < this.nRooms) this.dlrData[i * this.nRooms + r] = 255;
+      if (this.war) this.dlrData[i * this.nRooms] = 255;
+      else if (L.rooms) for (const r of L.rooms) if (r >= 0 && r < this.nRooms) this.dlrData[i * this.nRooms + r] = 255;
     }
     const gl = this.gl;
     gl.bindTexture(gl.TEXTURE_2D, this.dlr);
@@ -358,11 +415,12 @@ export class Renderer {
     }
     this.camPos = [c.x, c.y, c.z];
     m4lookAt(this.view, c.x, c.y, c.z, c.x + fx, c.y + fy, c.z + fz, ux, uy, uz);
-    m4persp(this.proj, c.fov, W / H, 0.04, 400);
+    m4persp(this.proj, c.fov, W / H, this.war ? 0.08 : 0.04, this.war ? this.viewDist + 60 : 400);
     m4mul(this.vp, this.proj, this.view);
     m4invert(this.invVP, this.vp);
     frustumPlanes(this.vp, this.planes);
     this._setLights(f.lights || []);
+    if (this.war) this._warSelect(c);
     // 影
     this.shadowOn = false;
     if (this.q.shadow && this.sky.night < 0.5 && f.shadows !== false) this._shadowPass(c);
@@ -383,6 +441,7 @@ export class Renderer {
     const vis = [];
     for (const ch of this.chunks) {
       if (!ch.mesh) continue;
+      if (this.war && ch.d > this.viewDist + 46) continue;
       if (!aabbVisible(this.planes, ch.x0, ch.y0, ch.z0, ch.x1, ch.y1, ch.z1)) continue;
       const d = Math.hypot((ch.x0 + ch.x1) / 2 - c.x, (ch.y0 + ch.y1) / 2 - c.y, (ch.z0 + ch.z1) / 2 - c.z);
       vis.push([d, ch]);
@@ -537,7 +596,7 @@ export class Renderer {
 
   _shadowPass(c) {
     const gl = this.gl, q = this.q, sky = this.sky;
-    const R = 32, Dd = 70;
+    const R = this.war ? this.shR : 32, Dd = this.war ? 110 : 70;
     const sd = sky.sunDir;
     // 影の画面の中心は、カメラの少し前。テクセルの格子に合わせて揺れを防ぐ
     const fx = Math.sin(c.yaw), fz = Math.cos(c.yaw);

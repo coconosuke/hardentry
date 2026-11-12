@@ -45,9 +45,9 @@ function naturalH(x, z) {
   h += 14 * Math.exp(-((x - 900) ** 2 + (z - 1150) ** 2) / (2 * 160 * 160));
   // 石切り場（くぼみ）
   h -= 9 * Math.exp(-((x - 330) ** 2 + (z - 470) ** 2) / (2 * 45 * 45));
-  // まわりの山（遊べる範囲の外）
-  const e = Math.max(0, Math.max(Math.abs(x - CX), Math.abs(z - CZ)) - 600);
-  h += e * e * 0.012;
+  // まわりの山（遊べる範囲の外）: 尾根と谷のある丘陵（壁のように見えないよう、高さと立ち上がりを場所ごとに変える）
+  const e = Math.max(0, Math.max(Math.abs(x - CX), Math.abs(z - CZ)) - 590);
+  if (e > 0) { const k = 0.55 + 0.45 * fbm(x, z, 140, 3, 55); h += e * e * 0.0042 * k + e * 0.12 * (0.5 + 0.5 * fbm(x, z, 60, 2, 61)); }
   return h;
 }
 function segDist(px, pz, ax, az, bx, bz) {
@@ -64,7 +64,7 @@ const sstep = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a)
 
 export function buildRiverbend(seed = 7) {
   const ww = makeWarWorld({ sx: SIZE, sz: SIZE, hs: 2 });
-  ww.mapId = 'riverbend'; ww.areas = AREAS; ww.flagDefs = FLAGS; ww.roads = ROADS; ww.riverX = riverX;
+  ww.mapId = 'riverbend'; ww.areas = AREAS; ww.flagDefs = FLAGS; ww.roads = ROADS; ww.riverX = riverX; ww.roadDist = roadDist;
   // 平らにする高さ（自然の高さの平均）
   for (const p of PADS) { let s = 0, n = 0; for (let a = 0; a < 16; a++) { const r = p.r * 0.6; s += naturalH(p.x + Math.cos(a) * r, p.z + Math.sin(a) * r); n++; } p.h = s / n; }
   const W = ww.HW;
@@ -78,7 +78,7 @@ export function buildRiverbend(seed = 7) {
     if (rd < 12) { const k = 1 - sstep(4, 12, rd); h = h * (1 - 0.35 * k) + (h - 0.15) * 0.35 * k; }
     // 川床（幅24m・深さ3.5m。橋のあたりは土手）
     const dr = Math.abs(x - riverX(z));
-    if (dr < 22) h -= 3.5 * (1 - sstep(8, 22, dr));
+    if (dr < 22) h -= 3.5 * (1 - sstep(8, 22, dr)) * (1 - sstep(560, 620, Math.max(Math.abs(x - CX), Math.abs(z - CZ))));
     ww.h[j * W + i] = h;
   }
   const rnd = mulberry(seed);
