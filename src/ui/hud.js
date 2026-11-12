@@ -312,7 +312,7 @@ export class Hud {
       }
       // ボタンの状態
       this._flag('ads', v.adsOn); this._flag('crouch', p.stance >= 1); this._flag('leanL', v.leanL); this._flag('leanR', v.leanR);
-      this._flag('light', !!(wi && wi.lightOn)); this._flag('low', v.lowOn); this._flag('nvg', !!v.nvgOn);
+      this._flag('light', !!(wi && wi.lightOn)); this._flag('nvg', !!v.nvgOn);
       this.btn.nvg.classList.toggle('dis', !v.hasNvg);
       this.btn.light.classList.toggle('dis', !(wi && wi.att && (wi.att.light || wi.att.laser)));
       const m320 = p.ws.slot === 3 && p.inv.long === 'm320';

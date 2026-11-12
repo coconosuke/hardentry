@@ -50,7 +50,7 @@ export class Match {
     this.hud.setMode({ pve: !this.S.pvp, pvp: this.S.pvp, drone: false });
     this.yaw = o.cam ? o.cam.yaw : this.p.yaw; this.pitch = o.cam ? o.cam.pitch : 0;
     this.acc = 0; this.time = 0; this.dead = false; this.done = false;
-    this.adsOn = false; this.leanSide = 0; this.stance = 0; this.lowOn = false; this.team = 'gold'; this.nvgOn = false;
+    this.adsOn = false; this.leanSide = 0; this.stance = 0; this.team = 'gold'; this.nvgOn = false;
     this.gearSel = (this.p.inv.gear.find(g => GEAR[g.id].kind === 'nade') || this.p.inv.gear[0] || {}).id || null;
     this.acts = [];
     this.shake = 0; this.flashW = 0; this.dmgK = 0; this.suppK = 0; this.exposure = 1; this.blurK = 0;
@@ -243,7 +243,6 @@ export class Match {
         case 'fmode': if (k === 'down') { const wz = curWeapon(this.p), Wz = curW(this.p); this.acts.push({ a: 'mode', zoom: !!(wz && Wz && zoomsOf(wz.att) && (Wz.modes.length <= 1 || this.p.ads > 0.5)) }); } break;
         case 'light': if (k === 'down') this.acts.push({ a: 'light' }); break;
         case 'nvg': if (k === 'down' && p.armor.head === 'nvg') { this.nvgOn = !this.nvgOn; p.nvgOn = this.nvgOn; this.au.sfx('nvg', null, { vol: 0.5 }); } break;
-        case 'low': if (k === 'down') this.lowOn = !this.lowOn; break;
         case 'map': if (k === 'tap' || (k === 'longup' && !e.key)) this.app.openTablet(); break;
         case 'pause': if (k === 'tap' || (k === 'down' && e.key)) this.app.pauseGame(); break;
         case 'drone': if (k === 'down') this._droneToggle(); break;
@@ -265,7 +264,8 @@ export class Match {
     const p = this.p;
     const cmd = {
       mx: inp.mx, mz: inp.mz, yaw: this.yaw, pitch: this.pitch,
-      fire: inp.fire && !this.app.input.radial, ads: this.adsOn, low: this.lowOn, stance: this.stance, lean: this.leanSide, sprint: inp.sprint,
+      // ローレディは人の操作からはなくした（0.1.13。撃てなくなるだけで使う理由がない）。AI は今までどおり使う（銃を下げて歩く・投降など）
+      fire: inp.fire && !this.app.input.radial, ads: this.adsOn, low: false, stance: this.stance, lean: this.leanSide, sprint: inp.sprint,
       act: this.acts.length ? this.acts.splice(0) : null, power: 0.75,
     };
     if (this.droneId != null) { cmd.mx = 0; cmd.mz = 0; cmd.fire = false; }
@@ -679,9 +679,9 @@ export class Match {
     const voice = a ? (a.kind === 'swat' ? (a === this.p ? 'p' : 'o' + ((a.ai && a.ai.slot) || 0)) : a.kind === 'sus' ? 's' + (a.id % 3) : 'c' + (a.id % 3)) : 'toc';
     this.au.voice(line, idx, voice, a && a !== this.p ? [a.x, a.y + 1.6, a.z] : null, { radio: !a || who === 'TOC' || (a.kind === 'swat' && a !== this.p && Math.hypot(a.x - this.p.x, a.z - this.p.z) > 12) });
   }
-  // 倒れた・復帰した・ラウンドが変わった: 押しっぱなしの状態（リーン・しゃがみ・ADS・ローレディ・ダッシュの固定・カメラ）を戻す
+  // 倒れた・復帰した・ラウンドが変わった: 押しっぱなしの状態（リーン・しゃがみ・ADS・ダッシュの固定・カメラ）を戻す
   _resetControls() {
-    this.adsOn = false; this.leanSide = 0; this.stance = 0; this.lowOn = false;
+    this.adsOn = false; this.leanSide = 0; this.stance = 0;
     this.camView = null; this.droneId = null; this.pkEnd = false;
     const inp = this.app.input; if (inp) { inp.sprintLock = false; inp.sprintArm = false; if (inp.onStick) inp.onStick(null); if (inp.radial) inp.closeRadial(); }
     if (this.p) { this.p.lean = 0; this.p.ads = 0; this.p.low = 0; }
@@ -1033,7 +1033,7 @@ export class Match {
     const v = {
       p, wi, pvp: S.pvp, yaw: this.cam ? this.cam.yaw : p.yaw, adsOn: this.adsOn,
       // ダッシュを押しているが、ほかの操作（構える・リーン・撃つ・リロード）が先で走っていない
-      sprWait: !!(p.alive && !p.sprint && this.app.input && (this.app.input.sprintArm || this.app.input.sprintLock)), leanL: this.leanSide < 0, leanR: this.leanSide > 0, lowOn: this.lowOn, nvgOn: this.nvgOn, hasNvg: p.armor.head === 'nvg',
+      sprWait: !!(p.alive && !p.sprint && this.app.input && (this.app.input.sprintArm || this.app.input.sprintLock)), leanL: this.leanSide < 0, leanR: this.leanSide > 0, nvgOn: this.nvgOn, hasNvg: p.armor.head === 'nvg',
       gearSel: this.gearSel, gearId: p.ws.gear, team: this.team,
       spread: wi ? spreadDeg(S, p, WEAPONS[wi.id], wi) : 2,
       optic: null, canVault: this.vaultOK !== false,

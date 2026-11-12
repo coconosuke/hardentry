@@ -407,6 +407,11 @@ try {
     await page.waitForTimeout(800);
     const lt1 = await page.evaluate(() => !!window.__app.game.p.light);
     rec('タップ', 'ライトのボタンは押した瞬間に1回だけ切り替わる（離しても戻らない）', hasLight && mid === !lt0 && lt1 === mid, `ライト付き:${hasLight} ${lt0} → 押している間 ${mid} → 離した後 ${lt1}`);
+    // ローレディは人の操作からなくした（11-12 23:05 の要望）: ボタンも B キーもない
+    const lowGone = await page.evaluate(() => { const before = window.__app.game.p.low; window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyB' })); window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyB' })); return { btn: !!document.querySelector('#hud [data-btn="low"]'), before }; });
+    await page.waitForTimeout(600);
+    const lowAfter = await page.evaluate(() => window.__app.game.p.low);
+    rec('操作', 'ローレディのボタンと B キーはない（銃を下げない）', !lowGone.btn && lowAfter < 0.05, JSON.stringify({ ...lowGone, after: lowAfter }));
   }
   // HUDの配置の編集: 「すべて初期化」は2回押す・「元に戻す」は選んだ項目だけ戻す
   {
