@@ -7,7 +7,7 @@ import { eyeOf, dropWeapon, capsOf, wristsOf, startMelee } from './combat.js';
 import { throwNade, launchNade } from './nades.js';
 import { placeBar, clearBar, bashBar } from './barricade.js';
 import { curW } from './actor.js';
-import { startReload, switchTo, m320Next } from './weapon.js';
+import { startReload, switchTo, m320Next, cancelReload } from './weapon.js';
 import { ACT_POSE, REACH_D, STAND_D, ALIGN_T } from './data/acts.js';
 import { depSpot, placeDep, removeDep, DEP_WHY } from './deploy.js';
 
@@ -554,6 +554,8 @@ export function doAction(S, w, a, ac, ev) {
   if (kind === 'cmd') { S.orders.push({ ...ac, by: a.id, t: S.t, n: ++S.cmdSeq }); ev.push({ e: 'cmd', id: a.id, cmd: ac.cmd, team: ac.team || 'gold' }); return; }
   if (kind === 'det') { detonateMine(S, w, a, ev); return; }
   if (kind === 'reload') return; // 銃の側で処理
+  // ダッシュを入れ直した（手元が、押し直した・スティックを押し込み直した瞬間に送る）: リロードの最中ならやめる。動くより先なので、そのステップから走る
+  if (kind === 'sprint') { cancelReload(a, ev); return; }
   if (kind === 'melee') { startMelee(S, w, a, ev); return; }
   if (kind === 'unlockDoor') { if (a.kind === 'sus' || a.kind === 'civ') doorOp(S, w, a, ac.id, 'unlock', ev); return; }
   if (a.down || a.cuffed || a.comply) return;

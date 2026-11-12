@@ -234,6 +234,8 @@ function resetFighter(S, w, a, pt, side) {
   a.inj = { arm: 0, leg: 0, head: 0 };
   // 装備は陣営ごと（防護の重さも、選んだ陣営の物）
   const lo = Object.assign({}, PVP_LOADOUTS[side], a.pvpLo && a.pvpLo[side] ? a.pvpLo[side] : {});
+  // TDM だけ両方のチームが使える銃（狙撃銃）: 攻守のモードで相手の側の装備に入っていたら、既定の主武器に替える（11-12 17:50 の要望）
+  { const W0 = lo.primary && WEAPONS[lo.primary.id]; if (W0 && W0.tdmBoth && W0.side !== 'both' && W0.side !== side && !(S.m && S.m.kind === 'tdm')) lo.primary = PVP_LOADOUTS[side].primary; }
   a.pvpArmor = PVP_ARMOR[lo.armor] ? lo.armor : 'medium';
   const A = PVP_ARMOR[a.pvpArmor];
   a.hp = a.maxHp = A.hp;

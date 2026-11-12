@@ -31,6 +31,9 @@ export function onRepeat(el, fn) {
 }
 
 const LONG = 420; // 長押し（ms）
+// ダッシュの固定を続けるボタン（11-12）: 撃つ・構える・リーン・リロードの間は走らず、終わるとまた走る（押したままのダッシュと同じ）。
+// 持ち替え・乗り越えも走ったまま。ほかのボタン（調べる・命令・装備・しゃがむなど）は、今までどおり固定をやめる
+const KEEP_LOCK = new Set(['map', 'pause', 'fire', 'fireL', 'ads', 'leanL', 'leanR', 'reload', 'fmode', 'light', 'nvg', 'low', 'team', 'board', 'wpn1', 'wpn2', 'vault']);
 // 出来事の時刻（performance.now と同じ基準）。古いブラウザで 0 や Date 基準なら今の時刻
 const evT = (e) => { const t = e && e.timeStamp; const n = performance.now(); return t > 0 && t <= n + 50 && t > n - 60000 ? t : n; };
 
@@ -47,6 +50,8 @@ export class Input {
     this.keys = new Set();
     this.mouseBtn = { l: false, r: false };
     this.touchUsed = false;
+    // ダッシュを入れた回数（押し直した・スティックを押し込み直した。このこまの分）。リロードの最中ならやめる（game.js が動作 'sprint' を送る）
+    this.sprintArm = false; this.sprintLock = false; this.sprPress = 0;
     this.toggles = { ads: false, leanL: false, leanR: false, crouch: false, prone: false, low: false };
     this.gyro = { on: false, ok: false, x: 0, y: 0, last: 0 };
     this.onStick = null; this.onRadial = null; this.onBtn = null;
@@ -58,7 +63,7 @@ export class Input {
   reset() {
     this.mx = this.mz = this.lookDX = this.lookDY = 0;
     this.ptr.clear(); this.stick = null; this.hold.clear(); this.edges.length = 0; this.keys.clear();
-    this.sprintArm = false; this.sprintLock = false;
+    this.sprintArm = false; this.sprintLock = false; this.sprPress = 0;
     this.mouseBtn = { l: false, r: false };
     this.radial = null; if (this.onRadial) this.onRadial(null);
     if (this.onStick) this.onStick(null);
@@ -82,8 +87,9 @@ export class Input {
         // 時刻は出来事の起きた時（重いこまで処理が遅れても、短く押したのを長押しにしない）
         const p = { kind: 'btn', btn: b, el, x: sx, y: sy, x0: sx, y0: sy, t0: evT(e), tp: performance.now(), moved: 0, long: false };
         this.ptr.set(e.pointerId, p);
-        if (this.sprintLock && b !== 'map' && b !== 'pause') { this.sprintLock = false; this.sprintArm = false; if (this.onStick) this.onStick(null); }
+        if (this.sprintLock && !KEEP_LOCK.has(b)) { this.sprintLock = false; this.sprintArm = false; if (this.onStick) this.onStick(null); }
         this.hold.add(b); el.classList.add('down');
+        if (b === 'sprint') this.sprPress++;
         this.edges.push({ b, k: 'down', sub: el.dataset.sub || null });
         if (this.onBtn) this.onBtn(b, 'down', p);
         return;
@@ -97,7 +103,8 @@ export class Input {
       const leftZone = this.S.handed === 'left' ? sx > this.stage.w * 0.55 : sx < this.stage.w * 0.45;
       const onStick = fixed ? Math.hypot(sx - home.x, sy - home.y) < 95 * (home.s || 1) : leftZone;
       if (onStick && !this.stick) {
-        this.sprintLock = false;
+        // 触れたら固定をやめる。もう一度ダッシュの所まで押し込むと「入れ直し」（リロードをやめて走る）
+        this.sprintLock = false; this.sprintArm = false;
         this.stick = { id: e.pointerId, ox: fixed ? home.x : sx, oy: fixed ? home.y : sy, x: sx, y: sy, fixed: !!fixed };
         this.ptr.set(e.pointerId, { kind: 'stick' });
         if (this.onStick) this.onStick(this.stick, 0, 0);
@@ -128,7 +135,7 @@ export class Input {
       this.ptr.delete(e.pointerId);
       if (!p) return;
       if (p.kind === 'stick') {
-        // ダッシュの所で離した: 「ダッシュの固定」がオンなら走り続ける（PUBGM・CODM のように。スティックかボタンに触れるとやめる）
+        // ダッシュの所で離した: 「ダッシュの固定」がオンなら走り続ける（PUBGM・CODM のように。スティックか、撃つ・構える・リーン・リロード以外のボタンに触れるとやめる）
         const lock = !cancel && this.sprintArm && this.S.stickLock === true;
         this.stick = null; this.mx = 0; this.mz = 0; this.sprintArm = lock; this.sprintLock = lock;
         if (this.onStick) this.onStick(null, 0, 0, lock, lock); return;
@@ -163,6 +170,7 @@ export class Input {
       const k = e.code;
       if (this.keys.has(k)) return;
       this.keys.add(k);
+      if (k === 'ShiftLeft') this.sprPress++;
       const map = { KeyR: 'reload', KeyC: 'crouch', KeyZ: 'prone', KeyQ: 'leanL', KeyE: 'leanR', KeyF: 'shout', KeyV: 'use', KeyG: 'gear', KeyX: 'fmode', KeyT: 'light', KeyN: 'nvg', KeyB: 'low', KeyM: 'map', Escape: 'pause', KeyP: 'pause', Space: 'vault', Digit1: 'wpn1', Digit2: 'wpn2', Digit3: 'gear', KeyH: 'cmd', Tab: 'team', KeyK: 'drone', KeyY: 'melee' };
       const b = map[k];
       if (b) { e.preventDefault(); this.edges.push({ b, k: 'down', key: true }); this._keyT = this._keyT || {}; this._keyT[k] = performance.now(); }
@@ -190,7 +198,9 @@ export class Input {
     let dx = (sx - st.ox) / R, dy = (sy - st.oy) / R;
     const l = Math.hypot(dx, dy);
     // スティックを上へ押し込む（ダッシュの印より上）とダッシュ（CODM・PUBGM）。作戦・対戦とも。少し斜めでもよい（stick.js）
-    this.sprintArm = this.S.stickSprint !== false && sprintZone(dx, dy, spr, this.sprintArm);
+    const arm = this.S.stickSprint !== false && sprintZone(dx, dy, spr, this.sprintArm);
+    if (arm && !this.sprintArm) this.sprPress++;
+    this.sprintArm = arm;
     if (l > 1) { dx /= l; dy /= l; }
     // 可変のスティック: 大きく離れたら土台がついてくる（ダッシュの印より外で）
     const follow = Math.max(1.9, spr + 0.45);
@@ -257,12 +267,12 @@ export class Input {
     const out = {
       mx, mz, lookDX: this.lookDX, lookDY: this.lookDY, gyroX: this.gyro.x, gyroY: this.gyro.y,
       fire: this.hold.has('fire') || this.hold.has('fireL') || this.mouseBtn.l,
-      sprint: this.sprintArm || this.sprintLock || K.has('ShiftLeft') || this.hold.has('sprint'),
+      sprint: this.sprintArm || this.sprintLock || K.has('ShiftLeft') || this.hold.has('sprint'), sprPress: this.sprPress,
       hold: this.hold, edges: this.edges.slice(),
       mouse: !!document.pointerLockElement, touch: this.touchUsed,
     };
     this.lookDX = 0; this.lookDY = 0; this.gyro.x = 0; this.gyro.y = 0;
-    this.edges.length = 0;
+    this.edges.length = 0; this.sprPress = 0;
     // 長押しの判定（押している最中）。こまが大きく遅れたとき（0.25秒より長い）は次のこまで判定する
     // （遅れている間に指を離した出来事が待っているかもしれない。離していれば短押し）
     const now = performance.now();

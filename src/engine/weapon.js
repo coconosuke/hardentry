@@ -64,9 +64,9 @@ export function stepWeapon(S, w, a, inp, dt, ev) {
   }
   a.fireK = Math.max(0, a.fireK - dt * 9);
   a.throwT = Math.max(0, a.throwT - dt * 1.8);
-  // ADS とローレディ
+  // ADS とローレディ（構えるのはダッシュより先: 構えたい間は走らない。move.js）
   const busy = ws.st === 'draw' || ws.st === 'holster' || a.sprint || a.vault || (a.act && a.act.noAds);
-  a.adsOn = !!inp.ads && !busy && ws.slot >= 0 && (ws.slot < 2 || (ws.slot === 3 && a.inv.long === 'm320')) && !a.down && !a.peek;
+  a.adsOn = !!inp.ads && !busy && canAim(a);
   a.lowOn = !!inp.low && !a.adsOn;
   const adsT = W ? W.ads + attMods(wi).ads : 0.25;
   a.ads = Math.max(0, Math.min(1, a.ads + (a.adsOn ? dt / adsT : -dt / (adsT * 0.8))));
@@ -79,6 +79,10 @@ export function stepWeapon(S, w, a, inp, dt, ev) {
     ws.sx = A * (Math.sin(t * 0.83) * 0.65 + Math.sin(t * 1.91 + 1.3) * 0.35);
     ws.sy = A * (Math.sin(t * 1.17 + 2.1) * 0.6 + Math.sin(t * 0.57 + 0.4) * 0.4);
   } else { ws.sx = 0; ws.sy = 0; }
+  // 走るのをやめた: 銃を上げるまで撃てない（重い銃ほど長い 0.1〜0.25秒）。その間に引いた引き金は覚えておき、上がったら撃つ
+  if (ws.sprWas && !a.sprint) ws.so = sprintOutT(W);
+  ws.sprWas = !!a.sprint;
+  if (ws.so > 0) ws.so = Math.max(0, ws.so - dt);
   // 状態の時間
   if (ws.t > 0) ws.t -= dt;
   if (ws.t <= 0) finishState(S, a, ev);
@@ -96,9 +100,30 @@ export function stepWeapon(S, w, a, inp, dt, ev) {
   if (wi) { a.light = !!(wi.lightOn && wi.att.light); a.laser = wi.lightOn && wi.att.laser ? wi.att.laser : null; } else { a.light = false; a.laser = null; }
   // 撃つ
   const trig = !!inp.fire;
-  if (W && wi && trig) tryFire(S, w, a, W, wi, inp, ev);
+  if (W && wi && (trig || ws.pend)) tryFire(S, w, a, W, wi, inp, ev);
   if (!trig) ws.burstN = 0;
+  if (!(ws.so > 0)) ws.pend = false; // 銃が上がったときに撃てなかった（リロード中など）: 覚えていた引き金は捨てる
   ws.trigWas = trig;
+}
+
+// 構えられる物を持っている（銃・M320）
+export function canAim(a) {
+  const ws = a.ws;
+  return !!ws && ws.slot >= 0 && (ws.slot < 2 || (ws.slot === 3 && a.inv.long === 'm320')) && !a.down && !a.peek;
+}
+// 走るのをやめてから撃てるまで（秒）。重い銃ほど長い（拳銃 0.1・小銃 0.15・狙撃銃 0.24）
+export function sprintOutT(W) { return W ? Math.min(0.25, 0.08 + 0.025 * (W.kg || 3)) : 0.1; }
+
+// リロードをやめる（ダッシュを入れ直したとき）。弾倉を替えるのは終わったときなので、替えていない。
+// 1発ずつ込める銃は込めた分が残る。薬室が空で弾があれば、送り込んでから（ポンプ）
+export function cancelReload(a, ev) {
+  const ws = a.ws, W = curW(a), wi = curWeapon(a);
+  if (!ws || (ws.st !== 'reload' && ws.st !== 'shell')) return false;
+  if (ws.st === 'shell' && W && wi && W.chamber && !wi.ch && wi.mag > 0) { ws.st = 'pump'; ws.t = W.pump || 0.35; }
+  else { ws.st = 'ready'; ws.t = 0; }
+  ws.rk = null; ws.stopShell = false;
+  if (ev) ev.push({ e: 'reloadx', id: a.id });
+  return true;
 }
 
 function finishState(S, a, ev) {
@@ -147,16 +172,18 @@ export function startReload(S, a, fast, ev) {
     return true;
   }
   if (!wi || !W || (ws.st !== 'ready' && ws.st !== 'pump')) return false;
-  if (a.sprint || a.vault) return false;
+  if (a.vault) return false;
+  // 走っていても、リロードが先（走るのをやめる。リロードの間は走らない。ダッシュを入れ直すとやめる。move.js）
+  const run = a.sprint;
   if (W.tube) {
     if (wi.mag >= magCap(wi) || wi.res <= 0) return false;
-    ws.st = 'shell'; ws.t = W.rl.start + W.rl.shell; ws.stopShell = false;
+    ws.st = 'shell'; ws.t = W.rl.start + W.rl.shell; ws.stopShell = false; if (run) a.sprint = false;
     if (ev) ev.push({ e: 'reload', id: a.id, k: 'shell' });
     return true;
   }
   if (W.revolver || W.breakAction) {
     if (wi.mag >= magCap(wi) || wi.res <= 0) return false;
-    ws.st = 'reload'; ws.rk = W.revolver ? 'rev' : 'break'; ws.t = W.rl.tac; ws.rd = ws.t;
+    ws.st = 'reload'; ws.rk = W.revolver ? 'rev' : 'break'; ws.t = W.rl.tac; ws.rd = ws.t; if (run) a.sprint = false;
     if (ev) ev.push({ e: 'reload', id: a.id, k: ws.rk, dur: ws.t });
     return true;
   }
@@ -166,7 +193,7 @@ export function startReload(S, a, fast, ev) {
   ws.rk = fast ? 'fast' : 'tac';
   ws.t = ((fast ? W.rl.fast : W.rl.tac) + (empty ? W.rl.empty : 0)) * attMods(wi).reload;
   if (a.inj.arm) ws.t *= 1.15;
-  ws.rd = ws.t; ws.st = 'reload';
+  ws.rd = ws.t; ws.st = 'reload'; if (run) a.sprint = false;
   if (ev) ev.push({ e: 'reload', id: a.id, k: ws.rk, dur: ws.t, empty });
   return true;
 }
@@ -196,17 +223,18 @@ export function m320Next(a, ev) {
 function tryFire(S, w, a, W, wi, inp, ev) {
   const ws = a.ws;
   if (a.sprint || a.vault || a.low > 0.5 || (a.act && !a.act.canFire) || a.comply || a.down && !S.pvp) return;
+  if (ws.so > 0) { if (inp.fire && !ws.trigWas) ws.pend = true; return; } // 走るのをやめて銃を上げている間
   if (ws.st === 'shell') { if (wi.ch || wi.mag > 0) { ws.stopShell = true; ws.st = 'ready'; ws.t = 0; } else return; }
   if (ws.st !== 'ready') return;
   if (ws.cd > 0) return;
   const mode = W.modes[wi.mode] || 'semi';
-  if (mode === 'semi' && ws.trigWas) return;
+  if (mode === 'semi' && ws.trigWas && !ws.pend) return;
   if (W.range && a.ai == null) { /* テーザーの射程は弾で判定 */ }
   // 弾があるか
   const hasRound = W.chamber ? wi.ch > 0 : wi.mag > 0;
   if (!hasRound) {
-    if (!ws.trigWas) ev.push({ e: 'dry', id: a.id });
-    ws.cd = 0.25;
+    if (!ws.trigWas || ws.pend) ev.push({ e: 'dry', id: a.id });
+    ws.cd = 0.25; ws.pend = false;
     return;
   }
   // 撃つ
@@ -243,7 +271,7 @@ function tryFire(S, w, a, W, wi, inp, ev) {
   if (S.rules && S.rules.recoil) mul *= S.rules.recoil;
   ws.rp += kv * mul; ws.ry += kh * mul;
   ws.bloom = Math.min(W.sp.hip * 0.8, ws.bloom + W.sp.hip * 0.1 * (1 - 0.7 * a.ads));
-  ws.shots++; ws.lastShot = S.t; a.stats.sh++;
+  ws.shots++; ws.lastShot = S.t; a.stats.sh++; ws.pend = false;
   a.fireK = 1;
   // 音と光（AIは聞く）
   const supp = wi.att.muzzle === 'supp';

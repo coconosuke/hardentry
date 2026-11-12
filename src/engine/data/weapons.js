@@ -83,7 +83,8 @@ export const WEAPONS = {
     desc: 'HK416を7.62mm NATOにした選抜射手の小銃。遠くまでとてもよく当たる。重く長いので、室内では振り回しにくい。' }),
   // ---------- SWAT: 狙撃銃（11-12 追加。ボルトアクション: 1発ごとに手でボルトを引いて次の弾を込める） ----------
   // bolt: ボルトを操作する時間（秒）。この間は撃てない（ポンプと同じ扱い。見た目と音はボルト）。sway: 構えたときの照準の揺れ（度。立ち）
-  at308: W({ name: 'AT308', cat: 'sniper', side: 'swat', cal: '762x51', ammo: ['ap', 'jhp'], mag: 10, spare: 4, chamber: true, bolt: true, pump: 0.95, modes: ['semi'], rpm: 60, vel: 850, kg: 6.4, len: 1.13,
+  // tdmBoth: 攻守のモード（爆弾・殲滅戦）では SWAT 側だけの銃。両チームが同じ条件で戦う TDM では、両方のチームが使える（11-12 17:50 の要望）
+  at308: W({ name: 'AT308', cat: 'sniper', side: 'swat', tdmBoth: true, cal: '762x51', ammo: ['ap', 'jhp'], mag: 10, spare: 4, chamber: true, bolt: true, pump: 0.95, modes: ['semi'], rpm: 60, vel: 850, kg: 6.4, len: 1.13,
     ads: 0.5, draw: 0.85, move: 0.88, sway: 0.2, rc: { v: 3.0, h: 0.45, bias: 0.05, first: 1, ctrl: 7, kick: 2.2 }, sp: { hip: 6.0, ads: 0.012, move: 3.0 }, rl: { tac: 3.1, fast: 2.5, empty: 0.6 },
     pvp: { dmg: 115, fall: [70, 110, 0.9] }, model: 'bolt', mdl: {}, snd: 'r308',
     desc: '英国アキュラシー・インターナショナル社の警察向けのボルトアクション狙撃銃（7.62mm NATO・10発の箱弾倉）。1発ごとに手でボルトを引く（約1秒）。狙撃用スコープは4倍と8倍を切り替えられる（射撃モードのボタン）。構えると照準がわずかに揺れる（しゃがむ・伏せると小さい）。腰だめはまず当たらない。' }),

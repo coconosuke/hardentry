@@ -439,7 +439,7 @@ export class Screens {
       row('リーン', '', 'leanMode'); ch('leanMode', [['toggle', '切替'], ['hold', '長押し']]);
       row('移動スティック', '', 'stickMode'); ch('stickMode', [['float', '可変'], ['fixed', '固定']]);
       row('スティックでダッシュ', '上へ押し込む（作戦・対戦とも）', 'stickSprint'); ch('stickSprint', [[true, 'オン'], [false, 'オフ']]);
-      row('ダッシュの固定', 'ダッシュの所で指を離すと走り続ける', 'stickLock'); ch('stickLock', [[false, 'オフ'], [true, 'オン']]);
+      row('ダッシュの固定', 'ダッシュの所で指を離すと走り続ける（撃つ・構える・リーン・リロードの間は止まり、終わるとまた走る。スティックかほかのボタンでやめる）', 'stickLock'); ch('stickLock', [[false, 'オフ'], [true, 'オン']]);
       row('射撃ボタン（左）', '', 'leftFire'); ch('leftFire', [[true, '表示'], [false, '非表示']]);
       row('射撃ボタンで視点移動', '押したままドラッグ', 'fireLook'); ch('fireLook', [[true, 'オン'], [false, 'オフ']]);
       row('利き手', 'ボタンの左右を反転', 'handed'); ch('handed', [['right', '右'], ['left', '左']]);

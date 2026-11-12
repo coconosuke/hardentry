@@ -335,6 +335,65 @@ try {
     await tapAt(await btn('wpn1'), 34);
     rec('操作', '副武器のボタンで持ち替える', slot === 1, `持っている武器 ${slot}`);
   }
+  // ダッシュ中もほかの操作が先（11-12）: 走っていてもリロード・ADS・リーン・射撃ができ、その間は走らない。終わると（押したまま・固定なら）また走る。
+  // リロードはスティックを押し込み直すとやめて走る。CDP の touchEnd は書いた指だけ離す（スティックは押したまま）
+  {
+    await page.waitForFunction(() => window.__app.game.p.ws.st === 'ready' && window.__app.game.p.ws.slot === 0, null, { timeout: 15000 }).catch(() => {});
+    const sst = () => page.evaluate(() => { const g = window.__app.game, p = g.p, wi = p.inv.w[p.ws.slot]; return { spr: !!p.sprint, ws: p.ws.st, mag: wi ? wi.mag : -1, ads: +p.ads.toFixed(2), lean: +p.lean.toFixed(2), sh: p.stats.sh, lock: !!window.__app.input.sprintLock, wait: document.querySelector('#hud .hud-stick').classList.contains('spr-wait') }; });
+    const wf = (fn, t = 60000) => page.waitForFunction(fn, null, { timeout: t }).then(() => true).catch(() => false);
+    const at = (dy, id = 41) => ({ x: 150, y: 290 - dy, id });
+    const push = async (id) => { await touch('touchStart', [at(0, id)]); for (let k = 1; k <= 20; k++) { await touch('touchMove', [at(k * 5, id)]); await page.waitForTimeout(30); } };
+    const tapWith = async (b, id, sid = 41) => { await touch('touchStart', [at(100, sid), { x: b.x, y: b.y, id }]); await page.waitForTimeout(80); await touch('touchEnd', [{ x: b.x, y: b.y, id }]); await page.waitForTimeout(150); };
+    // 描画が遅い環境では、押し込み直す前にリロードが終わってしまうので長くしておく（やめるのを確かめる）
+    const longReload = () => page.evaluate(() => { const ws = window.__app.game.p.ws; ws.t = 30; ws.rd = 30; });
+    const R = await btn('reload'), A = await btn('ads'), LR = await btn('leanR'), F = await btn('fire');
+    await page.evaluate(() => { window.__app.game.p.inv.w[0].mag = 3; });
+    // スティックを押したまま
+    await push(41);
+    const run1 = await wf(() => window.__app.game.p.sprint);
+    await tapWith(R, 42);
+    const rl = await wf(() => window.__app.game.p.ws.st === 'reload'); await longReload();
+    await page.waitForTimeout(300);
+    const s1 = await sst();
+    for (const d of [80, 50, 30, 50, 80, 100]) { await touch('touchMove', [at(d)]); await page.waitForTimeout(20); }
+    const cx = await wf(() => window.__app.game.p.ws.st === 'ready' && window.__app.game.p.sprint);
+    const s2 = await sst();
+    rec('操作', 'ダッシュ中もリロードできる（その間は走らない・印は点線）。スティックを押し込み直すと、やめて走る', run1 && rl && !s1.spr && s1.wait && cx && s2.mag === 3, `走る${run1 ? '○' : '×'}・リロード中 ${JSON.stringify(s1)}・押し込み直し ${JSON.stringify(s2)}`);
+    await tapWith(A, 43);
+    const ad = await wf(() => window.__app.game.p.ads > 0.6 && !window.__app.game.p.sprint);
+    await tapWith(A, 44);
+    const ad2 = await wf(() => !window.__app.game.adsOn && window.__app.game.p.sprint);
+    rec('操作', 'ダッシュ中も ADS が先（構える）。戻すとまた走る', ad && ad2, JSON.stringify(await sst()));
+    await touch('touchEnd', []);
+    await wf(() => !window.__app.game.p.sprint, 20000);
+    // ダッシュの固定: 撃つ・リーン・リロードでやめず、その間だけ走らない
+    await page.evaluate(() => { window.__app.input.S.stickLock = true; window.__app.game.p.inv.w[0].mag = 30; });
+    await push(45); await touch('touchEnd', []);
+    const lk = await wf(() => window.__app.input.sprintLock && window.__app.game.p.sprint);
+    const sh0 = (await sst()).sh;
+    await holdAt(F, 500, 46);
+    const fired = await wf(() => window.__app.game.p.stats.sh > 0);
+    const sf = await sst();
+    const fb = await wf(() => window.__app.game.p.sprint && window.__app.input.sprintLock);
+    // リーン（傾く量は壁しだい: 走り続けて壁ぎわにいると傾けない。見るのはリーンの入力が効いて走らないこと）
+    await tapAt(LR, 47);
+    const ln = await wf(() => window.__app.game.leanSide > 0 && !window.__app.game.p.sprint && window.__app.input.sprintLock);
+    const sl = await sst();
+    await tapAt(LR, 48);
+    const lb = await wf(() => window.__app.game.p.sprint && window.__app.game.leanSide === 0);
+    await tapAt(R, 49);
+    const rl2 = await wf(() => window.__app.game.p.ws.st === 'reload' && !window.__app.game.p.sprint && window.__app.input.sprintLock); await longReload();
+    await push(50);
+    const cx2 = await wf(() => window.__app.game.p.ws.st === 'ready' && window.__app.game.p.sprint);
+    await touch('touchEnd', []);
+    const lk2 = await wf(() => window.__app.input.sprintLock);
+    await tapAt(at(0, 51), 51);
+    const off = await wf(() => !window.__app.input.sprintLock && !window.__app.game.p.sprint, 30000);
+    await page.evaluate(() => { window.__app.input.S.stickLock = false; });
+    rec('操作', 'ダッシュの固定: 撃つ・リーン・リロードの間だけ止まり、終わるとまた走る（押し込み直すとリロードをやめる・触れると固定をやめる）', lk && fired && sf.sh > sh0 && fb && ln && lb && rl2 && cx2 && lk2 && off,
+      `固定${lk ? '○' : '×'}・撃つ${fired && sf.sh > sh0 ? '○' : '×'}→また走る${fb ? '○' : '×'}・リーン${ln ? '○' : '×'}（傾き ${sl.lean}）→${lb ? '○' : '×'}・リロード${rl2 ? '○' : '×'}→押し込み直し${cx2 ? '○' : '×'}・離すと固定${lk2 ? '○' : '×'}・触れてやめる${off ? '○' : '×'}`);
+    await page.waitForFunction(() => window.__app.game.p.ws.st === 'ready', null, { timeout: 60000 }).catch(() => {});
+  }
   // ボタンは押した瞬間に1回だけ（ライト）
   {
     await page.waitForFunction(() => window.__app.game.p.ws.st === 'ready' && window.__app.game.p.ws.slot === 0, null, { timeout: 15000 }).catch(() => {});

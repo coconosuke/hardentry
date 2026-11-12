@@ -197,6 +197,8 @@ export class Match {
   // ボタンの出来事 → 状態と命令
   _edges(inp) {
     const st = this.app.settings, p = this.p;
+    // ダッシュを入れ直した（押し直した・スティックを押し込み直した）: リロードの最中ならやめて走る（11-12。エンジンが決める。weapon.js）
+    if (inp.sprPress && p && p.alive) this.acts.push({ a: 'sprint' });
     for (const e of inp.edges) {
       const b = e.b, k = e.k;
       switch (b) {
@@ -995,7 +997,9 @@ export class Match {
     const c = this.ctx;
     const wi = curWeapon(p);
     const v = {
-      p, wi, pvp: S.pvp, yaw: this.cam ? this.cam.yaw : p.yaw, adsOn: this.adsOn, leanL: this.leanSide < 0, leanR: this.leanSide > 0, lowOn: this.lowOn, nvgOn: this.nvgOn, hasNvg: p.armor.head === 'nvg',
+      p, wi, pvp: S.pvp, yaw: this.cam ? this.cam.yaw : p.yaw, adsOn: this.adsOn,
+      // ダッシュを押しているが、ほかの操作（構える・リーン・撃つ・リロード）が先で走っていない
+      sprWait: !!(p.alive && !p.sprint && this.app.input && (this.app.input.sprintArm || this.app.input.sprintLock)), leanL: this.leanSide < 0, leanR: this.leanSide > 0, lowOn: this.lowOn, nvgOn: this.nvgOn, hasNvg: p.armor.head === 'nvg',
       gearSel: this.gearSel, gearId: p.ws.gear, team: this.team,
       spread: wi ? spreadDeg(S, p, WEAPONS[wi.id], wi) : 2,
       optic: null, canVault: this.vaultOK !== false,

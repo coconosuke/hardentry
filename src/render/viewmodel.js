@@ -87,7 +87,8 @@ export class ViewModel {
     this.flipP = P.flipPivot || null;
     // 状態の重み
     const ads = sm(a.ads), low = sm(a.low), spr = a.sprint ? 1 : 0;
-    this.sprK = lerp(this.sprK || 0, spr, 1 - Math.exp(-dt * 10));
+    // 走るのをやめたら速く上げる（エンジンは 0.1〜0.25秒で撃てる。weapon.js sprintOutT）
+    this.sprK = lerp(this.sprK || 0, spr, 1 - Math.exp(-dt * (spr ? 10 : 22)));
     let draw = 0;
     if (ws.st === 'holster') draw = 1 - clamp(ws.t / 0.22, 0, 1);
     else if (ws.st === 'draw') draw = clamp(ws.t / Math.max(0.2, W ? W.draw : 0.3), 0, 1);

@@ -8,7 +8,7 @@ import { doAction } from '../engine/interact.js';
 import { setSalt } from '../engine/rng.js';
 
 // 手元でも先に行う動作（ホストにも送る）
-const LOCAL_ACTS = new Set(['switch', 'reload', 'mode', 'light', 'melee']);
+const LOCAL_ACTS = new Set(['switch', 'reload', 'mode', 'light', 'melee', 'sprint']);
 // ゲストが手元で出す出来事（ホストから来た同じものは捨てる）
 const LOCAL_EV = new Set(['shot', 'reload', 'reloaded', 'shell', 'pumped', 'bolt', 'zoom', 'dry', 'draw', 'fmode', 'lightsw', 'step', 'holster', 'melee']);
 
@@ -123,7 +123,9 @@ export function netMixin(Match) {
       // 描くときの補間用（ステップの前の自分の位置）
       { const P = this._prev || (this._prev = new Map()); let q = P.get(me.id); if (!q) P.set(me.id, q = [0, 0, 0]); q[0] = me.x; q[1] = me.y; q[2] = me.z; }
       if (me.alive && !me.down && !me.cuffed) {
-        me._inp = { ...cmd, act: null };
+        // 銃の動作も手元で先にやる（リロード・倍率。ダッシュの入れ直しでやめるのは上の doAction）。でないとリロード中の動き（走らない）がホストとずれ、リロードの動きと音も出ない
+        me._inp = { ...cmd, act: cmd.act ? cmd.act.filter(ac => ac.a === 'reload' || (ac.a === 'mode' && ac.zoom)) : null };
+        if (me._inp.act && !me._inp.act.length) me._inp.act = null;
         try { moveActor(S, this.w, me, me._inp, S.dt, ev); stepWeapon(S, this.w, me, me.melee ? { ...me._inp, fire: false, ads: false } : me._inp, S.dt, ev); } catch (e) { console.warn('predict', e); }
       }
       S.bullets.length = 0;

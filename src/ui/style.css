@@ -237,6 +237,7 @@ table.board small { color: var(--dim); font-size: max(11px, .72em); margin-left:
 .hud-stick .spr { position: absolute; left: 50%; transform: translate(-50%, -50%); font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 4px; background: rgba(0,0,0,.5); border: 1px dashed rgba(255,255,255,.45); white-space: nowrap; opacity: 0; transition: opacity .12s; }
 .hud-stick.show-spr .spr { opacity: .8; }
 .hud-stick.spr-on .spr { opacity: 1; background: var(--accent); color: #111; border-style: solid; border-color: var(--accent2); }
+.hud-stick.spr-on.spr-wait .spr { opacity: .9; background: rgba(0,0,0,.55); color: var(--accent); border-style: dashed; border-color: var(--accent); }
 #hud.editing .hud-stick { pointer-events: auto; touch-action: none; }
 .hud-mm { position: absolute; width: 120px; height: 120px; border-radius: 50%; overflow: hidden; border: 1.5px solid rgba(255,255,255,.35); transform-origin: 50% 50%; pointer-events: auto; touch-action: none; }
 .hud-mm.down { border-color: var(--accent); filter: brightness(1.25); }

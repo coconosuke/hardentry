@@ -210,6 +210,7 @@ export class Hud {
   update(v) {
     if (!this.on) return;
     const p = v.p;
+    if (this.stickEl && this.cache.sprWait !== !!v.sprWait) { this.cache.sprWait = !!v.sprWait; this.stickEl.classList.toggle('spr-wait', !!v.sprWait); }
     // 照準
     const ads = p ? p.ads : 0;
     const optic = v.optic;

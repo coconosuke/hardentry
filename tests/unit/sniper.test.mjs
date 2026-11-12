@@ -132,3 +132,17 @@ test('optics: 付けられる銃は実銃の取り付け方に合わせる', () 
   ok(!S('vz58').includes('mag3'), 'vz.58 の短いレールにブースターは付かない');
   eq(S('at308')[0], 'sniper', '狙撃銃の既定は狙撃用スコープ');
 });
+
+test('sniper: TDM では両方のチームが狙撃銃を使える。爆弾・殲滅戦は SWAT 側だけ（犯人側の装備に入れていても既定の主武器）', () => {
+  const lo = { swat: { primary: { id: 'at308', sight: 'sniper' }, secondary: { id: 'g17' } }, sus: { primary: { id: 'at308', sight: 'sniper' }, secondary: { id: 'm1911' } } };
+  const mk = (mode, team, seed) => createGame({ map: 'gasstation', mode, teams: [1, 1], roster: [{ pid: 0, name: 'P', team, lo }], rules: { botLevel: 1, wins: 3, time: 480 }, seed });
+  for (const team of [0, 1]) { const p = mk('tdm', team, 3).S.actors.find(a => a.pid === 0); eq(p.inv.w[0] && p.inv.w[0].id, 'at308', `TDM のチーム${team}`); }
+  let swat = false, sus = false;
+  for (const seed of [3, 4, 5, 6, 7, 8]) for (const team of [0, 1]) {
+    const G = mk('bomb', team, seed), p = G.S.actors.find(a => a.pid === 0), isSwat = p.team === G.S.m.att;
+    if (isSwat) { eq(p.inv.w[0].id, 'at308', '爆弾の SWAT 側は狙撃銃'); swat = true; }
+    else { ok(p.inv.w[0].id !== 'at308', `爆弾の犯人側は使えない（${p.inv.w[0].id}）`); sus = true; }
+  }
+  ok(swat && sus, '両方の側で確かめた');
+  ok(WEAPONS.at308.tdmBoth, 'TDM では両方の印');
+});

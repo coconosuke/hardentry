@@ -5,11 +5,13 @@ import { M } from './data/materials.js';
 import { OPEN_ANG, isOpen } from './doors.js';
 import { KNEEL_ACT } from './data/acts.js';
 import { curW, bodyHeight, curWeapon } from './actor.js';
-import { attMods } from './weapon.js';
+import { attMods, canAim } from './weapon.js';
 import { PLATE, LONG } from './data/equipment.js';
 import { FLOORS } from './data/materials.js';
 import { DEP, wireAt, stepWire } from './deploy.js';
 
+// 撃つのをやめてから、また走れるまで（秒。続けて撃つ間に銃が下がらないように）
+export const SPRINT_HOLD = 0.4;
 export const SPEED = { walk: 2.4, crouch: 1.2, prone: 0.45, low: 1.2, ads: 0.7, sprint: 4.6, back: 0.8, side: 0.9 };
 export const RADIUS = 0.28;
 const _po = [0, 0, 0];
@@ -82,6 +84,8 @@ export function moveActor(S, w, a, inp, dt, ev) {
   if (a.peek && want < 1) want = 1;
   if (a.down || a.cuffed || a.comply === 2) want = 0;
   if (a.sprint && want) a.sprint = false;
+  // 引き金を離してからの時間（撃ったあと少しは走らない）。ダッシュを入れ直してリロードをやめるのは、手元が送る動作 'sprint'（interact.js doAction → weapon.js cancelReload）
+  a.trigT = inp.fire ? 0 : Math.min(9, (a.trigT ?? 9) + dt);
   const rate = (a.st < 1 && want <= 1) || (a.st <= 1 && want === 0) ? 4.0 : 1.25;
   if (want !== Math.round(a.st) || Math.abs(a.st - want) > 1e-3) {
     // 立ち上がる前に頭がつかえないか
@@ -95,9 +99,9 @@ export function moveActor(S, w, a, inp, dt, ev) {
     a.st = Math.abs(d) <= stp ? want : a.st + Math.sign(d) * stp;
   }
   a.stance = want;
-  // リーン（壁にめり込まない）
+  // リーン（壁にめり込まない）。ダッシュより先（リーンしている間は走らない）
   let lw = inp.lean || 0;
-  if (a.sprint || a.st > 1.3 || a.vault || a.down || a.comply || a.cuffed) lw = 0;
+  if (a.st > 1.3 || a.vault || a.down || a.comply || a.cuffed) lw = 0;
   if (lw) {
     const rx = -Math.cos(a.yaw) * lw, rz = Math.sin(a.yaw) * lw;
     const hy = a.y + bodyHeight(a) - 0.25;
@@ -114,9 +118,11 @@ export function moveActor(S, w, a, inp, dt, ev) {
   // 速さ
   let mx = inp.mx || 0, mz = inp.mz || 0;
   let mag = Math.hypot(mx, mz); if (mag > 1) { mx /= mag; mz /= mag; mag = 1; }
-  // ダッシュ（PvPだけ。立って前へ）
-  // ダッシュ: 作戦・対戦とも（スティックを上へ押し込む・Shift）。盾を構えている・運んでいる・拘束されているときは走れない
-  a.sprint = !!(inp.sprint && a.st < 0.2 && mz > 0.55 && !a.adsOn && !a.down && !a.act && !a.cuffed && !a.comply && !(a.ws && a.ws.slot === 1 && a.inv && a.inv.long === 'shield') && !(S.deps && S.deps.length && wireAt(S, a.x, a.z, a.y)));
+  // ダッシュ: 作戦・対戦とも（スティックを上へ押し込む・Shift）。立って前へ。盾を構えている・運んでいる・拘束されているときは走れない。
+  // 押していても、ほかの操作が先（11-12）: 構える・リーン・撃つ（離して0.4秒まで）・リロードの間は走らず、やめるとまた走る
+  const reloading = !!a.ws && (a.ws.st === 'reload' || a.ws.st === 'shell');
+  const busy = (inp.ads && canAim(a)) || !!inp.lean || a.trigT < SPRINT_HOLD || reloading;
+  a.sprint = !!(inp.sprint && !busy && a.st < 0.2 && mz > 0.55 && !a.down && !a.act && !a.cuffed && !a.comply && !(a.ws && a.ws.slot === 1 && a.inv && a.inv.long === 'shield') && !(S.deps && S.deps.length && wireAt(S, a.x, a.z, a.y)));
   const vmax = maxSpeed(S, a, inp);
   // 後ろ・横は遅い
   let dirMul = 1;

@@ -74,7 +74,7 @@ export class LoadoutEditor {
     const ak = slot.replace(/2$/, '');
     if (PSLOTS.includes(ak)) return att(slot.endsWith('2') ? S2 : P, ak);
     switch (slot) {
-      case 'primary': return allowedP.map(id => ({ v: id, label: WEAPONS[id].name, sub: CAT_NAME[WEAPONS[id].cat] + ' · ' + (CAL[WEAPONS[id].cal] ? CAL[WEAPONS[id].cal].name : ''), on: P.id === id }));
+      case 'primary': return allowedP.map(id => ({ v: id, label: WEAPONS[id].name, sub: CAT_NAME[WEAPONS[id].cat] + ' · ' + (CAL[WEAPONS[id].cal] ? CAL[WEAPONS[id].cal].name : '') + (this.kind === 'pvp' && WEAPONS[id].tdmBoth && WEAPONS[id].side !== side ? ' · TDMだけ（爆弾・殲滅戦は SWAT 側だけ）' : ''), on: P.id === id }));
       case 'secondary': return allowedS.map(id => ({ v: id, label: WEAPONS[id].name, sub: CAT_NAME[WEAPONS[id].cat], on: S2.id === id }));
       case 'ammo': return (W ? W.ammo : []).map(k => ({ v: k, label: AMMO_NAME[k] || k, on: (P.ammo || W.ammo[0]) === k, sub: ammoSub(W, k) }));
       case 'ammo2': return (W2 ? W2.ammo : []).map(k => ({ v: k, label: AMMO_NAME[k] || k, on: (S2.ammo || W2.ammo[0]) === k, sub: ammoSub(W2, k) }));
