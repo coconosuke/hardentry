@@ -199,9 +199,9 @@ function reachAndDo(S, w, a, inp, dt, k, t, op) {
 function autoSecure(S, w, a, inp, dt, people, ctx) {
   const ai = a.ai;
   if (a.act) { inp.mx = inp.mz = 0; return true; }
-  // 他の隊員がやっている相手は除く
+  // 他の隊員がやっている相手は除く（倒れた隊員の受け持ちは数えない: 爆弾の解除に向かう途中で撃たれた隊員が、ずっと受け持ったままになっていた）
   const taken = new Set();
-  for (const b of S.actors) if (b !== a && b.kind === 'swat' && b.ai && b.ai.secId != null) taken.add(b.ai.secId);
+  for (const b of S.actors) if (b !== a && b.kind === 'swat' && b.alive && !b.down && b.ai && b.ai.secId != null) taken.add(b.ai.secId);
   let best = null, bd = 1e9, op = null;
   const bad = ai.noReach || (ai.noReach = {});
   for (const p of people) {
@@ -493,7 +493,7 @@ function search(S, w, a, inp, dt, o, people) {
   const bad = ai.noReach || (ai.noReach = {});
   const room0 = o.room ?? (o.room = roomAtPos(w, a.x, a.y, a.z));
   const taken = new Set();
-  for (const b of S.actors) if (b !== a && b.kind === 'swat' && b.ai && b.ai.secId != null) taken.add(b.ai.secId);
+  for (const b of S.actors) if (b !== a && b.kind === 'swat' && b.alive && !b.down && b.ai && b.ai.secId != null) taken.add(b.ai.secId);
   // 人
   let best = null, bd = 1e9, op = null, kind = 'person';
   for (const b of S.actors) {

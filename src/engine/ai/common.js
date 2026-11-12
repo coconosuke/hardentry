@@ -107,6 +107,7 @@ function leafStep(S, w, a, inp, did, op) {
 }
 // ---- 経路に沿って歩く。戻り値: 'moving' | 'arrived' | 'blocked' | 'door'
 // a.ai.nav = { tk: 目的のマス, path: [...], i, t: 作った時刻, stuck }
+export const NAV = { stuckV: 0.6 };
 export function goTo(S, w, a, inp, tx, ty, tz, o = {}) {
   const ai = a.ai;
   const tk = navCell(w, tx, ty, tz);
@@ -203,7 +204,8 @@ export function goTo(S, w, a, inp, tx, ty, tz, o = {}) {
   }
   // 詰まり（動けない）
   const moved = Math.hypot(a.x - nv.lx, a.z - nv.lz);
-  if (moved < 0.02) { nv.stuck = (nv.stuck || 0) + S.dt; } else nv.stuck = Math.max(0, (nv.stuck || 0) - S.dt * 2);
+  // 遅い（毎秒 NAV.stuckV m 未満）を詰まりと見る。1こまの距離で決めると、こまの細かさ（30/60回毎秒）で判定が変わっていた
+  if (moved < NAV.stuckV * S.dt) { nv.stuck = (nv.stuck || 0) + S.dt; } else nv.stuck = Math.max(0, (nv.stuck || 0) - S.dt * 2);
   nv.lx = a.x; nv.lz = a.z;
   // 置ける盾（対戦）にはばまれた: 乗り越える（盾の向こうへ進む向きを向いている）
   if (nv.stuck > 0.45 && S.deps && S.deps.length && !a.vault) {
