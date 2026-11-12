@@ -1,8 +1,8 @@
-HARD ENTRY ソース一式（2026-11-12T07:45:44.667Z）
+HARD ENTRY ソース一式（2026-11-12T08:36:10.017Z）
 復元: node tools/unbundle.mjs source-bundle.txt <出力先>
 （tools/unbundle.mjs がない場合は、下の "@@@@ FILE " の区切りごとにファイルへ書き出す。base64 と書かれたものはデコードする）
 
-@@@@ FILE DESIGN.md text 83609
+@@@@ FILE DESIGN.md text 87860
 # HARD ENTRY（仮タイトル）設計メモ
 
 ## 文脈が消えたら最初に読む
@@ -53,6 +53,7 @@ HARD ENTRY ソース一式（2026-11-12T07:45:44.667Z）
 - 2026-11-12 14:23 手すりに物理的な判定がない／操作中に引っかかり・カクつきが出る、エイムがスムーズに動かない／インタラクトの距離が遠いときの表記は出さなくていい。
 - 2026-11-12 14:44 スナイパーライフルを実装（→ 武器のデータ・スコープ・見た目・音まで作るので、0.1.9 の次の版で出す）。
 - 2026-11-12 14:47 壁に貼られた絵がドアの部分まではみ出している／ガソリンスタンドで窓枠を乗り越えて屋上に出られない。
+- 2026-11-12 16:33〜16:34 2倍・3倍・4倍・6倍・8倍のサイトやスコープも実装。付けられる銃は実際の銃の仕様に合わせて。実際のスコープ・サイトをモデルに（→ 下の「倍率の照準器」）。
 
 ## 約束（仕様・数値）— 必ず守る。守れなくなったら先に言う
 - 仮に決めて伝えたこと（15:20 送信）: ゲーム名「HARD ENTRY」（仮）。PvP は「SWAT 対 立てこもり犯」の攻守（シージの攻撃／防衛に相当）。掛け声・無線は英語の音声＋日本語字幕。血の表現あり（設定で消せる）。アプリ版のリポジトリはユーザーに作ってもらう（`hardentry`、Settings → Pages で main / root）。
@@ -151,6 +152,8 @@ HARD ENTRY ソース一式（2026-11-12T07:45:44.667Z）
 - 副武器（拳銃）も 照準器（アイアン／RMR）・マズル・弾薬・ライト を選べる（レールのない拳銃はライトなし、マカロフとリボルバーは RMR なし）。
 - 11-07 武器を増やした（計56丁）: SWAT に M4A1・MCX VIRTUS・AUG A3・Tavor X95・SCAR-H・HK417、Vector・MP5K-PDW・MP9・Scorpion EVO 3、KSG、M17・Glock 19・Beretta 92FS・Desert Eagle、両方に Saiga-12K・SPAS-12。犯人側に SKS・Mini-14・vz.58・RPK、PP-19 Bizon・vz.61 Skorpion。対戦で選べるのは陣営ごとの一覧（npc.js PVP_ALLOWED。HK417 は2発で倒せる連射になるので対戦には入れない）。容疑者の持ち物にも混ぜた。
 - 11-07 アタッチメントは RoN のように7つの枠: 照準器（アイアン・ドット・広窓ドット SRS・ホロ・4倍 ACOG・等倍〜4倍／拳銃は RMR・SRO）、マズル（消音器・コンペンセイター・マズルブレーキ・フラッシュハイダー／散弾はチョーク）、グリップ（縦・斜め・短い縦・ハンドストップ）、ライト・レーザー（ライト・赤のレーザー・両方・赤外線レーザー）、弾倉（標準・長い・2本つなぎ・ドラム）、銃床（標準・縮める・重い・たたむ）、色（標準・タン・OD・グレー）。数値は weapons.js の ATTACH（反動・構える時間・リロード・歩く速さ・腰だめ・音・発射炎・散弾の広がり）。付けられる物は銃ごと（attachOptions。見た目と合わせる: 前の握りが元からある AUG・MP9・MP5K・MP7 はグリップなし、レールのない拳銃はライトなし など）。
+- 狙撃銃（11-12 の要望で追加。計57丁）: AT308（アキュラシー・インターナショナルの警察向けのボルトアクション。7.62x51mm・10発の箱弾倉・SWAT）。1発ごとに右手でボルトを起こして引き、押して倒す（0.95秒。この間は撃てない。見た目は右手が槓桿へ行きボルトが回って下がる、音は起こす・引く・押す・倒す、薬莢はボルトを引ききったときに飛ぶ）。照準器は狙撃用スコープ（シュミット＆ベンダー PM II 3-12x50 を元に。4倍・8倍を射撃モードのボタンで切り替え、HUDのボタンに ×4/×8。像はミルドットの十字と中心の赤い点）・等倍〜8倍・6倍・4倍・等倍〜4倍。8倍の見回しの速さは4倍の半分（画面の上で同じ速さ）、エイムアシストの範囲も倍率に合わせて狭い。構えると照準がゆっくり揺れる（立ち 約0.2°、しゃがみ半分、伏せ4分の1、動くと大きい、腕のけがで大きい。弾も揺れた向きへ飛ぶ）。腰だめ 6°、構える 0.5秒、動きやすさ 88%。作戦の威力は同じ弾の小銃と同じ（7.62x51mm）。対戦: 胴 115（軽装100・中装110は1発、重装125は耐える）、頭は即死（ほかの銃と同じ）。対戦では SWAT 側だけが選べる（ボットは使わない）。
+- 倍率の照準器（11-12 の要望で追加。実在の照準器の形と照準の模様を元に）: 2倍 ACOG TA47 2x20（細い胴・赤い十字）、3倍 EXPS3＋G33（ホロサイトの後ろの3倍ブースター。STS の台の左の蝶番で横へ倒すと等倍のホロサイト）、4倍 ACOG TA31 4x32（赤い山形と 5.56mm の距離の目盛り。TA51 の台）、等倍〜4倍 ELCAN SpecterDR 1-4x（箱形・上の倍率レバー。十字と赤い点）、6倍 ACOG TA648 6x48（大きな48mmの対物・TA75 の台。赤い馬蹄形と点・.308 の距離の目盛り）、等倍〜8倍 Nightforce NX8 1-8x24（片持ちの台・2ミルごとの目盛りと赤い円）、狙撃用 PM II 3-12x50（4倍・8倍）。倍率を切り替えられる物は、構えている間に射撃モードのボタンで切り替える（射撃モードが1つの銃はいつも。構えていないときは連射・単発）。等倍のスコープは丸い窓が広い。像は SVG（style.css）、形は guns.js addSight。付けられる銃は実銃の取り付け方に合わせる（weapons.js rifleSights）: 上がレールの小銃はドット・ホロ・2倍・4倍・等倍〜4倍、ブースターは上のレールが長い物（vz.58 は短いので付かない）、等倍〜8倍は銃身が長めの物（M4A1・HK416・AUG・Tavor・SCAR-H・HK417）、6倍（7.62mm 用）は SCAR-H・HK417・G3（爪の台）。G3 はドット・2倍・4倍・6倍、G36C はドット・ホロ・2倍。短機関銃はレールがあれば2倍まで（9mm の目盛りの型もある）、上のレールが長い MPX・UMP・Vector はブースターも。散弾銃と拳銃に倍率の照準器はない。AK・SKS・Mini-14・RPK は照準器なし。見回しの速さ: 倍率の照準器は「スコープ」の感度（4倍が基準）を倍率に合わせて変える（2倍は約1.6倍、8倍は半分。画面の上で同じ速さ）。
 - レーザー: ライトのボタンで点ける。点けている間だけ腰だめの散らばりが小さくなる。赤は線と点が誰にでも見える、赤外線は暗視装置でだけ見える。照準器を載せるとレールの上の照門はたたむ。
 - 特殊装備の使い方（2026-10-30 決定）: 盾は副武器に持ち替えると構える（左手で胸の前。前からの弾を止める・7.62×51mmの徹甲弾だけ抜ける・ADSでは盾を下げて拳銃を構える）。M320・オプティワンド・破城槌・ブリーチング用散弾銃は「装備」の長押しメニューから構える（4番目の持ち物）。射撃ボタンで使う: M320 は撃つ（1発ずつ自動で込める2.6秒、射撃モードのボタンで弾の種類）、オプティワンドは扉を見ていれば扉の下から、そうでなければ角の先をのぞく、破城槌と散弾銃は閉じた扉を見て使う。扉の操作メニューからも使える。
 - のぞく視点（ミラー・オプティワンド）: 扉の向こう側の床から16cmの所にカメラ。画面のスワイプで見回す（ミラー左右72°・ワンド92°）。動く・撃つ・戻るボタン・調べるでやめる。ミラーは丸い鏡、ワンドは色の薄い広角の小さな画面。文字の情報は出さない。扉の罠は内側の床に置いた箱とくるぶしの高さの針金で、のぞけば見える（見ると扉のメニューに「罠を外す」が出る）。AI隊員のミラーはこれまでどおり字幕と声で知らせる。
@@ -297,7 +300,8 @@ HARD ENTRY ソース一式（2026-11-12T07:45:44.667Z）
   - 調べるの表記: 手が届かないほど遠いときは何も出さない（押しても小さな音だけ）。間に物があるときは「回り込む」。
 - 11-12 壁の絵（14:47 の要望）: 扉の口にはみ出していた → 壁の板がとぎれない所にだけ、収まる幅で掛ける（上の「壁の絵」）。
 - 11-12 版 0.1.9（郊外の家の拡張・階段の手すりの当たり・カクつきとエイム・遠いときの表記・壁の絵・ガソリンスタンドの屋上）。互換5（郊外の家の扉が増えたので、古い遊びかけは捨てる）。テスト一式 78/80（単体52件。作戦のAIだけの試合（60こま）完了24/35＝0.1.8 は 27/35。対戦ボット 27試合すべて決着）。落ちた2つはミラーの項目で、テストの手順の問題: 郊外の家の扉の並びが変わって最初に選ぶ扉が作業小屋の中の扉になり、向きを変えた同じこまでミラーを使っていた（動作は前のステップの向きで見ている物に対して行う）のと、この環境の描画が1こま1.5秒前後でミラーが出る前に待ちが切れていた。向きがエンジンに入るのを待ってから使い、待ちを長くして、単独で2項目とも合格。
-- 次: 実機での確認をお願いする → その結果で直す。残り: ほかのマップの拡張（港・アパート・オフィス・銀行・モーテル）、スナイパーライフル（0.1.9 の次の版）。AI の弱いところ（後で）: 小さい部屋の中から外へ突入すると、入った隊員が向こう側にいる味方に詰まり、突入した扉を自分で閉めて戻る、をくり返す（ガソリンスタンドの2階の物置）。
+- 11-12 版 0.1.10（狙撃銃 AT308・倍率の照準器 2・3・4・6・8倍。実在の照準器を元にした形と照準の模様）。互換6（新しい銃の番号。古い版とはオンラインで遊べない）。テスト一式 79/80（単体60件。作戦のAIだけの試合（60こま）完了24/35＝0.1.9 と同じ（AIは変えていない）。対戦ボット 27試合すべて決着）。落ちた1つは「命令の長押しで円形のメニュー」で、テストの待ち方の問題（この環境の描画が1こま1.5秒前後で、長押しが決まる前の0.7秒で見ていた）。出るまで待つように直して、単独で2回とも合格（8項目）。
+- 次: 実機での確認をお願いする → その結果で直す。残り: ほかのマップの拡張（港・アパート・オフィス・銀行・モーテル）。AI の弱いところ（後で）: 小さい部屋の中から外へ突入すると、入った隊員が向こう側にいる味方に詰まり、突入した扉を自分で閉めて戻る、をくり返す（ガソリンスタンドの2階の物置）。
 
 @@@@ FILE dev/view.html text 446
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -382,19 +386,19 @@ export async function getAssetURL(name, type) {
   return URL.createObjectURL(new Blob([buf], { type }));
 }
 
-@@@@ FILE src/app/game.js text 87047
+@@@@ FILE src/app/game.js text 89767
 // 1回の試合: エンジンを進め、入力を命令にし、出来事を音・効果・HUDへ。カメラ（一人称）と描画。
 import { createGame, step, dump, load } from '../engine/engine.js';
 import { eyeOf, capsOf } from '../engine/combat.js';
 import { curWeapon, curW, ammoCount } from '../engine/actor.js';
 import { contextOf, OP_NAME, doorOps, personOps } from '../engine/interact.js';
-import { spreadDeg, attMods } from '../engine/weapon.js';
+import { spreadDeg } from '../engine/weapon.js';
 import { vaultPlan } from '../engine/move.js';
 import { depSpot, DEP_WHY } from '../engine/deploy.js';
 import { raycast, CS, LH, levelOfY, los } from '../engine/world.js';
 import { smokeBetween } from '../engine/nades.js';
 import { sideOf, isOpen } from '../engine/doors.js';
-import { WEAPONS } from '../engine/data/weapons.js';
+import { WEAPONS, zoomOf, opticOf, zoomsOf } from '../engine/data/weapons.js';
 import { GEAR, LONG } from '../engine/data/equipment.js';
 import { MAPS } from '../engine/maps/index.js';
 import { MISSIONS } from '../engine/data/missions.js';
@@ -515,15 +519,17 @@ export class Match {
     const st = this.app.settings, p = this.p;
     const W = curW(p), wi = curWeapon(p);
     const ads = p.ads;
-    const zoom = wi ? attMods(wi).zoom : 1;
+    const zoom = zoomOf(wi);
     let k = (inp.mouse ? 0.0022 : 0.0052) * (st.sens || 1);
-    if (ads > 0.5) k *= zoom > 2 ? (st.sensScope || 0.45) : (st.sensAds || 0.75);
+    // 倍率の照準器は「スコープ」の感度（4倍が基準）を倍率に合わせて変える（画面の上で同じ速さ。2倍は0.72・8倍は0.23）
+    if (ads > 0.5) k *= zoom >= 1.5 ? (st.sensScope || 0.45) * Math.min(1.6, 4 / zoom) : (st.sensAds || 0.75);
     if (inp.fire && !inp.mouse) k *= st.sensFire || 1;
     // エイムアシスト（タッチ）: 敵の近くでは少しゆっくりに。対戦は部屋の設定（0なし・1弱い・2ふつう）
     let want = 1;
     const aa = this.S.pvp ? ['off', 'weak', 'strong'][this.S.rules.aimAssist ?? 1] : st.aimAssist;
     if (!inp.mouse && aa && aa !== 'off') {
-      const near = this._nearTarget(0.06);
+      // 倍率が高いスコープでは、画面の上で同じくらいの範囲になるよう角度を狭める
+      const near = this._nearTarget(0.06 / Math.max(1, (ads > 0.5 ? zoom : 1) / 2));
       if (near) want = aa === 'strong' ? 0.55 : 0.72;
     }
     // 急に遅く・速くならないように、0.12秒かけて寄せる（11-12: エイムがなめらかに動かない）
@@ -620,7 +626,8 @@ export class Match {
           break;
         case 'wpn1': if (k === 'down' || (k === 'tap' && e.wheel)) this.acts.push({ a: 'switch', slot: 0 }); break;
         case 'wpn2': if (k === 'down' || (k === 'tap' && e.wheel)) this.acts.push({ a: 'switch', slot: 1 }); break;
-        case 'fmode': if (k === 'down') this.acts.push({ a: 'mode' }); break;
+        // 倍率を切り替えるか（構えている間）は手元で決めて送る（オンラインでホストの構えの具合とずれないように）
+        case 'fmode': if (k === 'down') { const wz = curWeapon(this.p), Wz = curW(this.p); this.acts.push({ a: 'mode', zoom: !!(wz && Wz && zoomsOf(wz.att) && (Wz.modes.length <= 1 || this.p.ads > 0.5)) }); } break;
         case 'light': if (k === 'down') this.acts.push({ a: 'light' }); break;
         case 'nvg': if (k === 'down' && p.armor.head === 'nvg') { this.nvgOn = !this.nvgOn; p.nvgOn = this.nvgOn; this.au.sfx('nvg', null, { vol: 0.5 }); } break;
         case 'low': if (k === 'down') this.lowOn = !this.lowOn; break;
@@ -860,7 +867,7 @@ export class Match {
           const a = S.byId[e.id]; if (!a) break;
           const W = WEAPONS[e.wid];
           let mz;
-          if (a === p && this.vm.on) { mz = this.vm.out.muzzle; fx.muzzle(mz[0], mz[1], mz[2], this.vm.out.fwd[0], this.vm.out.fwd[1], this.vm.out.fwd[2], W.cat === 'pistol' ? 0.7 : 1, e.supp); const ej = this.vm.out.eject, r = this.vm.out.right; if (W.cat !== 'shotgun' && !W.revolver) fx.shell(ej[0], ej[1], ej[2], -r[0] * 1.6 + this.vm.out.up[0], 1.4, -r[2] * 1.6 + this.vm.out.up[2], W.cal === '762x51' || W.cal === '762x39'); }
+          if (a === p && this.vm.on) { mz = this.vm.out.muzzle; fx.muzzle(mz[0], mz[1], mz[2], this.vm.out.fwd[0], this.vm.out.fwd[1], this.vm.out.fwd[2], W.cat === 'pistol' ? 0.7 : 1, e.supp); const ej = this.vm.out.eject, r = this.vm.out.right; if (W.cat !== 'shotgun' && !W.revolver && !W.bolt) fx.shell(ej[0], ej[1], ej[2], -r[0] * 1.6 + this.vm.out.up[0], 1.4, -r[2] * 1.6 + this.vm.out.up[2], W.cal === '762x51' || W.cal === '762x39'); }
           else { const g = this._gunFrame(a); if (g) { const L = gunModel(e.wid, (curWeapon(a) || {}).att || {}); const ml = L ? L.len : 0.4; mz = [g.p[0] + g.f[0] * ml, g.p[1] + g.f[1] * ml, g.p[2] + g.f[2] * ml]; fx.muzzle(mz[0], mz[1], mz[2], g.f[0], g.f[1], g.f[2], 1, e.supp); } else mz = [e.x, e.y + 1.4, e.z]; }
           au.gun(e.wid, a === p ? null : mz, { supp: e.supp, local: a === p, n: e.n });
           { const d = a === p ? 0 : Math.hypot(a.x - this.cam.x, a.z - this.cam.z); this._heatUp(a === p ? 0.1 : (e.supp ? 0.12 : 0.3) * Math.max(0, 1 - d / 45)); }
@@ -938,7 +945,10 @@ export class Match {
         case 'reload': if (e.id === me) au.sfx(e.k === 'shell' ? 'shellStart' : 'magOut', null, { vol: 0.7 }); else { const a = S.byId[e.id]; if (a && a.kind === 'swat' && !S.pvp && Math.random() < 0.5) this._say(a, 'swat_reload'); if (a) au.sfx('magOut', [a.x, a.y + 1.2, a.z], { vol: 0.5 }); } break;
         case 'reloaded': if (e.id === me) au.sfx('magIn', null, { vol: 0.75 }); break;
         case 'shell': if (e.id === me) au.sfx('shellIn', null, { vol: 0.7 }); break;
-        case 'pumped': if (e.id === me) au.sfx('pump', null, { vol: 0.75 }); else { const a = S.byId[e.id]; if (a) au.sfx('pump', [a.x, a.y + 1.2, a.z], { vol: 0.5 }); } break;
+        case 'pumped': { const a = S.byId[e.id], wb = a && curWeapon(a); if (wb && WEAPONS[wb.id] && WEAPONS[wb.id].bolt) break; /* ボルトの音は 'bolt' で鳴らした */ if (e.id === me) au.sfx('pump', null, { vol: 0.75 }); else if (a) au.sfx('pump', [a.x, a.y + 1.2, a.z], { vol: 0.5 }); break; }
+        // ボルトの操作の音（起こす・引く・押す・倒す。音の中の間合いは見た目の動きと同じ）
+        case 'bolt': if (e.id === me) au.sfx('bolt', null, { vol: 0.8 }); else { const a = S.byId[e.id]; if (a) au.sfx('bolt', [a.x, a.y + 1.2, a.z], { vol: 0.55 }); } break;
+        case 'zoom': if (e.id === me) { au.sfx('fmode', null, { vol: 0.5 }); hud.showBanner(e.sight === 'mag3' ? (e.z <= 1 ? 'ブースターを倒した（等倍）' : 'ブースター 3倍') : e.z <= 1 ? 'スコープ 等倍' : `スコープ ${e.z}倍`, 800); } break;
         case 'dry': if (e.id === me) au.sfx('dry', null, { vol: 0.6 }); break;
         case 'draw': if (e.id === me) au.sfx('draw', null, { vol: 0.45 }); break;
         case 'fmode': if (e.id === me) { au.sfx('fmode', null, { vol: 0.5 }); hud.showBanner(e.m === 'auto' ? '連射' : '単発', 700); } break;
@@ -1094,18 +1104,21 @@ export class Match {
       const lookFree = !p.tased && !p.cuffed && !p.vault;
       const cyaw = lookFree ? this.yaw : p.yaw, cpitch = lookFree ? Math.max(-1.45, Math.min(1.45, this.pitch)) : p.pitch;
       const W = curW(p), wi = curWeapon(p);
-      const zoom = wi ? attMods(wi).zoom : 1;
+      const zoom = zoomOf(wi);
       const fov0 = vfovOf(st.hfov);
       const z = 1 + (zoom - 1) * p.ads;
       // 被弾のぶれ（エイムパンチ）と揺れ
       this.shake = Math.max(0, this.shake - dt * 1.8);
       const sh = this.shake * this.shake;
       const t = this.time;
+      // ボルトの操作中（スコープをのぞいたまま）: 像が少し跳ねて傾く（見た目だけ。狙いは変わらない）
+      const bp = W && W.bolt && p.ws.st === 'pump' ? Math.sin(Math.PI * Math.max(0, Math.min(1, 1 - p.ws.t / (W.pump || 1)))) * p.ads : 0;
       cam = {
         x: e[0], y: e[1], z: e[2],
-        yaw: cyaw + (p.ws.ry * DEG) + Math.sin(t * 37) * 0.012 * sh + p.flinch * 0.03 * Math.sin(t * 23),
-        pitch: cpitch + (p.ws.rp * DEG) + Math.sin(t * 41) * 0.012 * sh + p.flinch * 0.04,
-        roll: p.lean * 0.16 + Math.sin(t * 29) * 0.01 * sh,
+        // 反動と、狙撃銃の照準の揺れ（ws.sx/sy。弾も同じ向きに飛ぶ）
+        yaw: cyaw + ((p.ws.ry + (p.ws.sx || 0)) * DEG) + Math.sin(t * 37) * 0.012 * sh + p.flinch * 0.03 * Math.sin(t * 23),
+        pitch: cpitch + ((p.ws.rp + (p.ws.sy || 0)) * DEG) + Math.sin(t * 41) * 0.012 * sh + p.flinch * 0.04 - bp * 0.006,
+        roll: p.lean * 0.16 + Math.sin(t * 29) * 0.01 * sh + bp * 0.03,
         fov: 2 * Math.atan(Math.tan(fov0 / 2) / z),
       };
       if (!this.av.hidden.has(p.id)) this.av.hidden.add(p.id);
@@ -1142,6 +1155,14 @@ export class Match {
     this.av.hideCam = this.camView; // 見ているカメラ自身は描かない
     const fp = !this.dead && p.alive && !(p.down && !S.pvp) && !(drone && drone.alive) && this.camView == null && !p.peek && !this.debugCam;
     if (fp) this.vm.update(p, cam, dt); else this.vm.on = false;
+    // ボルトアクション: ボルトを引ききったところで薬莢が飛ぶ（一人称）
+    if (fp && this.vm.on) {
+      const Wb = curW(p);
+      if (Wb && Wb.bolt && p.ws.st === 'pump') {
+        const pr = 1 - p.ws.t / (Wb.pump || 1), n = p.stats.sh || 0;
+        if (pr > 0.42 && this._boltEj !== n) { this._boltEj = n; const ej = this.vm.out.eject, r = this.vm.out.right, u = this.vm.out.up; this.fx.shell(ej[0], ej[1], ej[2], -r[0] * 1.3 + u[0] * 0.8, 1.6, -r[2] * 1.3 + u[2] * 0.8, true); }
+      }
+    }
     // 曳光弾
     for (const b of S.bullets) {
       if (!b.tr) continue;
@@ -1374,7 +1395,8 @@ export class Match {
       camsOK: S.pvp && S.m.kind !== 'tdm' && p.team === S.m.def && p.alive && !p.down && (S.m.phase === 'prep' || S.m.phase === 'action') && !!(S.cams && S.cams.some(c => c.ok)), camOn: this.camView != null,
     };
     if (v.zoneOK) { const zs = attackZones(this.w, this.def); v.zoneLabel = (zs[p.zone ?? 0] || zs[0] || {}).name || ''; if (zs.length < 2) v.zoneOK = false; }
-    if (wi) { const g = gunModel(wi.id, wi.att); if (g && g.pts.optic) v.optic = g.pts.optic; }
+    // 照準器の今の状態（倍率を切り替えると、模様・スコープの像・広い視野が変わる）
+    if (wi) { const g = gunModel(wi.id, wi.att); if (g && g.pts.optic) { const o = opticOf(wi), key = wi.att.sight + o.kind + o.zoom; if (!this._opt || this._opt.key !== key || this._opt.base !== g.pts.optic) this._opt = { key, base: g.pts.optic, v: { ...g.pts.optic, kind: o.kind, scope: o.scope, wide: o.wide, zoom: o.zoom } }; v.optic = this._opt.v; } }
     if (this.droneId != null || this.camView != null) v.hideCross = true;
     // 案内
     let prompt = '';
@@ -2130,7 +2152,7 @@ export function netMixin(App) {
   };
 }
 
-@@@@ FILE src/app/netgame.js text 8709
+@@@@ FILE src/app/netgame.js text 8725
 // オンラインの試合の動かし方（Match に混ぜる）。
 //  ホスト: エンジンを動かし、ゲストの入力と動作をエンジンへ渡し、写しを配る。ゲストが切れたら止めて待つ。
 //  ゲスト: エンジンは動かさず、ホストの写しを補間して表示する。自分の移動と銃（反動・弾の見た目）だけは手元で先に動かし、ホストの位置へなめらかに寄せる。
@@ -2143,7 +2165,7 @@ import { setSalt } from '../engine/rng.js';
 // 手元でも先に行う動作（ホストにも送る）
 const LOCAL_ACTS = new Set(['switch', 'reload', 'mode', 'light', 'melee']);
 // ゲストが手元で出す出来事（ホストから来た同じものは捨てる）
-const LOCAL_EV = new Set(['shot', 'reload', 'reloaded', 'shell', 'pumped', 'dry', 'draw', 'fmode', 'lightsw', 'step', 'holster', 'melee']);
+const LOCAL_EV = new Set(['shot', 'reload', 'reloaded', 'shell', 'pumped', 'bolt', 'zoom', 'dry', 'draw', 'fmode', 'lightsw', 'step', 'holster', 'melee']);
 
 export function netMixin(Match) {
   const P = Match.prototype;
@@ -2856,7 +2878,7 @@ export const SPEAKERS = {
   s0: { who: 'sus' }, s1: { who: 'sus' }, s2: { who: 'sus' }, c0: { who: 'civ' }, c1: { who: 'civ' }, c2: { who: 'civ' }, toc: { who: 'toc' },
 };
 
-@@@@ FILE src/audio/synth.js text 34590
+@@@@ FILE src/audio/synth.js text 35968
 // 効果音を手続きで作る（外部の音素材は使わない）。DOMを使わないので Node でも書き出して検査できる。
 // 銃声は「銃口の爆風（広い帯域の破裂）」「胴の響き（低い山）」「超音速の弾のクラック（小銃）」「機関部の金属音」の重ね合わせ。
 // 残響（屋内・屋外）は再生側（audio.js）で付ける。
@@ -2917,6 +2939,8 @@ const GUNS = {
   h357: { b: 0.15, br: 7000, tau: 0.016, boom: [120, 45, 0.22, 1.2], crack: true, mech: 1900, tail: 0.38, sat: 2.0 },
   h57: { b: 0.1, br: 8200, tau: 0.008, boom: [190, 78, 0.1, 0.55], crack: true, mech: 3200, tail: 0.2, sat: 1.2 },
   sg: { b: 0.2, br: 5200, tau: 0.022, boom: [95, 38, 0.3, 1.4], crack: false, mech: 1700, tail: 0.45, sat: 2.2 },
+  // 狙撃銃（7.62mm NATO・長い銃身）: 太く長い響き。ボルトアクションなので撃った瞬間の機関部の音はない
+  r308: { b: 0.19, br: 7600, tau: 0.018, boom: [105, 38, 0.3, 1.25], crack: true, mech: 0, tail: 0.55, sat: 2.0, bolt: true },
 };
 function gunNear(sr, seed, k) {
   const g = GUNS[k], r = rng(seed);
@@ -2927,7 +2951,7 @@ function gunNear(sr, seed, k) {
   const [f0, f1, bd, bg] = g.boom;
   mixInto(out, thump(sr, r, f0 * (0.95 + r() * 0.1), f1, bd, bg), 0, 1.0);
   if (g.crack) mixInto(out, crack(sr, r), 0, 0.55);
-  mixInto(out, clack(sr, r, g.mech, 0.06, 0.35), S(sr, 0.028 + r() * 0.012), 1);
+  if (!g.bolt) mixInto(out, clack(sr, r, g.mech, 0.06, 0.35), S(sr, 0.028 + r() * 0.012), 1);
   // 短い尾（銃の近くの空気の揺れ）
   const tn = S(sr, g.tail); const tl = noise(tn, r); lp(tl, 1400, sr); hp(tl, 120, sr); mulEnv(tl, expEnv(tn, sr, 0.004, g.tail * 0.22)); mixInto(out, tl, S(sr, 0.004), 0.22);
   sat(out, g.sat);
@@ -3048,6 +3072,19 @@ function throwW(sr, seed) { const r = rng(seed), out = buf(sr, 0.35); const n = 
 function magOut(sr, seed) { const r = rng(seed), out = buf(sr, 0.35); mixInto(out, clack(sr, r, 1700, 0.05, 1), 0, 1); const n = S(sr, 0.18); const z = noise(n, r); bp(z, 2400, 1.5, sr); mulEnv(z, env(n, sr, 0.02, 0.15, 2)); mixInto(out, z, S(sr, 0.04), 0.5); return fadeEdges(normalize(out, 0.6), sr); }
 function magIn(sr, seed) { const r = rng(seed), out = buf(sr, 0.45); mixInto(out, clack(sr, r, 1400, 0.06, 1), 0, 1); mixInto(out, thump(sr, r, 200, 120, 0.05, 0.5), 0, 1); mixInto(out, clack(sr, r, 2300, 0.07, 1.1), S(sr, 0.25), 1); return fadeEdges(normalize(out, 0.65), sr); }
 function pump(sr, seed) { const r = rng(seed), out = buf(sr, 0.45); mixInto(out, clack(sr, r, 1100, 0.08, 1), 0, 1); const n = S(sr, 0.12); const z = noise(n, r); bp(z, 1600, 1.2, sr); mulEnv(z, env(n, sr, 0.01, 0.1, 2)); mixInto(out, z, S(sr, 0.02), 0.5); mixInto(out, clack(sr, r, 1300, 0.08, 1.1), S(sr, 0.2), 1); return fadeEdges(normalize(out, 0.7), sr); }
+// ボルトの操作: 起こす（カチッ）→ 引く（こすれ）→ 引ききる（薬莢が抜ける）→ 押す（こすれ）→ 押しきる（弾が入る）→ 倒す（カチッ）。
+// 間合いは見た目の動き（AT308 のボルトの時間 0.95秒の 16〜26%・26〜46%・46〜64%・64〜74%）に合わせる
+function boltS(sr, seed, T = 0.95) {
+  const r = rng(seed), out = buf(sr, T + 0.1);
+  const at = (f) => S(sr, T * f);
+  mixInto(out, clack(sr, r, 1500, 0.06, 0.9), at(0.17), 1);
+  { const n = S(sr, T * 0.2); const z = noise(n, r); bp(z, 2600, 1.4, sr); mulEnv(z, env(n, sr, 0.02, T * 0.16, 1.5)); mixInto(out, z, at(0.26), 0.45); }
+  mixInto(out, clack(sr, r, 2100, 0.05, 0.7), at(0.45), 1);
+  { const n = S(sr, T * 0.17); const z = noise(n, r); bp(z, 2200, 1.4, sr); mulEnv(z, env(n, sr, 0.02, T * 0.14, 1.5)); mixInto(out, z, at(0.47), 0.4); }
+  mixInto(out, clack(sr, r, 1250, 0.07, 1.0), at(0.63), 1);
+  mixInto(out, clack(sr, r, 1700, 0.06, 0.9), at(0.735), 1);
+  return fadeEdges(normalize(out, 0.62), sr);
+}
 function shellIn(sr, seed) { const r = rng(seed), out = buf(sr, 0.25); mixInto(out, clack(sr, r, 1200 + r() * 200, 0.06, 0.8), 0, 1); const n = S(sr, 0.08); const z = noise(n, r); bp(z, 1800, 1.5, sr); mulEnv(z, env(n, sr, 0.01, 0.07, 2)); mixInto(out, z, S(sr, 0.03), 0.4); return fadeEdges(normalize(out, 0.55), sr); }
 function dry(sr, seed) { const r = rng(seed), out = buf(sr, 0.12); mixInto(out, clack(sr, r, 2200, 0.08, 1), 0, 1); return fadeEdges(normalize(out, 0.5), sr); }
 function cloth(sr, seed, dur = 0.3, f = 2600) { const r = rng(seed), out = buf(sr, dur); const n = S(sr, dur); const z = noise(n, r); bp(z, f, 1.1, sr); mulEnv(z, env(n, sr, dur * 0.25, dur * 0.7, 2)); mixInto(out, z, 0, 1); return fadeEdges(normalize(out, 0.4), sr); }
@@ -3109,7 +3146,7 @@ export const SFX = {
   explosion: [(sr, i) => boom(sr, 700 + i, true), 2], flashbang: [(sr, i) => flashBang(sr, 710 + i), 2], stinger: [(sr, i) => stingerBang(sr, 720 + i), 1], gasPop: [(sr, i) => gasPop(sr, 730 + i), 1],
   nadeBounce: [(sr, i) => nadeBounce(sr, 740 + i), 2], throw: [(sr, i) => throwW(sr, 750 + i), 2],
   // 銃と装備の扱い
-  magOut: [(sr, i) => magOut(sr, 800 + i), 2], magIn: [(sr, i) => magIn(sr, 810 + i), 2], pump: [(sr, i) => pump(sr, 820 + i), 1], shellIn: [(sr, i) => shellIn(sr, 830 + i), 2], shellStart: [(sr, i) => cloth(sr, 840 + i, 0.2, 2000), 1],
+  magOut: [(sr, i) => magOut(sr, 800 + i), 2], magIn: [(sr, i) => magIn(sr, 810 + i), 2], pump: [(sr, i) => pump(sr, 820 + i), 1], bolt: [(sr, i) => boltS(sr, 1020 + i), 2], shellIn: [(sr, i) => shellIn(sr, 830 + i), 2], shellStart: [(sr, i) => cloth(sr, 840 + i, 0.2, 2000), 1],
   dry: [(sr, i) => dry(sr, 850 + i), 1], draw: [(sr, i) => draw(sr, 860 + i), 2], fmode: [(sr, i) => dry(sr, 870 + i), 1], click: [(sr, i) => dry(sr, 880 + i), 1],
   cuffs: [(sr, i) => cuffs(sr, 900 + i), 1], cuffsStart: [(sr, i) => cloth(sr, 910 + i, 0.35, 1800), 1], mirror: [(sr, i) => cloth(sr, 920 + i, 0.3, 3200), 1], act: [(sr, i) => cloth(sr, 930 + i, 0.25, 2400), 2],
   bandage: [(sr, i) => bandage(sr, 940 + i), 1], spray: [(sr, i) => sprayS(sr, 950 + i), 1], nvg: [(sr, i) => nvgWhine(sr, 960 + i), 1], drone: [(sr, i) => droneLoop(sr, 970 + i), 1],
@@ -6385,7 +6422,7 @@ export const EVIDENCE = {
   drugs: { name: '麻薬の包み' }, phone: { name: '携帯電話' }, docs: { name: '書類' }, cash: { name: '現金の束' }, drive: { name: 'ハードディスク' }, guns: { name: '銃のケース' },
 };
 
-@@@@ FILE src/engine/data/npc.js text 7323
+@@@@ FILE src/engine/data/npc.js text 7332
 // 人の性格と装備の種類（容疑者・市民・隊員）。資料室はここから作る。
 // morale: 士気の範囲（0で必ず投降）、aggr: 攻撃的（撃ち始めやすさ）、hidden: 隠し武器（投降のふりから撃つ）、
 // hide: 隠れる、flee: 逃げる、ambush: 待ち伏せ、armor: 防弾ベストの確率、react: 反応時間の倍率、acc: 命中の良さ
@@ -6435,7 +6472,7 @@ export const PVP_LOADOUTS = {
   sus: { primary: { id: 'akm', sight: 'iron', ammo: 'ap' }, secondary: { id: 'm1911' }, gear: [['dshield', 1], ['wire', 2], ['bandage', 1]], armor: 'medium' },
 };
 export const PVP_ALLOWED = {
-  swat: { primary: ['mk18', 'hk416', 'm4a1', 'mcx', 'g36c', 'scarl', 'aug', 'tavor', 'sa58', 'scarh', 'mp5', 'mp5sd', 'mp5k', 'ump45', 'mpx', 'mp7', 'mp9', 'vector', 'evo3', 'm4super', 'r870', 'ksg', 'saiga', 'spas12'], secondary: ['g17', 'g19', 'm17', 'm45a1', 'usp', 'm92', 'fiveseven', 'python', 'deagle'], gear: ['flash', 'stinger', 'cs', 'smoke', 'c2', 'frame', 'bandage', 'wedge'] },
+  swat: { primary: ['mk18', 'hk416', 'm4a1', 'mcx', 'g36c', 'scarl', 'aug', 'tavor', 'sa58', 'scarh', 'at308', 'mp5', 'mp5sd', 'mp5k', 'ump45', 'mpx', 'mp7', 'mp9', 'vector', 'evo3', 'm4super', 'r870', 'ksg', 'saiga', 'spas12'], secondary: ['g17', 'g19', 'm17', 'm45a1', 'usp', 'm92', 'fiveseven', 'python', 'deagle'], gear: ['flash', 'stinger', 'cs', 'smoke', 'c2', 'frame', 'bandage', 'wedge'] },
   sus: { primary: ['akm', 'aks74u', 'vz58', 'rpk', 'g3', 'sks', 'mini14', 'uzi', 'mac10', 'p90', 'bizon', 'skorpion', 'm590', 'saiga', 'spas12', 'sawedoff', 'tec9'], secondary: ['m1911', 'makarov', 'g18', 'g19', 'm92', 'fiveseven', 'python', 'deagle'], gear: ['dshield', 'wire', 'claymore', 'stinger', 'cs', 'bandage', 'wedge', 'flash'] },
 };
 
@@ -6505,13 +6542,13 @@ export const PROPS = {
   lamp: { name: '街灯', w: 0.25, d: 0.25, h: 4.5, boxes: [B(0.18, 4.5, 0.18, M.METAL)], solid: true, vault: false, foot: [0.25, 0.25] },
 };
 
-@@@@ FILE src/engine/data/version.js text 209
+@@@@ FILE src/engine/data/version.js text 210
 // 版番号: 互換（セーブ・オンラインの相性。上げたら古いセーブは捨てる）と表示用
-export const VERSION = '0.1.9';
-export const COMPAT = 5;
+export const VERSION = '0.1.10';
+export const COMPAT = 6;
 export const TITLE = 'HARD ENTRY';
 
-@@@@ FILE src/engine/data/weapons.js text 46183
+@@@@ FILE src/engine/data/weapons.js text 52458
 // 銃のデータ（実銃の諸元＋ゲームの扱い）。資料室はここから作る。
 // rpm: 発射速度（毎分）、vel: 銃口の弾の速さ m/s、kg: 重さ、mag: 装弾数、spare: 予備の弾倉の数
 // ads/draw: 構える・持ち替えの時間（秒）、move: 移動の速さの倍率
@@ -6595,6 +6632,12 @@ export const WEAPONS = {
     ads: 0.38, draw: 0.75, move: 0.9, rc: { v: 1.4, h: 0.5, bias: 0.08, first: 1.2, ctrl: 8, kick: 1.4 }, sp: { hip: 3.0, ads: 0.05, move: 2.2 }, rl: { tac: 2.9, fast: 2.3, empty: 0.5 },
     pvp: { dmg: 62, fall: [35, 55, 0.82] }, model: 'ar15', mdl: { barrel: 0.42, rail: 'hk', stock: 'hk', mag762: true }, snd: 'r762',
     desc: 'HK416を7.62mm NATOにした選抜射手の小銃。遠くまでとてもよく当たる。重く長いので、室内では振り回しにくい。' }),
+  // ---------- SWAT: 狙撃銃（11-12 追加。ボルトアクション: 1発ごとに手でボルトを引いて次の弾を込める） ----------
+  // bolt: ボルトを操作する時間（秒）。この間は撃てない（ポンプと同じ扱い。見た目と音はボルト）。sway: 構えたときの照準の揺れ（度。立ち）
+  at308: W({ name: 'AT308', cat: 'sniper', side: 'swat', cal: '762x51', ammo: ['ap', 'jhp'], mag: 10, spare: 4, chamber: true, bolt: true, pump: 0.95, modes: ['semi'], rpm: 60, vel: 850, kg: 6.4, len: 1.13,
+    ads: 0.5, draw: 0.85, move: 0.88, sway: 0.2, rc: { v: 3.0, h: 0.45, bias: 0.05, first: 1, ctrl: 7, kick: 2.2 }, sp: { hip: 6.0, ads: 0.012, move: 3.0 }, rl: { tac: 3.1, fast: 2.5, empty: 0.6 },
+    pvp: { dmg: 115, fall: [70, 110, 0.9] }, model: 'bolt', mdl: {}, snd: 'r308',
+    desc: '英国アキュラシー・インターナショナル社の警察向けのボルトアクション狙撃銃（7.62mm NATO・10発の箱弾倉）。1発ごとに手でボルトを引く（約1秒）。狙撃用スコープは4倍と8倍を切り替えられる（射撃モードのボタン）。構えると照準がわずかに揺れる（しゃがむ・伏せると小さい）。腰だめはまず当たらない。' }),
   // ---------- SWAT: 短機関銃 ----------
   mp5: W({ name: 'MP5A4', cat: 'smg', side: 'swat', cal: '9mm', ammo: ['ap', 'jhp'], mag: 30, spare: 6, chamber: true, modes: ['auto', 'semi'], rpm: 800, vel: 400, kg: 2.5, len: 0.68,
     ads: 0.23, draw: 0.45, move: 0.98, rc: { v: 0.42, h: 0.3, bias: 0.04, first: 1.3, ctrl: 12, kick: 0.75 }, sp: { hip: 2.0, ads: 0.14, move: 1.5 }, rl: { tac: 2.6, fast: 2.2, empty: 0.55 },
@@ -6785,8 +6828,15 @@ export const ATTACH = {
     reddot: { name: 'ドットサイト（Micro T-2）', zoom: 1.1, ads: 0.01 },
     srs: { name: '広窓ドットサイト（SRS）', zoom: 1.1, ads: 0.014, desc: '窓が広く、まわりが見やすい。少し重い。' },
     holo: { name: 'ホロサイト（EXPS3）', zoom: 1.1, ads: 0.015 },
-    acog: { name: '4倍スコープ（ACOG）', zoom: 4.0, ads: 0.05, scope: true, desc: '4倍の固定倍率。遠くの頭を狙える。近くは見づらい。' },
-    lpvo: { name: '等倍〜4倍スコープ', zoom: 3.0, ads: 0.06, scope: true },
+    // 倍率の照準器（11-12。実在の物を元にした形と照準の模様）。zooms: 構えている間に射撃モードのボタンで切り替える倍率（はじめが既定）。
+    // flip: 等倍にするとブースターを横へ倒す（照準はホロサイト）。wide1: 等倍でもスコープをのぞく（視野が広い）
+    acog2: { name: '2倍スコープ（ACOG TA47 2x20）', zoom: 2.0, ads: 0.03, scope: true, desc: 'トリジコンの小型のACOG（全長13.5cm）。2倍の固定倍率で、照準は赤い十字（光ファイバーと夜光）。近くも見やすい。' },
+    mag3: { name: 'ホロサイト＋3倍ブースター（EXPS3・G33）', zoom: 3.0, zooms: [3, 1], ads: 0.04, scope: true, flip: true, desc: 'EOTech のホロサイトの後ろに3倍のブースター（G33）。構えている間に射撃モードのボタンで、ブースターを横へ倒す（等倍のホロサイト）・戻す（3倍）。' },
+    acog: { name: '4倍スコープ（ACOG TA31 4x32）', zoom: 4.0, ads: 0.05, scope: true, desc: 'トリジコンの4倍の固定スコープ。照準は赤い山形（シェブロン）と、下に5.56mmの距離の目盛り。遠くの頭を狙える。近くは見づらい。' },
+    lpvo: { name: '等倍〜4倍スコープ（SpecterDR 1-4x）', zoom: 4.0, zooms: [4, 1], ads: 0.06, scope: true, wide1: true, desc: 'ELCAN の等倍と4倍を上のレバーで切り替えるスコープ。構えている間に射撃モードのボタンで切り替える。照準は十字と赤い点。' },
+    scope6: { name: '6倍スコープ（ACOG TA648 6x48）', zoom: 6.0, ads: 0.08, scope: true, desc: '7.62mm NATO の小銃のための大きなACOG（全長23cm・1.1kg）。照準は赤い馬蹄形と点、下に .308 の距離の目盛り。' },
+    lpvo8: { name: '等倍〜8倍スコープ（NX8 1-8x24）', zoom: 8.0, zooms: [8, 1], ads: 0.07, scope: true, wide1: true, desc: 'ナイトフォースの選抜射手向けのスコープ（全長22cm）。構えている間に射撃モードのボタンで等倍と8倍を切り替える。照準は赤い円と点、細い十字に2ミルごとの目盛り。' },
+    sniper: { name: '狙撃用スコープ（PM II 3-12x50）', zoom: 8.0, zooms: [4, 8], ads: 0.08, scope: true, desc: 'シュミット＆ベンダーの狙撃用スコープ（34mmの胴・50mmの対物レンズ）。射撃モードのボタンで4倍と8倍を切り替える。照準はミルドットの十字。' },
     rmr: { name: 'ピストル用ドットサイト（RMR）', zoom: 1.05, ads: 0.01 },
     sro: { name: 'ピストル用広窓ドット（SRO）', zoom: 1.05, ads: 0.012, desc: '丸い大きな窓で、ドットを見失いにくい。' },
   },
@@ -6831,6 +6881,24 @@ export const ATTACH = {
 export const SLOT_NAME = { sight: '照準器', muzzle: 'マズル', grip: 'グリップ', side: 'ライト・レーザー', mag: '弾倉', stock: '銃床', finish: '色' };
 // 銃の種類ごとに付けられるもの（はじめの物が既定）
 // 見た目と合わせる: 前の握りが元から付いている銃（AUG・MP9・MP5K・MP7）はグリップなし、レールのない拳銃はライトなし など
+// 小銃の照準器（実銃の取り付け方に合わせる）:
+//  上がレールの小銃（AR-15 の仲間・SCAR・SA58・AUG A3・Tavor X95・vz.58 の短いレール）はドット・ホロ・2倍・4倍・等倍〜4倍。
+//  ブースター（ホロ＋3倍）は上のレールが長い物だけ（vz.58 は短いので付かない）。
+//  等倍〜8倍は銃身が長めの物（M4A1・HK416・AUG・Tavor・SCAR-H・HK417）。6倍の ACOG（TA648）は 7.62mm NATO 用（SCAR-H・HK417・G3）。
+//  G3 は爪の台（クローマウント）にドット・2倍・4倍・6倍。G36C は持ち手の上の短いレールにドット・ホロ・2倍。AK・SKS・Mini-14・RPK は照準器なし
+function rifleSights(wid, W) {
+  const m = W.model, md = W.mdl || {};
+  if (m === 'g36') return ['reddot', 'holo', 'acog2', 'iron'];
+  if (m === 'g3') return ['iron', 'reddot', 'acog2', 'acog', 'scope6'];
+  const rail = !(m === 'ak' && !md.vz) && m !== 'sks' && m !== 'mini14';
+  if (!rail) return ['iron'];
+  const out = ['iron', 'reddot', 'srs', 'holo', 'acog2'];
+  if (!md.vz) out.push('mag3');
+  out.push('acog', 'lpvo');
+  if (['m4a1', 'hk416', 'aug', 'tavor', 'scarh', 'hk417'].includes(wid)) out.push('lpvo8');
+  if (W.cal === '762x51' && ['scarh', 'hk417'].includes(wid)) out.push('scope6');
+  return out;
+}
 export function attachOptions(wid) {
   const W = WEAPONS[wid];
   if (!W) return {};
@@ -6841,7 +6909,7 @@ export function attachOptions(wid) {
     const box = W.mag >= 20 && !md.rpk;
     const fg = (rail && m !== 'aug' && !md.vz) || m === 'g3';
     return {
-      sight: m === 'g36' ? ['reddot', 'holo', 'iron'] : rail ? ['iron', 'reddot', 'srs', 'holo', 'acog', 'lpvo'] : m === 'g3' ? ['iron', 'reddot', 'acog'] : ['iron'],
+      sight: rifleSights(wid, W),
       muzzle: ['none', 'supp', 'comp', 'brake', 'flash'],
       grip: fg ? ['none', 'vert', 'angled', 'stubby', 'handstop'] : ['none'],
       side: ['none', 'light', 'laser', 'combo', 'ir'],
@@ -6850,12 +6918,24 @@ export function attachOptions(wid) {
       finish: ['ak', 'sks', 'mini14', 'g36', 'aug', 'g3'].includes(m) ? ['blk'] : fin,
     };
   }
+  if (c === 'sniper') {
+    return {
+      sight: ['sniper', 'lpvo8', 'scope6', 'acog', 'lpvo'],
+      muzzle: ['none', 'brake', 'supp'],
+      grip: ['none'],
+      side: ['none', 'light', 'laser', 'combo', 'ir'],
+      mag: ['std'],
+      stock: ['std'],
+      finish: fin,
+    };
+  }
   if (c === 'smg') {
     const rail = ['mp7', 'ump', 'mpx', 'vector', 'mp9', 'evo', 'mp5'].includes(m) && !md.sd;
     const fg = rail && m !== 'mp9' && m !== 'mp7' && !md.k;
     const gripMag = ['mac10', 'mp9', 'mp7', 'uzi'].includes(m);
     return {
-      sight: rail || m === 'mp5' ? ['iron', 'reddot', 'srs', 'holo'] : ['iron'],
+      // 9mm の銃でも 2倍の ACOG（TA47 には 9mm 用の目盛りの型がある）。上のレールが長い MPX・UMP・Vector はブースターも
+      sight: rail || m === 'mp5' ? ['iron', 'reddot', 'srs', 'holo', 'acog2'].concat(['mpx', 'ump', 'vector'].includes(m) ? ['mag3'] : []) : ['iron'],
       muzzle: W.integral ? ['none'] : ['none', 'supp', 'comp', 'flash'],
       grip: fg ? ['none', 'vert', 'angled', 'stubby', 'handstop'] : ['none'],
       side: m === 'tec9' ? ['none'] : ['none', 'light', 'laser', 'combo', 'ir'],
@@ -6898,7 +6978,18 @@ export function capOf(wid, mag) {
   if (mag === 'ext') return W.tube ? W.mag + 2 : W.cat === 'pistol' ? W.mag + (W.mag >= 12 ? 5 : 3) : Math.round(W.mag * 1.33);
   return W.mag;
 }
-export const CAT_NAME = { rifle: '小銃', smg: '短機関銃', shotgun: '散弾銃', pistol: '拳銃', less: '非致死' };
+export const CAT_NAME = { rifle: '小銃', sniper: '狙撃銃', smg: '短機関銃', shotgun: '散弾銃', pistol: '拳銃', less: '非致死' };
+// スコープの倍率（倍率を切り替えられるスコープは、銃ごとに選んだ倍率 wi.zi）
+export function zoomsOf(att) { const x = att && ATTACH.sight[att.sight]; return x && x.zooms ? x.zooms : null; }
+export function zoomOf(wi) { if (!wi) return 1; const zs = zoomsOf(wi.att); if (zs) return zs[(wi.zi || 0) % zs.length]; const x = ATTACH.sight[wi.att && wi.att.sight]; return x && x.zoom ? x.zoom : 1; }
+// 今の照準器の状態（HUD・一人称の見え方）: kind 照準の模様、scope 倍率の像（銃を描かずに HUD のスコープの像）、wide 等倍のスコープ（広い視野）
+export function opticOf(wi) {
+  const sid = wi && wi.att ? wi.att.sight : 'iron', x = ATTACH.sight[sid];
+  if (!x) return { kind: 'iron', zoom: 1, scope: false, wide: false };
+  const zoom = zoomOf(wi);
+  if (x.flip && zoom <= 1) return { kind: 'holo', zoom: 1, scope: false, wide: false };
+  return { kind: sid, zoom, scope: !!x.scope, wide: !!(x.wide1 && zoom <= 1) };
+}
 
 @@@@ FILE src/engine/deploy.js text 8166
 // 置く物（対戦の守る側。シージの Deployable Shield と Barbed Wire）。状態は S.deps = [{ id, k, x, y, z, yaw, L, team, by, hp }]
@@ -12619,9 +12710,9 @@ export function stepStatus(S, w, dt, ev) {
   }
 }
 
-@@@@ FILE src/engine/weapon.js text 12652
+@@@@ FILE src/engine/weapon.js text 14108
 // 銃の動き: 撃つ・弾倉（1本ずつ残弾）・通常/速いリロード・1発ずつ込める・ポンプ・持ち替え・反動（BattleBit式）・散らばり
-import { WEAPONS, AMMO, ATTACH } from './data/weapons.js';
+import { WEAPONS, AMMO, ATTACH, zoomsOf } from './data/weapons.js';
 import { LONG, HAND_LONG } from './data/equipment.js';
 import { curWeapon, curW, magCap } from './actor.js';
 import { spawnBullet } from './combat.js';
@@ -12693,6 +12784,14 @@ export function stepWeapon(S, w, a, inp, dt, ev) {
   const adsT = W ? W.ads + attMods(wi).ads : 0.25;
   a.ads = Math.max(0, Math.min(1, a.ads + (a.adsOn ? dt / adsT : -dt / (adsT * 0.8))));
   a.low = Math.max(0, Math.min(1, a.low + (a.lowOn ? dt * 5 : -dt * 6)));
+  // 狙撃銃の照準の揺れ（度。構えたときだけ）: しゃがむと半分、伏せると4分の1、動くと大きい、腕のけがで大きい。
+  // 時間だけで決まる（乱数なし）ので、オンラインのゲストの手元とホストでほぼ同じになる
+  if (W && W.sway && a.ads > 0.01) {
+    const t = S.t * S.dt + a.id * 7.3;
+    const A = W.sway * a.ads * a.ads * (a.st > 1.5 ? 0.25 : a.st > 0.5 ? 0.5 : 1) * (1 + Math.min(1.5, (a.spd || 0) / 2.4) * 1.5) * (a.inj && a.inj.arm ? 1.8 : 1);
+    ws.sx = A * (Math.sin(t * 0.83) * 0.65 + Math.sin(t * 1.91 + 1.3) * 0.35);
+    ws.sy = A * (Math.sin(t * 1.17 + 2.1) * 0.6 + Math.sin(t * 0.57 + 0.4) * 0.4);
+  } else { ws.sx = 0; ws.sy = 0; }
   // 状態の時間
   if (ws.t > 0) ws.t -= dt;
   if (ws.t <= 0) finishState(S, a, ev);
@@ -12701,6 +12800,8 @@ export function stepWeapon(S, w, a, inp, dt, ev) {
     if (ac.a === 'reload') startReload(S, a, !!ac.fast, ev);
     else if (ac.a === 'switch') switchTo(S, a, ac.slot, ev);
     else if (ac.a === 'mode' && ws.slot === 3) m320Next(a, ev);
+    // 倍率を切り替えられる照準器: 構えている間（射撃モードが1つの銃はいつも）は射撃モードのボタンで倍率を切り替える
+    else if (ac.a === 'mode' && W && wi && zoomsOf(wi.att) && (ac.zoom != null ? ac.zoom : (W.modes.length <= 1 || a.ads > 0.5))) { const zs = zoomsOf(wi.att); wi.zi = ((wi.zi || 0) + 1) % zs.length; ev.push({ e: 'zoom', id: a.id, z: zs[wi.zi], sight: wi.att.sight }); }
     else if (ac.a === 'mode' && W && wi && W.modes.length > 1 && ws.st === 'ready') { wi.mode = (wi.mode + 1) % W.modes.length; ev.push({ e: 'fmode', id: a.id, m: W.modes[wi.mode] }); }
     else if (ac.a === 'light' && wi && (wi.att.light || wi.att.laser)) { wi.lightOn = !wi.lightOn; ev.push({ e: 'lightsw', id: a.id, on: wi.lightOn }); }
   }
@@ -12833,7 +12934,7 @@ function tryFire(S, w, a, W, wi, inp, ev) {
   // 散らばりと反動
   const sh = ws.shots;
   const sprd = spreadDeg(S, a, W, wi) * DEG;
-  const baseYaw = a.yaw + ws.ry * DEG, basePitch = a.pitch + ws.rp * DEG;
+  const baseYaw = a.yaw + (ws.ry + (ws.sx || 0)) * DEG, basePitch = a.pitch + (ws.rp + (ws.sy || 0)) * DEG;
   const pellets = am.pellets || 1;
   const seed = a.stats.sh + 1;
   for (let p = 0; p < pellets; p++) {
@@ -12860,6 +12961,8 @@ function tryFire(S, w, a, W, wi, inp, ev) {
   // 音と光（AIは聞く）
   const supp = wi.att.muzzle === 'supp';
   ev.push({ e: 'shot', id: a.id, wid: wi.id, x: a.x, y: a.y, z: a.z, supp, loud: (W.less ? 0.4 : 1) * m.noise, fl: m.flash, n: ws.shots });
+  // ボルトアクション: 撃ったらすぐボルトを操作する（音と薬莢は見る側で、操作の進み具合に合わせて出す）
+  if (W.bolt && ws.st === 'pump') ev.push({ e: 'bolt', id: a.id, wid: wi.id, dur: ws.t });
 }
 
 @@@@ FILE src/engine/world.js text 58497
@@ -14685,7 +14788,7 @@ export class GuestSession {
   }
 }
 
-@@@@ FILE src/net/snap.js text 23780
+@@@@ FILE src/net/snap.js text 23788
 // 通信の中身: ホストのエンジンの状態 → 小さな写し（数を丸めた配列）。ゲストは写しから「見せるための状態」を作る。
 // 静かな情報（名前・見た目・装備の種類・目的の一覧）は st、動く情報（位置・姿勢・扉・物・出来事）は g。
 import { createActor, makeWeapon } from '../engine/actor.js';
@@ -14704,7 +14807,7 @@ const r2 = (v) => Math.round(v * 100);
 const r3 = (v) => Math.round(v * 1000);
 const isNum = (v) => typeof v === 'number' && isFinite(v);
 // 送る出来事（見た目・音・HUDに要るもの）
-export const NET_EV = new Set(['shot', 'imp', 'blood', 'hit', 'whiz', 'kill', 'down', 'cuffed', 'report', 'evidence', 'bombdone', 'soft', 'glass', 'block', 'reinf', 'door', 'deny', 'nade', 'boom', 'c2', 'flashed', 'stung', 'tase', 'spray', 'reload', 'reloaded', 'shell', 'pumped', 'dry', 'draw', 'fmode', 'lightsw', 'step', 'shout', 'cmd', 'mirror', 'act', 'trap', 'trapset', 'barset', 'c2set', 'barhit', 'barbreak', 'plant', 'disable', 'defpick', 'defdrop', 'spotted', 'drone', 'dronedead', 'phase', 'round', 'roundstart', 'swap', 'respawn', 'matchend', 'end', 'revive', 'bandaged', 'fall', 'throw', 'bounce', 'allbombs', 'trapoff', 'peek', 'peekend', 'launch', 'shieldhit', 'longsel', 'm320sel', 'gearhint', 'gearsel', 'melee', 'meleehit', 'outside', 'zone', 'camdead', 'depset', 'depbreak', 'dephit', 'wire']);
+export const NET_EV = new Set(['shot', 'imp', 'blood', 'hit', 'whiz', 'kill', 'down', 'cuffed', 'report', 'evidence', 'bombdone', 'soft', 'glass', 'block', 'reinf', 'door', 'deny', 'nade', 'boom', 'c2', 'flashed', 'stung', 'tase', 'spray', 'reload', 'reloaded', 'shell', 'pumped', 'bolt', 'dry', 'draw', 'fmode', 'lightsw', 'step', 'shout', 'cmd', 'mirror', 'act', 'trap', 'trapset', 'barset', 'c2set', 'barhit', 'barbreak', 'plant', 'disable', 'defpick', 'defdrop', 'spotted', 'drone', 'dronedead', 'phase', 'round', 'roundstart', 'swap', 'respawn', 'matchend', 'end', 'revive', 'bandaged', 'fall', 'throw', 'bounce', 'allbombs', 'trapoff', 'peek', 'peekend', 'launch', 'shieldhit', 'longsel', 'm320sel', 'gearhint', 'gearsel', 'melee', 'meleehit', 'outside', 'zone', 'camdead', 'depset', 'depbreak', 'dephit', 'wire']);
 // 出来事の数を丸める（小数2けた）
 export function packEvent(e) {
   const o = {};
@@ -14972,7 +15075,7 @@ function lerp(a, b, k) { return a + (b - a) * k; }
 function lerpA(a, b, k) { let d = b - a; const T = 2000 * Math.PI; d = ((d + T / 2) % T + T) % T - T / 2; return a + d * k; }
 function lerpPhase(a, b, k) { let d = b - a; if (d < -300) d += 628.3; if (d > 300) d -= 628.3; return a + d * k; }
 
-@@@@ FILE src/render/actors.js text 15727
+@@@@ FILE src/render/actors.js text 15889
 // 人・持っている銃・落ちている物を描く（renderer のフックに入れる）
 import { personMeshData, lookFor, boneMatrices, SV } from './people.js';
 import { gunModel, longModel, shieldModel } from './guns.js';
@@ -15039,7 +15142,7 @@ export class ActorView {
     const g = gunModel(wid, att);
     if (!g) return null;
     let m = this.guns.get(g.key);
-    if (!m) { m = { body: makeWorldMesh(this.gl, g.body), mag: g.mag ? makeWorldMesh(this.gl, g.mag) : null, pump: g.pump ? makeWorldMesh(this.gl, g.pump) : null, g }; this.guns.set(g.key, m); }
+    if (!m) { m = { body: makeWorldMesh(this.gl, g.body), mag: g.mag ? makeWorldMesh(this.gl, g.mag) : null, pump: g.pump ? makeWorldMesh(this.gl, g.pump) : null, flip: g.flip ? makeWorldMesh(this.gl, g.flip) : null, g }; this.guns.set(g.key, m); }
     return m;
   }
   // このこまの準備: S（エンジンの状態）、alpha（補間）
@@ -15120,7 +15223,7 @@ export class ActorView {
       M[12] = g.p[0]; M[13] = g.p[1]; M[14] = g.p[2]; M[15] = 1;
       gl.uniformMatrix4fv(W.u.uModel, false, M);
       gl.uniform1f(W.u.uRoomOverride, Math.max(0, e.room));
-      drawMesh(gl, gm.body); if (gm.mag && e.a.ws.st !== 'reload') drawMesh(gl, gm.mag); if (gm.pump) drawMesh(gl, gm.pump);
+      drawMesh(gl, gm.body); if (gm.mag && e.a.ws.st !== 'reload') drawMesh(gl, gm.mag); if (gm.pump) drawMesh(gl, gm.pump); if (gm.flip) drawMesh(gl, gm.flip);
       r.stats.draws++;
     }
     // 結束バンド: 手首から手首へ（白い帯と、手首ごとの輪）
@@ -15148,7 +15251,7 @@ export class ActorView {
       M[12] = it.x; M[13] = it.y + 0.02; M[14] = it.z; M[15] = 1;
       gl.uniformMatrix4fv(W.u.uModel, false, M);
       gl.uniform1f(W.u.uRoomOverride, Math.max(0, roomOf(r.w0, it.x, it.y + 0.3, it.z)));
-      drawMesh(gl, gm.body); if (gm.mag) drawMesh(gl, gm.mag);
+      drawMesh(gl, gm.body); if (gm.mag) drawMesh(gl, gm.mag); if (gm.pump) drawMesh(gl, gm.pump); if (gm.flip) drawMesh(gl, gm.flip);
     }
     // 飛んでいる投げ物（回りながら）
     for (const n of this.nades || []) {
@@ -15902,7 +16005,7 @@ void main(){
 }`;
 export function drawFS(gl) { gl.bindVertexArray(null); gl.drawArrays(gl.TRIANGLES, 0, 3); }
 
-@@@@ FILE src/render/guns.js text 63143
+@@@@ FILE src/render/guns.js text 73447
 // 銃の見た目（ローポリの実銃）。ローカル: X=左、Y=上、Z=前（銃口）。原点は引き金の上の銃身の軸。
 // 部品: 本体・弾倉（リロードで動く）・前の握り（ポンプ）。照準の高さと目の位置（ADS）、手の位置、銃口の位置も返す。
 import { MeshBuilder, hex, mulc, cross, nrm } from './build.js';
@@ -16182,6 +16285,44 @@ const MODELS = {
     P.gripR = [0, -0.085, -0.08]; P.gripL = [0, -0.035, 0.22]; P.magWell = [0, -0.035, 0.05]; P.tube = true; P.tubeMag = [-0.014, 0.37 + L, 0.012]; P.boreY = 0.018;
     P.pump = (M) => { sbx(M, 0.021, -0.037, 0.15, 0.008, 0.29, furn, LAYER.rubber); };
     P.pumpZ = 0.08;
+  },
+  // ボルトアクションの狙撃銃（AT308）: 丸い機関部・骨組みの銃床（頬当てを高く）・太い銃身・たたんだ二脚・箱弾倉。
+  // ボルト（後ろの覆いと右の槓桿）は別の部品で、撃つたびに右手で起こして引き、押して倒す（P.bolt）
+  bolt(B, P, o) {
+    const c = K.blk;
+    tz(B, -0.13, 0.11, 0.0178, 0.002, K.dg, 12);                     // 機関部（丸い）
+    bx(B, -0.0165, -0.002, -0.07, -0.0182, 0.012, -0.015, hex('#121316')); // 排莢口（右）
+    sbx(B, 0.011, 0.018, -0.135, 0.03, 0.125, c);                      // 上のレール（スコープ）
+    sbx(B, 0.024, -0.058, -0.12, -0.004, 0.12, c, LAYER.metal);       // 銃床の骨組み（機関部の下）
+    sbx(B, 0.02, -0.07, -0.005, -0.04, 0.088, c, LAYER.metal);        // 弾倉の差し込み口
+    sbx(B, 0.025, -0.034, 0.12, 0.024, 0.4, c, LAYER.metal);          // 先台（銃身に触れない筒）
+    sbx(B, 0.011, 0.024, 0.12, 0.032, 0.3, c);                        // 先台の上のレール
+    for (const sx of [1, -1]) for (const z of [0.17, 0.23, 0.29, 0.35]) bx(B, sx * 0.0252, -0.018, z, sx * 0.0256, 0.008, z + 0.035, hex('#17181b')); // 横の穴
+    tz(B, 0.11, 0.625, 0.0128, 0, K.dg, 10, 0.0105);                  // 太い銃身（先へ細く）
+    tz(B, 0.625, 0.64, 0.0112, 0, K.blk, 8);                          // ねじの覆い
+    // 二脚（たたんで銃身の下へ）
+    sbx(B, 0.014, -0.048, 0.355, -0.032, 0.395, c, LAYER.metal);
+    for (const sx of [1, -1]) bx(B, sx * 0.003, -0.05, 0.38, sx * 0.0135, -0.04, 0.58, K.dg, LAYER.metal);
+    // 握りと用心金・引き金
+    grip(B, -0.052, -0.058, -0.155, -0.1, 0.015, 0.02, c);
+    sbx(B, 0.004, -0.083, -0.07, -0.077, 0.004, c);
+    sbx(B, 0.0025, -0.072, -0.045, -0.058, -0.039, K.steel);
+    // 銃床: 骨組みの背と、高い頬当て、床尾（ゴム）、下の支え
+    sbx(B, 0.016, -0.036, -0.4, -0.006, -0.12, c, LAYER.metal);
+    sbx(B, 0.019, -0.006, -0.36, 0.036, -0.2, c, LAYER.rubber);
+    sbx(B, 0.021, -0.125, -0.428, 0.04, -0.4, hex('#1d1e20'), LAYER.rubber);
+    grip(B, -0.036, -0.24, -0.118, -0.4, 0.012, 0.011, c);
+    P.boreY = 0; P.sightY = 0.07; P.eyeZ = -0.27; P.muzzle = 0.64; P.railZ = [-0.12, 0.12]; P.railY = 0.03; P.rail2 = [0.16, 0.36]; P.foreY = -0.034;
+    P.gripR = [0, -0.1, -0.1]; P.gripL = [0, -0.046, 0.27]; P.magWell = [0, -0.065, 0.04];
+    P.mag = (M) => sbx(M, 0.0155, -0.068, 0.006, -0.128, 0.08, c);
+    // ボルト（動く部品）: 後ろの覆いと、右へ出た槓桿・先の丸い握り
+    P.pump = (M) => {
+      tz(M, -0.168, -0.13, 0.0135, 0.002, c, 10);
+      const u = nrm([-1, -0.62, -0.18]), v = nrm(cross([0, 0, 1], u)), w = cross(u, v);
+      obox(M, [-0.032, -0.006, -0.088], u, v, w, 0.019, 0.0035, 0.0035, LAYER.metal, K.steel);
+      M.tube([-0.05, -0.016, -0.093], [-0.061, -0.023, -0.096], 0.0068, 0.0068, 8, LAYER.metal, c, { caps: true });
+    };
+    P.pumpZ = 0.085; P.bolt = true; P.boltPt = [-0.056, -0.02, -0.095];
   },
   pepper(B, P, o) {
     sbx(B, 0.022, -0.04, -0.12, 0.04, 0.16, K.blk, LAYER.rubber);
@@ -16556,31 +16697,106 @@ function addSight(B, P, kind) {
     P.sightY = ry + 0.033; P.eyeZ = z - 0.2; P.optic = { kind: 'srs', z, r: 0.017, y: ry + 0.033 };
   } else if (kind === 'holo') {
     const z = (z0 + z1) / 2;
-    sbx(B, 0.019, ry, z - 0.045, ry + 0.02, z + 0.04, K.blk);
-    // 窓の枠（左右の柱と屋根）。中は空いている
-    for (const sx of [1, -1]) bx(B, sx * 0.02, ry + 0.02, z - 0.045, sx * 0.0145, ry + 0.062, z + 0.04, K.blk);
-    sbx(B, 0.02, ry + 0.056, z - 0.045, ry + 0.062, z + 0.04, K.blk);
-    sbx(B, 0.0145, ry + 0.02, z + 0.034, ry + 0.024, z + 0.04, K.dg);
+    holoBody(B, ry, z);
     P.sightY = ry + 0.04; P.eyeZ = z - 0.2; P.optic = { kind, z, r: 0.017, y: ry + 0.04 };
+  } else if (kind === 'acog2') {
+    // トリジコン ACOG TA47 2x20（全長135mm）: 細い胴と一体の台、上に赤い光ファイバー、左にねじ
+    const z = (z0 + z1) / 2, y = ry + 0.028, zb = z - 0.07, zf = z + 0.065;
+    sbx(B, 0.0115, ry, z - 0.045, ry + 0.013, z + 0.035, K.blk);
+    B.tube([0.0115, ry + 0.0065, z - 0.01], [0.0175, ry + 0.0065, z - 0.01], 0.0042, 0.0042, 8, LAYER.metal, K.dg, { caps: true });
+    B.tube([0, y, zb + 0.015], [0, y, zf - 0.02], 0.0128, 0.0128, 12, LAYER.metal, K.blk, { caps: false });
+    B.tube([0, y, zf - 0.02], [0, y, zf], 0.0128, 0.0146, 12, LAYER.metal, K.blk, { caps: true });
+    B.tube([0, y, zb], [0, y, zb + 0.015], 0.0142, 0.0128, 12, LAYER.metal, K.blk, { caps: true });
+    sbx(B, 0.0042, y + 0.0118, z - 0.04, y + 0.0165, z + 0.03, hex('#a8382a'));
+    P.sightY = y; P.eyeZ = zb - 0.053; P.optic = { kind, z, r: 0.011, y, scope: true };
+  } else if (kind === 'mag3') {
+    // EOTech EXPS3（前）＋ G33 3倍ブースター（後ろ）。ブースターは STS の台の左の蝶番で横へ倒れる（別の部品 P.flip）
+    const z = (z0 + z1) / 2, zh = z + 0.045, zm = z - 0.07, y = ry + 0.04;
+    holoBody(B, ry, zh);
+    sbx(B, 0.0145, ry, zm - 0.026, ry + 0.012, zm + 0.026, K.blk);                  // STS の台
+    bx(B, 0.0145, ry + 0.004, zm - 0.02, 0.0215, ry + 0.015, zm + 0.02, K.blk);      // 蝶番（左）
+    P.flip = (M) => {
+      M.tube([0, y, zm - 0.05], [0, y, zm + 0.046], 0.0152, 0.0152, 12, LAYER.metal, K.blk, { caps: false });
+      M.tube([0, y, zm - 0.062], [0, y, zm - 0.05], 0.0172, 0.0152, 12, LAYER.metal, K.blk, { caps: true });
+      M.tube([0, y, zm + 0.046], [0, y, zm + 0.053], 0.0162, 0.0162, 12, LAYER.metal, K.dg, { caps: true });
+      M.tube([0, y, zm - 0.013], [0, y, zm + 0.013], 0.0182, 0.0182, 12, LAYER.metal, K.blk, { caps: false }); // 輪
+      bx(M, 0.004, ry + 0.012, zm - 0.012, 0.0195, y, zm + 0.012, K.blk);                                   // 輪から蝶番への腕
+    };
+    P.flipPivot = [0.0185, ry + 0.012];
+    P.sightY = y; P.eyeZ = zh - 0.2; P.optic = { kind, z: zh, r: 0.017, y, scope: true };
   } else if (kind === 'acog') {
-    // 4倍の固定スコープ: 短い胴、太い対物レンズ、上の光ファイバー
-    const z = (z0 + z1) / 2, y = ry + 0.034;
-    sbx(B, 0.012, ry, z - 0.04, ry + 0.018, z + 0.03, K.blk);
-    B.tube([0, y, z - 0.06], [0, y, z + 0.03], 0.0165, 0.0165, 10, LAYER.metal, K.blk, { caps: false });
-    B.tube([0, y, z + 0.03], [0, y, z + 0.075], 0.0175, 0.0215, 10, LAYER.metal, K.blk, { caps: true });
-    B.tube([0, y, z - 0.088], [0, y, z - 0.06], 0.0195, 0.0165, 10, LAYER.metal, K.blk, { caps: true });
-    sbx(B, 0.0035, y + 0.0165, z - 0.045, y + 0.022, z + 0.022, hex('#3e7a3a'));
+    // トリジコン ACOG TA31 4x32（全長150mm）: 角ばった後ろと太い対物レンズ、上に緑の光ファイバー、TA51 の台（左に2つのねじ）
+    const z = (z0 + z1) / 2, y = ry + 0.034, zb = z - 0.08, zf = z + 0.07;
+    sbx(B, 0.0125, ry, z - 0.045, ry + 0.018, z + 0.035, K.blk);
+    for (const dz of [-0.03, 0.02]) B.tube([0.0125, ry + 0.009, z + dz], [0.019, ry + 0.009, z + dz], 0.0045, 0.0045, 8, LAYER.metal, K.dg, { caps: true });
+    sbx(B, 0.0158, y - 0.012, zb + 0.022, y + 0.0165, z + 0.02, K.blk);              // 後ろの角ばった胴
+    B.tube([0, y, z + 0.02], [0, y, zf - 0.03], 0.0165, 0.0175, 12, LAYER.metal, K.blk, { caps: false });
+    B.tube([0, y, zf - 0.03], [0, y, zf], 0.0175, 0.0215, 12, LAYER.metal, K.blk, { caps: true });
+    B.tube([0, y, zb], [0, y, zb + 0.022], 0.0185, 0.016, 12, LAYER.metal, K.blk, { caps: true });
+    sbx(B, 0.0042, y + 0.0165, z - 0.05, y + 0.022, z + 0.035, hex('#3e7a3a'));
     sbx(B, 0.006, y + 0.016, z - 0.012, y + 0.026, z + 0.004, K.dg);                // 上のつまみ
-    bx(B, -0.0165, y - 0.006, z - 0.012, -0.026, y + 0.006, z + 0.004, K.dg);       // 右のつまみ
-    P.sightY = y; P.eyeZ = z - 0.088 - 0.05; P.optic = { kind: 'acog', z, r: 0.014, y, scope: true };
+    bx(B, -0.0158, y - 0.006, z - 0.012, -0.025, y + 0.006, z + 0.004, K.dg);        // 右のつまみ
+    P.sightY = y; P.eyeZ = zb - 0.038 - 0.04; P.optic = { kind: 'acog', z, r: 0.014, y, scope: true };
+  } else if (kind === 'scope6') {
+    // トリジコン ACOG TA648 6x48（全長229mm・1.1kg）: 太い48mmの対物レンズ、長い光ファイバー、TA75 の大きな台（左にレバー2本）
+    const z = (z0 + z1) / 2, y = ry + 0.043, zb = z - 0.105, zf = z + 0.124;
+    sbx(B, 0.016, ry, z - 0.075, ry + 0.02, z + 0.045, K.blk);
+    for (const dz of [-0.055, 0.02]) bx(B, 0.016, ry + 0.004, z + dz, 0.025, ry + 0.012, z + dz + 0.03, K.dg);
+    sbx(B, 0.0185, y - 0.02, zb + 0.016, y + 0.019, z + 0.03, K.blk);
+    B.tube([0, y, z + 0.03], [0, y, zf - 0.036], 0.019, 0.0285, 14, LAYER.metal, K.blk, { caps: false });
+    B.tube([0, y, zf - 0.036], [0, y, zf], 0.0285, 0.0285, 14, LAYER.metal, K.blk, { caps: true });
+    B.tube([0, y, zb], [0, y, zb + 0.016], 0.021, 0.0185, 12, LAYER.metal, K.blk, { caps: true });
+    sbx(B, 0.0045, y + 0.019, z - 0.08, y + 0.025, z + 0.06, hex('#a8382a'));
+    sbx(B, 0.0065, y + 0.019, z - 0.02, y + 0.03, z - 0.002, K.dg);
+    bx(B, -0.0185, y - 0.008, z - 0.02, -0.028, y + 0.006, z - 0.002, K.dg);
+    P.sightY = y; P.eyeZ = zb - 0.069; P.optic = { kind: 'scope6', z, r: 0.016, y, scope: true };
   } else if (kind === 'lpvo') {
-    const z = (z0 + z1) / 2;
-    for (const dz of [-0.04, 0.04]) sbx(B, 0.012, ry, z + dz - 0.01, ry + 0.03, z + dz + 0.01, K.blk);
-    B.tube([0, ry + 0.04, z - 0.08], [0, ry + 0.04, z + 0.08], 0.015, 0.015, 10, LAYER.metal, K.blk, { caps: false });
-    B.tube([0, ry + 0.04, z + 0.08], [0, ry + 0.04, z + 0.13], 0.016, 0.022, 10, LAYER.metal, K.blk, { caps: true });
-    B.tube([0, ry + 0.04, z - 0.13], [0, ry + 0.04, z - 0.08], 0.021, 0.016, 10, LAYER.metal, K.blk, { caps: true });
-    P.sightY = ry + 0.04; P.eyeZ = z - 0.13 - 0.085; P.optic = { kind, z, r: 0.014, y: ry + 0.04, scope: true };
+    // ELCAN SpecterDR 1-4x: 箱形の胴、丸い対物レンズ、上の倍率のレバー、一体の台（左にレバー）
+    const z = (z0 + z1) / 2, y = ry + 0.04;
+    sbx(B, 0.0135, ry, z - 0.05, ry + 0.014, z + 0.045, K.blk);
+    bx(B, 0.0135, ry + 0.004, z - 0.03, 0.022, ry + 0.012, z + 0.005, K.dg);
+    sbx(B, 0.022, ry + 0.014, z - 0.056, ry + 0.063, z + 0.046, K.blk);
+    B.tube([0, y, z + 0.046], [0, y, z + 0.082], 0.0215, 0.0238, 14, LAYER.metal, K.blk, { caps: true });
+    B.tube([0, y, z - 0.088], [0, y, z - 0.056], 0.0195, 0.019, 12, LAYER.metal, K.blk, { caps: true });
+    bx(B, 0.003, ry + 0.063, z - 0.035, 0.021, ry + 0.068, z + 0.012, K.dg);          // 倍率のレバー
+    B.tube([0.012, ry + 0.068, z + 0.01], [0.012, ry + 0.076, z + 0.01], 0.0055, 0.0055, 8, LAYER.metal, K.dg, { caps: true });
+    B.tube([-0.022, y, z - 0.012], [-0.03, y, z - 0.012], 0.009, 0.009, 10, LAYER.metal, K.dg, { caps: true });
+    P.sightY = y; P.eyeZ = z - 0.088 - 0.07; P.optic = { kind, z, r: 0.015, y, scope: true };
+  } else if (kind === 'lpvo8') {
+    // ナイトフォース NX8 1-8x24（全長218mm・30mmの胴）: 片持ちの台に2つの輪、小さな対物、倍率の輪とつまみ、ふたつきのつまみ
+    const z = (z0 + z1) / 2, y = ry + 0.04, zb = z - 0.108, zf = z + 0.11;
+    sbx(B, 0.0125, ry, z - 0.045, ry + 0.012, z + 0.06, K.blk);
+    for (const zr of [-0.035, 0.045]) { sbx(B, 0.0125, ry + 0.012, z + zr - 0.009, y - 0.01, z + zr + 0.009, K.blk); B.tube([0, y, z + zr - 0.009], [0, y, z + zr + 0.009], 0.0172, 0.0172, 12, LAYER.metal, K.blk, { caps: false }); }
+    B.tube([0, y, z - 0.07], [0, y, zf - 0.025], 0.015, 0.015, 12, LAYER.metal, K.blk, { caps: false });
+    B.tube([0, y, zf - 0.025], [0, y, zf], 0.015, 0.0168, 12, LAYER.metal, K.blk, { caps: true });
+    B.tube([0, y, z - 0.086], [0, y, z - 0.07], 0.0185, 0.0185, 12, LAYER.metal, K.dg, { caps: false });   // 倍率の輪
+    bx(B, -0.004, y + 0.017, z - 0.084, -0.016, y + 0.024, z - 0.074, K.dg);                              // 倍率のつまみ
+    B.tube([0, y, zb], [0, y, z - 0.086], 0.0195, 0.0188, 12, LAYER.metal, K.blk, { caps: true });
+    B.tube([0, y + 0.012, z + 0.005], [0, y + 0.026, z + 0.005], 0.0105, 0.0105, 10, LAYER.metal, K.blk, { caps: true });
+    B.tube([-0.012, y, z + 0.005], [-0.026, y, z + 0.005], 0.0105, 0.0105, 10, LAYER.metal, K.blk, { caps: true });
+    B.tube([0.012, y, z + 0.005], [0.024, y, z + 0.005], 0.0118, 0.0118, 10, LAYER.metal, K.dg, { caps: true });
+    P.sightY = y; P.eyeZ = zb - 0.09; P.optic = { kind, z, r: 0.013, y, scope: true };
+  } else if (kind === 'sniper') {
+    // シュミット＆ベンダー PM II 3-12x50（34mmの胴・50mmの対物）: 2つの輪、太い対物、高い上のつまみ・右・左（距離）
+    const z = (z0 + z1) / 2, y = ry + 0.048, zb = z - 0.17, zf = z + 0.18;
+    for (const dz of [-0.06, 0.065]) { sbx(B, 0.0125, ry, z + dz - 0.012, ry + 0.032, z + dz + 0.012, K.blk); B.tube([0, y, z + dz - 0.01], [0, y, z + dz + 0.01], 0.0192, 0.0192, 12, LAYER.metal, K.blk, { caps: false }); }
+    B.tube([0, y, z - 0.12], [0, y, z + 0.1], 0.017, 0.017, 14, LAYER.metal, K.blk, { caps: false });
+    B.tube([0, y, z + 0.1], [0, y, zf - 0.04], 0.017, 0.029, 14, LAYER.metal, K.blk, { caps: false });
+    B.tube([0, y, zf - 0.04], [0, y, zf], 0.029, 0.029, 14, LAYER.metal, K.blk, { caps: true });
+    B.tube([0, y, z - 0.136], [0, y, z - 0.12], 0.0205, 0.0205, 12, LAYER.metal, K.dg, { caps: false });
+    B.tube([0, y, zb], [0, y, z - 0.136], 0.0215, 0.0205, 12, LAYER.metal, K.blk, { caps: true });
+    B.tube([0, y + 0.015, z], [0, y + 0.041, z], 0.0135, 0.0135, 12, LAYER.metal, K.dg, { caps: true });
+    B.tube([-0.015, y, z], [-0.038, y, z], 0.013, 0.013, 12, LAYER.metal, K.dg, { caps: true });
+    B.tube([0.015, y, z - 0.004], [0.034, y, z - 0.004], 0.0152, 0.0152, 12, LAYER.metal, K.dg, { caps: true });
+    P.sightY = y; P.eyeZ = zb - 0.09; P.optic = { kind: 'sniper', z, r: 0.017, y, scope: true };
   }
+}
+// ホロサイト（EOTech EXPS3）: 台と窓の枠（左右の柱と屋根）。中は空いている
+function holoBody(B, ry, z) {
+  sbx(B, 0.019, ry, z - 0.045, ry + 0.02, z + 0.04, K.blk);
+  for (const sx of [1, -1]) bx(B, sx * 0.02, ry + 0.02, z - 0.045, sx * 0.0145, ry + 0.062, z + 0.04, K.blk);
+  sbx(B, 0.02, ry + 0.056, z - 0.045, ry + 0.062, z + 0.04, K.blk);
+  sbx(B, 0.0145, ry + 0.02, z + 0.034, ry + 0.024, z + 0.04, K.dg);
 }
 function addMuzzle(B, P, kind, cat) {
   const z = P.muzzle, y = P.boreY ?? 0;
@@ -16817,10 +17033,11 @@ export function gunModel(wid, att = {}) {
   addSide(B, P, side);
   magVariant(P, att.mag, W);
   if (P.extTube) P.extTube(B);
-  let mag = null, pump = null;
+  let mag = null, pump = null, flip = null;
   if (P.mag) { mag = new MeshBuilder(); P.mag(mag); }
   if (P.pump) { pump = new MeshBuilder(); P.pump(pump); }
-  g = { key, wid, body: B, mag, pump, pts: P, len: P.muzzle };
+  if (P.flip) { flip = new MeshBuilder(); P.flip(flip); }
+  g = { key, wid, body: B, mag, pump, flip, pts: P, len: P.muzzle };
   cache.set(key, g);
   return g;
 }
@@ -20510,12 +20727,12 @@ export function makeTextures() {
 }
 function vnoiseLine(x, y) { return (Math.sin(y * 1.7 + Math.sin(x * 0.05) * 3) * 0.5 + 0.5); }
 
-@@@@ FILE src/render/viewmodel.js text 29784
+@@@@ FILE src/render/viewmodel.js text 32313
 // 一人称の腕と銃: 腰だめ↔ADS（照準の線を目に合わせる）、揺れ（向きの慣性・歩き・呼吸）、撃った跳ね、リロード・ポンプ・持ち替え・ローレディ・ダッシュ・投げ物
 import { MeshBuilder, hex, mulc } from './build.js';
 import { LAYER } from './textures.js';
 import { makeWorldMesh, drawMesh } from './renderer.js';
-import { WEAPONS } from '../engine/data/weapons.js';
+import { WEAPONS, opticOf } from '../engine/data/weapons.js';
 import { GEAR } from '../engine/data/equipment.js';
 import { curWeapon } from '../engine/actor.js';
 import { WV } from './build.js';
@@ -20593,7 +20810,11 @@ export class ViewModel {
     const P = gm ? gm.g.pts : { sightY: 0.05, eyeZ: -0.3, muzzle: 0.3, gripR: [0, -0.08, -0.05], gripL: [0, -0.04, 0.2] };
     const pistol = !!P.pistol;
     // 倍率スコープをのぞいている: 銃（筒とレンズのふた）は描かず、HUD のスコープの像に任せる（筒の中から見ると視界がふさがれていた）
-    this.scoped = !!(P.optic && P.optic.scope && a.ads > 0.8);
+    const os = P.optic && wi ? opticOf(wi) : null;
+    this.scoped = !!(os && os.scope && a.ads > 0.8);
+    // ブースター（ホロ＋3倍）: 等倍のときは横へ倒す（0.25秒）
+    this.flipK = lerp(this.flipK || 0, os && P.optic.kind === 'mag3' && !os.scope ? 1 : 0, 1 - Math.exp(-dt * 12));
+    this.flipP = P.flipPivot || null;
     // 状態の重み
     const ads = sm(a.ads), low = sm(a.low), spr = a.sprint ? 1 : 0;
     this.sprK = lerp(this.sprK || 0, spr, 1 - Math.exp(-dt * 10));
@@ -20614,7 +20835,7 @@ export class ViewModel {
     // 腰だめ: 画面の右下に収まり、銃口が画面の中央の少し下へ向く（スマホの小さい画面で大きすぎないよう、少し遠く・低く）
     const hip = P.heavy ? [0.05, -0.25, 0.5] : L3 === 'wand' ? [0.09, -0.2, 0.4] : pistol ? [0.105, -0.112, 0.4] : [0.128, -0.128, 0.36];
     // 照準の窓が画面に対して大きすぎないよう、目を少し後ろに（スマホの小さい画面向け）
-    const adsP = [0, -P.sightY, -P.eyeZ + (P.optic && !P.optic.scope ? (pistol ? 0.03 : 0.09) : 0.04)];
+    const adsP = [0, -P.sightY, -P.eyeZ + (P.optic && !(os && os.scope) ? (pistol ? 0.03 : 0.09) : 0.04)];
     let px = lerp(hip[0], adsP[0], ads), py = lerp(hip[1], adsP[1], ads) - bell(a.ads) * 0.012, pz = lerp(hip[2], adsP[2], ads);
     let yaw = lerp(pistol ? 0.03 : 0.05, 0, ads), pitch = 0, roll = 0;
     // 破城槌は体の前で斜めに抱える
@@ -20654,7 +20875,7 @@ export class ViewModel {
       else if (L3 === 'wand') { pitch -= 0.6 * sm(t); py -= 0.1 * sm(t); }
     }
     // リロード
-    let magOff = 0, magHide = false, pumpOff = 0, lhand = null, rel = -1;
+    let magOff = 0, magHide = false, pumpOff = 0, pumpRot = 0, boltHand = 0, lhand = null, rel = -1;
     const longRl = ws.slot === 3 && ws.lt > 0 && ws.rd > 0;
     if ((ws.st === 'reload' || longRl) && ws.rd > 0) {
       rel = 1 - (longRl ? ws.lt : ws.t) / ws.rd;
@@ -20672,7 +20893,15 @@ export class ViewModel {
       roll -= 0.55; pitch += 0.1; px -= 0.02; rel = 1 - c;
     } else if (ws.st === 'pump') {
       const pr = 1 - clamp(ws.t / (W && W.pump ? W.pump : 0.5), 0, 1);
-      pumpOff = -(P.pumpZ || 0.08) * bell(pr);
+      if (P.bolt) {
+        // ボルト: 右手を握りから槓桿へ（〜0.16）→ 起こす（〜0.26）→ 引く（〜0.46）→ 押す（〜0.64）→ 倒す（〜0.74）→ 握りへ戻る
+        boltHand = pr < 0.16 ? sm(pr / 0.16) : pr > 0.74 ? 1 - sm((pr - 0.74) / 0.26) : 1;
+        const lift = pr < 0.16 ? 0 : pr < 0.26 ? sm((pr - 0.16) / 0.1) : pr < 0.64 ? 1 : pr < 0.74 ? 1 - sm((pr - 0.64) / 0.1) : 0;
+        pumpRot = -1.2 * lift; // 銃身の軸のまわりに右から上へ約70°
+        pumpOff = pr < 0.26 ? 0 : pr < 0.46 ? -P.pumpZ * sm((pr - 0.26) / 0.2) : pr < 0.64 ? -P.pumpZ * (1 - sm((pr - 0.46) / 0.18)) : 0;
+        // 銃を少し左へ傾けて前・下へ出す（引いた右手が顔に近づきすぎないように）
+        roll -= 0.14 * bell(pr); yaw -= 0.05 * bell(pr); py -= 0.035 * bell(pr); pz += 0.06 * bell(pr);
+      } else pumpOff = -(P.pumpZ || 0.08) * bell(pr);
     }
     // 投げ物を持っている
     const nade = ws.slot === 2 && ws.gear && GEAR[ws.gear] && GEAR[ws.gear].kind === 'nade';
@@ -20688,7 +20917,7 @@ export class ViewModel {
     M[4] = gU[0]; M[5] = gU[1]; M[6] = gU[2]; M[7] = 0;
     M[8] = gF[0]; M[9] = gF[1]; M[10] = gF[2]; M[11] = 0;
     M[12] = org[0]; M[13] = org[1]; M[14] = org[2]; M[15] = 1;
-    this.gm = nade ? null : gm; this.magOff = magOff; this.magHide = magHide; this.pumpOff = pumpOff;
+    this.gm = nade ? null : gm; this.magOff = magOff; this.magHide = magHide; this.pumpOff = pumpOff; this.pumpRot = pumpRot;
     const toW = (p) => [org[0] - gR[0] * p[0] + gU[0] * p[1] + gF[0] * p[2], org[1] - gR[1] * p[0] + gU[1] * p[1] + gF[1] * p[2], org[2] - gR[2] * p[0] + gU[2] * p[1] + gF[2] * p[2]];
     const camP = (x, y, z) => [cx + R[0] * x + U[0] * y + F[0] * z, cy + R[1] * x + U[1] * y + F[1] * z, cz + R[2] * x + U[2] * y + F[2] * z];
     this.out.muzzle = toW([0, 0, P.muzzle]); this.out.fwd = gF; this.out.right = gR; this.out.up = gU;
@@ -20737,7 +20966,12 @@ export class ViewModel {
         const below = [port[0] - gU[0] * 0.12, port[1] - gU[1] * 0.12, port[2] - gU[2] * 0.12];
         hL = lerpV(below, port, bell(1 - rel));
       }
-      if (pumpOff) hL = [hL[0] + gF[0] * pumpOff, hL[1] + gF[1] * pumpOff, hL[2] + gF[2] * pumpOff];
+      if (pumpOff && !P.bolt) hL = [hL[0] + gF[0] * pumpOff, hL[1] + gF[1] * pumpOff, hL[2] + gF[2] * pumpOff];
+      // ボルト: 右手は槓桿の丸い握り（回して引いた位置）
+      if (boltHand > 0 && P.boltPt) {
+        const c = Math.cos(pumpRot), sn = Math.sin(pumpRot), b = P.boltPt;
+        hR = lerpV(hR, toW([b[0] * c - b[1] * sn, b[0] * sn + b[1] * c, b[2] + pumpOff]), boltHand);
+      }
       if (this.sprK > 0.5 && pistol) hL = camP(-0.15, -0.35, 0.2);
       if (shieldHand) hL = shieldHand;
     }
@@ -20908,9 +21142,21 @@ export class ViewModel {
       if (this.gm.pump) {
         const M2 = this.Mm, M = this.M;
         M2.set(M);
+        // ボルトは銃身の軸（ローカルの Z）のまわりに回す
+        if (this.pumpRot) { const c = Math.cos(this.pumpRot), sn = Math.sin(this.pumpRot); for (let i = 0; i < 3; i++) { const x = M[i], y = M[4 + i]; M2[i] = c * x + sn * y; M2[4 + i] = -sn * x + c * y; } }
         M2[12] += M[8] * this.pumpOff; M2[13] += M[9] * this.pumpOff; M2[14] += M[10] * this.pumpOff;
         gl.uniformMatrix4fv(P.u.uModel, false, M2);
         drawMesh(gl, this.gm.pump);
+      }
+      // ブースターの倒し: 左の蝶番（flipPivot）のまわりに、上から左へ 90°
+      if (this.gm.flip) {
+        const M2 = this.Mm, M = this.M, th = -Math.PI / 2 * sm(this.flipK || 0), c = Math.cos(th), sn = Math.sin(th), pv = this.flipP || [0, 0];
+        M2.set(M);
+        for (let i = 0; i < 3; i++) { const x = M[i], y = M[4 + i]; M2[i] = c * x + sn * y; M2[4 + i] = -sn * x + c * y; }
+        const tx = pv[0] - (pv[0] * c - pv[1] * sn), ty = pv[1] - (pv[0] * sn + pv[1] * c);
+        M2[12] += M[0] * tx + M[4] * ty; M2[13] += M[1] * tx + M[5] * ty; M2[14] += M[2] * tx + M[6] * ty;
+        gl.uniformMatrix4fv(P.u.uModel, false, M2);
+        drawMesh(gl, this.gm.flip);
       }
     } else if (this.nade) {
       gl.uniformMatrix4fv(P.u.uModel, false, this.Mm);
@@ -21030,13 +21276,13 @@ export class Book {
 // 爆弾の制限時間（マップで違う）: 「10〜15分」
 function bombMin(M) { const ts = MAP_LIST.filter(id => MAPS[id].missions && MAPS[id].missions.bomb).map(id => MAPS[id].missions.bomb.time || M.time); if (!ts.length) ts.push(M.time); const a = Math.floor(Math.min(...ts) / 60), b = Math.floor(Math.max(...ts) / 60); return a === b ? `${a}分` : `${a}〜${b}分・マップによる`; }
 
-@@@@ FILE src/ui/hud.js text 33549
+@@@@ FILE src/ui/hud.js text 34107
 // HUD（CODモバイル／PUBGモバイル風）: ボタン、ミニマップ、方位、目的、出来事、隊員、体力、弾、字幕、照準、命中、被弾の向き、円形メニュー、HUDの編集
 import { BTN, INFO, ICONS } from './hudlayout.js';
 import { onTap } from './input.js';
 import { C, CS, LH, isWallish } from '../engine/world.js';
 import { M } from '../engine/data/materials.js';
-import { WEAPONS } from '../engine/data/weapons.js';
+import { WEAPONS, zoomsOf, zoomOf } from '../engine/data/weapons.js';
 import { GEAR, LONG } from '../engine/data/equipment.js';
 import { ammoCount } from '../engine/actor.js';
 
@@ -21254,7 +21500,7 @@ export class Hud {
     }
     this.reticle.className = 'hud-reticle' + (optic && ads > 0.85 && !optic.scope ? ' on ' + optic.kind : '');
     // 倍率スコープ: 銃の像と同じ所（構え 0.8）で切り替える
-    const sk = optic && optic.scope && ads > 0.8 ? 'hud-scope on ' + optic.kind : 'hud-scope';
+    const sk = optic && optic.scope && ads > 0.8 ? 'hud-scope on ' + optic.kind + (optic.wide ? ' wide' : '') : 'hud-scope';
     if (this.cache.scope !== sk) { this.cache.scope = sk; this.scope.className = sk; }
     // 体力・防具
     if (p) {
@@ -21285,7 +21531,7 @@ export class Hud {
       let akey = '';
       if (p.ws.slot === 2 && v.gearId) { const g = p.inv.gear.find(x => x.id === v.gearId); akey = 'g|' + v.gearId + '|' + (g ? g.n : 0); }
       else if (p.ws.slot === 3 && p.inv.long) { const m = p.inv.m320; akey = 'L|' + p.inv.long + '|' + (m ? [m.sel, m.flash, m.stinger, m.cs].join(',') : '') + '|' + (p.ws.lt > 0 ? 1 : 0); }
-      else if (wi && W) { const [m, r] = ammoCount(wi); akey = wi.id + '|' + m + '|' + r + '|' + wi.mode + '|' + (wi.mags ? wi.mags.join(',') : '') + '|' + p.ws.st; }
+      else if (wi && W) { const [m, r] = ammoCount(wi); akey = wi.id + '|' + m + '|' + r + '|' + wi.mode + '|' + (wi.zi || 0) + '|' + (wi.mags ? wi.mags.join(',') : '') + '|' + p.ws.st; }
       if (this.cache.ammo !== akey) {
         this.cache.ammo = akey;
         const am = this.info.ammo;
@@ -21308,7 +21554,7 @@ export class Hud {
           am.querySelector('.mags').innerHTML = '';
         } else if (wi && W) {
           const [m, r] = ammoCount(wi);
-          am.querySelector('.mode').textContent = (W.modes[wi.mode] === 'auto' ? '連射' : W.modes[wi.mode] === 'burst' ? '3点' : '単発') + (p.ws.st === 'reload' ? '・リロード中' : p.ws.st === 'shell' ? '・装填中' : '');
+          am.querySelector('.mode').textContent = (W.bolt ? 'ボルト' : W.modes[wi.mode] === 'auto' ? '連射' : W.modes[wi.mode] === 'burst' ? '3点' : '単発') + (zoomsOf(wi.att) ? (zoomOf(wi) <= 1 ? '・等倍' : `・${zoomOf(wi)}倍`) : '') + (p.ws.st === 'reload' ? '・リロード中' : p.ws.st === 'shell' ? '・装填中' : '');
           // 対戦は予備が減らない（∞）
           am.querySelector('.cnt').innerHTML = `<b class="${m === 0 ? 'empty' : m <= (wi.cap || W.mag) * 0.25 ? 'lowa' : ''}">${m}</b><span>/${v.pvp ? '∞' : wi.mags ? wi.mags.length + '本' : r}</span>`;
           // 弾倉ごとの残り（RoN の弾倉の確認のように）
@@ -21333,8 +21579,11 @@ export class Hud {
       this.btn.nvg.classList.toggle('dis', !v.hasNvg);
       this.btn.light.classList.toggle('dis', !(wi && wi.att && (wi.att.light || wi.att.laser)));
       const m320 = p.ws.slot === 3 && p.inv.long === 'm320';
-      this.btn.fmode.querySelector('.lb').textContent = m320 ? '弾種' : W ? (W.modes[wi.mode] === 'auto' ? 'AUTO' : 'SEMI') : '';
-      this.btn.fmode.classList.toggle('dis', !m320 && !(W && W.modes.length > 1));
+      // 倍率を切り替えられるスコープ（狙撃銃）: 射撃モードのボタンで倍率を切り替える
+      // 構えている間（射撃モードが1つの銃はいつも）は倍率
+      const zs = !m320 && W && wi && (W.modes.length <= 1 || p.ads > 0.5) ? zoomsOf(wi.att) : null;
+      this.btn.fmode.querySelector('.lb').textContent = m320 ? '弾種' : zs ? (zoomOf(wi) <= 1 ? '×1' : `×${zoomOf(wi)}`) : W ? (W.bolt ? 'BOLT' : W.modes[wi.mode] === 'auto' ? 'AUTO' : 'SEMI') : '';
+      this.btn.fmode.classList.toggle('dis', !m320 && !zs && !(W && W.modes.length > 1));
       const gtxt = v.gearSel ? (GEAR[v.gearSel] ? GEAR[v.gearSel].name.replace(/（.*）/, '') : '') : '';
       const gn = v.gearSel ? (p.inv.gear.find(x => x.id === v.gearSel) || { n: 0 }).n : 0;
       const gk = gtxt + gn;
@@ -21925,7 +22174,7 @@ export class Input {
   }
 }
 
-@@@@ FILE src/ui/loadout.js text 15743
+@@@@ FILE src/ui/loadout.js text 15890
 // 装備の画面: 左に枠（主武器・照準・…）、右にその枠の候補と説明。作戦は自分とAI隊員4人、対戦は陣営ごと。
 import { onTap } from './input.js';
 import { Scroller, esc } from './widgets.js';
@@ -22079,7 +22328,8 @@ function attSub(k, v, wid) {
   const A = ATTACH[k] && ATTACH[k][v]; if (!A) return '';
   const t = [];
   if (k === 'mag' && wid) t.push(`${capOf(wid, v)}発`);
-  if (A.zoom && A.zoom > 1.01) t.push(`倍率${A.zoom.toFixed(1)}`);
+  if (A.zooms) t.push(`倍率${Math.min(...A.zooms)}〜${Math.max(...A.zooms)}（切り替え）`);
+  else if (A.zoom && A.zoom > 1.01) t.push(`倍率${A.zoom.toFixed(1)}`);
   if (A.ads) t.push(`構える時間${A.ads > 0 ? '+' : ''}${Math.round(A.ads * 1000)}ms`);
   if (A.rcv && A.rcv !== 1) t.push(`縦の反動${Math.round((A.rcv - 1) * 100)}%`);
   if (A.rch && A.rch !== 1) t.push(`横の反動${Math.round((A.rch - 1) * 100)}%`);
@@ -22111,7 +22361,7 @@ export function weaponCard(spec, kind) {
   const bar = (label, v, max, txt) => `<div class="bar"><span>${label}</span><i><em style="width:${Math.max(3, Math.min(100, v / max * 100))}%"></em></i><b>${txt}</b></div>`;
   const rec = (W.rc ? W.rc.v * (W.rc.first || 1) : 1);
   const cap = capOf(spec.id, curAtt(spec, 'mag'));
-  return `<h3>${esc(W.name)}</h3><p class="sub">${CAT_NAME[W.cat]} · ${CAL[W.cal] ? CAL[W.cal].name : ''} · ${cap}発${W.modes ? ' · ' + W.modes.map(m => m === 'auto' ? '連射' : m === 'burst' ? '3点' : '単発').join('/') : ''}</p>
+  return `<h3>${esc(W.name)}</h3><p class="sub">${CAT_NAME[W.cat]} · ${CAL[W.cal] ? CAL[W.cal].name : ''} · ${cap}発${W.bolt ? ' · ボルトアクション' : W.modes ? ' · ' + W.modes.map(m => m === 'auto' ? '連射' : m === 'burst' ? '3点' : '単発').join('/') : ''}</p>
     ${bar('威力', dmg, kind === 'pvp' ? 130 : 200, Math.round(dmg))}
     ${bar('発射速度', W.rpm || 0, 1200, (W.rpm || 0) + '発/分')}
     ${bar('反動', rec, 4, rec.toFixed(1))}
@@ -22121,7 +22371,7 @@ export function weaponCard(spec, kind) {
     <p class="desc">${esc(W.desc || '')}</p><p class="note">初速 ${W.vel || '-'} m/s · 重さ ${W.kg || '-'} kg</p>`;
 }
 
-@@@@ FILE src/ui/screens.js text 49459
+@@@@ FILE src/ui/screens.js text 49511
 // 画面: 読み込み・タイトル・作戦の準備（マップ・作戦・難易度・人数・突入口）・ブリーフィング・装備・対戦の準備・
 // オンライン（ルームを作る/参加・ロビー）・一時停止・地図（タブレット）・結果・設定・資料室（手順書と資料）
 import { onTap } from './input.js';
@@ -22572,7 +22822,7 @@ export class Screens {
     } else if (tab === 'sens') {
       row('視点', '', 'sens'); sl('sens', 0.2, 3, 0.05, (v) => v.toFixed(2));
       row('ADS', '等倍', 'sensAds'); sl('sensAds', 0.2, 1.5, 0.05, pct);
-      row('スコープ', '倍率あり', 'sensScope'); sl('sensScope', 0.1, 1.2, 0.05, pct);
+      row('スコープ', '倍率あり（4倍が基準。倍率に合わせて変わる）', 'sensScope'); sl('sensScope', 0.1, 1.2, 0.05, pct);
       row('射撃中', '射撃ボタンで視点移動', 'sensFire'); sl('sensFire', 0.3, 1.5, 0.05, pct);
       row('上下反転', '', 'invertY'); ch('invertY', [[false, 'オフ'], [true, 'オン']]);
       row('エイムアシスト', '作戦のみ（対戦はルーム設定）', 'aimAssist'); ch('aimAssist', [['off', 'オフ'], ['weak', '弱'], ['strong', '標準']]);
@@ -22762,7 +23012,7 @@ export function sprintZone(dx, dy, spr, armed) {
   return armed ? (dy < -(spr - SPRINT_ZONE.drop) && ang <= SPRINT_ZONE.keep) : (dy < -spr && ang <= SPRINT_ZONE.start);
 }
 
-@@@@ FILE src/ui/style.css text 41509
+@@@@ FILE src/ui/style.css text 46910
 /* HARD ENTRY — 見た目の決まり（色・枠・書体）。雰囲気より読みやすさを優先。自分の側はいつも青、相手は赤 */
 :root {
   --bg: #07090c; --panel: rgba(12, 16, 22, 0.9); --panel2: rgba(22, 28, 36, 0.92); --line: rgba(255, 255, 255, 0.13); --line2: rgba(255, 255, 255, 0.28);
@@ -23072,9 +23322,18 @@ table.board small { color: var(--dim); font-size: max(11px, .72em); margin-left:
 .hud-scope .ret { position: absolute; left: 50%; top: 50%; width: 60%; height: 1px; background: rgba(0,0,0,.85); transform: translate(-50%, 0); }
 .hud-scope .ret::after { content: ''; position: absolute; left: 50%; top: -120px; width: 1px; height: 240px; background: rgba(0,0,0,.85); }
 .hud-scope .ret::before { content: ''; position: absolute; left: 50%; top: 50%; width: 5px; height: 5px; margin: -2.5px; border-radius: 50%; background: #ff3a2a; box-shadow: 0 0 4px #ff2a1a; z-index: 1; }
-.hud-scope.acog .ret { width: 0; }
-.hud-scope.acog .ret::after { top: 3px; height: 120px; }
-.hud-scope.acog .ret::before { width: 0; height: 0; margin: -9px 0 0 -8px; border-radius: 0; background: none; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 9px solid #ff3a2a; box-shadow: none; filter: drop-shadow(0 0 3px #ff2a1a); }
+/* 倍率の照準器の像（11-12。実在の照準器の模様を元に。SVG）: 大きさは画面の短い辺の0.86（スコープの丸い窓） */
+.hud-scope.acog2 .ret, .hud-scope.mag3 .ret, .hud-scope.acog .ret, .hud-scope.scope6 .ret, .hud-scope.lpvo .ret, .hud-scope.lpvo8 .ret, .hud-scope.sniper .ret { width: calc(min(var(--sh), var(--sw)) * 0.86); height: calc(min(var(--sh), var(--sw)) * 0.86); transform: translate(-50%, -50%); background: center / 100% 100% no-repeat; }
+.hud-scope.acog2 .ret::before, .hud-scope.acog2 .ret::after, .hud-scope.mag3 .ret::before, .hud-scope.mag3 .ret::after, .hud-scope.acog .ret::before, .hud-scope.acog .ret::after, .hud-scope.scope6 .ret::before, .hud-scope.scope6 .ret::after, .hud-scope.lpvo .ret::before, .hud-scope.lpvo .ret::after, .hud-scope.lpvo8 .ret::before, .hud-scope.lpvo8 .ret::after, .hud-scope.sniper .ret::before, .hud-scope.sniper .ret::after { display: none; }
+.hud-scope.acog2 .ret { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><g fill='none' stroke='%23000' stroke-opacity='.9'><path d='M0 100H84M116 100H200M100 116V200M100 0V84' stroke-width='1'/><path d='M0 100H50M150 100H200M100 150V200' stroke-width='3.4'/></g><g fill='none' stroke='%23ff3a2a' stroke-width='1.8' stroke-linecap='round'><path d='M84 100H96M104 100H116M100 84V96M100 104V116'/></g><circle cx='100' cy='100' r='1.1' fill='%23ff3a2a'/></svg>"); }
+.hud-scope.mag3 .ret { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><g fill='none' stroke='%23ff3a2a' stroke-width='2.2'><circle cx='100' cy='100' r='24'/><path d='M100 72V78M100 122V128M72 100H78M122 100H128'/></g><circle cx='100' cy='100' r='1.9' fill='%23ff3a2a'/></svg>"); }
+.hud-scope.acog .ret { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><path d='M91.5 108.5L100 100L108.5 108.5' fill='none' stroke='%23ff3a2a' stroke-width='2.6' stroke-linejoin='miter'/><path d='M100 112V178' stroke='%23000' stroke-width='0.9'/><path d='M90.0 118H110.0' stroke='%23000' stroke-width='1.1'/><path d='M92.5 126H107.5' stroke='%23000' stroke-width='1.1'/><path d='M94.5 134H105.5' stroke='%23000' stroke-width='1.1'/><path d='M96.0 142H104.0' stroke='%23000' stroke-width='1.1'/><path d='M97.0 150H103.0' stroke='%23000' stroke-width='1.1'/><path d='M98.0 158H102.0' stroke='%23000' stroke-width='1.1'/></svg>"); }
+.hud-scope.scope6 .ret { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><path d='M106 110.4A12 12 0 1 0 94 110.4' fill='none' stroke='%23ff3a2a' stroke-width='2'/><circle cx='100' cy='100' r='1.6' fill='%23ff3a2a'/><path d='M100 116V178' stroke='%23000' stroke-width='0.9'/><path d='M92.0 122H108.0' stroke='%23000' stroke-width='1.1'/><path d='M94.0 129H106.0' stroke='%23000' stroke-width='1.1'/><path d='M95.5 136H104.5' stroke='%23000' stroke-width='1.1'/><path d='M96.5 143H103.5' stroke='%23000' stroke-width='1.1'/><path d='M97.25 150H102.75' stroke='%23000' stroke-width='1.1'/><path d='M98.0 157H102.0' stroke='%23000' stroke-width='1.1'/><path d='M98.5 164H101.5' stroke='%23000' stroke-width='1.1'/></svg>"); }
+.hud-scope.lpvo .ret { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><g fill='none' stroke='%23000' stroke-opacity='.92'><path d='M0 100H200M100 100V200M100 0V92' stroke-width='.8'/><path d='M0 100H52M148 100H200M100 152V200' stroke-width='3.6'/><path d='M96 110H104M96 120H104M97 130H103M97 140H103' stroke-width='1'/></g><circle cx='100' cy='100' r='2' fill='%23ff3a2a'/></svg>"); }
+.hud-scope.lpvo8 .ret { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><g fill='none' stroke='%23000' stroke-opacity='.92'><path d='M0 100H90M110 100H200M100 110V200M100 0V90' stroke-width='.7'/><path d='M0 100H58M142 100H200M100 142V200M100 0V58' stroke-width='3.2'/><g stroke-width='.8'><path d='M116 97V103M84 97V103M97 116H103' /><path d='M124 97V103M76 97V103M97 124H103' /><path d='M132 97V103M68 97V103M97 132H103' /><path d='M140 97V103M60 97V103M97 140H103' /><path d='M148 97V103M52 97V103M97 148H103' /></g></g><circle cx='100' cy='100' r='8' fill='none' stroke='%23ff3a2a' stroke-width='1.4'/><circle cx='100' cy='100' r='1.2' fill='%23ff3a2a'/></svg>"); }
+.hud-scope.sniper .ret { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><g fill='none' stroke='%23000' stroke-opacity='.92'><path d='M0 100H200M100 0V200' stroke-width='.5'/><path d='M0 100H62M138 100H200M100 0V62M100 138V200' stroke-width='3.2'/></g><g fill='%23000' fill-opacity='.92'><circle cx='108' cy='100' r='1'/><circle cx='92' cy='100' r='1'/><circle cx='100' cy='108' r='1'/><circle cx='100' cy='92' r='1'/><circle cx='116' cy='100' r='1'/><circle cx='84' cy='100' r='1'/><circle cx='100' cy='116' r='1'/><circle cx='100' cy='84' r='1'/><circle cx='124' cy='100' r='1'/><circle cx='76' cy='100' r='1'/><circle cx='100' cy='124' r='1'/><circle cx='100' cy='76' r='1'/><circle cx='132' cy='100' r='1'/><circle cx='68' cy='100' r='1'/><circle cx='100' cy='132' r='1'/><circle cx='100' cy='68' r='1'/></g><circle cx='100' cy='100' r='.9' fill='%23ff3a2a'/></svg>"); }
+.hud-scope.mag3 .ret, .hud-scope.acog2 .ret, .hud-scope.acog .ret, .hud-scope.scope6 .ret, .hud-scope.lpvo .ret, .hud-scope.lpvo8 .ret { filter: drop-shadow(0 0 1.5px rgba(255,60,40,.55)); }
+.hud-scope.wide { background: radial-gradient(circle at 50% 50%, transparent 0, transparent calc(min(var(--sh), var(--sw)) * 0.8), rgba(0,0,0,.9) calc(min(var(--sh), var(--sw)) * 0.9)); }
 .hud-hit { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px; opacity: 0; }
 .hud-hit::before, .hud-hit::after { content: ''; position: absolute; left: 50%; top: 50%; width: 26px; height: 2px; margin: -1px -13px; background: #fff; transform: rotate(45deg); box-shadow: 0 0 2px #000; }
 .hud-hit::after { transform: rotate(-45deg); }
@@ -23543,7 +23802,7 @@ export async function runTests(filter) {
   return res;
 }
 
-@@@@ FILE tests/run_all.mjs text 55716
+@@@@ FILE tests/run_all.mjs text 56045
 // テスト一式: node tests/run_all.mjs [--quick] [--no-sizes] [--no-net] → test-results/summary.md
 //  1 ビルド  2 単体  3 マップ  4 音  5 自動の試合（作戦・対戦・同じシードで同じ結果・途中保存）
 //  6 ブラウザ（起動・タップ・音の開始・回した画面・2本指・射撃/ADS/リロード/リーン/しゃがみ・ミニマップ→地図・ミラーの視点・HUDの編集・撤収→結果・保存と続きから・2回押し・WebGL）
@@ -23964,7 +24223,9 @@ try {
     // 命令: 長押しで円形のメニュー
     const cb = await btn('cmd');
     await touch('touchStart', [{ x: cb.x, y: cb.y, id: 43 }]);
+    // 長押しは押している間のこまで決まる（ソフトウェア描画では1こま1秒以上かかるので、出るまで待つ）
     await page.waitForTimeout(700);
+    await page.waitForFunction(() => { const e = document.querySelector('#hud .hud-radial'); return !!e && e.classList.contains('on'); }, null, { timeout: 15000 }).catch(() => {});
     const rad = await page.evaluate(() => { const e = document.querySelector('#hud .hud-radial'); return { on: !!e && e.classList.contains('on'), n: e ? e.querySelectorAll('.ri, button, [data-i]').length : 0, txt: e ? e.textContent.slice(0, 60) : '' }; });
     await shot('作戦-命令');
     await touch('touchEnd', []);
@@ -25305,6 +25566,142 @@ for (const r of all) console.log(`${r.ok ? 'ok  ' : 'FAIL'} ${r.name} (${r.ms.to
 console.log(`\n${all.length - bad.length}/${all.length} 合格`);
 if (process.env.UNIT_JSON) fs.writeFileSync(process.env.UNIT_JSON, JSON.stringify(all, null, 1));
 process.exit(bad.length ? 1 : 0);
+
+@@@@ FILE tests/unit/sniper.test.mjs text 9232
+import { test, ok, eq, near } from '../lib/t.mjs';
+import { createGame, step } from '../../src/engine/engine.js';
+import { WEAPONS, zoomOf, attachOptions, opticOf, ATTACH } from '../../src/engine/data/weapons.js';
+import { makeWeapon } from '../../src/engine/actor.js';
+import { gunModel } from '../../src/render/guns.js';
+import { renderSfx, gunKeys } from '../../src/audio/synth.js';
+import { PVP_ARMOR } from '../../src/engine/move.js';
+
+// 訓練場で、主武器を狙撃銃（AT308・狙撃用スコープ）に持ち替えた人
+function mkSniper() {
+  const G = createGame({ map: 'training', mode: 'train', seed: 7, team: 1, house: false });
+  const p = G.S.actors[0];
+  p.inv.w[0] = makeWeapon({ id: 'at308', sight: 'sniper', ammo: 'ap' });
+  p.ws.slot = 0; p.ws.st = 'draw'; p.ws.t = 0.1;
+  for (let i = 0; i < 30; i++) step(G, { [p.id]: { yaw: p.yaw, pitch: 0 } });
+  return { G, p, wi: p.inv.w[0] };
+}
+
+test('sniper: ボルトアクションは1発ごとにボルトを操作し（約0.95秒）、その間は撃てない', () => {
+  const { G, p, wi } = mkSniper();
+  eq(p.ws.st, 'ready', '構えられる');
+  const mag0 = wi.mag;
+  let ev = step(G, { [p.id]: { yaw: p.yaw, pitch: 0, fire: true } });
+  ok(ev.some(e => e.e === 'shot'), '撃てる');
+  ok(ev.some(e => e.e === 'bolt' && e.id === p.id), 'ボルトの操作が始まる（音と薬莢の合図）');
+  eq(p.ws.st, 'pump', 'ボルトの操作中');
+  eq(wi.ch, 0, '薬室は空');
+  // 押し直しても、ボルトの操作が終わるまでは撃てない
+  let shots = 0;
+  for (let i = 0; i < 50; i++) { const fire = i % 2 === 0; ev = step(G, { [p.id]: { yaw: p.yaw, pitch: 0, fire } }); shots += ev.filter(e => e.e === 'shot').length; }
+  eq(shots, 0, '0.83秒のあいだは撃てない');
+  for (let i = 0; i < 12; i++) step(G, { [p.id]: { yaw: p.yaw, pitch: 0 } });
+  eq(p.ws.st, 'ready', 'ボルトを押して次の弾が入った');
+  eq(wi.ch, 1, '薬室に弾'); eq(wi.mag, mag0 - 1, '弾倉から1発');
+  ev = step(G, { [p.id]: { yaw: p.yaw, pitch: 0, fire: true } });
+  ok(ev.some(e => e.e === 'shot'), '次の1発');
+});
+
+test('sniper: 射撃モードのボタンでスコープの倍率が4倍と8倍に切り替わる（ほかのスコープは固定）', () => {
+  const { G, p, wi } = mkSniper();
+  eq(zoomOf(wi), 4, '最初は4倍');
+  let ev = step(G, { [p.id]: { yaw: p.yaw, pitch: 0, act: [{ a: 'mode' }] } });
+  ok(ev.some(e => e.e === 'zoom' && e.z === 8), '8倍に');
+  eq(zoomOf(wi), 8);
+  ev = step(G, { [p.id]: { yaw: p.yaw, pitch: 0, act: [{ a: 'mode' }] } });
+  eq(zoomOf(wi), 4, '4倍に戻る');
+  eq(zoomOf(makeWeapon({ id: 'at308', sight: 'acog' })), 4, 'ACOG は4倍のまま');
+  eq(zoomOf(makeWeapon({ id: 'at308', sight: 'lpvo' })), 4, '等倍〜4倍は4倍から');
+  ok(attachOptions('at308').sight[0] === 'sniper', '既定は狙撃用スコープ');
+});
+
+test('sniper: 構えると照準が揺れる（伏せると小さく、構えていないと揺れない）。弾も揺れた向きへ飛ぶ', () => {
+  const { G, p } = mkSniper();
+  const swing = (stance) => {
+    let m = 0;
+    for (let i = 0; i < 150; i++) { step(G, { [p.id]: { yaw: p.yaw, pitch: 0, ads: true, stance } }); if (i > 60) m = Math.max(m, Math.hypot(p.ws.sx, p.ws.sy)); }
+    return m;
+  };
+  const stand = swing(0), prone = swing(2);
+  ok(stand > 0.05 && stand < 0.4, `立って構えると揺れる ${stand.toFixed(3)}°`);
+  ok(prone < stand * 0.5, `伏せると小さい ${prone.toFixed(3)}° < ${stand.toFixed(3)}°`);
+  for (let i = 0; i < 60; i++) step(G, { [p.id]: { yaw: p.yaw, pitch: 0, ads: false, stance: 0 } });
+  eq(p.ws.sx, 0, '構えていないと揺れない');
+  ok(WEAPONS.mk18.sway == null, '小銃には揺れがない');
+});
+
+test('sniper: 形（狙撃用スコープ・動くボルト・箱弾倉）と音（銃声・ボルト）が作れる', () => {
+  const g = gunModel('at308', { sight: 'sniper', muzzle: 'brake' });
+  ok(g && g.pts.optic && g.pts.optic.kind === 'sniper' && g.pts.optic.scope, 'スコープをのぞく（HUD の狙撃用の十字）');
+  ok(g.pump && g.pts.bolt && g.pts.boltPt, 'ボルトは別の部品で、右手で操作する点がある');
+  ok(g.mag, '弾倉は別の部品（リロードで動く）');
+  ok(g.len > 0.6, `長い銃身 ${g.len.toFixed(2)}m`);
+  for (const sight of attachOptions('at308').sight) ok(gunModel('at308', { sight }), `照準器 ${sight}`);
+  const k = gunKeys(WEAPONS.at308.snd);
+  eq(k.near, 'r308', '近い音は狙撃銃の音'); eq(k.far, 'far_r'); eq(k.supp, 'sup_r');
+  const shot = renderSfx('r308', 0, 22050), bolt = renderSfx('bolt', 0, 22050);
+  ok(shot.length > 2000 && Math.max(...shot.map(Math.abs)) > 0.5, '銃声');
+  near(bolt.length / 22050, WEAPONS.at308.pump + 0.1, 0.01, 'ボルトの音の長さは操作の時間に合わせる');
+});
+
+test('sniper: 対戦の1発（胴）は軽装・中装を倒し、重装は耐える。頭は即死（ほかの銃と同じ）', () => {
+  const d = WEAPONS.at308.pvp.dmg;
+  ok(d >= PVP_ARMOR.medium.hp && d < PVP_ARMOR.heavy.hp, `胴 ${d}（中装 ${PVP_ARMOR.medium.hp}・重装 ${PVP_ARMOR.heavy.hp}）`);
+  ok(d * 0.75 < PVP_ARMOR.light.hp, '手足は1発では倒れない');
+});
+
+test('optics: 2・3・4・6・8倍の照準器（実在の物）。等倍に切り替えられる物は、等倍で照準の見え方が変わる', () => {
+  const z = (sight, zi = 0) => { const wi = makeWeapon({ id: 'hk417', sight }); wi.zi = zi; return { zoom: zoomOf(wi), o: opticOf(wi) }; };
+  eq(z('acog2').zoom, 2, '2倍（ACOG TA47）');
+  eq(z('mag3').zoom, 3, '3倍（EXPS3＋G33）'); ok(z('mag3').o.scope, '3倍はスコープの像');
+  const m1 = z('mag3', 1); eq(m1.zoom, 1, 'ブースターを倒すと等倍'); eq(m1.o.kind, 'holo', '等倍はホロサイトの照準'); ok(!m1.o.scope, '銃とホロの窓が見える');
+  eq(z('acog').zoom, 4, '4倍（ACOG TA31）');
+  eq(z('lpvo').zoom, 4); const l1 = z('lpvo', 1); eq(l1.zoom, 1); ok(l1.o.scope && l1.o.wide, '等倍〜4倍の等倍は広い視野のスコープ');
+  eq(z('scope6').zoom, 6, '6倍（ACOG TA648）');
+  eq(z('lpvo8').zoom, 8, '8倍（NX8 1-8x24）'); eq(z('lpvo8', 1).zoom, 1);
+  for (const k of ['acog2', 'mag3', 'acog', 'lpvo', 'scope6', 'lpvo8', 'sniper']) ok(/（.+）/.test(ATTACH.sight[k].name), `実在の照準器の名前 ${ATTACH.sight[k].name}`);
+  const g = gunModel('hk416', { sight: 'mag3' });
+  ok(g.flip && g.pts.flipPivot, 'ブースターは横へ倒れる別の部品');
+  for (const k of ['acog2', 'acog', 'lpvo', 'scope6', 'lpvo8']) { const m = gunModel('hk417', { sight: k }); ok(m.pts.optic && m.pts.optic.kind === k && m.pts.optic.scope, `形 ${k}`); }
+});
+
+test('optics: 構えている間は射撃モードのボタンで倍率を、構えていないときは連射・単発を切り替える', () => {
+  const G = createGame({ map: 'training', mode: 'train', seed: 7, team: 1, house: false });
+  const p = G.S.actors[0];
+  p.inv.w[0] = makeWeapon({ id: 'hk416', sight: 'lpvo8', ammo: 'ap' });
+  p.ws.slot = 0; p.ws.st = 'draw'; p.ws.t = 0.1;
+  for (let i = 0; i < 30; i++) step(G, { [p.id]: { yaw: p.yaw, pitch: 0 } });
+  const wi = p.inv.w[0], m0 = wi.mode;
+  let ev = step(G, { [p.id]: { yaw: p.yaw, pitch: 0, act: [{ a: 'mode' }] } });
+  ok(ev.some(e => e.e === 'fmode') && wi.mode !== m0, '構えていない: 射撃モード');
+  eq(zoomOf(wi), 8, '倍率はそのまま');
+  for (let i = 0; i < 40; i++) step(G, { [p.id]: { yaw: p.yaw, pitch: 0, ads: true } });
+  const m1 = wi.mode;
+  ev = step(G, { [p.id]: { yaw: p.yaw, pitch: 0, ads: true, act: [{ a: 'mode' }] } });
+  ok(ev.some(e => e.e === 'zoom' && e.z === 1), '構えている: 等倍へ');
+  eq(wi.mode, m1, '射撃モードはそのまま');
+  // 手元で決めた向き（オンラインのゲスト）: 構えていても zoom: false なら射撃モード
+  ev = step(G, { [p.id]: { yaw: p.yaw, pitch: 0, ads: true, act: [{ a: 'mode', zoom: false }] } });
+  ok(ev.some(e => e.e === 'fmode') && wi.mode !== m1, '手元の指示どおり射撃モード');
+});
+
+test('optics: 付けられる銃は実銃の取り付け方に合わせる', () => {
+  const S = (id) => attachOptions(id).sight;
+  ok(!S('mk18').includes('lpvo8') && !S('mk18').includes('scope6'), 'Mk18（短い銃身）に等倍〜8倍・6倍はない');
+  ok(S('hk417').includes('scope6') && S('hk417').includes('lpvo8'), 'HK417（7.62mm・選抜射手）は6倍と等倍〜8倍');
+  ok(S('g3').includes('scope6') && !S('g3').includes('mag3'), 'G3 は爪の台に6倍まで（ブースターはなし）');
+  ok(S('m4a1').includes('lpvo8') && !S('m4a1').includes('scope6'), 'M4A1 は等倍〜8倍、6倍（7.62mm 用）はなし');
+  eq(S('akm').join(), 'iron', 'AKM は照準器なし');
+  ok(S('mp7').includes('acog2') && !S('mp7').includes('mag3'), 'MP7 は2倍まで（レールが短い）');
+  ok(S('mpx').includes('mag3'), 'MPX は上のレールが長いのでブースターも');
+  ok(!S('m4super').some(k => ATTACH.sight[k].scope), '散弾銃に倍率の照準器はない');
+  ok(!S('vz58').includes('mag3'), 'vz.58 の短いレールにブースターは付かない');
+  eq(S('at308')[0], 'sniper', '狙撃銃の既定は狙撃用スコープ');
+});
 
 @@@@ FILE tests/unit/stick.test.mjs text 1456
 import { test, ok } from '../lib/t.mjs';
