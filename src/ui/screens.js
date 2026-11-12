@@ -456,13 +456,14 @@ export class Screens {
   _resultPvp(res) {
     const a = this.app;
     const mine = res.win === res.myTeam;
-    const MODE = MODE_INFO[res.mode] || { name: '' };
-    const rows = res.rows || [];
-    const el = this._mk('result', `<div class="sc-wrap"><header class="sc-head"><h2 class="${res.win < 0 ? '' : mine ? 'good' : 'bad'}">${res.win < 0 ? '引き分け' : mine ? '勝利' : '敗北'}</h2><span class="hint">${esc(MODE.name)} · ${esc(MAPS[res.map].name)} · ${fmtTime(res.time || 0)}</span></header>
+    const MODE = res.war ? { name: 'コンクエスト（大規模戦）' } : MODE_INFO[res.mode] || { name: '' };
+    const mapName = res.war ? (WAR_MAPS[res.map] || {}).name || '' : MAPS[res.map].name;
+    const rows = (res.rows || []).slice(0, res.war ? 40 : 99);
+    const el = this._mk('result', `<div class="sc-wrap"><header class="sc-head"><h2 class="${res.win < 0 ? '' : mine ? 'good' : 'bad'}">${res.win < 0 ? '引き分け' : mine ? '勝利' : '敗北'}</h2><span class="hint">${esc(MODE.name)} · ${esc(mapName)} · ${fmtTime(res.time || 0)}${res.war ? ' · 残りチケット' : ''}</span></header>
       <div class="pvp-score"><b class="t0">${res.score[res.myTeam]}</b><span>—</span><b class="t1">${res.score[1 - res.myTeam]}</b></div>
       <div class="pane scroll"><table class="board"><thead><tr><th>名前</th><th>キル</th><th>デス</th><th>アシスト</th></tr></thead><tbody>${rows.map((r, i) => `<tr class="${r.team === res.myTeam ? 'ally' : 'enemy'}${r.me ? ' me' : ''}"><th>${i === 0 ? '<em>MVP</em>' : ''}${esc(r.name)}${r.bot ? '<small>ボット</small>' : ''}</th><td>${r.k}</td><td>${r.d}</td><td>${r.a}</td></tr>`).join('')}</tbody></table></div>
       <div class="sc-foot">${res.net ? (a.net && a.net.role === 'host' ? '<button class="btn primary" data-a="again">ロビーへ</button>' : '<span class="wait">ホスト待ち…</span>') : '<button class="btn primary" data-a="again">再戦</button>'}<button class="btn ghost" data-a="title">${res.net ? '退出' : 'タイトルへ'}</button></div></div>`, 'dim');
-    this._acts(el, { again: () => res.net ? a.netAgain() : a.startPvp(a.lastPvp), title: () => res.net ? a.leaveRoom() : a.toTitle() });
+    this._acts(el, { again: () => res.net ? a.netAgain() : res.war ? a.startWar(a.lastWar) : a.startPvp(a.lastPvp), title: () => res.net ? a.leaveRoom() : a.toTitle() });
     this.show('result'); a.scene('pause');
   }
 

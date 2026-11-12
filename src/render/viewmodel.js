@@ -41,6 +41,14 @@ export class ViewModel {
   nadeMesh(id) {
     if (this.nadeMeshes[id]) return this.nadeMeshes[id];
     const B = new MeshBuilder();
+    if (id === 'frag' || id === 'impact') {
+      // M67: 丸い本体（手の中で見える大きさ）
+      const c = id === 'frag' ? hex('#4b5332') : hex('#5b5b3c');
+      B.loft([{ y: -0.04, rx: 0.014, rz: 0.014 }, { y: -0.03, rx: 0.034, rz: 0.034 }, { y: 0.0, rx: 0.038, rz: 0.038 }, { y: 0.03, rx: 0.032, rz: 0.032 }, { y: 0.044, rx: 0.014, rz: 0.014 }], 10, LAYER.paint, c, { capTop: true, capBot: true });
+      B.cyl(0, 0, 0.042, 0.066, 0.01, 0.01, 6, LAYER.metal, hex('#8a8a80'));
+      B.box(0.008, 0.0, -0.009, 0.014, 0.064, 0.009, LAYER.metal, hex('#9a9a90'));
+      const m = makeWorldMesh(this.gl, B); this.nadeMeshes[id] = m; return m;
+    }
     const col = id === 'flash' ? hex('#3a4a3a') : id === 'stinger' ? hex('#3a3a40') : id === 'cs' ? hex('#5a5a40') : hex('#4a4a4a');
     B.cyl(0, 0, -0.06, 0.06, 0.03, 0.03, 10, LAYER.metal, col, { capB: true });
     B.cyl(0, 0, 0.06, 0.085, 0.012, 0.012, 6, LAYER.metal, hex('#8a8a80'));

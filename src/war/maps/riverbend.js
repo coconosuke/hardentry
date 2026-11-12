@@ -1,6 +1,6 @@
 // リバーベンド（独自のマップ）: 南北に曲がって流れる川（今は水のない川床）と、その東の町・西の工場・農場・電波塔の丘・東の村・石切り場。
 // 世界 1400m 四方（まわり 100m は山。遊べるのは内側）。人数で範囲が3つ（小 500m・中 800m・大 1200m）。
-import { makeWarWorld, finishWorld, heightAt, addCyl, addBox } from '../world.js';
+import { makeWarWorld, finishWorld, heightAt, addCyl, addBox, addRamp } from '../world.js';
 import { house, apartment, warehouse, tower, wallRun, sandbags, container } from '../buildings.js';
 import { fbm, mulberry } from '../noise.js';
 import { M } from '../../engine/data/materials.js';
@@ -111,11 +111,17 @@ export function buildRiverbend(seed = 7) {
   for (let k = 0; k < 18; k++) { const a = rnd() * Math.PI * 2, r = 15 + rnd() * 35, x = 330 + Math.cos(a) * r, z = 470 + Math.sin(a) * r; rock(ww, x, z, 1.5 + rnd() * 3, rnd); }
   // ---- 本陣（6つ）: 土のうの囲いとコンテナ
   for (const s of Object.values(AREAS)) for (const [x, z] of s.hq) { container(ww, x - 12, z - 8, 0, gy(x - 12, z - 8), '#56604a'); container(ww, x + 12, z + 8, 0, gy(x + 12, z + 8), '#56604a'); sandbags(ww, x - 8, z + 14, x + 8, z + 14, gy(x, z + 14)); }
-  // ---- 橋（川の上の板。川の両岸の高さをつなぐ）
-  { const z0 = 694, z1 = 706, xa = riverX(700) - 26, xb = riverX(700) + 26; const ya = gy(xa, 700), yb = gy(xb, 700), y = Math.max(ya, yb) + 0.1;
-    addBox(ww, { x0: xa, z0, x1: xb, z1, y0: y - 0.5, y1: y, mat: M.CONCRETE, kind: 'bridge', col: '#9b9a94' });
-    addBox(ww, { x0: xa, z0: z0 - 0.3, x1: xb, z1: z0, y0: y, y1: y + 1.0, mat: M.CONCRETE, kind: 'rail', col: '#9b9a94' });
-    addBox(ww, { x0: xa, z0: z1, x1: xb, z1: z1 + 0.3, y0: y, y1: y + 1.0, mat: M.CONCRETE, kind: 'rail', col: '#9b9a94' }); }
+  // ---- 橋（川の上の坂の板。両岸の高さが違うので、ゆるい坂でつなぐ。欄干は 4m ごとに坂に合わせる）
+  { const z0 = 694, z1 = 706, xa = riverX(700) - 26, xb = riverX(700) + 26; const ya = gy(xa, 700) + 0.05, yb = gy(xb, 700) + 0.05;
+    addRamp(ww, { x0: xa, z0, x1: xb, z1, y0: Math.min(ya, yb), y1: Math.max(ya, yb), dir: ya <= yb ? 'e' : 'w', th: 0.6, mat: M.CONCRETE, col: '#9b9a94', smooth: true, kind: 'bridge' });
+    const N = Math.ceil((xb - xa) / 4);
+    for (let s = 0; s < N; s++) {
+      const a = xa + (xb - xa) * s / N, b = xa + (xb - xa) * (s + 1) / N, y = ya + (yb - ya) * ((s + 0.5) / N);
+      addBox(ww, { x0: a, z0: z0 - 0.3, x1: b, z1: z0, y0: y - 0.2, y1: y + 1.0, mat: M.CONCRETE, kind: 'rail', col: '#9b9a94' });
+      addBox(ww, { x0: a, z0: z1, x1: b, z1: z1 + 0.3, y0: y - 0.2, y1: y + 1.0, mat: M.CONCRETE, kind: 'rail', col: '#9b9a94' });
+    }
+    // 橋脚（川床から板の下まで）
+    for (const t of [0.33, 0.66]) { const x = xa + (xb - xa) * t, y = ya + (yb - ya) * t; addBox(ww, { x0: x - 0.6, z0: z0 + 1, x1: x + 0.6, z1: z1 - 1, y0: gy(x, 700) - 0.5, y1: y - 0.6, mat: M.CONCRETE, kind: 'pier', col: '#8c8b85' }); } }
   // ---- 森と岩（道・建物・川・本陣から離れた所）
   const near = (x, z) => {
     if (roadDist(x, z) < 9) return true;

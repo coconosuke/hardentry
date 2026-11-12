@@ -303,7 +303,8 @@ export function lookFor(o) {
     if (o.helmet !== 'none') gear.push('helmet'); else gear.push('hairShort');
     if (o.head === 'nvg') gear.push('nvg'); else if (o.head === 'gasmask') gear.push('gasmask'); else if (o.head === 'goggles') gear.push('goggles'); else if (o.head === 'facemask') gear.push('facemask');
     // 目出し帽（半分くらい）
-    if (o.head !== 'gasmask' && rnd(s, 9) < 0.45) { set(PAL.faceU, hex('#1d1e21')); set(PAL.faceL, hex('#1d1e21')); }
+    if (!o.war && o.head !== 'gasmask' && rnd(s, 9) < 0.45) { set(PAL.faceU, hex('#1d1e21')); set(PAL.faceL, hex('#1d1e21')); }
+    if (o.war) { set(PAL.hands, mulc(hex(o.gearCol || '#3f4631'), 0.8)); set(PAL.shoes, hex('#2a241c')); }
     if (sex === 'f' && o.helmet === 'none') gear.push('hairLong');
   } else if (o.kind === 'sus') {
     const top = pk(TOPS, s, 4), bot = pk(BOTTOMS, s, 5);

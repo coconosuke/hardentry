@@ -33,7 +33,7 @@ export function addBox(ww, b) {
 }
 // 坂の板（階段・斜路）: 四角 x0..x1 × z0..z1 で、dir の向きへ y0 から y1 へ上がる（'n' -z・'s' +z・'e' +x・'w' -x）。厚み th
 export function addRamp(ww, r) {
-  const ramp = { id: ww.ramps.length, x0: Math.min(r.x0, r.x1), x1: Math.max(r.x0, r.x1), z0: Math.min(r.z0, r.z1), z1: Math.max(r.z0, r.z1), y0: r.y0, y1: r.y1, dir: r.dir, th: r.th ?? 0.25, mat: r.mat ?? M.CONCRETE, bld: r.bld ?? -1, col: r.col || null };
+  const ramp = { id: ww.ramps.length, x0: Math.min(r.x0, r.x1), x1: Math.max(r.x0, r.x1), z0: Math.min(r.z0, r.z1), z1: Math.max(r.z0, r.z1), y0: r.y0, y1: r.y1, dir: r.dir, th: r.th ?? 0.25, mat: r.mat ?? M.CONCRETE, bld: r.bld ?? -1, col: r.col || null, smooth: !!r.smooth, kind: r.kind || 'stair' };
   ww.ramps.push(ramp);
   return ramp;
 }

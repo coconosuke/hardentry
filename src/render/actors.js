@@ -42,6 +42,8 @@ export class ActorView {
     const o = { seed: a.look && a.look.seed || a.id * 977, kind: a.kind === 'swat' || (a.kind === 'bot' && a.team === 0) ? 'swat' : kind, armor: ar.vest || 'none', helmet: ar.helmet || 'none', head: ar.head || 'none', prof: a.ai && a.ai.prof, pro: a.ai && a.ai.prof === 'pro' };
     if (a.pvpSide === 'sus') { o.kind = 'sus'; o.armor = a.pvpArmor === 'light' ? 'none' : 'vestSus'; o.pro = a.pvpArmor === 'heavy'; o.helmet = a.pvpArmor === 'heavy' ? 'helmet' : 'none'; }
     if (a.pvpSide === 'swat') { o.kind = 'swat'; o.armor = 'heavy'; o.helmet = a.pvpArmor === 'light' ? 'none' : 'helmet'; }
+    // 大規模戦の兵士: 陣営で服の色が違う（味方側 オリーブ・相手側 砂色）。目出し帽なし
+    if (a.kind === 'soldier') { const t = a.team === 1; Object.assign(o, { kind: 'swat', war: true, armor: 'heavy', helmet: 'helmet', uniform: t ? '#857350' : '#4f5739', gearCol: t ? '#6b5d42' : '#3f4631', helmetCol: t ? '#77684a' : '#4a5036' }); }
     const lk = lookFor(o);
     const { key, d } = personMeshData(lk);
     if (!this.people.has(key)) this.people.set(key, vaoSkin(this.gl, d.v, d.i));
@@ -98,6 +100,14 @@ export class ActorView {
     this._nm = this._nm || {};
     if (this._nm[type]) return this._nm[type];
     const B = new MeshBuilder();
+    if (type === 'frag' || type === 'impact') {
+      // M67 の形: 丸い本体（緑）と信管・レバー
+      const c = type === 'frag' ? hex('#4b5332') : hex('#5b5b3c');
+      B.loft([{ y: -0.035, rx: 0.012, rz: 0.012 }, { y: -0.025, rx: 0.03, rz: 0.03 }, { y: 0.0, rx: 0.033, rz: 0.033 }, { y: 0.025, rx: 0.028, rz: 0.028 }, { y: 0.038, rx: 0.012, rz: 0.012 }], 8, LAYER.paint, c, { capTop: true, capBot: true });
+      B.cyl(0, 0, 0.036, 0.058, 0.009, 0.009, 6, LAYER.metal, hex('#8a8a80'));
+      B.box(0.006, 0.0, -0.008, 0.012, 0.055, 0.008, LAYER.metal, hex('#9a9a90'));
+      return (this._nm[type] = makeWorldMesh(this.gl, B));
+    }
     const col = type === 'flash' ? hex('#3a4a3a') : type === 'stinger' ? hex('#3a3a40') : type === 'cs' ? hex('#6a6a48') : hex('#4a4a4a');
     B.cyl(0, 0, -0.055, 0.055, 0.028, 0.028, 10, LAYER.metal, col, { capB: true });
     B.cyl(0, 0, 0.055, 0.08, 0.012, 0.012, 6, LAYER.metal, hex('#8a8a80'));

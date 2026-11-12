@@ -255,6 +255,7 @@ function rampMesh(B, rp, r, tops) {
   const q = rp.bld >= 0 ? tops.get(rp.bld) : null;
   B.room = q ? 0 : 1;
   const ao = q ? 0.6 : 1;
+  if (rp.smooth) { smoothRamp(B, rp, col); B.room = 1; return; }
   const len = rp.dir === 'n' || rp.dir === 's' ? rp.z1 - rp.z0 : rp.x1 - rp.x0, n = Math.max(2, Math.round((rp.y1 - rp.y0) / 0.25));
   for (let k = 0; k < n; k++) {
     const t0 = k / n, t1 = (k + 1) / n, y = rp.y0 + (rp.y1 - rp.y0) * (k + 1) / n;
@@ -268,6 +269,17 @@ function rampMesh(B, rp, r, tops) {
   B.room = 1;
 }
 
+// なめらかな坂の板（橋）: 上面・下面・両側・両端
+function smoothRamp(B, rp, col) {
+  const H = (x, z) => { let t; if (rp.dir === 'n') t = (rp.z1 - z) / (rp.z1 - rp.z0); else if (rp.dir === 's') t = (z - rp.z0) / (rp.z1 - rp.z0); else if (rp.dir === 'e') t = (x - rp.x0) / (rp.x1 - rp.x0); else t = (rp.x1 - x) / (rp.x1 - rp.x0); return rp.y0 + (rp.y1 - rp.y0) * Math.max(0, Math.min(1, t)); };
+  const c = [[rp.x0, rp.z0], [rp.x1, rp.z0], [rp.x1, rp.z1], [rp.x0, rp.z1]];
+  const top = c.map(([x, z]) => [x, H(x, z), z]), bot = c.map(([x, z]) => [x, H(x, z) - rp.th, z]);
+  const n = (a, b, d) => { const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], v = [d[0] - a[0], d[1] - a[1], d[2] - a[2]]; let w = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]]; const l = Math.hypot(...w) || 1; return w.map(q => q / l); };
+  let nt = n(top[0], top[3], top[1]); if (nt[1] < 0) nt = nt.map(q => -q);
+  B.poly(top, nt, LAYER.concrete, col);
+  B.poly(bot, nt.map(q => -q), LAYER.concrete, mulc(col, 0.7));
+  for (let k = 0; k < 4; k++) { const a = k, b = (k + 1) % 4; const mx = (c[a][0] + c[b][0]) / 2 - (rp.x0 + rp.x1) / 2, mz = (c[a][1] + c[b][1]) / 2 - (rp.z0 + rp.z1) / 2, l = Math.hypot(mx, mz) || 1; B.poly([top[a], top[b], bot[b], bot[a]], [mx / l, 0, mz / l], LAYER.concrete, mulc(col, 0.85)); }
+}
 // 塊の割り当て（箱・坂・木を中心のある塊へ）
 function sortIn(ww) {
   if (ww._chunkItems) return ww._chunkItems;

@@ -27,6 +27,9 @@ export const GEAR = {
   stinger: { name: 'スティンガー弾', kind: 'nade', max: 4, fuse: 1.5, desc: 'ゴムの小球をまき散らす。防具では防げず、まわりの人を怯ませて投降させやすくする。' },
   cs: { name: 'CSガス', kind: 'nade', max: 3, fuse: 1.6, desc: '催涙ガスの雲が約20秒残る。中の人は目と喉をやられ、戦う力が落ちる。ガスマスクで防げる。' },
   smoke: { name: '発煙弾', kind: 'nade', max: 3, fuse: 1.4, desc: '濃い煙の壁が約16秒残る。煙の中と向こうは見えない（暗視装置でも）。弾は通る。' },
+  // 大規模戦の投げ物（実在の型。research/WARBIT.md の 6）
+  frag: { name: '破片手榴弾（M67）', kind: 'nade', max: 3, fuse: 4.0, desc: '投げて約4秒で爆発する。半径5mはほぼ致命傷、15mまで破片が届く（遠いほど弱い）。遮蔽物の陰には届かない。' },
+  impact: { name: '衝撃手榴弾', kind: 'nade', max: 2, fuse: 9, impact: true, desc: '何かに当たった瞬間に爆発する。破片手榴弾より小さい（致命は2〜3m、8mまで）。' },
   c2: { name: 'C2 爆破薬', kind: 'charge', max: 3, place: 2.5, desc: '鍵のかかった扉に付けて離れて起爆する。扉の向こうの人を怯ませる。扉の前の近い人は死ぬことがある。対戦では石膏の壁にも穴を開けられる。' },
   wedge: { name: 'ドアウェッジ', kind: 'wedge', max: 6, place: 1.5, desc: '扉の下にはさみ、開かなくする。背後を守るのに使う。破城槌・散弾・C2で開けると壊れる。' },
   lockgun: { name: 'ロックピックガン', kind: 'tool', max: 1, use: 2.0, desc: '普通のピッキング（6秒）より速く、約2秒で鍵を開ける。' },

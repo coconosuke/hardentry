@@ -22,8 +22,8 @@ export function stepStatus(S, w, dt, ev) {
     if (a.down) {
       a.downT += dt;
       if (S.pvp && a.dbno > 0) {
-        // ダウン: 20HP が約20秒で尽きる（傷を押さえると半分の速さ = 動かないとき）
-        a.dbno -= dt * (a.spd < 0.05 ? 0.6 : 1.0);
+        // ダウン: 20HP が約20秒で尽きる（傷を押さえると半分の速さ = 動かないとき）。大規模戦は 10 秒（起こす仕組みは次の段階）
+        a.dbno -= dt * (S.war ? 2 : a.spd < 0.05 ? 0.6 : 1.0);
         if (a.dbno <= 0) { const by = a.lastHit ? S.byId[a.lastHit.by] : null; killActor(S, a, by, ev, 'bleed'); }
       } else if (!S.pvp && a.bleedOut > 0 && !a.cuffed && !a.reported) {
         a.bleedOut -= dt;

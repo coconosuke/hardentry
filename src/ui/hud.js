@@ -33,6 +33,9 @@ export class Hud {
     r.innerHTML = '';
     // スコープの像（外側の黒）はいちばん下に置く。上に置くと、ミニマップ・体力・弾数・味方・方位などが黒に隠れていた（11-12 22:05）
     this.scope = el('div', 'hud-scope', '<div class="ret"></div>'); r.appendChild(this.scope);
+    // 大規模戦: 世界の上の印（拠点・味方）を描く透明な画面と、出撃の場所を選ぶ板
+    this.ov = document.createElement('canvas'); this.ov.className = 'hud-ov'; r.appendChild(this.ov); this.ovCtx = this.ov.getContext('2d');
+    this.deployEl = el('div', 'hud-deploy'); r.appendChild(this.deployEl);
     // 情報
     // ミニマップ: タップで地図を開く（地図のボタンの代わり）
     const mm = el('div', 'hud-mm'); const mc = document.createElement('canvas'); mc.width = 240; mc.height = 240; mm.appendChild(mc); mm.appendChild(el('div', 'hud-mm-n', 'N')); mm.appendChild(el('div', 'hud-mm-x', svg('expand')));
@@ -108,6 +111,7 @@ export class Hud {
       if (def.pve && !this.mode.pve) hide = true;
       if (def.pvpOnly && !this.mode.pvp) hide = true;
       if (def.pvp && !this.mode.drone) hide = true;
+      if (def.noWar && this.mode.war) hide = true;
       // 設定で消したボタン（左の射撃）: 配置を動かしたことがあっても消す（動かすと設定が効かなくなっていた）
       const offBySetting = def.opt === 'leftFire' && this.S.leftFire === false;
       if (offBySetting) hide = true;
@@ -401,6 +405,45 @@ export class Hud {
   showBanner(html, ms = 2600, cls = '') { this.banner.innerHTML = html; this.banner.className = 'hud-banner on ' + cls; clearTimeout(this._banT); if (ms > 0) this._banT = setTimeout(() => { this.banner.className = 'hud-banner'; }, ms); }
   hideBanner() { this.banner.className = 'hud-banner'; }
   showMirror(html) { this.mirror.innerHTML = html; this.mirror.classList.add('on'); clearTimeout(this._mirT); this._mirT = setTimeout(() => this.mirror.classList.remove('on'), 6000); }
+
+  // ---- 大規模戦: 世界の上の印。list: [{ x, y（画面）, k: 'flag'|'ally'|'squad'|'enemy', t: 文字, col, d: 距離m }]
+  warMarks(list) {
+    const cv = this.ov, st = this.stage, dpr = Math.min(2, devicePixelRatio || 1);
+    const W = Math.round(st.w * dpr), H = Math.round(st.h * dpr);
+    if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; cv.style.width = st.w + 'px'; cv.style.height = st.h + 'px'; }
+    const c = this.ovCtx;
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    c.clearRect(0, 0, st.w, st.h);
+    if (!list || !list.length) return;
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    for (const m of list) {
+      if (m.k === 'flag') {
+        c.globalAlpha = 0.92;
+        c.beginPath(); c.arc(m.x, m.y, 11, 0, Math.PI * 2); c.fillStyle = 'rgba(8,12,18,0.6)'; c.fill();
+        c.lineWidth = 2.5; c.strokeStyle = m.col; c.stroke();
+        if (m.prog != null) { c.beginPath(); c.arc(m.x, m.y, 11, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.abs(m.prog)); c.strokeStyle = m.pcol || m.col; c.lineWidth = 3.5; c.stroke(); }
+        c.fillStyle = m.col; c.font = '900 12px Inter, sans-serif'; c.fillText(m.t, m.x, m.y + 0.5);
+        if (m.d != null) { c.font = '700 10px Inter, sans-serif'; c.fillStyle = 'rgba(235,240,245,0.9)'; c.fillText(Math.round(m.d) + 'm', m.x, m.y + 20); }
+      } else {
+        // 味方: 頭の上の小さな山形（分隊は緑・ほかは青）。近いほど大きく
+        const s = Math.max(3.5, Math.min(7, 7 - (m.d || 0) / 40));
+        c.globalAlpha = m.k === 'enemy' ? 0.95 : 0.85;
+        c.fillStyle = m.col;
+        c.beginPath(); c.moveTo(m.x - s, m.y - s * 0.9); c.lineTo(m.x + s, m.y - s * 0.9); c.lineTo(m.x, m.y + s * 0.5); c.closePath(); c.fill();
+        if (m.t && (m.d || 0) < 30) { c.font = '700 10px "Noto Sans JP", sans-serif'; c.fillStyle = m.col; c.fillText(m.t, m.x, m.y - s - 7); }
+      }
+    }
+    c.globalAlpha = 1;
+  }
+  // 出撃の場所を選ぶ板（倒れている間）。d: null で隠す / { left: 秒, opts: [{ id, label, sub }], sel }
+  deploy(d) {
+    const key = d ? Math.ceil(d.left) + '|' + d.opts.map(o => o.id + o.sub).join(',') + '|' + (d.sel || '') + '|' + (d.msg || '') : '';
+    if (this.cache.dep === key) return;
+    this.cache.dep = key;
+    if (!d) { this.deployEl.classList.remove('on'); this.deployEl.innerHTML = ''; return; }
+    this.deployEl.classList.add('on');
+    this.deployEl.innerHTML = `<div class="dp-h"><b>出撃</b><span>${d.msg || (d.left > 0 ? `${Math.ceil(d.left)} 秒後に出撃できる` : '場所を選ぶと出撃')}</span></div><div class="dp-l">${d.opts.map(o => `<div class="dp-o${o.id === d.sel ? ' sel' : ''}" data-btn="deploy" data-sub="${o.id}" role="button"><b>${o.label}</b><small>${o.sub || ''}</small></div>`).join('')}</div>`;
+  }
 
   // ---- ミニマップ
   setPlan(w, def) {

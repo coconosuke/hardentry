@@ -395,3 +395,22 @@ table.board small { color: var(--dim); font-size: max(11px, .72em); margin-left:
 
 /* 小さすぎる注記の下限（スマホで読める大きさ） */
 #stage .lo-tabs small, #stage .pl small, #stage .row .rc small { font-size: max(11px, .8em); }
+
+/* ---- 大規模戦 ---- */
+.hud-ov { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 0; }
+.hud-obj .wb, .tab-obj .wb { display: flex; align-items: center; gap: 5px; background: rgba(8,12,18,.62); border-radius: 4px; padding: 3px 8px; }
+.hud-obj .wb .tk, .tab-obj .wb .tk { font: 900 18px var(--f-head); min-width: 2.2em; text-align: center; font-variant-numeric: tabular-nums; }
+.hud-obj .wb .tk.t0, .tab-obj .wb .tk.t0 { color: var(--ally); } .hud-obj .wb .tk.t1, .tab-obj .wb .tk.t1 { color: var(--enemy); }
+.hud-obj .wb .fl, .tab-obj .wb .fl { font-style: normal; position: relative; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font: 900 12px var(--f-head); color: #e8e8e4; border: 2px solid rgba(232,232,228,.85); background: rgba(0,0,0,.35); }
+.hud-obj .wb .fl.o0, .tab-obj .wb .fl.o0 { color: var(--ally); border-color: var(--ally); } .hud-obj .wb .fl.o1, .tab-obj .wb .fl.o1 { color: var(--enemy); border-color: var(--enemy); }
+.hud-obj .wb .fl.ct { animation: flagBlink .8s steps(2) infinite; }
+.hud-obj .wb .fl.goal::after { content: ''; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); border: 4px solid transparent; border-bottom-color: #f2b33d; }
+@keyframes flagBlink { 50% { background: rgba(255,255,255,.25); } }
+.hud-obj .wb .oob { color: var(--enemy); font-weight: 900; margin-left: 6px; font-size: 12px; }
+.hud-deploy { position: absolute; left: 50%; bottom: 18%; transform: translateX(-50%); display: none; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 8px; background: rgba(8,12,18,.78); border: 1px solid rgba(255,255,255,.18); pointer-events: auto; z-index: 5; max-width: 92%; }
+.hud-deploy.on { display: flex; }
+.hud-deploy .dp-h { display: flex; gap: 10px; align-items: baseline; } .hud-deploy .dp-h b { font: 900 16px var(--f-head); color: var(--accent2); } .hud-deploy .dp-h span { font-size: 12px; color: #dfe5ea; }
+.hud-deploy .dp-l { display: flex; flex-wrap: wrap; gap: 6px; }
+.hud-deploy .dp-o { min-width: 74px; min-height: 40px; padding: 4px 10px; border-radius: 6px; background: rgba(40,52,66,.85); border: 1px solid rgba(255,255,255,.2); display: flex; flex-direction: column; justify-content: center; cursor: pointer; touch-action: none; }
+.hud-deploy .dp-o b { font-size: 13px; } .hud-deploy .dp-o small { font-size: 10px; color: #bcc6cf; }
+.hud-deploy .dp-o.sel, .hud-deploy .dp-o.down { background: var(--accent); color: #17120a; } .hud-deploy .dp-o.sel small { color: #3b2c0e; }

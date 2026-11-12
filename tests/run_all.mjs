@@ -371,7 +371,10 @@ try {
     await push(45); await touch('touchEnd', []);
     const lk = await wf(() => window.__app.input.sprintLock && window.__app.game.p.sprint);
     const sh0 = (await sst()).sh;
-    await holdAt(F, 500, 46);
+    // 撃つ: 1発出るまで押し続ける（遅い環境では 0.5 秒の間に走りやめ→構えまで進まないことがある）
+    await touch('touchStart', [{ x: F.x, y: F.y, id: 46 }]);
+    await page.waitForFunction((n) => window.__app.game.p.stats.sh > n, sh0, { timeout: 15000 }).catch(() => {});
+    await page.waitForTimeout(150); await touch('touchEnd', []); await page.waitForTimeout(250);
     const fired = await wf(() => window.__app.game.p.stats.sh > 0);
     const sf = await sst();
     const fb = await wf(() => window.__app.game.p.sprint && window.__app.input.sprintLock);
@@ -520,6 +523,40 @@ try {
     rec('結果', '対戦の決着で勝敗と成績表が出る', r.cur === 'result' && r.h === '勝利' && r.rows === 4, `「${r.h}」・${r.rows}人`);
   }
 
+  // ---- WAR BIT（大規模戦の試作）: 出撃・歩く・撃つ・上の帯・倒れて出撃し直す・決着→結果
+  try {
+    await page.evaluate(() => window.__app.startWar({ size: 'small' }));
+    await waitGame();
+    await page.waitForTimeout(800);
+    await shot('WAR-出撃');
+    const st = await page.evaluate(() => { const g = window.__app.game; return { war: !!g.S.war, n: g.S.actors.length, bots: g.S.actors.filter(a => a.ai).length, draws: g.r.stats.draws, tris: g.r.stats.tris }; });
+    rec('WAR BIT', '小（16対16）で出撃する（ボット31体・地形と建物を描く）', st.war && st.n === 32 && st.bots === 31 && st.tris > 20000, `${st.n}人・描く回数${st.draws}・三角形${Math.round(st.tris / 1000)}k`);
+    const p0 = await page.evaluate(() => { const p = window.__app.game.p; return { x: p.x, z: p.z, sh: p.stats.sh }; });
+    await page.keyboard.down('KeyW'); await page.waitForTimeout(2500); await page.keyboard.up('KeyW');
+    const fb = await center('#hud .hb[data-btn="fire"]');
+    await touch('touchStart', [{ x: fb.x, y: fb.y, id: 7 }]); await page.waitForTimeout(800); await touch('touchEnd', []); await page.waitForTimeout(300);
+    const p1 = await page.evaluate(() => { const p = window.__app.game.p; return { x: p.x, z: p.z, sh: p.stats.sh }; });
+    rec('WAR BIT', '歩いて撃てる', Math.hypot(p1.x - p0.x, p1.z - p0.z) > 0.3 && p1.sh > p0.sh, `移動 ${Math.hypot(p1.x - p0.x, p1.z - p0.z).toFixed(1)}m・射撃 ${p1.sh - p0.sh}`);
+    const bar = await page.evaluate(() => ({ fl: document.querySelectorAll('#hud .hud-obj .wb .fl').length, tk: document.querySelectorAll('#hud .hud-obj .wb .tk').length, use: getComputedStyle(document.querySelector('#hud [data-btn="use"]')).display !== 'none' && !document.querySelector('#hud [data-btn="use"]').classList.contains('hidden') }));
+    rec('WAR BIT', '上の帯に拠点4つと両チームのチケット・調べるボタンは出さない', bar.fl === 4 && bar.tk === 2 && !bar.use, JSON.stringify(bar));
+    await shot('WAR-HUD');
+    // 範囲の外で倒れる → 出撃の板 → 本陣を選ぶ → 出撃し直す
+    await page.evaluate(() => { const g = window.__app.game, p = g.p, r = g.S.m.rect; p.x = r[0] - 25; p.oob = 9.95; });
+    await page.waitForFunction(() => document.querySelector('#hud .hud-deploy.on .dp-o'), null, { timeout: 90000 }).catch(() => {});
+    await shot('WAR-出撃の板');
+    const hb = await center('#hud .hud-deploy .dp-o[data-sub="hq"]');
+    if (hb) await tapAt(hb);
+    await page.waitForFunction(() => window.__app.game.p.alive, null, { timeout: 90000 }).catch(() => {});
+    const rs = await page.evaluate(() => { const g = window.__app.game, p = g.p, hq = g.S.m.hq[p.team]; return { alive: p.alive, d: Math.hypot(p.x - hq[0], p.z - hq[1]), tk: g.S.m.tickets[p.team] }; });
+    rec('WAR BIT', '倒れたら出撃の板で本陣を選んで出撃し直す（チケットが1減る）', !!hb && rs.alive && rs.d < 25 && rs.tk < 300, `板${hb ? 'あり' : 'なし'}・本陣から${rs.d.toFixed(0)}m・チケット${Math.ceil(rs.tk)}`);
+    // 決着
+    await page.evaluate(() => { window.__app.game.S.m.tickets[1] = 0; });
+    await page.waitForFunction(() => window.__app.screens.cur === 'result', null, { timeout: 90000 }).catch(() => {});
+    const r = await page.evaluate(() => ({ cur: window.__app.screens.cur, h: (document.querySelector('.screen.result h2') || {}).textContent, rows: document.querySelectorAll('.screen.result .board tbody tr').length }));
+    await shot('WAR-結果');
+    rec('WAR BIT', '相手のチケットが尽きると勝利と成績表', r.cur === 'result' && r.h === '勝利' && r.rows >= 16, `「${r.h}」・${r.rows}人`);
+  } catch (e) { rec('WAR BIT', '大規模戦の試作', false, e.message.slice(0, 200)); }
+
   // ---- 全サイズの見た目
   const SCREENS = [
     ['title', []], ['pveMenu', []], ['pvpMenu', []], ['train', []], ['mission', [{}]], ['brief', ['__sel']], ['loadout', [{ kind: 'pve', team: 4 }]], ['loadout', [{ kind: 'pvp' }]], ['pvpSetup', [null]],
@@ -577,15 +614,18 @@ try {
     await page.reload();
     await waitTitle(page, 240000);
     const s2 = await page.evaluate(() => ({ cont: !!document.querySelector('.screen.title [data-a="continue"]'), game: !!window.__app.game, run: localStorage.getItem('hardentry.v1.run'), first: (document.querySelector('.screen.title .t-menu .mi') || {}).dataset?.a }));
-    rec('保存', '「続きから」はない: 一時停止しても遊びかけを保存せず、読み込み直すとタイトル（作戦が先頭）', s1.mode === 'pause' && s1.run == null && !s2.cont && !s2.game && s2.run == null && s2.first === 'pve', JSON.stringify({ s1, s2 }));
+    rec('保存', '「続きから」はない: 一時停止しても遊びかけを保存せず、読み込み直すとタイトル（WAR BIT（試作）が先頭）', s1.mode === 'pause' && s1.run == null && !s2.cont && !s2.game && s2.run == null && s2.first === 'war', JSON.stringify({ s1, s2 }));
     await page.evaluate(() => window.__app.startTrain({ start: 'range' }));
     await waitGame();
     await page.evaluate(() => window.__app.pauseGame());
     await page.waitForFunction(() => window.__app.screens.cur === 'pause', null, { timeout: 30000 }).catch(() => {});
     const q = await center('.screen.pause [data-a="quit"]');
     await tapAt(q, 52);
+    // 遅い環境では、1回目の押しを受け取るまで待ってから2回目を押す（受け取る前に2回目を送ると、2回目が「1回目」になる）
+    await page.waitForFunction(() => { const b = document.querySelector('.screen.pause [data-a="quit"]'); return b && b.classList.contains('armed'); }, null, { timeout: 15000 }).catch(() => {});
     const after1 = await page.evaluate(() => window.__app.screens.cur);
     await tapAt(q, 53);
+    await page.waitForFunction(() => window.__app.screens.cur === 'title', null, { timeout: 15000 }).catch(() => {});
     const after2 = await page.evaluate(() => window.__app.screens.cur);
     rec('操作', 'やり直せない操作（タイトルへ戻る）は指だと2回押す', after1 === 'pause' && after2 === 'title', `${after1} → ${after2}`);
   }

@@ -5,14 +5,17 @@ import { eyeOf, hurt, killActor, pvpDamage, damageBlock, breakGlass, downActor, 
 import { M, MATS } from './data/materials.js';
 import { blastBars } from './barricade.js';
 import { blastDeps } from './deploy.js';
+import { GEAR } from './data/equipment.js';
 
 const _rc = { out: [], seenProp: new Set(), seenDoor: new Set() };
 
 export function throwNade(S, a, type, power, ev) {
   const eye = eyeOf(S, a);
-  const cp = Math.cos(a.pitch + 0.12), v = 4 + 9 * Math.max(0.15, Math.min(1, power));
+  // 大規模戦は遠くまで投げる（M67 は約35m。research/WARBIT.md の 6）
+  const pw = Math.max(0.15, Math.min(1, power)), cp = Math.cos(a.pitch + 0.12), v = S.war ? 6 + 12 * pw : 4 + 9 * pw;
   const dx = Math.sin(a.yaw) * cp, dy = Math.sin(a.pitch + 0.12), dz = Math.cos(a.yaw) * cp;
-  const n = { id: S.nextItem++, type, x: eye[0] + dx * 0.3, y: eye[1] - 0.1, z: eye[2] + dz * 0.3, vx: dx * v + a.vx * 0.5, vy: dy * v + 1.2, vz: dz * v + a.vz * 0.5, t: 0, fuse: type === 'cs' ? 1.6 : 1.5, by: a.id, team: a.team, rest: false };
+  const G = GEAR[type] || {};
+  const n = { id: S.nextItem++, type, x: eye[0] + dx * 0.3, y: eye[1] - 0.1, z: eye[2] + dz * 0.3, vx: dx * v + a.vx * 0.5, vy: dy * v + 1.2, vz: dz * v + a.vz * 0.5, t: 0, fuse: G.fuse ?? (type === 'cs' ? 1.6 : 1.5), impact: !!G.impact, by: a.id, team: a.team, rest: false };
   S.nades.push(n);
   a.throwT = 1;
   ev.push({ e: 'throw', id: a.id, type, n: n.id });
@@ -102,7 +105,11 @@ function detonate(S, w, n, ev) {
     // 煙: 床から立ちのぼって半径 3.2m の玉になる（目の高さを覆うよう、中心は床から 1.1m）
     S.clouds.push({ x: n.x, y: n.y + 1.1, z: n.z, r: 0.4, max: 3.2, t: 16, type: 'smoke', L: levelOfY(n.y) });
   } else if (n.type === 'frag') {
-    S.blasts.push({ x: n.x, y: n.y + 0.2, z: n.z, r: 5, dmg: 150, kind: 'frag', by: n.by, t: 0 });
+    // 大規模戦の M67: 5m でほぼ致命、15m まで（research/WARBIT.md の 6）。今までのモードの罠は 5m
+    if (S.war) S.blasts.push({ x: n.x, y: n.y + 0.2, z: n.z, r: 15, dmg: 250, fall: 2.2, kind: 'frag', by: n.by, t: 0 });
+    else S.blasts.push({ x: n.x, y: n.y + 0.2, z: n.z, r: 5, dmg: 150, kind: 'frag', by: n.by, t: 0 });
+  } else if (n.type === 'impact') {
+    S.blasts.push({ x: n.x, y: n.y + 0.2, z: n.z, r: 8, dmg: 170, fall: 1.9, kind: 'frag', by: n.by, t: 0 });
   }
 }
 
@@ -162,7 +169,7 @@ export function stepBlasts(S, w, dt, ev) {
       const d = Math.hypot(a.x - b.x, a.y + 0.9 - b.y, a.z - b.z);
       if (d > b.r) continue;
       if (!los(w, b.x, b.y, b.z, a.x, a.y + 0.9, a.z, S.doors) && !los(w, b.x, b.y, b.z, a.x, a.y + 1.6, a.z, S.doors)) continue;
-      const k = Math.pow(1 - d / b.r, 1.3);
+      const k = Math.pow(1 - d / b.r, b.fall || 1.3);
       const dmg = b.dmg * k;
       a.stun = Math.max(a.stun, 1.5 * k + 0.5); a.deaf = Math.max(a.deaf, 4);
       if (S.pvp) pvpDamage(S, a, dmg, by, 'chest', a.x - b.x, a.z - b.z, ev, 'blast');
@@ -182,7 +189,7 @@ export function stepBlasts(S, w, dt, ev) {
     // 置ける盾・有刺鉄線も吹き飛ぶ
     blastDeps(S, w, b.x, b.y, b.z, b.kind === 'c2' ? 2.4 : b.kind === 'frame' ? 2.0 : 1.7, ev, b.by ?? -1);
     // 壁（石膏・木）を壊す
-    if (b.kind === 'c2' || b.kind === 'frame' || b.kind === 'frag') {
+    if (!w.war && (b.kind === 'c2' || b.kind === 'frame' || b.kind === 'frag')) {
       const R = b.kind === 'frame' ? 1.4 : b.kind === 'c2' ? 0.9 : 0.6;
       const L = levelOfY(b.y - 1);
       for (let j = Math.floor((b.z - R) / CS); j <= Math.floor((b.z + R) / CS); j++) for (let ii = Math.floor((b.x - R) / CS); ii <= Math.floor((b.x + R) / CS); ii++) {
