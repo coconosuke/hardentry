@@ -135,8 +135,8 @@ test('war engine: 破片手榴弾（4秒・5mでほぼ致命・15mまで）と�
   ok(boom >= 60 * 3.9 && boom <= 60 * 4.1 + 2, `約4秒で爆発 ${(boom / 60).toFixed(2)}秒`);
   const hp = foes.map(b => b.alive ? Math.round(b.hp) : (b.down ? 'down' : 'dead'));
   ok(!foes[0].alive || foes[0].down || foes[0].hp <= 0, `3m は倒れる ${hp[0]}`);
-  ok(foes[1].alive && foes[1].hp < 100 && foes[1].hp > 50, `11m は少し傷つく ${hp[1]}`);
-  ok(foes[2].hp === 100, '40m は無傷');
+  ok(foes[1].alive && foes[1].hp < foes[1].maxHp && foes[1].hp > foes[1].maxHp / 2, `11m は少し傷つく ${hp[1]}/${foes[1].maxHp}`);
+  ok(foes[2].hp === foes[2].maxHp, '40m は無傷');
   // 衝撃手榴弾: 地面に向けて投げる → 当たったら爆発（1秒以内）
   const G2 = game(), b = G2.S.actors[0];
   for (let i = 0; i < 30; i++) step(G2, inp(b));

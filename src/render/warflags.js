@@ -1,10 +1,12 @@
 // 大規模戦の拠点の旗: 竿と、持ち主の色の布（奪い合いの進み具合で上下する。Battlefield の旗と同じ見せ方）。地面に範囲の輪
+// 色は見る人から見て 味方 青・敵 赤・中立 白（BattleBit の Ally / Enemy / Neutral Objective。research/WARBIT.md の 10）
 import { MeshBuilder, hex } from './build.js';
 import { LAYER } from './textures.js';
 import { makeWorldMesh, drawMesh } from './renderer.js';
 
 const POLE_H = 9;
 export const FLAG_COL = { [-1]: [0.85, 0.85, 0.82], 0: [0.18, 0.42, 0.95], 1: [0.92, 0.22, 0.16] };
+const rel = (o, my) => o < 0 ? -1 : o === my ? 0 : 1;
 
 export class WarFlags {
   constructor(r) {
@@ -39,7 +41,7 @@ export class WarFlags {
     this._off = [r.hook('opaque', (rr, f) => this.draw(f))];
   }
   dispose() { for (const f of this._off) f(); this._off = []; }
-  set(flags, ww) { this.flags = flags; this.ww = ww; }
+  set(flags, ww, myTeam = 0) { this.flags = flags; this.ww = ww; this.my = myTeam; }
   draw(f) {
     if (!this.flags.length) return;
     const r = this.r, gl = this.gl, P = r.P.world, M = this.M;
@@ -55,7 +57,8 @@ export class WarFlags {
       gl.uniform3f(P.u.uTint, 1, 1, 1);
       drawMesh(gl, this.pole);
       // 布: 高さは進み具合（持ち主の側に寄るほど上）。色は持ち主、中立なら進んでいる側の色を薄く
-      const pr = fl.prog || 0, own = fl.owner;
+      // 見る人のチームから見た向き（味方の側へ進む = +）
+      const pr = (fl.prog || 0) * (this.my === 1 ? -1 : 1), own = rel(fl.owner, this.my);
       const k = own >= 0 ? Math.abs(pr) : Math.abs(pr);
       const col = own >= 0 ? FLAG_COL[own] : pr > 0.02 ? mix(FLAG_COL[-1], FLAG_COL[0], 0.5) : pr < -0.02 ? mix(FLAG_COL[-1], FLAG_COL[1], 0.5) : FLAG_COL[-1];
       const yy = y + 1.6 + (POLE_H - 1.7) * (own >= 0 ? k : Math.max(0.15, k));

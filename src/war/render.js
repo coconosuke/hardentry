@@ -69,7 +69,12 @@ export function prepGround(ww) {
     for (let j = Math.max(0, Math.floor((z0 - m) / hs)); j <= Math.min(HD - 1, Math.ceil((z1 + m) / hs)); j++)
       for (let i = Math.max(0, Math.floor((x0 - m) / hs)); i <= Math.min(HW - 1, Math.ceil((x1 + m) / hs)); i++) near[j * HW + i] = 1;
   }
-  const cx = ww.sx / 2, cz = ww.sz / 2, edge0 = ww.sx / 2 - 110;
+  // 踏み固めた地面（マップが決めた四角。射撃場の射台のまわりなど）
+  for (const [x0, z0, x1, z1] of ww.pads || [])
+    for (let j = Math.max(0, Math.floor(z0 / hs)); j <= Math.min(HD - 1, Math.ceil(z1 / hs)); j++)
+      for (let i = Math.max(0, Math.floor(x0 / hs)); i <= Math.min(HW - 1, Math.ceil(x1 / hs)); i++) near[j * HW + i] = 1;
+  // 山の色が始まる所（中心からの距離。正方形でないマップは x と z で別に）
+  const cx = ww.sx / 2, cz = ww.sz / 2, [mx, mz] = ww.mountIn || [ww.sx / 2 - 110, ww.sz / 2 - 110];
   const r = mulberry(91);
   for (let j = 0; j < HD; j++) for (let i = 0; i < HW; i++) {
     const q = j * HW + i, x = i * hs, z = j * hs;
@@ -83,10 +88,10 @@ export function prepGround(ww) {
     c = mixc(c, C.dirt, sstep(0.1, 0.22, slope));
     c = mixc(c, C.rock, sstep(0.26, 0.42, slope));
     // 遊べる範囲の外の山
-    const e = Math.max(Math.abs(x - cx), Math.abs(z - cz));
-    c = mixc(c, C.mount, sstep(edge0, edge0 + 60, e) * 0.7);
+    const e = Math.max(Math.abs(x - cx) - mx, Math.abs(z - cz) - mz);
+    c = mixc(c, C.mount, sstep(0, 60, e) * 0.7);
     // 川床（山の中までは続けない）
-    if (ww.riverX) { const dr = Math.abs(x - ww.riverX(z)); c = mixc(c, C.sand, (1 - sstep(8, 15, dr)) * (1 - sstep(edge0 - 40, edge0 + 10, e))); }
+    if (ww.riverX) { const dr = Math.abs(x - ww.riverX(z)); c = mixc(c, C.sand, (1 - sstep(8, 15, dr)) * (1 - sstep(-40, 10, e))); }
     // 建物のまわり
     if (near[q]) c = mixc(c, C.pad, 0.65);
     // 道（帯は近くだけ描くので、遠くでも道に見えるよう地面の色も変える）

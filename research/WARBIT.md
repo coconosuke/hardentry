@@ -104,3 +104,49 @@
 - 発煙弾: 投げてから数秒で煙が出る。中では 2m ほどしか見えず、外からは向こうが見えない（縁は薄い）。弾は止めない。熱線の照準器では人だけ白く見える。分隊長 3 個、ほかは 2 個。投げ物はほかに 照明弾・閃光弾・破片手榴弾・衝撃手榴弾。
   出典: battlebit.wiki.gg/wiki/Smoke_Grenade
 → M3: 兵科ごとに 主の銃・道具2つ・投げ物（破片 M67・衝撃・発煙 M18・閃光 M84）を持つ。最初に入れる道具: 医療キット（衛生）・弾薬箱（突撃 小・援護 大）・RPG（工兵。歩兵と建物に）・双眼鏡で敵に印（偵察・分隊長）・C4（全員）。地雷・ドローン・フック・ハンマー・盾は後で。
+
+## 10. メニューと表記・画面の雰囲気（2026-11-13 03:20 調べ）
+- タイトルの入り方: 「Quick match」（ランダムなサーバー）・「Casual quickmatch」・「Hardcore quickmatch」・「Server browser」・Steam の友だちに参加。ほかに「Shooting range」（銃と基本の操作の練習）。クイックマッチは人数で選ぶ（「127 vs. 127 players」「64 vs. 64 players」「32 vs. 32 players」）。標準のモードは Conquest・Infantry Conquest・Domination・Frontline。
+  出典: steamah.com/battlebit-remastered-basic-guide-for-beginners/、battlebit.wiki.gg/wiki/How_to_play_guide_for_BattleBit
+- 出撃の画面（A〜G）: A「Squad list」（分隊を見る・入る・作る。8人、クランは16人）、B「Loadout」（銃・道具・部品）、C「Customize」（見た目）、D「Class list」（左から Squad leader・Assault・Medic・Engineer・Support・Sniper）、E「Deploy」（出撃）、F マップの帯（サーバー名・モード・マップの形）、G「Map」（動かす・拡大）。分隊に入らないと Assault だけ、入るとすべての兵科。拠点か仲間を選んで Deploy。
+  出典: steamah.com/battlebit-remastered-basic-guide-for-beginners/
+- 兵科は地図の下に6つのアイコンで並ぶ。Loadout は左下。兵科を選ばなければ Assault で出る。装備は別の画面で開く。
+  出典: wepc.com（How to change classes in BattleBit Remastered）、primagames.com（How to change loadouts in BattleBit Remastered）
+- 画面の作り: 「ピクセルアートのようなブロックの見た目」。メニューはホバーで横に広がる。HUD は隅に寄せ、アイコンとキーで画面をすっきりさせる。弾は数字ではなく弾倉の絵。いわゆるミニマップはない（M で全体の地図）。出撃の画面の印は色分け（仲間・自分の分隊・敵）。命中は照準の近くにアイコンと点数。
+  出典: besthub.dev（BattleBit Remastered: an in-depth analysis of its large-scale multiplayer FPS design）、ggrecon.com/guides/battlebit-remastered-minimap
+- 色: HUD の色はすべて設定で変えられる。命中の印は 頭・防具・体・出現直後の守り で色が違う。設定の項目は「Friendly」「Squad Friendly」「Squad Captain」「Enemy」「Ally Objective」「Enemy Objective」「Neutral Objective」「Headshot / Armor / Kill Hit Marker」。拠点の色は見る人から見た味方・敵・中立。
+  出典: gamenguides.com（BattleBit Remastered beginner's quick guide）、steamah.com（BattleBit Remastered Battlefield 1 UI color scheme）
+- 陣営: アメリカ軍とロシア軍。見た目は「Roblox のよう」と言われるローポリ。
+  出典: en.wikipedia.org/wiki/BattleBit_Remastered
+- Battlefield 4 の出撃の画面: 地図の上で拠点か仲間を1回押して出撃のボタン（2回押しで即出撃）。分隊の欄に仲間の生死と兵科。チケットと旗の持ち主も出る。
+  出典: lparchive.org/Battlefield-4/Update 01
+→ WAR BIT: 表記は英語の大文字（BattleBit と同じ）に、小さく日本語を添える。タイトルは独自のブロック文字の「WAR BIT」。入り口は「PLAY（対戦）」「SHOOTING RANGE（射撃場）」「SETTINGS（設定）」。PLAY はモードごとに人数（「16 vs 16」など）を押すとすぐ始まる（クイックマッチ。足りない人数はボット）。出撃の画面は 地図（全画面）・上の帯（マップ名・モード・人数）・左に分隊の欄・下に兵科6つ・左下に LOADOUT・右下に DEPLOY。拠点と印の色は見る人から見て 味方 青・分隊 緑・敵 赤・中立 白。いまの M2 の旗は陣営で色が決まっていたので直す。陣営は実在の国にせず、青・赤の2軍のまま。
+
+## 11. モード（2026-11-13 03:25 調べ）
+- BattleBit のモード: Conquest（全部の乗り物・大きいマップ・拠点の奪い合い）、Infantry Conquest（輸送車だけ・大きいマップ）、Rush（区画ごとに攻めと守り）、Domination（乗り物なし・小さいマップ・拠点の奪い合い）、Frontline（区画の綱引き）、Team Deathmatch（一覧にあるが説明なし）、ほか遊びのモード。大型アップデート 3.0 では Conquest と Domination 以外を外す。
+  出典: battlebit.wiki.gg/wiki/Game_Modes
+- 大型アップデートの開発日誌: 公式サーバーは Conquest と Domination だけ。Rush・Invasion・Frontline は調整のため一時的に外す。Conquest と Domination の 64v64 をやめ、公式は 127v127、32v32 はコミュニティのサーバー向け。
+  出典: joinbattlebit.com/operation-overhaul-dev-blog-3/
+- Domination（BattleBit）: 16v16 か 32v32 が向く。乗り物なし・縮めたマップ。拠点を持って守ると点が入り、先に決まった点に届くか、時間切れで多い方が勝ち。
+  出典: thegamer.com（Every game mode in BattleBit Remastered, ranked）
+- Domination（Battlefield）: 拠点はふつう3つで近い。Conquest よりずっと速く奪える。半分より多く持つと相手のチケットが減る。奪った拠点には出現できない（ランダムか分隊の仲間の近く）。乗り物なし。BF4 は20人。
+  出典: battlefield.fandom.com/wiki/Domination、gamepressure.com（Battlefield 4: Domination）、mp1st.com（All Battlefield 4 game modes detailed）
+- Team Deathmatch（Battlefield）: 倒した数が決まった数に先に届いたチームの勝ち。既定は 100（BF4）、サーバーで 50〜500 以上。BF4 は20人、BF3 の Close Quarters は 8対8。囲まれた場所で、外は範囲外。出現は両チーム反対側、敵が近いと反対側へ移る。乗り物なし。
+  出典: battlefield.fandom.com/wiki/Team_Deathmatch、gamepressure.com（Battlefield 4: Team DM and Squad DM）
+- Conquest と Conquest Large（Battlefield）: 規則は同じで、Large は拠点・乗り物・範囲が多い。BF4 のチケットは 300 と 800。
+  出典: battlefield.fandom.com/wiki/Conquest、gamepressure.com（Battlefield 4: Conquest and Conquest Large）
+→ WAR BIT のモード（BattleBit に合わせる。足りない人数はボット）:
+  - CONQUEST: 16 vs 16（小。拠点が少なく狭い・300）、32 vs 32（中・500）、64 vs 64（大。拠点がいちばん多く広い・800）。乗り物が入ったら INFANTRY CONQUEST を足す。
+  - DOMINATION: 乗り物なし。町のまわりの狭い範囲（約 300m 四方）に拠点3つ。16 vs 16 と 32 vs 32。奪うのは Conquest の倍の速さ。持っている拠点の数だけ点が入り、先に 200 点か、15 分で多い方の勝ち。拠点には出現できず、自陣の端から出る。
+  - TEAM DEATHMATCH: 乗り物なし。町の中の狭い範囲（約 220m 四方）。8 vs 8 と 16 vs 16。倒した数が先に 50（8 vs 8）・100（16 vs 16）か、10 分で多い方の勝ち。自陣の端から出て、敵が近い出現場所は避ける。
+  - Rush・Frontline は BattleBit でも外されているので入れない。
+
+## 12. 射撃場（2026-11-13 09:40 調べ）
+- BattleBit の「Shooting range」: タイトルから入る、銃と基本の操作の練習（チュートリアル）。すべての銃を、いろいろな距離で試せる。
+  出典: battlebit.wiki.gg/wiki/How_to_play_guide_for_BattleBit、wepc.com（BattleBit Remastered how to improve aim）
+- 遠い撃ち合い: 100m からは距離計（Rangefinder）が役に立つ。照準器のゼロイン（例: 1000m の的に合わせて弾の落ちを打ち消す）。距離の線は照準器ごとに違う。
+  出典: steamah.com（BattleBit Remastered extreme range shooting guide）
+- 大型アップデートの方針: 公式は Conquest と Domination だけ（11 の続き）。リリースの時期は調べた範囲では確かめられなかった（ベータテストは 2025 年 11 月）。
+  出典: joinbattlebit.com/operation-overhaul-dev-blog-3/、gamingonlinux.com（BattleBit Remastered is surprisingly alive, Operation Overhaul test arrives in November）
+→ WAR BIT の射撃場: 独自の谷の射場に 10m〜1000m の人形13体（敵の服・防具つき。部位とダメージは対戦と同じ）、距離の札、当てた所の部位・ダメージ・距離を上の帯に出す（距離計の代わり）。弾は減らず、兵科と銃は出撃の画面でいつでも変えられる。横に乗り越え・屋内・高所の練習場。ゼロインと距離計の部品は銃の部品を足すとき（M3 以降）。
+

@@ -1,5 +1,6 @@
-// 画面: 読み込み・タイトル・作戦の準備（マップ・作戦・難易度・人数・突入口）・ブリーフィング・装備・対戦の準備・
-// オンライン（ルームを作る/参加・ロビー）・一時停止・地図（タブレット）・結果・設定・資料室（手順書と資料）
+// 画面: 読み込み・タイトル（WAR BIT）・PLAY（モードと人数）・一時停止・地図（タブレット）・結果・設定。
+// メニューの形と表記は BattleBit に合わせる（英語の大文字に日本語を小さく添える。research/WARBIT.md の 10）。
+// 旧 HARD ENTRY の画面（作戦・対戦・訓練・ロビー・資料室）はメニューから外した（11-13 03:10・03:15 の要望）。中身は後で消す
 import { onTap } from './input.js';
 import { Scroller, slider, chips, confirmTap, textModal, copyText, esc } from './widgets.js';
 import { MAPS, MAP_LIST, PVE_MAPS, PVP_MAPS } from '../engine/maps/index.js';
@@ -13,9 +14,30 @@ import { LoadoutEditor } from './loadout.js';
 import { Book } from './book.js';
 import { QUALITY, GFX_PRESET, gfxOf } from '../render/renderer.js';
 import { WAR_MAPS } from '../war/maps/index.js';
-import { RIVERBEND_AREAS } from '../war/maps/riverbend.js';
 import { warPlanImage, drawWarMarks } from './warplan.js';
+import { WAR_MODES, WAR_MODE_LIST, sizeLabel } from '../engine/modes/war.js';
 
+// WAR BIT のロゴ: 独自のブロック文字（5×7 の升目）。WAR は白、BIT は琥珀色。1升下・右に影
+const GLYPH = {
+  W: ['X...X', 'X...X', 'X...X', 'X.X.X', 'X.X.X', 'XX.XX', 'X...X'],
+  A: ['.XXX.', 'X...X', 'X...X', 'XXXXX', 'X...X', 'X...X', 'X...X'],
+  R: ['XXXX.', 'X...X', 'X...X', 'XXXX.', 'X.X..', 'X..X.', 'X...X'],
+  B: ['XXXX.', 'X...X', 'X...X', 'XXXX.', 'X...X', 'X...X', 'XXXX.'],
+  I: ['XXX', '.X.', '.X.', '.X.', '.X.', '.X.', 'XXX'],
+  T: ['XXXXX', '..X..', '..X..', '..X..', '..X..', '..X..', '..X..'],
+};
+export function warLogo() {
+  const parts = [], shadow = [];
+  let x = 0;
+  for (const ch of 'WAR BIT') {
+    if (ch === ' ') { x += 3; continue; }
+    const g = GLYPH[ch], col = x > 20 ? '#f2b33d' : '#f4f1ea';
+    g.forEach((row, y) => { for (let i = 0; i < row.length; i++) if (row[i] === 'X') { parts.push(`<rect x="${x + i}" y="${y}" width="1.02" height="1.02" fill="${col}"/>`); shadow.push(`<rect x="${x + i + 0.45}" y="${y + 0.45}" width="1.02" height="1.02"/>`); } });
+    x += g[0].length + 1;
+  }
+  return `<svg class="wlogo" viewBox="-0.2 -0.2 ${x + 0.6} 7.8" role="img" aria-label="WAR BIT"><g fill="rgba(0,0,0,.55)">${shadow.join('')}</g>${parts.join('')}</svg>`;
+}
+const PERSON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7.5" r="4" fill="currentColor"/><path d="M4 21c0-4.5 3.6-7.5 8-7.5s8 3 8 7.5z" fill="currentColor"/></svg>';
 export function fmtTime(t) { t = Math.max(0, Math.floor(t)); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); }
 const BACK = `<button class="back" data-back aria-label="戻る"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>戻る</span></button>`;
 const TIME_JA = { day: '昼', dusk: '夕方', night: '夜', dawn: '明け方' };
@@ -62,84 +84,54 @@ export class Screens {
 
   // ---- 読み込み・エラー
   loading(msg, p) {
-    if (!this.el.loading) this._mk('loading', `<div class="ld"><div class="ld-name">${TITLE}</div><div class="ld-bar"><i></i></div><div class="ld-msg"></div></div>`);
+    if (!this.el.loading) this._mk('loading', `<div class="ld"><div class="ld-name" aria-label="${TITLE}">${warLogo()}</div><div class="ld-bar"><i></i></div><div class="ld-msg"></div></div>`);
     const el = this.el.loading;
     el.querySelector('.ld-msg').textContent = msg || '';
     el.querySelector('.ld-bar i').style.width = Math.round((p || 0) * 100) + '%';
     if (this.cur !== 'loading') this.show('loading');
   }
   error(msg, detail) {
-    this._mk('loading', `<div class="ld"><div class="ld-name">${TITLE}</div><p class="ld-err">${esc(msg)}${detail ? `<small>${esc(detail)}</small>` : ''}</p></div>`);
+    this._mk('loading', `<div class="ld"><div class="ld-name" aria-label="${TITLE}">${warLogo()}</div><p class="ld-err">${esc(msg)}${detail ? `<small>${esc(detail)}</small>` : ''}</p></div>`);
     this.show('loading');
   }
 
-  // ---- タイトル
+  // ---- タイトル（BattleBit のメインメニューに合わせる: 左に大きな項目、右上に名前、背景は分隊）
   _title() {
     const a = this.app;
     const el = this._mk('title', `
-      <div class="t-logo"><div class="t-badge">SWAT · CQB</div><h1>HARD<b>ENTRY</b></h1><p>突入。制圧。確保。</p></div>
-      <nav class="t-menu" aria-label="メニュー">
-        <button class="mi main war" data-a="war"><span class="mi-l">WAR BIT（試作）</span><span class="mi-d">大規模戦 · 作り替え中</span></button>
-        <button class="mi" data-a="pve"><span class="mi-l">作戦</span><span class="mi-d">PvE · ソロ／協力</span></button>
-        <button class="mi" data-a="pvp"><span class="mi-l">対戦</span><span class="mi-d">PvP · 1v1〜4v4</span></button>
-        <button class="mi" data-a="train"><span class="mi-l">訓練</span><span class="mi-d">射撃場・キルハウス</span></button>
-        <button class="mi" data-a="settings"><span class="mi-l">設定</span></button>
-        <button class="mi" data-a="book"><span class="mi-l">資料室</span><span class="mi-d">手順・交戦規定・装備</span></button>
+      <div class="wt-logo">${warLogo()}<p>大人数の撃ち合い · ${sizeLabel(16)} 〜 ${sizeLabel(64)}</p></div>
+      <div class="wt-me" data-a="me" role="button"><span>${PERSON}</span><b>${esc(a.profile.name)}</b></div>
+      <nav class="wt-menu" aria-label="メニュー">
+        <button class="wm main" data-a="play"><b>PLAY</b><span>対戦 · 足りない人数はボット</span></button>
+        <button class="wm" data-a="range"><b>SHOOTING RANGE</b><span>射撃場 · 銃を試す</span></button>
+        <button class="wm" data-a="settings"><b>SETTINGS</b><span>設定</span></button>
       </nav>
       <div class="t-foot"><span>ヘッドホン推奨</span><span class="ver">互換${COMPAT} · v${VERSION}</span></div>`);
     this._acts(el, {
-      war: () => this.open('warSetup'),
-      pve: () => this.open('pveMenu'),
-      pvp: () => this.open('pvpMenu'),
-      train: () => this.open('train'),
+      play: () => this.open('play'),
+      range: () => a.startWar({ wmode: 'range' }),
       settings: () => this.open('settings', 'ctrl'),
-      book: () => this.open('book', 'play'),
+      me: () => this.open('settings', 'etc'),
     });
     this.show('title');
     a.scene('title');
   }
-  // ---- 大規模戦（試作）: 人数（範囲）を選んで出撃
-  _warSetup() {
-    const a = this.app, M = WAR_MAPS.riverbend;
-    const sizes = Object.entries(RIVERBEND_AREAS);
-    const el = this._mk('warSetup', `<div class="sc-wrap"><header class="sc-head">${BACK}<h2>WAR BIT（試作）</h2><span class="hint">${esc(M.name)}</span></header>
-      <p class="note war-note">${esc(M.desc)}<br>今は「広い戦場を歩いて撃てる」ところまで。拠点の奪い合い・分隊・兵科・ボットは順に入れていきます。</p>
-      <div class="big-choice three">${sizes.map(([k, s]) => `<button class="bc" data-a="go" data-k="${k}"><b>${esc(s.name)}</b><span>範囲 ${s.rect[2] - s.rect[0]}m 四方・拠点 ${s.flags.length}</span></button>`).join('')}</div></div>`, 'dim');
-    el.querySelectorAll('[data-a="go"]').forEach(b => onTap(b, () => a.startWar({ size: b.dataset.k })));
+  // ---- PLAY: モードを選び、人数を押すとすぐ始まる（BattleBit のクイックマッチ。足りない人数はボット）
+  _play() {
+    const a = this.app, M = WAR_MAPS.riverbend, last = a.lastWar || {};
+    const card = (id) => {
+      const MD = WAR_MODES[id];
+      const sizes = Object.entries(MD.sizes);
+      return `<div class="wp-card"><div class="wp-h"><b>${MD.en}</b><span>${esc(MD.name)}</span></div><p>${esc(MD.desc)}</p>
+        <div class="wp-sizes">${sizes.map(([k, z]) => `<button class="wp-size${last.wmode === id && last.size === k ? ' last' : ''}" data-a="go" data-m="${id}" data-k="${k}"><b>${sizeLabel(z.per)}</b><small>${id === 'conquest' ? `チケット ${z.tickets}` : id === 'tdm' ? `${z.kills} キル` : `${MD.score} 点`}</small></button>`).join('')}</div></div>`;
+    };
+    const el = this._mk('play', `<div class="sc-wrap"><header class="sc-head">${BACK}<h2>PLAY</h2><span class="hint">MAP · ${esc(M.en)}（${esc(M.name)}）· 足りない人数はボットが入る</span></header>
+      <div class="wp-modes">${WAR_MODE_LIST.map(card).join('')}</div></div>`, 'dim');
+    el.querySelectorAll('[data-a="go"]').forEach(b => onTap(b, () => { a.audio.ui('go'); a.startWar({ wmode: b.dataset.m, size: b.dataset.k }); }));
     this._acts(el, {});
-    this.show('warSetup'); a.scene('menu');
+    this.show('play'); a.scene('menu');
   }
-  _pveMenu() {
-    const a = this.app;
-    const el = this._mk('pveMenu', `<div class="sc-wrap"><header class="sc-head">${BACK}<h2>作戦</h2></header>
-      <div class="big-choice">
-        <button class="bc" data-a="solo"><b>ソロ</b><span>AI隊員（最大3名）を指揮して突入。</span></button>
-        <button class="bc" data-a="multi"><b>協力（オンライン）</b><span>2〜4名で出動。空き枠はAI隊員。</span></button>
-      </div></div>`, 'dim');
-    this._acts(el, { solo: () => this.open('mission'), multi: () => this.open('multi', 'pve') });
-    this.show('pveMenu'); a.scene('menu');
-  }
-  _pvpMenu() {
-    const a = this.app;
-    const el = this._mk('pvpMenu', `<div class="sc-wrap"><header class="sc-head">${BACK}<h2>対戦</h2><span class="hint">SWAT 対 立てこもり犯</span></header>
-      <div class="big-choice">
-        <button class="bc" data-a="solo"><b>ボット戦</b><span>自分以外はボット。人数・モード・強さを設定。</span></button>
-        <button class="bc" data-a="multi"><b>オンライン対戦</b><span>1v1〜4v4。空き枠はボット。</span></button>
-      </div></div>`, 'dim');
-    this._acts(el, { solo: () => this.open('pvpSetup', null), multi: () => this.open('multi', 'pvp') });
-    this.show('pvpMenu'); a.scene('menu');
-  }
-  _train() {
-    const a = this.app;
-    const el = this._mk('train', `<div class="sc-wrap"><header class="sc-head">${BACK}<h2>訓練</h2></header>
-      <div class="big-choice three">
-        <button class="bc" data-a="range"><b>射撃場</b><span>反動と照準の確認。弾は無制限。</span></button>
-        <button class="bc" data-a="house"><b>キルハウス</b><span>役者相手に警告・拘束・命令を訓練。</span></button>
-        <button class="bc" data-a="lo"><b>装備</b><span>作戦と共通の装備。</span></button>
-      </div></div>`, 'dim');
-    this._acts(el, { range: () => a.startTrain({ start: 'range' }), house: () => a.startTrain({ start: 'house' }), lo: () => this.open('loadout', { kind: 'pve' }) });
-    this.show('train'); a.scene('menu');
-  }
+  _warSetup() { this._play(); }
 
   // ---- 作戦の準備（ひとり／ホストのロビーでも使う）
   _mission(opt = {}) {
@@ -349,6 +341,7 @@ export class Screens {
   // ---- 一時停止
   _pause() {
     const a = this.app, g = a.game;
+    if (g && g.S.war) return this._warPause();
     const pve = g && !g.S.pvp && g.S.m && g.S.m.kind === 'pve';
     const net = !!(g && g.net);
     const el = this._mk('pause', `<div class="pz"><h2>一時停止${net ? '<small>オンライン中は停止しません</small>' : ''}</h2>
@@ -369,6 +362,27 @@ export class Screens {
     const ab = el.querySelector('[data-a="abort"]');
     if (ab) confirmTap(ab, () => a.confirmMode(), () => a.abortMission(), '<span class="mi-l">もう一度押すと終える</span>');
     confirmTap(el.querySelector('[data-a="quit"]'), () => a.confirmMode(), () => net ? a.leaveRoom() : a.quitToTitle(), '<span class="mi-l">もう一度押すと出る</span>');
+    this.show('pause'); a.scene('pause');
+  }
+  // WAR BIT の一時停止（BattleBit のように英語の項目。射撃場は兵科・装備を変えられる）
+  _warPause() {
+    const a = this.app, g = a.game, m = g.S.m, range = m.mode === 'range';
+    const MD = WAR_MODES[m.mode] || WAR_MODES.conquest;
+    const line = range ? 'SHOOTING RANGE' : `${MD.en} · ${sizeLabel(m.per)} · ${(WAR_MAPS[g.S.map] || {}).en || ''}`;
+    const el = this._mk('pause', `<div class="pz"><h2>PAUSED<small>${esc(line)}</small></h2>
+      <nav class="wt-menu pz-menu">
+        <button class="wm main" data-a="resume"><b>RESUME</b><span>再開</span></button>
+        ${range ? '<button class="wm" data-a="loadout"><b>LOADOUT</b><span>兵科・銃を変える</span></button>' : '<button class="wm" data-a="tablet"><b>MAP</b><span>地図・状況</span></button>'}
+        <button class="wm" data-a="settings"><b>SETTINGS</b><span>設定</span></button>
+        <button class="wm danger" data-a="quit"><b>QUIT</b><span>${range ? '射撃場を出る' : '試合を出る'}</span></button>
+      </nav></div>`, 'dim');
+    this._acts(el, {
+      resume: () => a.resumeGame(),
+      tablet: () => this.open('tablet'),
+      settings: () => this.open('settings', 'ctrl'),
+      loadout: () => { a.resumeGame(); if (a.game && a.game.p.alive) a.game.acts.push({ a: 'warRedeploy' }); },
+    });
+    confirmTap(el.querySelector('[data-a="quit"]'), () => a.confirmMode(), () => a.quitToTitle(), '<b>QUIT</b><span>もう一度押すと出る</span>');
     this.show('pause'); a.scene('pause');
   }
   // ---- 地図（タブレット）
@@ -400,7 +414,7 @@ export class Screens {
   _warTablet() {
     const a = this.app, g = a.game, S = g.S, p = g.p;
     const ob = g._objectives();
-    const el = this._mk('tablet', `<div class="sc-wrap"><header class="sc-head">${BACK}<h2>地図</h2><span class="hint">${esc(WAR_MAPS[S.map].name)}</span></header>
+    const el = this._mk('tablet', `<div class="sc-wrap"><header class="sc-head">${BACK}<h2>MAP</h2><span class="hint">${esc(WAR_MAPS[S.map].en)}（${esc(WAR_MAPS[S.map].name)}）</span></header>
       <div class="split brief"><div class="pane planbox"><canvas class="plan"></canvas></div>
       <div class="pane rows scroll"><h3>状況</h3><div class="tab-obj">${ob.html}</div>
       <p class="note">黄: 自分　青: 味方　赤: 敵　四角: 本陣（取れない出撃地点）　丸: 拠点　赤い点線: 範囲（外に10秒いると死亡）</p></div></div></div>`, 'dim');
@@ -453,8 +467,30 @@ export class Screens {
     });
     this.show('result'); a.scene('pause');
   }
+  // WAR BIT の結果（BattleBit の終わりの画面のように: 勝敗・理由・両チームの数字・両チームの表・もう一度）
+  _warResult(res) {
+    const a = this.app, my = res.myTeam, win = res.win === my, draw = res.win < 0;
+    const MD = WAR_MODES[res.wmode] || WAR_MODES.conquest;
+    const WHY = { tickets: win ? '敵のチケットが尽きた' : '味方のチケットが尽きた', score: res.wmode === 'tdm' ? 'キルの数が目標に届いた' : '点が目標に届いた', time: '時間切れ' };
+    const unit = res.wmode === 'conquest' ? 'TICKETS' : res.wmode === 'tdm' ? 'KILLS' : 'SCORE';
+    const rows = (t) => (res.rows || []).filter(r => r.team === t);
+    const me = (res.rows || []).find(r => r.me) || { k: 0, d: 0, a: 0 };
+    const mvp = (res.rows || [])[0];
+    const table = (t, cls, name) => `<div class="wr-team ${cls}"><div class="wr-th"><b>${name}</b><span>${res.score[t]}</span></div>
+      <table class="board"><thead><tr><th></th><th>K</th><th>D</th><th>A</th></tr></thead><tbody>${rows(t).slice(0, 32).map(r => `<tr class="${r.me ? 'me' : ''}"><th>${r === mvp ? '<em>MVP</em>' : ''}${esc(r.name || '?')}${r.bot ? '' : '<small>YOU</small>'}</th><td>${r.k}</td><td>${r.d}</td><td>${r.a}</td></tr>`).join('')}</tbody></table></div>`;
+    const el = this._mk('result', `<div class="sc-wrap wr">
+      <header class="wr-head"><h2 class="${draw ? '' : win ? 'good' : 'bad'}">${draw ? 'DRAW' : win ? 'VICTORY' : 'DEFEAT'}</h2>
+        <div class="wr-sub"><b>${draw ? '引き分け' : win ? '勝利' : '敗北'} ― ${esc(WHY[res.why] || '')}</b><span>${MD.en} · ${sizeLabel(res.per || 16)} · ${esc((WAR_MAPS[res.map] || {}).en || '')} · ${fmtTime(res.time || 0)}</span></div>
+        <div class="wr-me"><span>YOU</span><b>${me.k}</b><small>K</small><b>${me.d}</b><small>D</small><b>${me.a}</b><small>A</small></div></header>
+      <div class="wr-score"><b class="t0">${res.score[my]}</b><span>${unit}</span><b class="t1">${res.score[1 - my]}</b></div>
+      <div class="wr-teams scroll">${table(my, 'ally', 'ALLY')}${table(1 - my, 'enemy', 'ENEMY')}</div>
+      <div class="sc-foot"><button class="btn primary" data-a="again">PLAY AGAIN<small>同じモードと人数</small></button><button class="btn ghost" data-a="menu">MENU</button></div></div>`, 'dim');
+    this._acts(el, { again: () => a.startWar(a.lastWar), menu: () => a.toTitle() });
+    this.show('result'); a.scene('pause');
+  }
   _resultPvp(res) {
     const a = this.app;
+    if (res.war) return this._warResult(res);
     const mine = res.win === res.myTeam;
     const MODE = res.war ? { name: 'コンクエスト（大規模戦）' } : MODE_INFO[res.mode] || { name: '' };
     const mapName = res.war ? (WAR_MAPS[res.map] || {}).name || '' : MAPS[res.map].name;
@@ -471,7 +507,7 @@ export class Screens {
   _settings(tab = 'ctrl') {
     const a = this.app, S = a.settings;
     const TABS = [['ctrl', '操作'], ['sens', '感度'], ['hud', 'HUD'], ['gfx', '画質'], ['snd', '音'], ['etc', 'その他']];
-    const el = this._mk('settings', `<div class="sc-wrap"><header class="sc-head">${BACK}<h2>設定</h2><div class="tabs">${TABS.map(([k, n]) => `<button class="tab${k === tab ? ' on' : ''}" data-tab="${k}">${n}</button>`).join('')}</div></header><div class="pane rows scroll set-body"></div></div>`, 'dim');
+    const el = this._mk('settings', `<div class="sc-wrap"><header class="sc-head">${BACK}<h2>SETTINGS</h2><div class="tabs">${TABS.map(([k, n]) => `<button class="tab${k === tab ? ' on' : ''}" data-tab="${k}">${n}</button>`).join('')}</div></header><div class="pane rows scroll set-body"></div></div>`, 'dim');
     el.querySelectorAll('[data-tab]').forEach(b => onTap(b, () => { this.app.audio.ui('tap'); this.args = [b.dataset.tab]; this._noKeep = true; this._settings(b.dataset.tab); }));
     const body = el.querySelector('.set-body');
     const save = () => a.applySettings();
@@ -486,20 +522,20 @@ export class Screens {
       row('ADS', '照準ボタン', 'adsMode'); ch('adsMode', [['tap', '切替'], ['hold', '長押し'], ['mixed', '両方']]);
       row('リーン', '', 'leanMode'); ch('leanMode', [['toggle', '切替'], ['hold', '長押し']]);
       row('移動スティック', '', 'stickMode'); ch('stickMode', [['float', '可変'], ['fixed', '固定']]);
-      row('スティックでダッシュ', '上へ押し込む（作戦・対戦とも）', 'stickSprint'); ch('stickSprint', [[true, 'オン'], [false, 'オフ']]);
+      row('スティックでダッシュ', '上へ押し込む', 'stickSprint'); ch('stickSprint', [[true, 'オン'], [false, 'オフ']]);
       row('ダッシュの固定', 'ダッシュの所で指を離すと走り続ける（撃つ・構える・リーン・リロードの間は止まり、終わるとまた走る。スティックかほかのボタンでやめる）', 'stickLock'); ch('stickLock', [[false, 'オフ'], [true, 'オン']]);
       row('射撃ボタン（左）', '', 'leftFire'); ch('leftFire', [[true, '表示'], [false, '非表示']]);
       row('射撃ボタンで視点移動', '押したままドラッグ', 'fireLook'); ch('fireLook', [[true, 'オン'], [false, 'オフ']]);
       row('利き手', 'ボタンの左右を反転', 'handed'); ch('handed', [['right', '右'], ['left', '左']]);
-      row('確認が必要な操作', '撤収・タイトルへ など', 'confirm'); ch('confirm', [['auto', '自動（タッチは2回）'], ['two', '常に2回'], ['one', '常に1回']]);
-      note('キーボード: WASD 移動／マウス 視点（画面をクリック）／左クリック 射撃／右クリック ADS／Q・E リーン／C しゃがみ／Z 伏せ／R リロード（長押しで高速）／F 警告／V 調べる／H 命令／Tab 隊の切替／G 投げ物／1・2 武器／X 射撃モード／T ライト／N 暗視／Y 近接（銃床）／K ドローン（対戦）／Tab スコア表（対戦）／M 地図／Esc 一時停止');
+      row('確認が必要な操作', '試合を出る など', 'confirm'); ch('confirm', [['auto', '自動（タッチは2回）'], ['two', '常に2回'], ['one', '常に1回']]);
+      note('キーボード: WASD 移動／Shift 走る／マウス 視点（画面をクリック）／左クリック 射撃／右クリック ADS／Q・E リーン／C しゃがみ／Z 伏せ／Space 乗り越え／R リロード（長押しで高速）／G 投げ物／1・2 武器／X 射撃モード／T ライト／Y 近接（銃床）／Tab スコア表／M 地図／Esc 一時停止');
     } else if (tab === 'sens') {
       row('視点', '', 'sens'); sl('sens', 0.2, 3, 0.05, (v) => v.toFixed(2));
       row('ADS', '等倍', 'sensAds'); sl('sensAds', 0.2, 1.5, 0.05, pct);
       row('スコープ', '倍率あり（4倍が基準。倍率に合わせて変わる）', 'sensScope'); sl('sensScope', 0.1, 1.2, 0.05, pct);
       row('射撃中', '射撃ボタンで視点移動', 'sensFire'); sl('sensFire', 0.3, 1.5, 0.05, pct);
       row('上下反転', '', 'invertY'); ch('invertY', [[false, 'オフ'], [true, 'オン']]);
-      row('エイムアシスト', '作戦のみ（対戦はルーム設定）', 'aimAssist'); ch('aimAssist', [['off', 'オフ'], ['weak', '弱'], ['strong', '標準']]);
+      row('エイムアシスト', '照準が敵へ少し寄る', 'aimAssist'); ch('aimAssist', [['off', 'オフ'], ['weak', '弱'], ['strong', '標準']]);
       row('ジャイロ', '端末の傾きで照準', 'gyro'); ch('gyro', [['off', 'オフ'], ['ads', 'ADS時'], ['always', '常時']]);
       row('ジャイロ感度', '', 'gyroSens'); sl('gyroSens', 0.2, 3, 0.05, (v) => v.toFixed(2));
       row('ジャイロ 左右', '', 'gyroInvX'); ch('gyroInvX', [[false, '標準'], [true, '反転']]);
@@ -557,7 +593,7 @@ export class Screens {
       row('消音モードでも再生', 'オンでロック画面に再生中と表示', 'playSilent'); ch('playSilent', [[false, 'オフ'], [true, 'オン']]);
       note('ヘッドホン推奨（足音と銃声の方向が分かる）');
     } else {
-      R.push(`<div class="row"><div class="rl"><b>コールサイン</b><small>オンラインと結果に表示</small></div><div class="rc"><span class="nmv">${esc(a.profile.name)}</span><button class="btn small" data-a="rename">変更</button></div></div>`);
+      R.push(`<div class="row"><div class="rl"><b>コールサイン</b><small>分隊の欄と結果に表示</small></div><div class="rc"><span class="nmv">${esc(a.profile.name)}</span><button class="btn small" data-a="rename">変更</button></div></div>`);
       R.push('<div class="row"><div class="rl"><b>引き継ぎコード</b><small>設定・コールサイン・装備・記録を移す</small></div><div class="rc"><button class="btn small" data-a="exp">書き出し</button><button class="btn small" data-a="imp">読み込み</button></div></div>');
       R.push('<div class="row"><div class="rl"><b>記録の消去</b></div><div class="rc"><button class="btn small danger" data-a="clr">消去</button></div></div>');
       note(`版: 互換${COMPAT} · v${VERSION}`);

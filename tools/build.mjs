@@ -18,7 +18,7 @@ const css = fs.readFileSync(r('src/ui/style.css'), 'utf8');
 const verSrc = fs.readFileSync(r('src/engine/data/version.js'), 'utf8');
 const VERSION = /export const VERSION = '([^']+)'/.exec(verSrc)[1];
 const COMPAT = /export const COMPAT = (\d+)/.exec(verSrc)[1];
-const TITLE = 'HARD ENTRY';
+const TITLE = 'WAR BIT';
 
 // 素材（base64でページに埋め込む）: 声（話す人ごとのm4a＋目次）・BGM
 const assets = {};

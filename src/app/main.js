@@ -1,6 +1,5 @@
 // アプリ全体: 起動・画面の切り替え・試合の開始と終了・保存・画面の作り直し（WebGLが落ちたとき）
 import { Stage } from '../ui/stage.js';
-import { WAR_LOADOUT } from '../engine/modes/war.js';
 import { Input, tapHooks } from '../ui/input.js';
 import { Hud } from '../ui/hud.js';
 import { Screens } from '../ui/screens.js';
@@ -201,7 +200,7 @@ class App {
   editHud(onDone) {
     this.screens.hide();
     const prevMode = this.hud.mode;
-    this.hud.setMode({ pve: true, pvp: false, drone: false });
+    this.hud.setMode({ pve: false, pvp: false, drone: false, war: true });
     this.hud.show(true);
     this.hud.edit(this.settings, (s) => saveSettings(s), () => { this.hud.show(this.mode === 'game'); this.hud.setMode(prevMode); onDone(); });
   }
@@ -244,12 +243,16 @@ class App {
     const rules = { botLevel: cfg.botLevel, wins: cfg.wins, time: (cfg.time || 8) * 60, aimAssist: cfg.aimAssist, ff: cfg.ff };
     return this._start({ mode: cfg.mode, map: cfg.map, teams, roster, rules, seed: this._seed() }, '準備中…');
   }
-  // 大規模戦（試作）
+  // WAR BIT: モード（コンクエスト・ドミネーション・TDM・射撃場）と人数を選んで始める。足りない人数はボット。
+  // 兵科と銃は前に選んだもの（プロフィール）。試合の始めは出撃の画面から（射撃場はすぐ立つ）
   startWar(cfg) {
     if (!cfg) return;
     this.lastWar = { ...cfg };
-    const roster = [{ pid: 0, name: this.profile.name, team: 0, lo: WAR_LOADOUT.assault }];
-    return this._start({ mode: 'war', map: 'riverbend', size: cfg.size || 'small', roster, seed: this._seed() }, '戦場へ向かっています…');
+    const W = (this.profile.war && typeof this.profile.war === 'object') ? this.profile.war : {};
+    const cls = W.cls || 'assault';
+    const roster = [{ pid: 0, name: this.profile.name, team: 0, cls, gun: W.guns && W.guns[cls], sec: W.secs && W.secs[cls] }];
+    const range = cfg.wmode === 'range';
+    return this._start({ mode: 'war', map: range ? 'range' : (cfg.map || 'riverbend'), wmode: cfg.wmode || 'conquest', size: cfg.size || 'small', roster, predeploy: !range, seed: this._seed() }, range ? '射撃場へ移動中…' : '戦場へ向かっています…');
   }
   startTrain(o) {
     const roster = [{ pid: 0, name: this.profile.name, lo: this.loadouts.player }];

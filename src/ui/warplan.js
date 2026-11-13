@@ -37,10 +37,11 @@ export function drawWarMarks(ctx, m, myTeam, toXY, scale = 1) {
   if (!m) return;
   const col = (o) => o < 0 ? 'rgba(235,235,235,0.95)' : o === myTeam ? '#4aa8ff' : '#ff4a3a';
   for (let t = 0; t < (m.hq || []).length; t++) {
+    if (m.mode === 'range' && t !== myTeam) continue; // 射撃場の奥の本陣（人形の向きにだけ使う）は描かない
     const [x, y] = toXY(m.hq[t][0], m.hq[t][1]);
     ctx.fillStyle = t === myTeam ? 'rgba(74,168,255,0.9)' : 'rgba(255,74,58,0.9)';
     ctx.fillRect(x - 5 * scale, y - 5 * scale, 10 * scale, 10 * scale);
-    ctx.fillStyle = '#fff'; ctx.font = `bold ${9 * scale}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('本', x, y + 0.5);
+    ctx.fillStyle = '#fff'; ctx.font = `bold ${7 * scale}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('HQ', x, y + 0.5);
   }
   for (const f of m.flags || []) {
     const [x, y] = toXY(f.x, f.z);

@@ -16,6 +16,14 @@ export const AREAS = {
   medium: { name: '中（32対32）', per: 32, rect: [320, 300, 1120, 1100], hq: [[370, 700], [1070, 700]], flags: ['A', 'B', 'C', 'D', 'E'] },
   large: { name: '大（64対64）', per: 64, rect: [100, 100, 1300, 1300], hq: [[160, 700], [1240, 700]], flags: ['G', 'A', 'B', 'C', 'D', 'E', 'F', 'H'] },
 };
+// 狭いモード（research/WARBIT.md の 11）: ドミネーション（工場・橋・町の広場の3拠点。小のコンクエストと同じ本陣）と、チームデスマッチ（町の中）。
+// spawns: 出撃の場所の候補（敵が近い所は避けて選ぶ）
+export const MODE_AREAS = {
+  dom: { name: 'ドミネーション', rect: [480, 540, 940, 860], hq: [[520, 700], [920, 700]], flags: ['B', 'C', 'D'],
+    spawns: [[[520, 700], [585, 745], [610, 672]], [[920, 700], [870, 780], [880, 640]]] },
+  tdm: { name: '町', rect: [690, 610, 890, 830], hq: [[712, 725], [875, 725]], flags: [],
+    spawns: [[[712, 645], [712, 700], [712, 755], [712, 810]], [[875, 645], [875, 700], [875, 755], [875, 810]]] },
+};
 export const FLAGS = {
   A: { name: '農場', x: 470, z: 860, r: 22 },
   B: { name: '工場', x: 560, z: 600, r: 26 },
@@ -65,7 +73,7 @@ const sstep = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a)
 export const RIVERBEND_AREAS = AREAS;
 export function buildRiverbend(seed = 7) {
   const ww = makeWarWorld({ sx: SIZE, sz: SIZE, hs: 2 });
-  ww.mapId = 'riverbend'; ww.areas = AREAS; ww.flagDefs = FLAGS; ww.roads = ROADS; ww.riverX = riverX; ww.roadDist = roadDist;
+  ww.mapId = 'riverbend'; ww.areas = { ...AREAS, ...MODE_AREAS }; ww.flagDefs = FLAGS; ww.roads = ROADS; ww.riverX = riverX; ww.roadDist = roadDist;
   // 平らにする高さ（自然の高さの平均）
   for (const p of PADS) { let s = 0, n = 0; for (let a = 0; a < 16; a++) { const r = p.r * 0.6; s += naturalH(p.x + Math.cos(a) * r, p.z + Math.sin(a) * r); n++; } p.h = s / n; }
   const W = ww.HW;

@@ -16,10 +16,17 @@ const RANGE = { smg: [0, 45, 110], pistol: [0, 30, 70], shotgun: [0, 18, 40], ri
 
 function rangeOf(a) { const W = curW(a); return RANGE[W ? W.cat : 'rifle'] || RANGE.rifle; }
 const flagById = (S, id) => S.m.flags.find(f => f.id === id);
+// 目標（拠点、TDM は場所）。TDM は分隊を4人ずつの組に分けて別々に動く
+const goalKey = (S, a) => S.m.mode === 'tdm' ? a.team + ':' + a.squad + ':' + ((a.sqIdx || 0) >> 2) : a.team + ':' + a.squad;
+export function goalOf(S, a) {
+  const g = S.m.sqGoal && S.m.sqGoal[goalKey(S, a)];
+  return typeof g === 'string' ? flagById(S, g) : g || null;
+}
 
 // ---- 指揮: チームごとに分隊へ目標の拠点を割り当てる（2秒ごと）
 export function command(S, w) {
   const m = S.m;
+  if (m.mode === 'tdm') return commandTdm(S);
   for (let t = 0; t < 2; t++) {
     const hq = m.hq[t];
     const squads = new Map();
@@ -43,9 +50,31 @@ export function command(S, w) {
   }
 }
 
-// 出撃する場所（ボット）: 分隊の目標に一番近い、自分の持っている拠点（敵が近くにいない）。なければ本陣
+// TDM: 組ごとに、いちばん近い敵のあたり（少しずらす）へ。着いたか 10 秒で選び直す
+function commandTdm(S) {
+  const m = S.m, R = m.rect;
+  const groups = new Map();
+  for (const a of S.actors) if (a.team >= 0 && a.team < 2 && a.squad != null && a.alive && !a.down) { const k = goalKey(S, a); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(a); }
+  for (const [key, mem] of groups) {
+    const cur = m.sqGoal[key];
+    if (cur && S.t < cur.until && !mem.some(a => Math.hypot(a.x - cur.x, a.z - cur.z) < cur.r)) continue;
+    const t = mem[0].team;
+    let cx = 0, cz = 0; for (const a of mem) { cx += a.x; cz += a.z; } cx /= mem.length; cz /= mem.length;
+    let best = null, bd = 1e9;
+    for (const e of S.actors) if (e.team === 1 - t && e.alive && !e.down) { const d = Math.hypot(e.x - cx, e.z - cz); if (d < bd) { bd = d; best = e; } }
+    const n = key.length * 7 + S.t;
+    let x = best ? best.x + (hrand(S.seed, n, 91) - 0.5) * 40 : R[0] + (R[2] - R[0]) * hrand(S.seed, n, 92);
+    let z = best ? best.z + (hrand(S.seed, n, 93) - 0.5) * 40 : R[1] + (R[3] - R[1]) * hrand(S.seed, n, 94);
+    x = Math.max(R[0] + 8, Math.min(R[2] - 8, x)); z = Math.max(R[1] + 8, Math.min(R[3] - 8, z));
+    m.sqGoal[key] = { id: 'pt' + S.t + key, x, z, r: 12, until: S.t + 600 };
+  }
+}
+
+// 出撃する場所（ボット。コンクエストだけ）: 分隊の目標に一番近い、自分の持っている拠点（敵が近くにいない）。なければ本陣
 export function botSpawnPoint(S, a) {
-  const m = S.m, goal = m.sqGoal && flagById(S, m.sqGoal[a.team + ':' + a.squad]);
+  const m = S.m;
+  if (m.mode !== 'conquest') return null;
+  const goal = m.sqGoal && flagById(S, m.sqGoal[a.team + ':' + a.squad]);
   let best = null, bd = 1e9;
   for (const f of m.flags) {
     if (f.owner !== a.team || f.contested) continue;
@@ -114,7 +143,7 @@ function think(S, w, a, dt, ctx) {
     const e = eyeAI(S, a); inp.yaw = turnToward(a.yaw, yawTo(ai.look[0] - e[0], ai.look[2] - e[2]), sk.turn * Math.PI / 180 * dt); inp.pitch = a.pitch * 0.9;
   }
   // ---- 目標の拠点へ
-  const goalF = S.m.sqGoal && flagById(S, S.m.sqGoal[a.team + ':' + a.squad]);
+  const goalF = goalOf(S, a);
   if (goalF) {
     // 拠点の中の自分の場所（ボットごとに違う向き・距離）。中に入ったら、ときどき場所を変える
     const inside = Math.hypot(a.x - goalF.x, a.z - goalF.z) < goalF.r;

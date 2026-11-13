@@ -1,7 +1,8 @@
-// テスト一式: node tests/run_all.mjs [--quick] [--no-sizes] [--no-net] → test-results/summary.md
-//  1 ビルド  2 単体  3 マップ  4 音  5 自動の試合（作戦・対戦・同じシードで同じ結果・途中保存）
-//  6 ブラウザ（起動・タップ・音の開始・回した画面・2本指・射撃/ADS/リロード/リーン/しゃがみ・ミニマップ→地図・ミラーの視点・HUDの編集・撤収→結果・続きからがない・2回押し・WebGL）
-//  7 全サイズの見た目（iPhone各種・iPad・PC、安全領域つき）  8 オンライン（自前の中継で2人: 協力・対戦）  9 アプリ版  10 古い保存から上がる
+// テスト一式: node tests/run_all.mjs [--quick] [--no-sizes] → test-results/summary.md
+//  1 ビルド  2 単体  3 マップ（WAR BIT: 本陣・拠点・出撃の場所が範囲の中・本陣から拠点まで歩ける）  4 音
+//  5 自動の試合（コンクエスト・ドミネーション・TDM をボットだけで最後まで・同じシードで同じ結果・人数ごとの速さ）
+//  6 ブラウザ（起動・タップ・音の開始・回した画面・射撃場の操作・PLAY→出撃の画面→出撃→倒れて出撃し直す→結果・2回押し・WebGL）
+//  7 全サイズの見た目（iPhone各種・iPad・PC、安全領域つき）  9 アプリ版  10 古い保存から上がる
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -64,22 +65,28 @@ try {
   fs.rmSync(tmp, { force: true });
 } catch (e) { rec('単体', '単体テスト', false, e.message.slice(0, 200)); }
 
-// ---------------- 3 マップ
+// ---------------- 3 マップ（WAR BIT）
 try {
-  const { checkMap } = await import('../tools/mapcheck.mjs');
-  const { MAPS, MAP_LIST, PVE_MAPS, PVP_MAPS } = await import('../src/engine/maps/index.js');
-  const rows = [];
-  for (const id of MAP_LIST) {
-    const r = checkMap(id);
-    rows.push(`${id}: 到達${r.stats.reach}%${r.errors.length ? ' ✗' + r.errors.length : ''}${r.warn.length ? ' △' + r.warn.length : ''}`);
-    rec('マップ', `${MAPS[id].name}: 家具・出現位置・扉・明かりに誤りがなく、どこへでも歩いて行ける`, !r.errors.length && r.stats.reach >= 100, r.errors.slice(0, 2).concat(r.warn.slice(0, 2)).join(' / ') || `${r.stats.rooms}部屋・扉${r.stats.doors}・家具${r.stats.props}・到達${r.stats.reach}%`);
+  const { warWorld, WAR_MAPS } = await import('../src/war/maps/index.js');
+  const { buildWarNav, findWarPath } = await import('../src/war/nav.js');
+  for (const id of Object.keys(WAR_MAPS)) {
+    const tm = Date.now(), w = warWorld(id), errs = [];
+    for (const [ak, A] of Object.entries(w.areas)) {
+      const R = A.rect, inR = (x, z) => x >= R[0] && x <= R[2] && z >= R[1] && z <= R[3];
+      for (const [x, z] of A.hq) if (!inR(x, z)) errs.push(`${ak}: 本陣が範囲の外`);
+      for (const fid of A.flags || []) { const f = w.flagDefs[fid]; if (!f || !inR(f.x, f.z)) errs.push(`${ak}: 拠点${fid}が範囲の外`); }
+      for (const L of A.spawns || []) for (const [x, z] of L) if (!inR(x, z)) errs.push(`${ak}: 出撃の場所が範囲の外`);
+      // 本陣から拠点まで歩いて行ける（ボットの道）
+      if (!WAR_MAPS[id].training && (A.flags || []).length) {
+        const nav = buildWarNav(w, R);
+        for (const [hx, hz] of A.hq) for (const fid of A.flags) {
+          const f = w.flagDefs[fid], pth = findWarPath(nav, hx, hz, f.x, f.z, 80000), end = pth && pth[pth.length - 1];
+          if (!end || Math.hypot(end[0] - f.x, end[1] - f.z) > f.r) errs.push(`${ak}: 本陣→${fid} の道がない`);
+        }
+      }
+    }
+    rec('マップ', `${WAR_MAPS[id].name}: 本陣・拠点・出撃の場所が範囲の中・本陣から拠点まで歩いて行ける`, !errs.length, errs.slice(0, 3).join(' / ') || `範囲${Object.keys(w.areas).length}・箱${w.boxes.length}・木${(w.trees || []).length}・${Date.now() - tm}ms`);
   }
-  // 置き物の配置: 扉・窓・開口・階段の前と、道の幅（tools/propaudit.mjs）
-  const { auditMap } = await import('../tools/propaudit.mjs');
-  const pa = MAP_LIST.map(id => ({ id, f: auditMap(id).finds }));
-  const paBad = pa.filter(x => x.f.length);
-  rec('マップ', '置き物が扉・窓・開口・階段の前をふさがず、どの扉・窓・部屋へも幅0.9m以上の道で行ける（全マップ）', !paBad.length, paBad.map(x => `${x.id}: ${x.f.length}件 ${x.f[0].msg}`).slice(0, 3).join(' / ') || `${pa.length}マップ・0件`);
-  rec('マップ', 'マップの数: 作戦用7（対戦でも使える）＋対戦用2＋訓練場', PVE_MAPS.length === 7 && PVP_MAPS.length === 9 && PVP_MAPS.filter(m => MAPS[m].pvpOnly).length === 2 && !!MAPS.training, `作戦 ${PVE_MAPS.length}・対戦 ${PVP_MAPS.length}（うち対戦用 ${PVP_MAPS.filter(m => MAPS[m].pvpOnly).length}）`);
 } catch (e) { rec('マップ', 'マップの点検', false, e.message.slice(0, 200)); }
 
 // ---------------- 4 音（数値の検査）
@@ -104,41 +111,34 @@ try {
   rec('音', 'BGM（メニュー・作戦・対戦）がそろう', ['menu', 'op', 'pvp'].every(k => mus[k] && fs.existsSync(path.join(ROOT, `src/assets/music/${k}.m4a`))));
 } catch (e) { rec('音', '音の検査', false, e.message.slice(0, 200)); }
 
-// ---------------- 5 自動の試合
+// ---------------- 5 自動の試合（WAR BIT: ボットだけ。ゲームと同じ毎秒60こま）
 try {
-  const { runPve, runPvp } = await import('../tools/sim.mjs');
-  const { MAPS, PVE_MAPS, PVP_MAPS } = await import('../src/engine/maps/index.js');
-  const { MISSIONS } = await import('../src/engine/data/missions.js');
-  const pve = [], errs = [];
-  const tA = Date.now();
-  for (const map of PVE_MAPS) for (const mission of Object.keys(MISSIONS)) {
-    if (MAPS[map].missions && !MAPS[map].missions[mission]) continue;
-    try { pve.push(runPve(map, mission, 7, { max: QUICK ? 420 : 1200 })); } catch (e) { errs.push(`${map}/${mission}: ${e.message}`); }
+  const { createGame, step } = await import('../src/engine/engine.js');
+  const runWar = (wmode, size, seed, maxMin) => {
+    const G = createGame({ map: 'riverbend', mode: 'war', wmode, size, seed, roster: [] }), S = G.S;
+    let kills = 0, flags = 0, i = 0;
+    const t = Date.now(), N = 3600 * maxMin;
+    for (; i < N && !S.m.over; i++) for (const e of step(G, {})) { if (e.e === 'kill') kills++; if (e.e === 'flag') flags++; }
+    return { over: S.m.over, win: S.m.winner, why: S.m.why || '', kills, flags, min: i / 3600, ms: (Date.now() - t) / Math.max(1, i), score: (wmode === 'conquest' ? S.m.tickets : S.m.score).map(Math.ceil), G };
+  };
+  const fmt = (r) => `${r.over ? (r.win < 0 ? '引き分け' : 'チーム' + r.win + 'の勝ち') + '（' + r.why + '）' : '終わらず'}・${r.min.toFixed(1)}分・${r.score.join('/')}・キル${r.kills}・拠点${r.flags}・${r.ms.toFixed(2)}ms`;
+  for (const [m, size, cap, name] of [['conquest', 'small', 25, 'コンクエスト 16 vs 16'], ['domination', 'small', 16, 'ドミネーション 16 vs 16'], ['tdm', 'small', 11, 'チームデスマッチ 8 vs 8'], ['tdm', 'medium', 11, 'チームデスマッチ 16 vs 16']]) {
+    const r = runWar(m, size, 7, QUICK ? 3 : cap);
+    rec('自動の試合', `${name}: ボットだけで例外なく${QUICK ? '動く' : '決着する'}（撃ち合い・${m === 'tdm' ? 'キル' : '拠点の取り合い'}）`, (QUICK || r.over) && r.kills > 0 && (m === 'tdm' || r.flags > 0), fmt(r));
   }
-  const done = pve.filter(r => r.res === 'done').length, fail = pve.filter(r => r.res === 'fail').length;
-  rec('自動の試合', `作戦: AIだけで ${pve.length}試合（マップ×作戦。ゲームと同じ毎秒60こま）が例外なく最後まで動く`, !errs.length && pve.length >= 25, `完了${done}・失敗${fail}・時間切れ${pve.length - done - fail}・${((Date.now() - tA) / 1000).toFixed(0)}秒 ${errs.slice(0, 2).join(' / ')}`);
-  rec('自動の試合', '作戦: AIの部隊が半分以上の作戦を終えられる', done >= pve.length / 2, `${done}/${pve.length}`);
-  const pvp = [], perr = [];
-  const tB = Date.now();
-  for (const map of PVP_MAPS) for (const mode of ['tdm', 'elim', 'bomb']) {
-    try { pvp.push(runPvp(map, mode, 3, { max: 1500, size: QUICK ? '2v2' : '4v4' })); } catch (e) { perr.push(`${map}/${mode}: ${e.message}`); }
+  // 人数が多いときの速さ（撃ち合いが始まった後の1分）
+  for (const [size, name, lim] of [['medium', '32 vs 32', 6], ['large', '64 vs 64', 12]]) {
+    const G = createGame({ map: 'riverbend', mode: 'war', wmode: 'conquest', size, seed: 3, roster: [] });
+    for (let i = 0; i < 3600 * (QUICK ? 0.5 : 2); i++) step(G, {});
+    const t = Date.now(); let k = 0;
+    for (let i = 0; i < 3600; i++) for (const e of step(G, {})) if (e.e === 'kill') k++;
+    const ms = (Date.now() - t) / 3600;
+    rec('自動の試合', `コンクエスト ${name}: 1ステップ ${lim}ms 未満（作業環境の Node・撃ち合いの最中）`, ms < lim, `${ms.toFixed(2)}ms・1分のキル${k}`);
   }
-  const decided = pvp.filter(r => r.winner === 0 || r.winner === 1 || r.winner === -1).length;
-  rec('自動の試合', `対戦: ボットだけで ${pvp.length}試合（マップ×モード）が例外なく決着する`, !perr.length && decided === pvp.length, `決着${decided}/${pvp.length}・キル合計${pvp.reduce((a, r) => a + r.kills[0] + r.kills[1], 0)}・設置${pvp.reduce((a, r) => a + r.plants, 0)}・${((Date.now() - tB) / 1000).toFixed(0)}秒 ${perr.slice(0, 2).join(' / ')}`);
-  rec('自動の試合', '対戦: どの試合でも撃ち合いが起きる', pvp.every(r => r.kills[0] + r.kills[1] > 0), pvp.filter(r => r.kills[0] + r.kills[1] === 0).map(r => r.map + '/' + r.mode).join(' '));
   // 同じシードなら同じ結果（固定ステップ・シード付き乱数）
-  const a1 = runPve('suburb', 'hostage', 11, { max: 300 }), a2 = runPve('suburb', 'hostage', 11, { max: 300 });
-  const strip = (r) => JSON.stringify({ ...r, wall: 0 });
-  rec('自動の試合', '同じシードなら同じ結果になる', strip(a1) === strip(a2));
-  // 途中で保存（dump）して読み込んで続けても、続けた場合と同じ
-  const { createGame, step, dump, load } = await import('../src/engine/engine.js');
-  const G = createGame({ map: 'apartment', mode: 'pve', mission: 'raid', diff: 'normal', team: 4, allAI: true, seed: 5 });
-  for (let i = 0; i < 1800; i++) step(G, {});
-  const D = dump(G);
-  const G2 = load(JSON.parse(JSON.stringify(D)));
-  for (let i = 0; i < 1800; i++) { step(G, {}); step(G2, {}); }
-  const pos = (g) => g.S.actors.map(a => [a.id, +a.x.toFixed(4), +a.z.toFixed(4), a.alive]).join('|');
-  rec('自動の試合', '途中の保存から読み込んで続けても同じ展開になる', pos(G) === pos(G2) && G.S.t === G2.S.t, `t=${G.S.t}`);
+  const pos = (g) => g.S.actors.map(a => [a.id, +a.x.toFixed(4), +a.z.toFixed(4), a.alive]).join('|') + '|' + g.S.m.score.join(',');
+  const a1 = runWar('domination', 'small', 11, 0.5), a2 = runWar('domination', 'small', 11, 0.5);
+  rec('自動の試合', '同じシードなら同じ結果になる', pos(a1.G) === pos(a2.G));
 } catch (e) { rec('自動の試合', '自動の試合', false, e.message.slice(0, 300)); }
 
 // ---------------- 6〜10 ブラウザ
@@ -243,18 +243,18 @@ try {
     rec('回した画面', '設定の一覧を指でスクロールできる', sc1 > sc0 + 40, `${sc0} → ${sc1}`);
   }
   {
-    await page.evaluate(() => window.__app.screens.reset('book', 'play'));
+    await page.evaluate(() => window.__app.screens.reset('settings', 'ctrl'));
     await page.waitForTimeout(300);
-    const box = await page.evaluate(() => { const r = document.querySelector('.screen.book .tabs').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+    const box = await page.evaluate(() => { const r = document.querySelector('.screen.settings .tabs').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
     await touch('touchStart', [{ x: box.x, y: box.y + 120, id: 4 }]);
     for (let k = 1; k <= 12; k++) { await touch('touchMove', [{ x: box.x, y: box.y + 120 - k * 22, id: 4 }]); await page.waitForTimeout(16); }
     await touch('touchEnd', []);
     await page.waitForTimeout(500);
-    const sl = await page.evaluate(() => { const t = document.querySelector('.screen.book .tabs'); return { left: t.scrollLeft, over: t.scrollWidth - t.clientWidth }; });
-    const pp = await page.evaluate(() => { const b = [...document.querySelectorAll('.screen.book .tab')].find(e => e.textContent === '人物'); const r = b.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+    const sl = await page.evaluate(() => { const t = document.querySelector('.screen.settings .tabs'); return { left: t.scrollLeft, over: t.scrollWidth - t.clientWidth }; });
+    const pp = await page.evaluate(() => { const b = [...document.querySelectorAll('.screen.settings .tab')].find(e => e.textContent === 'その他'); const r = b.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
     await tapAt(pp, 5);
-    const tab = await page.evaluate(() => window.__app.screens.bk && window.__app.screens.bk.tab);
-    rec('回した画面', '資料室のタブの列を指で横に送り（はみ出すとき）、端のタブを押せる', (sl.over <= 2 || sl.left > 30) && tab === 'people', `はみ出し ${Math.round(sl.over)}px・送った量 ${Math.round(sl.left)}px・押したタブ ${tab}`);
+    const tab = await page.evaluate(() => window.__app.screens.args && window.__app.screens.args[0]);
+    rec('回した画面', '設定のタブの列を指で横に送り（はみ出すとき）、端のタブを押せる', (sl.over <= 2 || sl.left > 30) && tab === 'etc', `はみ出し ${Math.round(sl.over)}px・送った量 ${Math.round(sl.left)}px・押したタブ ${tab}`);
   }
   // コールサイン（文字の入力は回した画面の外で、端末の向きのまま）
   {
@@ -274,9 +274,11 @@ try {
   await page.setViewportSize({ width: 844, height: 390 });
   await page.evaluate(() => { window.__app.stage.layout(); window.__app.screens.reset('title'); });
 
-  // ---- 射撃場: 2本指・射撃・ADS・リロード・リーン・しゃがみ・武器の持ち替え
-  await page.evaluate(() => window.__app.startTrain({ start: 'range' }));
+  // ---- 射撃場（タイトルの SHOOTING RANGE）: 2本指・射撃・ADS・リロード・リーン・しゃがみ・武器の持ち替え
+  await tapAt(await center('.screen.title.on [data-a="range"]'), 6);
   await waitGame();
+  await page.waitForFunction(() => window.__app.game.p.alive, null, { timeout: 60000 }).catch(() => {});
+  await page.waitForTimeout(500);
   await shot('射撃場');
   {
     const p0 = await page.evaluate(() => { const g = window.__app.game; return { x: g.p.x, z: g.p.z, yaw: g.yaw }; });
@@ -435,140 +437,134 @@ try {
     await page.evaluate(() => window.__app.resumeGame());
   }
 
-  // ---- 作戦: ミニマップ→地図、ミラーの視点、命令のメニュー、撤収→結果
-  await page.evaluate(() => window.__app.startPve({ map: 'suburb', mission: 'barricade', diff: 'normal', team: 4, entry: 0 }));
-  await waitGame();
-  await shot('作戦-HUD');
-  {
-    await tapAt(await center('#hud .hud-mm'), 41);
-    await page.waitForTimeout(500);
-    const scr = await page.evaluate(() => ({ cur: window.__app.screens.cur, mode: window.__app.mode }));
-    await shot('作戦-地図');
-    rec('操作', 'ミニマップを押すと地図が開く', scr.cur === 'tablet', `画面 ${scr.cur}`);
-    await page.evaluate(() => window.__app.resumeGame());
-    await page.waitForTimeout(300);
-  }
-  {
-    // 閉じた扉の前に立って、扉を見てミラーを使う
-    const ok = await page.evaluate(() => {
-      const g = window.__app.game, S = g.S, w = g.w, p = g.p;
-      for (const d of w.doors) {
-        if (d.L !== 0) continue;
-        const ds = S.doors[d.id]; if (!ds || ds.open > 0.05 || ds.broken) continue;
-        for (const sg of [1, -1]) {
-          const x = d.cx + d.nx * sg * 1.0, z = d.cz + d.nz * sg * 1.0;
-          const i = Math.floor(x / 0.5), j = Math.floor(z / 0.5);
-          if (w.cell[w.idx(0, i, j)] !== 1 && w.cell[w.idx(0, i, j)] !== 2) continue;
-          p.x = x; p.z = z; p.vx = p.vz = 0;
-          g.yaw = Math.atan2(d.cx - x, d.cz - z); g.pitch = -0.2;
-          for (const b of S.actors) if (b.kind === 'sus' || b.kind === 'civ') { b.x = 1; b.z = 1; }
-          return d.id;
-        }
-      }
-      return -1;
-    });
-    // 向きがエンジンに入ってから（動作は前のステップの向きで見ている物に対して行う）ミラーを使う
-    await page.waitForFunction(() => { const g = window.__app.game, d = g.p.yaw - g.yaw; return Math.abs(Math.atan2(Math.sin(d), Math.cos(d))) < 0.05 && Math.abs(g.p.pitch - g.pitch) < 0.05; }, null, { timeout: 20000 }).catch(() => {});
-    if (ok >= 0) await page.evaluate((id) => { window.__app.game.acts.push({ a: 'op', k: 'door', id, op: 'mirror' }); }, ok);
-    // ミラーを出すのに 0.8秒（ゲームの時間）。ソフトウェア描画では1こま1秒以上かかるので長めに待つ
-    await page.waitForFunction(() => !!window.__app.game.p.peek, null, { timeout: 60000 }).catch(() => {});
-    await page.waitForTimeout(800);
-    const pk = await page.evaluate(() => { const g = window.__app.game, el = document.querySelector('#hud .hud-peek'); return { peek: !!g.p.peek, shown: !!el && getComputedStyle(el).display !== 'none', text: el ? el.textContent.trim() : '' }; });
-    await shot('作戦-ミラー');
-    rec('操作', 'ミラーで扉の下から覗いた映像になり、出るのは「戻る」と短い案内だけ', ok >= 0 && pk.peek && pk.shown && /戻る/.test(pk.text) && !/人影|\d+人/.test(pk.text), `表示「${pk.text}」`);
-    await tapAt(await center('#hud [data-btn="peekx"]'), 42);
-    await page.waitForFunction(() => !window.__app.game.p.peek, null, { timeout: 30000 }).catch(() => {});
-    const after = await page.evaluate(() => !!window.__app.game.p.peek);
-    rec('操作', 'ミラーの視点は「戻る」で元に戻る', pk.peek && !after);
-  }
-  {
-    // 命令: 長押しで円形のメニュー
-    const cb = await btn('cmd');
-    await touch('touchStart', [{ x: cb.x, y: cb.y, id: 43 }]);
-    // 長押しは押している間のこまで決まる（ソフトウェア描画では1こま1秒以上かかるので、出るまで待つ）
-    await page.waitForTimeout(700);
-    await page.waitForFunction(() => { const e = document.querySelector('#hud .hud-radial'); return !!e && e.classList.contains('on'); }, null, { timeout: 15000 }).catch(() => {});
-    const rad = await page.evaluate(() => { const e = document.querySelector('#hud .hud-radial'); return { on: !!e && e.classList.contains('on'), n: e ? e.querySelectorAll('.ri, button, [data-i]').length : 0, txt: e ? e.textContent.slice(0, 60) : '' }; });
-    await shot('作戦-命令');
-    await touch('touchEnd', []);
-    await page.waitForTimeout(300);
-    rec('操作', '命令のボタンを長押しすると円形のメニューが出る', rad.on, `項目 ${rad.n}・「${rad.txt}」`);
-  }
-  {
-    await page.evaluate(() => window.__app.pauseGame());
-    await page.waitForTimeout(300);
-    const ab = await center('.screen.pause [data-a="abort"]');
-    await tapAt(ab, 44);
-    const mid = await page.evaluate(() => window.__app.screens.cur);
-    await tapAt(ab, 45);
-    await page.waitForFunction(() => window.__app.screens.cur === 'result', null, { timeout: 60000 }).catch(() => {});
-    const r = await page.evaluate(() => ({ cur: window.__app.screens.cur, h: (document.querySelector('.screen.result h2') || {}).textContent, grade: (document.querySelector('.screen.result .grade') || {}).textContent }));
-    await shot('作戦-結果');
-    rec('結果', '撤収は指だと2回押す・結果に評価と点数が出る', mid === 'pause' && r.cur === 'result' && /[SABCDF]/.test(r.grade || ''), `見出し「${r.h}」・評価 ${r.grade}`);
-    const recs = await page.evaluate(() => window.__app.records());
-    rec('保存', '作戦の結果が記録に残る', Object.keys(recs).some(k => k.startsWith('suburb:barricade:') && recs[k].plays >= 1));
-  }
-
-  // ---- 対戦: 決着→結果
-  await page.evaluate(() => window.__app.startPvp({ mode: 'tdm', map: 'motel', teams: [2, 2], side: 0, botLevel: 1, wins: 3, time: 8, aimAssist: 1, ff: false }));
-  await waitGame();
-  await shot('対戦-HUD');
-  {
-    const hud = await page.evaluate(() => ({ cmd: !!document.querySelector('#hud [data-btn="cmd"]') && getComputedStyle(document.querySelector('#hud [data-btn="cmd"]')).display !== 'none' }));
-    rec('対戦', '対戦のHUDには命令のボタンがない', !hud.cmd);
-    await page.evaluate(() => { const m = window.__app.game.S.m; m.score[0] = m.limit; });
-    await page.waitForFunction(() => window.__app.screens.cur === 'result', null, { timeout: 60000 }).catch(() => {});
-    const r = await page.evaluate(() => ({ cur: window.__app.screens.cur, h: (document.querySelector('.screen.result h2') || {}).textContent, rows: document.querySelectorAll('.screen.result .board tbody tr').length }));
-    await shot('対戦-結果');
-    rec('結果', '対戦の決着で勝敗と成績表が出る', r.cur === 'result' && r.h === '勝利' && r.rows === 4, `「${r.h}」・${r.rows}人`);
-  }
-
-  // ---- WAR BIT（大規模戦の試作）: 出撃・歩く・撃つ・上の帯・倒れて出撃し直す・決着→結果
+  // ---- 射撃場だけの物: 当てると部位・ダメージ・距離が出る・倒した人形は起き上がる・距離の札・兵科を変える
   try {
-    await page.evaluate(() => window.__app.startWar({ size: 'small' }));
-    await waitGame();
+    const t100 = await page.evaluate(() => { const g = window.__app.game, p = g.p, t = g.S.actors.find(a => a.dummy && a.dummy.d === 25); g.yaw = Math.atan2(t.x - p.x, t.z - p.z); g.pitch = Math.atan2(t.y + 1.2 - (p.y + 1.55), Math.hypot(t.x - p.x, t.z - p.z)); return t.id; });
+    await page.waitForTimeout(400);
+    const F = await btn('fire');
+    let hit = null;
+    for (let k = 0; k < 6 && !hit; k++) {
+      await page.evaluate((id) => { const g = window.__app.game, p = g.p, t = g.S.byId[id]; g.yaw = Math.atan2(t.x - p.x, t.z - p.z); g.pitch = Math.atan2(t.y + 1.2 - (p.y + 1.55), Math.hypot(t.x - p.x, t.z - p.z)); }, t100);
+      await holdAt(F, 250, 60 + k);
+      await page.waitForTimeout(400);
+      hit = await page.evaluate(() => window.__app.game.rangeHit || null);
+    }
+    const bar = await page.evaluate(() => (document.querySelector('#hud .hud-obj .wb.rg') || {}).textContent || '');
+    rec('射撃場', '人形に当てると、上の帯に部位・ダメージ・距離が出る', !!hit && hit.m > 15 && hit.m < 40 && /m/.test(bar), `${JSON.stringify(hit)}・帯「${bar}」`);
+    const signs = await page.evaluate(() => { const g = window.__app.game; g.yaw = 0; g.pitch = 0; return g.w.signs.length; });
+    await page.waitForTimeout(500);
+    await shot('射撃場-奥');
+    rec('射撃場', '標的は 10m〜1000m の13体・距離の札がある', signs === 13, `札 ${signs}`);
+    // 兵科・装備のボタン → 出撃の画面 → 衛生を選んで出る
+    await tapAt(await btn('loadout'), 66);
+    await page.waitForFunction(() => document.querySelector('#hud .hud-deploy.on .dps-go'), null, { timeout: 30000 }).catch(() => {});
+    await shot('射撃場-兵科');
+    await tapAt(await center('#hud .dps-c[data-sub="medic"]'), 67);
+    await page.waitForFunction(() => window.__app.game.dcls === 'medic', null, { timeout: 15000 }).catch(() => {});
+    await tapAt(await center('#hud .dps-go'), 68);
+    await page.waitForFunction(() => window.__app.game.p.alive, null, { timeout: 30000 }).catch(() => {});
+    const re = await page.evaluate(() => { const p = window.__app.game.p; return { alive: p.alive, cls: p.warCls, gun: p.inv.w[0] && p.inv.w[0].id, d: p.stats.d }; });
+    rec('射撃場', '兵科・装備のボタンで出撃の画面へ戻り、選んだ兵科で射台に出る（倒されたことにはしない）', re.alive && re.cls === 'medic' && re.d === 0, JSON.stringify(re));
+  } catch (e) { rec('射撃場', '射撃場だけの物', false, e.message.slice(0, 200)); }
+
+  // ---- WAR BIT: タイトル → PLAY → コンクエスト 16 vs 16 → 出撃の画面 → 兵科を選んで出る → 撃つ → 倒れて出撃し直す → 勝ち → 結果 → もう一度
+  try {
+    await page.evaluate(() => window.__app.toTitle());
+    await page.waitForFunction(() => window.__app.screens.cur === 'title', null, { timeout: 30000 });
+    const menu = await page.evaluate(() => [...document.querySelectorAll('.screen.title .wt-menu .wm')].map(b => b.dataset.a));
+    rec('メニュー', 'タイトルの項目は PLAY・SHOOTING RANGE・SETTINGS だけ（作戦・対戦・訓練・資料室はない）', JSON.stringify(menu) === JSON.stringify(['play', 'range', 'settings']), menu.join(','));
+    await tapAt(await center('.screen.title.on [data-a="play"]'), 70);
+    await page.waitForFunction(() => window.__app.screens.cur === 'play', null, { timeout: 15000 }).catch(() => {});
+    const modes = await page.evaluate(() => [...document.querySelectorAll('.screen.play .wp-card')].map(c => c.querySelector('.wp-h b').textContent + ':' + [...c.querySelectorAll('.wp-size b')].map(b => b.textContent).join('/')));
+    await shot('PLAY');
+    rec('メニュー', 'PLAY: コンクエスト（16・32・64 vs）・ドミネーション（16・32）・チームデスマッチ（8・16）', modes.length === 3 && /^CONQUEST:16 vs 16\/32 vs 32\/64 vs 64$/.test(modes[0]) && /^DOMINATION:16 vs 16\/32 vs 32$/.test(modes[1]) && /^TEAM DEATHMATCH:8 vs 8\/16 vs 16$/.test(modes[2]), modes.join(' | '));
+    await tapAt(await center('.screen.play.on [data-m="conquest"][data-k="small"]'), 71);
+    await page.waitForFunction(() => window.__app.mode === 'game' && window.__app.game && document.querySelector('#hud .hud-deploy.on .dps-go'), null, { timeout: 240000 });
+    await page.waitForTimeout(500);
+    await shot('WAR-出撃の画面');
+    const dp = await page.evaluate(() => { const g = window.__app.game; return { alive: g.p.alive, cls: document.querySelectorAll('#hud .dps-c').length, sq: document.querySelectorAll('#hud .dps-m').length, pts: [...document.querySelectorAll('#hud .dps-p')].map(e => e.dataset.sub), n: g.S.actors.length, bots: g.S.actors.filter(a => a.ai).length }; });
+    rec('WAR BIT', '試合は出撃の画面から始まる（兵科6つ・分隊8人・地図の出撃の場所・ボット31体）', !dp.alive && dp.cls === 6 && dp.sq === 8 && dp.pts.includes('hq') && dp.n === 32 && dp.bots === 31, JSON.stringify(dp));
+    await tapAt(await center('#hud .dps-c[data-sub="support"]'), 72);
+    await page.waitForFunction(() => window.__app.game.dcls === 'support', null, { timeout: 15000 }).catch(() => {});
+    await tapAt(await center('#hud .dps-lo'), 73);
+    await page.waitForFunction(() => document.querySelector('#hud .dps-card.dps-lop .dps-o'), null, { timeout: 15000 }).catch(() => {});
+    const guns = await page.evaluate(() => [...document.querySelectorAll('#hud .dps-card .dps-o[data-btn="dgun"]')].map(e => e.dataset.sub));
+    await shot('WAR-装備');
+    await tapAt(await center('#hud .dps-lo'), 74);
+    await tapAt(await center('#hud .dps-p[data-sub="hq"]'), 75);
+    await tapAt(await center('#hud .dps-go'), 76);
+    await page.waitForFunction(() => window.__app.game.p.alive, null, { timeout: 60000 }).catch(() => {});
     await page.waitForTimeout(800);
+    const st = await page.evaluate(() => { const g = window.__app.game, p = g.p, hq = g.S.m.hq[p.team]; return { alive: p.alive, cls: p.warCls, hp: p.maxHp, gun: p.inv.w[0] && p.inv.w[0].id, d: Math.hypot(p.x - hq[0], p.z - hq[1]), tris: g.r.stats.tris }; });
+    rec('WAR BIT', '援護を選び（銃は機関銃）、本陣を押して DEPLOY で出る（体力125）', st.alive && st.cls === 'support' && st.hp === 125 && guns.includes('rpk') && st.d < 25 && st.tris > 20000, `${JSON.stringify(st)}・銃 ${guns.join(',')}`);
     await shot('WAR-出撃');
-    const st = await page.evaluate(() => { const g = window.__app.game; return { war: !!g.S.war, n: g.S.actors.length, bots: g.S.actors.filter(a => a.ai).length, draws: g.r.stats.draws, tris: g.r.stats.tris }; });
-    rec('WAR BIT', '小（16対16）で出撃する（ボット31体・地形と建物を描く）', st.war && st.n === 32 && st.bots === 31 && st.tris > 20000, `${st.n}人・描く回数${st.draws}・三角形${Math.round(st.tris / 1000)}k`);
     const p0 = await page.evaluate(() => { const p = window.__app.game.p; return { x: p.x, z: p.z, sh: p.stats.sh }; });
     await page.keyboard.down('KeyW'); await page.waitForTimeout(2500); await page.keyboard.up('KeyW');
     const fb = await center('#hud .hb[data-btn="fire"]');
     await touch('touchStart', [{ x: fb.x, y: fb.y, id: 7 }]); await page.waitForTimeout(800); await touch('touchEnd', []); await page.waitForTimeout(300);
     const p1 = await page.evaluate(() => { const p = window.__app.game.p; return { x: p.x, z: p.z, sh: p.stats.sh }; });
     rec('WAR BIT', '歩いて撃てる', Math.hypot(p1.x - p0.x, p1.z - p0.z) > 0.3 && p1.sh > p0.sh, `移動 ${Math.hypot(p1.x - p0.x, p1.z - p0.z).toFixed(1)}m・射撃 ${p1.sh - p0.sh}`);
-    const bar = await page.evaluate(() => ({ fl: document.querySelectorAll('#hud .hud-obj .wb .fl').length, tk: document.querySelectorAll('#hud .hud-obj .wb .tk').length, use: getComputedStyle(document.querySelector('#hud [data-btn="use"]')).display !== 'none' && !document.querySelector('#hud [data-btn="use"]').classList.contains('hidden') }));
-    rec('WAR BIT', '上の帯に拠点4つと両チームのチケット・調べるボタンは出さない', bar.fl === 4 && bar.tk === 2 && !bar.use, JSON.stringify(bar));
+    const bar = await page.evaluate(() => ({ fl: [...document.querySelectorAll('#hud .hud-obj .wb .fl')].map(e => e.textContent).join(''), tk: document.querySelectorAll('#hud .hud-obj .wb .tk').length, hidden: ['use', 'shout', 'cmd', 'team', 'nvg', 'loadout'].filter(b => { const e = document.querySelector('#hud .hb[data-btn="' + b + '"]'); return !e || e.classList.contains('hidden'); }).length }));
+    rec('WAR BIT', '上の帯に拠点（A から順）と両チームのチケット・旧モードのボタン（調べる・警告・命令・暗視）と射撃場のボタンは出さない', bar.fl === 'BCDE' && bar.tk === 2 && bar.hidden === 6, JSON.stringify(bar));
     await shot('WAR-HUD');
-    // 範囲の外で倒れる → 出撃の板 → 本陣を選ぶ → 出撃し直す
+    // 範囲の外で倒れる → KIA → 出撃の画面（数秒待つ）→ 本陣 → 出撃し直す（チケットが減る）
+    const tk0 = await page.evaluate(() => window.__app.game.S.m.tickets[window.__app.game.p.team]);
     await page.evaluate(() => { const g = window.__app.game, p = g.p, r = g.S.m.rect; p.x = r[0] - 25; p.oob = 9.95; });
-    await page.waitForFunction(() => document.querySelector('#hud .hud-deploy.on .dp-o'), null, { timeout: 90000 }).catch(() => {});
-    await shot('WAR-出撃の板');
-    const hb = await center('#hud .hud-deploy .dp-o[data-sub="hq"]');
-    if (hb) await tapAt(hb);
+    await page.waitForFunction(() => document.querySelector('#hud .hud-deploy.on .dps-go'), null, { timeout: 90000 }).catch(() => {});
+    const wait = await page.evaluate(() => (document.querySelector('#hud .dps-go b') || {}).textContent || '');
+    await shot('WAR-倒れた後の出撃の画面');
+    await tapAt(await center('#hud .dps-go'), 77);
     await page.waitForFunction(() => window.__app.game.p.alive, null, { timeout: 90000 }).catch(() => {});
-    const rs = await page.evaluate(() => { const g = window.__app.game, p = g.p, hq = g.S.m.hq[p.team]; return { alive: p.alive, d: Math.hypot(p.x - hq[0], p.z - hq[1]), tk: g.S.m.tickets[p.team] }; });
-    rec('WAR BIT', '倒れたら出撃の板で本陣を選んで出撃し直す（チケットが1減る）', !!hb && rs.alive && rs.d < 25 && rs.tk < 300, `板${hb ? 'あり' : 'なし'}・本陣から${rs.d.toFixed(0)}m・チケット${Math.ceil(rs.tk)}`);
-    // 決着
+    const rs = await page.evaluate(() => { const g = window.__app.game, p = g.p, hq = g.S.m.hq[p.team]; return { alive: p.alive, d: Math.hypot(p.x - hq[0], p.z - hq[1]), tk: g.S.m.tickets[p.team], cls: p.warCls }; });
+    rec('WAR BIT', '倒れたら出撃の画面（DEPLOY に待ちの秒数。先に押すと時間が来たら出る）→ 出撃し直す（チケットが1減る・兵科はそのまま）', /DEPLOY|READY/.test(wait) && rs.alive && rs.d < 25 && rs.tk <= tk0 - 1 && rs.cls === 'support', `「${wait}」・本陣から${rs.d.toFixed(0)}m・チケット${Math.ceil(tk0)}→${Math.ceil(rs.tk)}`);
+    // スコア表（上の帯を押す）
+    await tapAt(await center('#hud .hud-obj'), 78);
+    await page.waitForFunction(() => document.querySelector('#hud .hud-board.on'), null, { timeout: 15000 }).catch(() => {});
+    const bd = await page.evaluate(() => ({ on: !!document.querySelector('#hud .hud-board.on'), rows: document.querySelectorAll('#hud .hud-board tr').length }));
+    await shot('WAR-スコア表');
+    await tapAt(await center('#hud .hud-board'), 79);
+    rec('WAR BIT', '上の帯を押すとスコア表（両チームの上位）', bd.on && bd.rows >= 12, JSON.stringify(bd));
+    // 決着 → 結果 → もう一度
     await page.evaluate(() => { window.__app.game.S.m.tickets[1] = 0; });
     await page.waitForFunction(() => window.__app.screens.cur === 'result', null, { timeout: 90000 }).catch(() => {});
-    const r = await page.evaluate(() => ({ cur: window.__app.screens.cur, h: (document.querySelector('.screen.result h2') || {}).textContent, rows: document.querySelectorAll('.screen.result .board tbody tr').length }));
+    const r = await page.evaluate(() => ({ cur: window.__app.screens.cur, h: (document.querySelector('.screen.result h2') || {}).textContent, rows: document.querySelectorAll('.screen.result .board tbody tr').length, me: !!document.querySelector('.screen.result tr.me') }));
     await shot('WAR-結果');
-    rec('WAR BIT', '相手のチケットが尽きると勝利と成績表', r.cur === 'result' && r.h === '勝利' && r.rows >= 16, `「${r.h}」・${r.rows}人`);
-  } catch (e) { rec('WAR BIT', '大規模戦の試作', false, e.message.slice(0, 200)); }
+    rec('WAR BIT', '相手のチケットが尽きると VICTORY と両チームの表（自分の行に印）', r.cur === 'result' && r.h === 'VICTORY' && r.rows >= 32 && r.me, `「${r.h}」・${r.rows}行`);
+    await tapAt(await center('.screen.result.on [data-a="again"]'), 80);
+    await page.waitForFunction(() => window.__app.mode === 'game' && window.__app.game && !window.__app.game.done && document.querySelector('#hud .hud-deploy.on'), null, { timeout: 240000 }).catch(() => {});
+    const ag = await page.evaluate(() => { const g = window.__app.game; return { mode: g && g.S.m.mode, per: g && g.S.m.per, dcls: g && g.dcls }; });
+    rec('WAR BIT', 'PLAY AGAIN で同じモード・人数がもう一度始まる（兵科は前に選んだ物）', ag.mode === 'conquest' && ag.per === 16 && ag.dcls === 'support', JSON.stringify(ag));
+  } catch (e) { rec('WAR BIT', 'コンクエストの流れ', false, e.message.slice(0, 200)); }
+
+  // ---- ドミネーションとチームデスマッチ: 上の帯（残り時間と目標）・決着
+  for (const [wm, size, label] of [['domination', 'small', 'ドミネーション'], ['tdm', 'small', 'チームデスマッチ']]) {
+    try {
+      await page.evaluate(([m, s]) => { window.__app.toTitle(); window.__app.startWar({ wmode: m, size: s }); }, [wm, size]);
+      await page.waitForFunction(() => window.__app.mode === 'game' && window.__app.game && document.querySelector('#hud .hud-deploy.on .dps-go'), null, { timeout: 240000 });
+      await page.waitForTimeout(300);
+      await tapAt(await center('#hud .dps-go'), 81);
+      await page.waitForFunction(() => window.__app.game.p.alive, null, { timeout: 60000 }).catch(() => {});
+      await page.waitForTimeout(600);
+      const b = await page.evaluate(() => { const g = window.__app.game, m = g.S.m; return { fl: document.querySelectorAll('#hud .hud-obj .wb .fl').length, wt: (document.querySelector('#hud .hud-obj .wb .wt') || {}).textContent || '', inArea: g.p.x >= m.rect[0] && g.p.x <= m.rect[2] && g.p.z >= m.rect[1] && g.p.z <= m.rect[3] }; });
+      await shot('WAR-' + label);
+      await page.evaluate(() => { const g = window.__app.game; g.S.m.score[g.p.team] = g.S.m.limit; });
+      await page.waitForFunction(() => window.__app.screens.cur === 'result', null, { timeout: 60000 }).catch(() => {});
+      const h = await page.evaluate(() => (document.querySelector('.screen.result h2') || {}).textContent);
+      rec('WAR BIT', `${label}: 範囲の中に出る・上の帯に残り時間と目標・目標に届くと VICTORY`, b.inArea && b.fl === (wm === 'tdm' ? 0 : 3) && /\d+:\d\d/.test(b.wt) && h === 'VICTORY', `${JSON.stringify(b)}・「${h}」`);
+    } catch (e) { rec('WAR BIT', label, false, e.message.slice(0, 200)); }
+  }
 
   // ---- 全サイズの見た目
-  const SCREENS = [
-    ['title', []], ['pveMenu', []], ['pvpMenu', []], ['train', []], ['mission', [{}]], ['brief', ['__sel']], ['loadout', [{ kind: 'pve', team: 4 }]], ['loadout', [{ kind: 'pvp' }]], ['pvpSetup', [null]],
-    ['settings', ['ctrl']], ['settings', ['sens']], ['settings', ['hud']], ['settings', ['gfx']], ['settings', ['snd']], ['settings', ['etc']],
-    ['book', ['play']], ['book', ['ctrl']], ['book', ['roe']], ['book', ['missions']], ['book', ['pvp']], ['book', ['maps']], ['book', ['guns']], ['book', ['gear']], ['book', ['people']],
-  ];
-  await page.evaluate(() => window.__app.startPve({ map: 'apartment', mission: 'hostage', diff: 'normal', team: 4, entry: 0 }));
-  await waitGame();
-  await page.evaluate(() => window.__app.pauseGame());
+  const SCREENS = [['title', []], ['play', []], ['settings', ['ctrl']], ['settings', ['sens']], ['settings', ['hud']], ['settings', ['gfx']], ['settings', ['snd']], ['settings', ['etc']]];
+  await page.evaluate(() => { window.__app.toTitle(); window.__app.startWar({ wmode: 'conquest', size: 'small' }); });
+  await page.waitForFunction(() => window.__app.mode === 'game' && window.__app.game && document.querySelector('#hud .hud-deploy.on .dps-go'), null, { timeout: 240000 });
+  await page.waitForTimeout(300);
+  await tapAt(await center('#hud .dps-go'), 90);
+  await page.waitForFunction(() => window.__app.game.p.alive, null, { timeout: 60000 }).catch(() => {});
+  await page.waitForTimeout(500);
   await page.evaluate(() => { window.__app.freeze = true; });
-  const fakePve = { res: 'done', map: 'apartment', mission: 'hostage', diff: 'hard', why: '', score: { total: 87, grade: 'A', parts: [{ name: '容疑者の制圧', got: 25, max: 25, note: '逮捕3・無力化1' }, { name: '市民の救出', got: 25, max: 25 }, { name: '報告', got: 8, max: 10 }, { name: '証拠', got: 6, max: 10 }, { name: '人質の救出', got: 10, max: 10 }, { name: '隊員の安全', got: 8, max: 10 }, { name: '規則', got: 5, max: 10 }], viol: [{ v: 'force', pen: 5, byName: 'オカダ' }], stats: { time: 612, arrested: 3, susTotal: 4, killed: 1, rescued: 2, civTotal: 2 } }, me: { sh: 48, hi: 21 } };
-  const fakePvp = { pvp: true, mode: 'bomb', map: 'bank', time: 1311, win: 0, myTeam: 0, score: [3, 2], rows: [{ name: 'ブラボー1', team: 0, k: 9, d: 4, a: 3, me: true }, { name: 'ボット・タナカ', team: 0, k: 6, d: 5, a: 4, bot: true }, { name: 'ボット・ヨシダ', team: 1, k: 7, d: 6, a: 1, bot: true }, { name: 'ボット・キムラ', team: 1, k: 3, d: 8, a: 2, bot: true }] };
+  const fakeWar = { pvp: true, war: true, mode: 'war', wmode: 'conquest', why: 'tickets', map: 'riverbend', per: 16, size: 'small', time: 1311, win: 0, myTeam: 0, score: [112, 0],
+    rows: Array.from({ length: 32 }, (_, i) => ({ name: i ? (i < 16 ? 'アルファ' : 'オスカー') + ((i % 8) + 1) : 'ブラボー1', team: i < 16 ? 0 : 1, k: 20 - (i % 20), d: i % 7, a: i % 5, me: i === 0, bot: i > 0 })) };
   for (const S of SIZES) {
     await page.evaluate(([ins, o]) => { globalThis.__testInsets = ins; globalThis.__testOrient = o; }, [S.insets, S.orient]);
     await page.setViewportSize({ width: S.w, height: S.h });
@@ -584,38 +580,41 @@ try {
     };
     let nBad = 0; const list = [];
     const add = (label, b) => { nBad += b.length; list.push(...b.map(x => label + ':' + x.kind + ' ' + (x.el || ''))); };
-    for (const [name, args] of [['pause', []], ['tablet', []]]) { await page.evaluate(([n, a]) => window.__app.screens.reset(n, ...a), [name, args]); add(name, await check(name)); }
-    // HUD（作戦）
-    await page.evaluate(() => { const a = window.__app; a.screens.hide(); a.hud.show(true); a.hud.layout && a.hud.layout(); a.game.redraw(); });
+    // 試合中の HUD
+    await page.evaluate(() => { const a = window.__app; a.screens.hide(); a.hud.deploy(null); a.hud.show(true); a.hud.layout && a.hud.layout(); a.game.redraw(); });
     add('HUD', await check('HUD'));
-    await page.evaluate(() => window.__app.hud.show(false));
-    await page.evaluate((res) => window.__app.screens.reset('result', res), fakePve);
+    // 出撃の画面（試合の始め）と、装備の板
+    await page.evaluate(() => { const a = window.__app; a.screens.hide(); a.hud.show(true); a.game.dlo = false; a.hud.deploy(a.game._warDeployData()); });
+    add('出撃の画面', await check('出撃の画面'));
+    await page.evaluate(() => { const a = window.__app; a.game.dlo = true; a.hud.deploy(a.game._warDeployData()); });
+    add('出撃の画面-装備', await check('出撃の画面-装備'));
+    await page.evaluate(() => { const a = window.__app; a.game.dlo = false; a.hud.deploy(null); a.hud.show(false); });
+    for (const [name, args] of [['pause', []], ['tablet', []]]) { await page.evaluate(([n, a]) => window.__app.screens.reset(n, ...a), [name, args]); add(name, await check(name)); }
+    await page.evaluate((res) => window.__app.screens.reset('result', res), fakeWar);
     add('結果', await check('結果'));
-    await page.evaluate((res) => window.__app.screens.reset('result', res), fakePvp);
-    add('結果-対戦', await check('結果-対戦'));
     for (const [name, args] of SCREENS) {
-      await page.evaluate(([n, a]) => { const sc = window.__app.screens; if (!sc.sel) sc.sel = { map: 'gasstation', mission: 'barricade', diff: 'normal', team: 4, entry: 0 }; sc.reset(n, ...a.map(x => x === '__sel' ? sc.sel : x)); }, [name, args]);
-      const label = name + (args[0] && typeof args[0] === 'string' && args[0] !== '__sel' ? '-' + args[0] : args[0] && args[0].kind ? '-' + args[0].kind : '');
+      await page.evaluate(([n, a]) => window.__app.screens.reset(n, ...a), [name, args]);
+      const label = name + (args[0] && typeof args[0] === 'string' ? '-' + args[0] : '');
       add(label, await check(label));
     }
-    await page.evaluate(() => window.__app.screens.reset('pause'));
     rec('見た目', `${S.id}（${S.w}×${S.h}）: はみ出し・切れ・重なり・安全領域・文字とボタンの大きさ`, nBad === 0, list.slice(0, 4).join(' / '));
   }
   await page.evaluate(() => { globalThis.__testInsets = { l: 47, r: 47, b: 21 }; globalThis.__testOrient = 90; window.__app.freeze = false; });
   await page.setViewportSize({ width: 844, height: 390 });
   await page.evaluate(() => window.__app.stage.layout());
 
-  // ---- 「続きから」はない（11-12 21:59 の要望）・タイトルへ戻るは2回押す・WebGLが落ちても戻る
+  // ---- 「続きから」はない（11-12 21:59 の要望）・試合を出るのは2回押す・WebGLが落ちても戻る
   {
-    await page.evaluate(() => window.__app.resumeGame());
+    await page.evaluate(() => window.__app.startWar({ wmode: 'range' }));
+    await waitGame();
     await page.keyboard.down('KeyW'); await page.waitForTimeout(1200); await page.keyboard.up('KeyW');
     // 裏に回ったときと同じ一時停止（保存はしない）→ 読み込み直すとタイトルで、「続きから」は出ない
     const s1 = await page.evaluate(() => { const a = window.__app; a.pauseGame(); return { mode: a.mode, run: localStorage.getItem('hardentry.v1.run') }; });
     await page.reload();
     await waitTitle(page, 240000);
-    const s2 = await page.evaluate(() => ({ cont: !!document.querySelector('.screen.title [data-a="continue"]'), game: !!window.__app.game, run: localStorage.getItem('hardentry.v1.run'), first: (document.querySelector('.screen.title .t-menu .mi') || {}).dataset?.a }));
-    rec('保存', '「続きから」はない: 一時停止しても遊びかけを保存せず、読み込み直すとタイトル（WAR BIT（試作）が先頭）', s1.mode === 'pause' && s1.run == null && !s2.cont && !s2.game && s2.run == null && s2.first === 'war', JSON.stringify({ s1, s2 }));
-    await page.evaluate(() => window.__app.startTrain({ start: 'range' }));
+    const s2 = await page.evaluate(() => ({ cont: !!document.querySelector('.screen.title [data-a="continue"]'), game: !!window.__app.game, run: localStorage.getItem('hardentry.v1.run'), first: (document.querySelector('.screen.title .wt-menu .wm') || {}).dataset?.a }));
+    rec('保存', '「続きから」はない: 一時停止しても遊びかけを保存せず、読み込み直すとタイトル（PLAY が先頭）', s1.mode === 'pause' && s1.run == null && !s2.cont && !s2.game && s2.run == null && s2.first === 'play', JSON.stringify({ s1, s2 }));
+    await page.evaluate(() => window.__app.startWar({ wmode: 'range' }));
     await waitGame();
     await page.evaluate(() => window.__app.pauseGame());
     await page.waitForFunction(() => window.__app.screens.cur === 'pause', null, { timeout: 30000 }).catch(() => {});
@@ -627,10 +626,10 @@ try {
     await tapAt(q, 53);
     await page.waitForFunction(() => window.__app.screens.cur === 'title', null, { timeout: 15000 }).catch(() => {});
     const after2 = await page.evaluate(() => window.__app.screens.cur);
-    rec('操作', 'やり直せない操作（タイトルへ戻る）は指だと2回押す', after1 === 'pause' && after2 === 'title', `${after1} → ${after2}`);
+    rec('操作', 'やり直せない操作（試合を出る）は指だと2回押す', after1 === 'pause' && after2 === 'title', `${after1} → ${after2}`);
   }
   {
-    await page.evaluate(() => window.__app.startTrain({ start: 'range' }));
+    await page.evaluate(() => window.__app.startWar({ wmode: 'range' }));
     await waitGame();
     const lost = await page.evaluate(async () => {
       const gl = window.__app.renderer.gl; const ext = gl.getExtension('WEBGL_lose_context');
@@ -652,61 +651,13 @@ try {
   rec('ブラウザ', 'ブラウザのテストが最後まで動く', false, e.message.split('\n')[0]);
 }
 
-// ---------------- 8 オンライン（自前の中継で2人）
-if (!NONET) {
-  try {
-    const { startBroker } = await import('../tools/mqttbroker.mjs');
-    for (const kind of ['pve', 'pvp']) {
-      const br = await startBroker({ port: 0 });
-      const q = `?mqtt=${encodeURIComponent(br.url)}&p2p=0&room=0`;
-      const H = await openPage(env, 'dist/claude/preview.html' + q, { w: 844, h: 390, touch: true, mobile: true, init: INIT });
-      const G = await openPage(env, 'dist/claude/preview.html' + q, { w: 844, h: 390, touch: true, mobile: true, init: INIT });
-      try {
-        await waitTitle(H.page, 240000); await waitTitle(G.page, 240000);
-        await H.page.evaluate((k) => window.__app.hostRoom(k), kind);
-        await H.page.waitForFunction(() => window.__app.net && window.__app.screens.cur === 'lobby' && window.__app.net.code, null, { timeout: 60000 });
-        const code = await H.page.evaluate(() => window.__app.net.code);
-        await G.page.evaluate((c) => window.__app.joinRoom(c), code);
-        await G.page.waitForFunction(() => window.__app.net && window.__app.screens.cur === 'lobby', null, { timeout: 60000 });
-        await H.page.waitForFunction(() => window.__app.net.sess.roster.length === 2 && window.__app.net.sess.canStart(), null, { timeout: 60000 });
-        rec('オンライン', `${kind === 'pve' ? '協力' : '対戦'}: ルームを作り、コードで入ってロビーにそろう`, true, `コード ${code}`);
-        await H.page.screenshot({ path: path.join(SHOTS, `オンライン-${kind}-ロビー.png`) });
-        if (kind === 'pvp') await H.page.evaluate(() => { const S = window.__app.net.sess; S.setCfg({ ...S.cfg, mode: 'tdm', map: 'motel', teams: [1, 1] }); const g = S.roster.find(r => !r.host); S.setTeam(g.cid, 1); });
-        // 2画面を同時に描くので、画質を下げてこまを速くする（入力が1.5秒より古いとホストは捨てる）
-        for (const P of [H.page, G.page]) await P.evaluate(() => { const a = window.__app; a.settings.quality = 'low'; if (a.applySettings) a.applySettings(); });
-        await H.page.evaluate(() => window.__app.hostStart());
-        await H.page.waitForFunction(() => window.__app.mode === 'game', null, { timeout: 120000 });
-        await G.page.waitForFunction(() => window.__app.mode === 'game', null, { timeout: 120000 });
-        // 始まりの演出・準備の時間（動けない）が終わるまで待つ
-        await G.page.waitForFunction(() => { const g = window.__app.game; return g && g.p && !(g.intro > 0) && !(g.S.m && (g.S.m.phase === 'pre' || g.S.m.phase === 'prep')); }, null, { timeout: 120000 }).catch(() => {});
-        await H.page.waitForFunction(() => { const g = window.__app.game; return g && !(g.S.m && (g.S.m.phase === 'pre' || g.S.m.phase === 'prep')); }, null, { timeout: 120000 }).catch(() => {});
-        await G.page.waitForTimeout(1000);
-        const before = await H.page.evaluate(() => { const g = window.__app.game; const b = g.S.actors.find(a => a.pid === 1); return b ? { x: b.x, z: b.z, sh: b.stats.sh } : null; });
-        // 前が開けている向きへ（出現した所の前が塀や壁のこともある）
-        await G.page.evaluate(() => { const g = window.__app.game, w = g.w, p = g.p, PL = Math.max(0, Math.floor((p.y + 0.3) / 3)); let best = 0, bd = -1; for (let k = 0; k < 16; k++) { const yw = k * Math.PI / 8; let d = 0; for (let s = 0.3; s <= 3; s += 0.25) { const x = p.x + Math.sin(yw) * s, z = p.z + Math.cos(yw) * s, i = Math.floor(x / 0.5), j = Math.floor(z / 0.5); if (i < 0 || j < 0 || i >= w.W || j >= w.D) break; const k2 = w.idx(PL, i, j), t = w.cell[k2]; if (t !== 1 && t !== 2) break; if ((w.propNear.get(k2) || []).some(pid => { const q = w.props[pid]; return q && q.solid && q.alive !== false && q.boxes.some(b => b[4] > 0.3 && x > b[0] - 0.35 && x < b[3] + 0.35 && z > b[2] - 0.35 && z < b[5] + 0.35); })) break; d = s; } if (d > bd) { bd = d; best = yw; } } g.yaw = best; });
-        await G.page.keyboard.down('KeyW'); await G.page.waitForTimeout(8000); await G.page.keyboard.up('KeyW');
-        // 射撃: ソフトウェア描画の2画面では1こまが1秒を超えることがあり、短く押すと送る前に離してしまう。3秒押し続ける
-        await G.page.evaluate(async () => { const a = window.__app; a.input.hold.add('fire'); await new Promise(r => setTimeout(r, 3000)); a.input.hold.delete('fire'); });
-        await new Promise(r => setTimeout(r, 4000));
-        const after = await H.page.evaluate(() => { const g = window.__app.game; const b = g.S.actors.find(a => a.pid === 1); return b ? { x: b.x, z: b.z, sh: b.stats.sh } : null; });
-        const gs = await G.page.evaluate(() => { const g = window.__app.game; return { n: g.S.actors.length, me: g.p ? g.p.id : -1, err: window.__app._lastErr || null }; });
-        const moved = before && after ? Math.hypot(after.x - before.x, after.z - before.z) : 0;
-        await H.page.screenshot({ path: path.join(SHOTS, `オンライン-${kind}-ホスト.png`) });
-        await G.page.screenshot({ path: path.join(SHOTS, `オンライン-${kind}-ゲスト.png`) });
-        rec('オンライン', `${kind === 'pve' ? '協力' : '対戦'}: ゲストの移動と射撃がホストに届く`, moved > 0.15 && after.sh > before.sh && !gs.err, `移動 ${moved.toFixed(2)}m・射撃 ${before ? before.sh : '-'}→${after ? after.sh : '-'}・ゲストの見ている人数 ${gs.n}`);
-        const errsH = H.logs.filter(l => /pageerror/.test(l)), errsG = G.logs.filter(l => /pageerror/.test(l));
-        rec('オンライン', `${kind === 'pve' ? '協力' : '対戦'}: 両方の画面でエラーが出ない`, !errsH.length && !errsG.length, errsH.concat(errsG).slice(0, 2).join(' | '));
-      } finally { await H.ctx.close(); await G.ctx.close(); br.close(); }
-    }
-  } catch (e) { rec('オンライン', 'オンラインの検査が最後まで動く', false, e.message.split('\n')[0]); }
-}
 
 // ---------------- 9 アプリ版（ホーム画面用のページ）
 try {
   const { ctx, page, logs } = await openPage(env, 'dist/app/index.html', { w: 844, h: 390, touch: true, mobile: true, init: INIT });
   await waitTitle(page, 240000);
   const v = await page.evaluate(() => ({ ver: document.querySelector('.screen.title .ver') && document.querySelector('.screen.title .ver').textContent, title: document.title }));
-  rec('アプリ版', 'アプリ版のページもタイトルまで動く', !logs.filter(l => /pageerror/.test(l)).length, `${v.title} · ${v.ver}`);
+  rec('アプリ版', 'アプリ版のページもタイトルまで動く（題名は WAR BIT）', !logs.filter(l => /pageerror/.test(l)).length && v.title === 'WAR BIT', `${v.title} · ${v.ver}`);
   await page.screenshot({ path: path.join(SHOTS, 'アプリ版-タイトル.png') });
   await ctx.close();
 } catch (e) { rec('アプリ版', 'アプリ版のページ', false, e.message.split('\n')[0]); }
@@ -738,7 +689,7 @@ md += `\n## 見た目の検査で見つかったもの\n`;
 const lp = layoutProblems.filter(p => p.kind !== '省略(…)');
 md += lp.length ? lp.slice(0, 200).map(p => `- ${p.size} / ${p.screen}: ${p.kind} ${p.el || ''} ${p.rect ? JSON.stringify(p.rect) : ''}`).join('\n') : '- なし';
 md += `\n\n（「…」で省略される長い名前などは意図どおり: ${layoutProblems.length - lp.length}件）\n`;
-md += `\n## できていない検査\n- 実機のiPhone（Safari / Claudeアプリ）での表示・音・操作・速さ。作業環境はソフトウェア描画のChromiumなので、速さと見た目の細部は実機と違う。\n- ジャイロ（端末の傾き）での照準。\n- 公開のMQTTサーバーとWebRTCの直接接続（作業環境からは届かない）。オンラインは手元の中継で検査。\n- フォントは字幅が同じ手元のフォントで測っている（DESIGN.md 環境メモ）。\n`;
+md += `\n## できていない検査\n- 実機のiPhone（Safari / Claudeアプリ）での表示・音・操作・速さ。作業環境はソフトウェア描画のChromiumなので、速さと見た目の細部は実機と違う。\n- ジャイロ（端末の傾き）での照準。\n- オンライン（人どうしの対戦）は WAR BIT ではまだない（メニューから外した旧モードだけにあった）。\n- フォントは字幅が同じ手元のフォントで測っている（DESIGN.md 環境メモ）。\n`;
 if (note.length) md += `\n## メモ\n` + note.map(n => '- ' + n).join('\n') + '\n';
 fs.writeFileSync(path.join(OUT, 'summary.md'), md);
 console.log(`\n${ok}/${results.length} 合格 → test-results/summary.md`);

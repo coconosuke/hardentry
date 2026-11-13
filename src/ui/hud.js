@@ -7,6 +7,7 @@ import { WEAPONS, zoomsOf, zoomOf } from '../engine/data/weapons.js';
 import { GEAR, LONG } from '../engine/data/equipment.js';
 import { ammoCount } from '../engine/actor.js';
 import { warPlanImage, drawWarMarks, WAR_PX } from './warplan.js';
+import { DeployScreen } from './deployscreen.js';
 
 // 移動スティックの既定の場所（左下から。左利きは左右が入れ替わる）
 const STICK_DEF = { name: '移動スティック', ax: 'l', ay: 'b', x: 118, y: 96 };
@@ -85,7 +86,7 @@ export class Hud {
   setMode(m) {
     this.mode = m;
     // 対戦: 画面上部のスコア（目的の欄）をタップするとスコア表（専用のボタンはない）
-    if (this.info.obj) { if (m && m.pvp) { this.info.obj.dataset.btn = 'board'; this.info.obj.setAttribute('role', 'button'); this.info.obj.setAttribute('aria-label', 'スコア表を開く'); } else { delete this.info.obj.dataset.btn; this.info.obj.removeAttribute('role'); } }
+    if (this.info.obj) { if (m && (m.pvp || (m.war && !m.range))) { this.info.obj.dataset.btn = 'board'; this.info.obj.setAttribute('role', 'button'); this.info.obj.setAttribute('aria-label', 'スコア表を開く'); } else { delete this.info.obj.dataset.btn; this.info.obj.removeAttribute('role'); } }
     this.layout();
   }
   show(on) { this.on = on; this.root.classList.toggle('on', on); }
@@ -112,10 +113,11 @@ export class Hud {
       if (def.pvpOnly && !this.mode.pvp) hide = true;
       if (def.pvp && !this.mode.drone) hide = true;
       if (def.noWar && this.mode.war) hide = true;
+      if (def.rangeOnly && !this.mode.range) hide = true;
       // 設定で消したボタン（左の射撃）: 配置を動かしたことがあっても消す（動かすと設定が効かなくなっていた）
       const offBySetting = def.opt === 'leftFire' && this.S.leftFire === false;
       if (offBySetting) hide = true;
-      if (this.editing) hide = def.pve && !this.mode.pve ? true : false;
+      if (this.editing) hide = (def.pve && !this.mode.pve) || (def.rangeOnly && !this.mode.range) ? true : false;
       e.classList.toggle('hidden', hide && !this.editing);
       const [x, y] = this.posOf(def, ov);
       const s = (ov.s || 1) * def.s * k;
@@ -296,11 +298,15 @@ export class Hud {
           am.querySelector('.mags').innerHTML = '';
         } else if (wi && W) {
           const [m, r] = ammoCount(wi);
-          am.querySelector('.mode').textContent = (W.bolt ? 'ボルト' : W.modes[wi.mode] === 'auto' ? '連射' : W.modes[wi.mode] === 'burst' ? '3点' : '単発') + (zoomsOf(wi.att) ? (zoomOf(wi) <= 1 ? '・等倍' : `・${zoomOf(wi)}倍`) : '') + (p.ws.st === 'reload' ? '・リロード中' : p.ws.st === 'shell' ? '・装填中' : '');
+          am.querySelector('.mode').textContent = v.war
+            ? (W.bolt ? 'BOLT' : W.modes[wi.mode] === 'auto' ? 'AUTO' : W.modes[wi.mode] === 'burst' ? 'BURST' : 'SEMI') + (zoomsOf(wi.att) ? (zoomOf(wi) <= 1 ? ' · 1x' : ` · ${zoomOf(wi)}x`) : '') + (p.ws.st === 'reload' ? ' · RELOAD' : p.ws.st === 'shell' ? ' · LOAD' : '')
+            : (W.bolt ? 'ボルト' : W.modes[wi.mode] === 'auto' ? '連射' : W.modes[wi.mode] === 'burst' ? '3点' : '単発') + (zoomsOf(wi.att) ? (zoomOf(wi) <= 1 ? '・等倍' : `・${zoomOf(wi)}倍`) : '') + (p.ws.st === 'reload' ? '・リロード中' : p.ws.st === 'shell' ? '・装填中' : '');
           // 対戦は予備が減らない（∞）
-          am.querySelector('.cnt').innerHTML = `<b class="${m === 0 ? 'empty' : m <= (wi.cap || W.mag) * 0.25 ? 'lowa' : ''}">${m}</b><span>/${v.pvp ? '∞' : wi.mags ? wi.mags.length + '本' : r}</span>`;
+          // 大規模戦は弾倉の数（BattleBit も残りを弾倉で見せる）
+          const inf = v.pvp && !v.war;
+          am.querySelector('.cnt').innerHTML = `<b class="${m === 0 ? 'empty' : m <= (wi.cap || W.mag) * 0.25 ? 'lowa' : ''}">${m}</b><span>/${inf ? '∞' : wi.mags ? (v.war ? '×' + wi.mags.length : wi.mags.length + '本') : r}</span>`;
           // 弾倉ごとの残り（RoN の弾倉の確認のように）
-          am.querySelector('.mags').innerHTML = wi.mags && !v.pvp ? wi.mags.slice().sort((a, b) => b - a).map(n => `<i style="--f:${n / (wi.cap || W.mag)}"></i>`).join('') : '';
+          am.querySelector('.mags').innerHTML = wi.mags && !inf ? wi.mags.slice().sort((a, b) => b - a).map(n => `<i style="--f:${n / (wi.cap || W.mag)}"></i>`).join('') : '';
         } else { am.querySelector('.mode').textContent = ''; am.querySelector('.cnt').innerHTML = '<b>-</b>'; am.querySelector('.mags').innerHTML = ''; }
       }
       // 武器の切り替え
@@ -424,6 +430,12 @@ export class Hud {
         if (m.prog != null) { c.beginPath(); c.arc(m.x, m.y, 11, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.abs(m.prog)); c.strokeStyle = m.pcol || m.col; c.lineWidth = 3.5; c.stroke(); }
         c.fillStyle = m.col; c.font = '900 12px Inter, sans-serif'; c.fillText(m.t, m.x, m.y + 0.5);
         if (m.d != null) { c.font = '700 10px Inter, sans-serif'; c.fillStyle = 'rgba(235,240,245,0.9)'; c.fillText(Math.round(m.d) + 'm', m.x, m.y + 20); }
+      } else if (m.k === 'sign') {
+        // 射撃場の距離の札
+        c.globalAlpha = 0.9; c.font = '800 11px Inter, sans-serif';
+        const w = c.measureText(m.t).width + 10;
+        c.fillStyle = 'rgba(8,12,18,0.62)'; c.fillRect(m.x - w / 2, m.y - 9, w, 18);
+        c.fillStyle = '#f2f4f5'; c.fillText(m.t, m.x, m.y + 0.5);
       } else {
         // 味方: 頭の上の小さな山形（分隊は緑・ほかは青）。近いほど大きく
         const s = Math.max(3.5, Math.min(7, 7 - (m.d || 0) / 40));
@@ -435,14 +447,12 @@ export class Hud {
     }
     c.globalAlpha = 1;
   }
-  // 出撃の場所を選ぶ板（倒れている間）。d: null で隠す / { left: 秒, opts: [{ id, label, sub }], sel }
+  // 出撃の画面（倒れている間・試合の始め）。d: null で隠す / game.js の _warDeployData()
   deploy(d) {
-    const key = d ? Math.ceil(d.left) + '|' + d.opts.map(o => o.id + o.sub).join(',') + '|' + (d.sel || '') + '|' + (d.msg || '') : '';
-    if (this.cache.dep === key) return;
-    this.cache.dep = key;
-    if (!d) { this.deployEl.classList.remove('on'); this.deployEl.innerHTML = ''; return; }
-    this.deployEl.classList.add('on');
-    this.deployEl.innerHTML = `<div class="dp-h"><b>出撃</b><span>${d.msg || (d.left > 0 ? `${Math.ceil(d.left)} 秒後に出撃できる` : '場所を選ぶと出撃')}</span></div><div class="dp-l">${d.opts.map(o => `<div class="dp-o${o.id === d.sel ? ' sel' : ''}" data-btn="deploy" data-sub="${o.id}" role="button"><b>${o.label}</b><small>${o.sub || ''}</small></div>`).join('')}</div>`;
+    if (!d) { if (this.deployOn) { this.deployOn = false; this.deployEl.classList.remove('on'); } return; }
+    if (!this.dps) this.dps = new DeployScreen(this.deployEl);
+    if (!this.deployOn) { this.deployOn = true; this.deployEl.classList.add('on'); this.dps.cache = {}; }
+    this.dps.update(d);
   }
 
   // ---- ミニマップ
