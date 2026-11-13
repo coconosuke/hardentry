@@ -196,7 +196,8 @@ class App {
   }
   saveProfile() { saveProfile(this.profile); }
   saveLoadouts() { saveLoadouts(this.loadouts); if (this.net && this.netLoadoutChanged) this.netLoadoutChanged(); }
-  confirmMode() { return this.settings.confirm || 'auto'; }
+  // 試合を出るなどの確認: 設定の項目はなくした（11-13 14:35）。タッチは2回押し、マウスは1回
+  confirmMode() { return 'auto'; }
   editHud(onDone) {
     this.screens.hide();
     const prevMode = this.hud.mode;

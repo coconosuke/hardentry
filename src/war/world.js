@@ -15,7 +15,7 @@ export function makeWarWorld(o) {
   const ww = {
     war: true, sx, sz, hs, HW, HD, GW, GD,
     h: o.heights || new Float32Array(HW * HD),
-    boxes: [], ramps: [], cyls: [],
+    boxes: [], ramps: [], cyls: [], decos: [], bushes: [],
     cellBox: null, cellRamp: null, cellCyl: null, cellMaxH: null,
     stamp: new Uint32Array(0), stampN: 1,
     // engine の w と同じ名前で持つ物（使わない物は空）
@@ -25,21 +25,43 @@ export function makeWarWorld(o) {
 }
 
 // 箱: { x0,y0,z0,x1,y1,z1, mat, hp?, kind?, bld?, opaque?(既定 true), walk?(上に立てる。既定 true) }
+// 描き方（当たりには関係ない）: col（色）・layer（模様。既定は材質から）・bev（角を落とす幅）・detail（近くだけ描く小物・枠・家具）・
+// hide（描かない。三角の破風の当たりなど）・far（遠くでも描く小物。車など）
 export function addBox(ww, b) {
   const x0 = Math.min(b.x0, b.x1), x1 = Math.max(b.x0, b.x1), z0 = Math.min(b.z0, b.z1), z1 = Math.max(b.z0, b.z1), y0 = Math.min(b.y0, b.y1), y1 = Math.max(b.y0, b.y1);
   const box = { id: ww.boxes.length, x0, y0, z0, x1, y1, z1, mat: b.mat ?? M.CONCRETE, hp: b.hp ?? 1e9, kind: b.kind || 'wall', bld: b.bld ?? -1, opaque: b.opaque !== false, walk: b.walk !== false, alive: true, col: b.col || null };
+  if (b.layer != null) box.layer = b.layer;
+  if (b.bev) box.bev = b.bev;
+  if (b.detail) box.detail = true;
+  if (b.hide) box.hide = true;
+  if (b.far) box.far = true;
+  if (b.cols) box.cols = b.cols;
   ww.boxes.push(box);
   return box;
+}
+// 描くだけの面（当たりなし）: 切妻の屋根の三角の壁など。pts は凸の多角形（世界の座標）、n は向き。far: 遠くでも描く
+export function addDeco(ww, d) {
+  const o = { pts: d.pts, n: d.n, col: d.col || '#a0a0a0', layer: d.layer ?? 1, far: d.far !== false, bld: d.bld ?? -1 };
+  ww.decos.push(o);
+  return o;
+}
+// 茂み（通り抜けられる・弾も通る。姿は隠れる）: x・z・下の高さ y・半径 r・高さ h
+export function addBush(ww, b) {
+  const o = { x: b.x, z: b.z, y: b.y ?? heightAt(ww, b.x, b.z), r: b.r ?? 1.2, h: b.h ?? 1.3, col: b.col || null, n: b.n || 0 };
+  (ww.bushes || (ww.bushes = [])).push(o);
+  return o;
 }
 // 坂の板（階段・斜路）: 四角 x0..x1 × z0..z1 で、dir の向きへ y0 から y1 へ上がる（'n' -z・'s' +z・'e' +x・'w' -x）。厚み th
 export function addRamp(ww, r) {
   const ramp = { id: ww.ramps.length, x0: Math.min(r.x0, r.x1), x1: Math.max(r.x0, r.x1), z0: Math.min(r.z0, r.z1), z1: Math.max(r.z0, r.z1), y0: r.y0, y1: r.y1, dir: r.dir, th: r.th ?? 0.25, mat: r.mat ?? M.CONCRETE, bld: r.bld ?? -1, col: r.col || null, smooth: !!r.smooth, kind: r.kind || 'stair' };
+  if (r.layer != null) ramp.layer = r.layer;
   ww.ramps.push(ramp);
   return ramp;
 }
-// 円柱（木の幹・柱・電柱）
+// 円柱（木の幹・柱・電柱・ドラム缶・サイロ・干し草）。木の幹は ww.trees が描く。ほかは col があれば render.js が描く（seg: 角の数）
 export function addCyl(ww, c) {
   const cyl = { id: ww.cyls.length, x: c.x, z: c.z, r: c.r, y0: c.y0, y1: c.y1, mat: c.mat ?? M.WOOD, kind: c.kind || 'tree', alive: true, opaque: c.opaque !== false };
+  if (c.col) { cyl.col = c.col; cyl.seg = c.seg || 8; cyl.layer = c.layer; cyl.far = !!c.far; cyl.r1 = c.r1 ?? c.r; if (c.rot) cyl.rot = c.rot; }
   ww.cyls.push(cyl);
   return cyl;
 }

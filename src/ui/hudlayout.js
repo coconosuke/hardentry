@@ -47,7 +47,8 @@ export const ICONS = {
   expand: '<path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>',
   fire: '<circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2.2" fill="currentColor"/><path d="M12 1v5M12 18v5M1 12h5M18 12h5" stroke="currentColor" stroke-width="2"/>',
   ads: '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 5v4M12 15v4M5 12h4M15 12h4" stroke="currentColor" stroke-width="2"/>',
-  reload: '<path d="M8 3h8v4H8zM9 7h6v13H9z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 11h2M11 14h2M11 17h2" stroke="currentColor" stroke-width="1.5"/>',
+  // リロード: 弾丸を円の矢印が囲む（主なスマホFPSと同じ形。11-13 14:35）
+  reload: '<path d="M19.36 7.75A8.5 8.5 0 1 1 14.2 3.79" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M17.1 4.5L12.7 6.1 14 1z" fill="currentColor"/><path d="M9.7 11C9.7 9.1 10.85 7.55 12 7 13.15 7.55 14.3 9.1 14.3 11zM9.6 11.7h4.8v4.8H9.6zM9.1 16.9h5.8v1.3H9.1z" fill="currentColor"/>',
   crouch: '<circle cx="13" cy="5" r="2.5" fill="currentColor"/><path d="M12 8l-3 6h6l-2 6M9 14l-3 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
   vault: '<path d="M3 20h18M7 20v-7h10v7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 9c3-6 9-6 13-1l-2-3M18 8l-3 1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   leanL: '<path d="M10 4l-4 4 4 4M6 8h8a5 5 0 0 1 0 10h-3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',

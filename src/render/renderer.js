@@ -8,7 +8,7 @@ import { prepareLevel, buildChunk, doorLeafMesh, barPanelMesh, CHUNK } from './l
 import { WV, MeshBuilder, hex } from './build.js';
 import { bakeLight } from '../engine/light.js';
 import { CS, LH, CEIL, NB, DSHIELD } from '../engine/world.js';
-import { buildWarFar, buildWarNear } from '../war/render.js';
+import { buildWarFar, buildWarNear, buildWarGrass } from '../war/render.js';
 
 // 大規模戦の空（もやを薄く、遠くまで見える。日は少し低めで影が長い）
 export const WAR_SKY = { sky: [0.54, 0.67, 0.9], ground: [0.3, 0.29, 0.24], sun: [2.75, 2.5, 2.12], sunDir: (() => { const v = [0.5, 0.64, 0.36], l = Math.hypot(...v); return v.map(x => x / l); })(), fog: [0.7, 0.77, 0.86], fogD: 0.0011, amb: 0.03, exposure: 0.8, zenith: [0.23, 0.43, 0.86], horizon: [0.73, 0.8, 0.9], night: 0 };
@@ -273,7 +273,7 @@ export class Renderer {
   }
   clearMap() {
     const gl = this.gl;
-    for (const ch of this.chunks || []) { if ('far' in ch) { delMesh(gl, ch.far); delMesh(gl, ch.near); } else { delMesh(gl, ch.mesh); delMesh(gl, ch.glass); } }
+    for (const ch of this.chunks || []) { if ('far' in ch) { delMesh(gl, ch.far); delMesh(gl, ch.near); delMesh(gl, ch.grass); } else { delMesh(gl, ch.mesh); delMesh(gl, ch.glass); } }
     this.war = null;
     for (const d of this.doorMeshes || []) { for (const m of d.leaves) delMesh(gl, m); }
     for (const b of this.barMeshes || []) if (b) delMesh(gl, b.mesh);
@@ -293,6 +293,8 @@ export class Renderer {
     this.viewDist = o.viewDist || 900;
     this.nearDist = o.nearDist || 170;
     this.shR = o.shadowR || 44;
+    // 草を描く距離（0 で描かない）と濃さ
+    this.grassD = o.grassDist ?? 0; this.grassDens = o.grassDens ?? 1;
     // 使わない光の格子などは 1 画素の物を置く（シェーダーの決まりのため）
     const t3 = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_3D, t3);
@@ -306,7 +308,7 @@ export class Renderer {
     this.dlrData = new Uint8Array(MAX_DL);
     this.dlr = tex2D(gl, 1, MAX_DL, { internal: gl.R8, format: gl.RED, data: this.dlrData, filter: gl.NEAREST });
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
-    this.chunks = buildWarFar(ww).map(c => { const m = makeWorldMesh(gl, c.B); return { k: c.k, x0: c.x0, z0: c.z0, x1: c.x1, z1: c.z1, y0: c.y0, y1: c.y1, far: m, farTris: m ? m.n / 3 : 0, near: null, nearTris: 0, mesh: m, glass: null, tris: m ? m.n / 3 : 0, d: 1e9 }; });
+    this.chunks = buildWarFar(ww).map(c => { const m = makeWorldMesh(gl, c.B); return { k: c.k, x0: c.x0, z0: c.z0, x1: c.x1, z1: c.z1, y0: c.y0, y1: c.y1, far: m, farTris: m ? m.n / 3 : 0, near: null, nearTris: 0, grass: null, grassTris: 0, mesh: m, glass: null, tris: m ? m.n / 3 : 0, d: 1e9 }; });
     this.doorMeshes = []; this.barMeshes = []; this.outer = null;
     this.roofY = 1e9;
     this.buildMs = performance.now() - t0;
@@ -323,6 +325,18 @@ export class Renderer {
     want.sort((a, b) => a.d - b.d);
     const nb = budget < 0 ? want.length : Math.min(want.length, budget);
     for (let k = 0; k < nb; k++) { const ch = want[k]; ch.near = makeWorldMesh(gl, buildWarNear(this.war, ch.k)); ch.nearTris = ch.near ? ch.near.n / 3 : 0; }
+    // 草（近い塊だけ。塊の中心から grassD＋45m 以内）
+    const G = this.grassD;
+    if (G > 0) {
+      let gb = budget < 0 ? 1e9 : 1;
+      const gw = [];
+      for (const ch of this.chunks) {
+        if (ch.d < G + 45 && !ch.grass) gw.push(ch);
+        else if (ch.grass && ch.d > G + 110) { delMesh(gl, ch.grass); ch.grass = null; ch.grassTris = 0; }
+      }
+      gw.sort((a, b) => a.d - b.d);
+      for (const ch of gw) { if (gb-- <= 0) break; ch.grass = makeWorldMesh(gl, buildWarGrass(this.war, ch.k, this.grassDens)); ch.grassTris = ch.grass ? ch.grass.n / 3 : 0; }
+    }
     for (const ch of this.chunks) {
       const useNear = ch.near && ch.d < N + 40;
       ch.mesh = useNear ? ch.near : ch.far; ch.tris = useNear ? ch.nearTris : ch.farTris;
@@ -353,6 +367,7 @@ export class Renderer {
     if (u.uWar) gl.uniform1f(u.uWar, this.war ? 1 : 0);
     if (u.uOuter) gl.uniform1f(u.uOuter, this.war ? 1 : 0);
     if (u.uFogFar) gl.uniform1f(u.uFogFar, this.war ? this.viewDist : 0);
+    if (u.uGrassD) gl.uniform1f(u.uGrassD, this.war ? this.grassD || 1 : 1);
     if (u.uCam) gl.uniform3fv(u.uCam, this.camPos);
     if (u.uFogCol) gl.uniform3fv(u.uFogCol, sky.fog);
     if (u.uFogD) gl.uniform1f(u.uFogD, sky.fogD * (opts.fogMul ?? 1));
@@ -448,6 +463,12 @@ export class Renderer {
     }
     vis.sort((a, b) => a[0] - b[0]);
     for (const [, ch] of vis) { drawMesh(gl, ch.mesh); this.stats.draws++; this.stats.tris += ch.tris; this.stats.chunks++; }
+    // 草（裏も描く）
+    if (this.grassD > 0) {
+      gl.disable(gl.CULL_FACE);
+      for (const [, ch] of vis) if (ch.grass && ch.d < this.grassD + 45) { drawMesh(gl, ch.grass); this.stats.draws++; this.stats.tris += ch.grassTris; }
+      gl.enable(gl.CULL_FACE);
+    }
     if (this.outer && this.outer.mesh) { if (P.u.uOuter) gl.uniform1f(P.u.uOuter, 1); drawMesh(gl, this.outer.mesh); if (P.u.uOuter) gl.uniform1f(P.u.uOuter, 0); this.stats.draws++; this.stats.tris += this.outer.tris; }
     // 扉
     if (f.doors) { this._drawDoors(P, f.doors); this._drawBars(P, f.doors.bars); this._drawDeps(P, f.doors.deps); }

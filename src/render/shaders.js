@@ -18,7 +18,7 @@ uniform highp sampler2D uDLR;     // 動く光ごとに、届く部屋（光が�
 uniform vec4 uLGd;                // W1, D1, NLy, NL
 uniform vec4 uMapD;               // W, D, CS, LH
 uniform vec3 uSunDir; uniform vec3 uSunCol; uniform float uShadowOn; uniform mat4 uShadowVP; uniform highp sampler2DShadow uShadow; uniform float uShadowTexel;
-uniform vec3 uSkyCol; uniform float uAmbMin; uniform float uOuter; uniform float uWar; uniform float uFogFar;
+uniform vec3 uSkyCol; uniform float uAmbMin; uniform float uOuter; uniform float uWar; uniform float uFogFar; uniform float uGrassD;
 uniform vec4 uDLp[${MAX_DL}]; uniform vec4 uDLc[${MAX_DL}]; uniform vec4 uDLd[${MAX_DL}]; uniform int uDLn;
 uniform vec3 uCam; uniform vec3 uFogCol; uniform float uFogD; uniform float uFogIn; uniform float uTime;
 uniform float uRoofY;
@@ -157,7 +157,11 @@ in vec3 vPos; in vec3 vNrm; in vec2 vUV; flat in float vLayer; in vec3 vCol; in 
 layout(location=0) out vec4 oCol;
 void main(){
   vec3 n = normalize(vNrm);
-  if (!gl_FrontFacing) n = -n;
+  // 草（emit < 0）: 遠い所から点を間引いて消す（塊の四角い境目を見せない）。裏も表と同じ向きの光
+  if (vEmit < -0.5) {
+    float gd = length(vPos.xz - uCam.xz), fade = clamp((gd - uGrassD * 0.55) / (uGrassD * 0.45), 0.0, 1.0);
+    if (fract(sin(dot(floor(vPos.xz * 9.0), vec2(12.9898, 78.233))) * 43758.5453) < fade) discard;
+  } else if (!gl_FrontFacing) n = -n;
   vec3 alb = texture(uTex, vec3(vUV, vLayer)).rgb * vCol * uTint;
   // 大規模戦の地面: 大きな模様を重ねて、くり返しを目立たせない
   if (uWar > 0.5 && abs(vLayer - 8.0) < 0.5) alb *= 0.72 + 0.4 * texture(uTex, vec3(vUV * 0.11 + 0.37, 9.0)).r;

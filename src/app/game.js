@@ -29,7 +29,7 @@ import { WarFlags, FLAG_COL } from '../render/warflags.js';
 import { WAR_MAPS } from '../war/maps/index.js';
 
 // 大規模戦の描く距離（画質ごと）: 低 550m・中 800m・高 1050m（遠くはもやに溶かす）
-function warView(st) { const g = gfxOf(st); return { viewDist: { low: 550, medium: 800, high: 1050, max: 1200 }[g.detail] || 800, nearDist: g.detail === 'low' ? 130 : 170, shadowR: g.shadow === 'high' ? 48 : 40 }; }
+function warView(st) { const g = gfxOf(st); return { viewDist: { low: 550, medium: 800, high: 1050, max: 1200 }[g.detail] || 800, nearDist: g.detail === 'low' ? 120 : g.detail === 'medium' ? 150 : 180, shadowR: g.shadow === 'high' ? 48 : 40, grassDist: { low: 0, medium: 55, high: 80, max: 100 }[g.detail] ?? 55, grassDens: g.detail === 'low' ? 0.6 : 1 }; }
 
 const DEG = Math.PI / 180;
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;

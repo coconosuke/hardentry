@@ -35,7 +35,7 @@ export class TitleScene {
     const r = this.app.renderer;
     this.detach();
     const g = gfxOf(this.app.settings);
-    r.setWar(this.G.w, { viewDist: g.detail === 'low' ? 450 : 650, nearDist: 120, shadowR: 30 });
+    r.setWar(this.G.w, { viewDist: g.detail === 'low' ? 450 : 650, nearDist: 120, shadowR: 30, grassDist: g.detail === 'low' ? 0 : 45 });
     r.warmWar(this.cx, this.cz);
     this.av = new ActorView(r); this.fx = new FX(r);
     this.entered = true;
