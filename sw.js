@@ -1,5 +1,5 @@
-// ビルド 51b307cc61
-const CACHE = 'hardentry-51b307cc61';
+// ビルド 89656b5e8e
+const CACHE = 'hardentry-89656b5e8e';
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./'])).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', (e) => {

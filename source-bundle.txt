@@ -1,8 +1,8 @@
-HARD ENTRY ソース一式（2026-11-13T01:24:42.154Z）
+HARD ENTRY ソース一式（2026-11-13T06:13:01.654Z）
 復元: node tools/unbundle.mjs source-bundle.txt <出力先>
 （tools/unbundle.mjs がない場合は、下の "@@@@ FILE " の区切りごとにファイルへ書き出す。base64 と書かれたものはデコードする）
 
-@@@@ FILE DESIGN.md text 117313
+@@@@ FILE DESIGN.md text 121001
 # WAR BIT 設計メモ（旧 HARD ENTRY）
 
 ## 文脈が消えたら最初に読む
@@ -85,6 +85,9 @@ HARD ENTRY ソース一式（2026-11-13T01:24:42.154Z）
 - 2026-11-13 03:10 遊ぶモードは不足分をボットが補う対戦のみでいい（ボットが補うから1人でも可）。メニューの感じや表記、雰囲気も BattleBit を参考に（→ 0.1.15。上の「メニューとモード」）。
 - 2026-11-13 03:15 言い方が悪かった。作戦・対戦・訓練のうち、作戦と対戦は統合していい（中身が変わらないから）。訓練（射撃場）は欲しい。モードはコンクエスト（人数による規模の大きさ。BF のコンクエストとコンクエスト小などの分け方は任せる）と、歩兵だけのチームデスマッチやドミネーションがあるといい（→ 0.1.15）。
 - 2026-11-13 09:31 基本はモードも BattleBit 準拠でいい（→ CONQUEST・DOMINATION は BattleBit の公式のモード、TDM は 03:15 の要望で BattleBit のサーバー一覧にもある物。Rush・Frontline は入れない）。
+- 2026-11-13 10:19 リバーベンドを遊んだ感想: 建築物・遮蔽物が少なく、建築物の質が低い。グラフィック・質感・挙動が BattleBit を再現できていない。AI が固まって棒立ちが多く、頭があまり良くない。これから作り込む予定だったか（→ 一部だけ予定にあったと答えた: AI の蘇生・手榴弾・回り込み・建物の中は M3〜M4 の予定。建物の数と質、見た目と挙動の作り込みは段階に入っていなかった。3つとも M3 より先にやる案を出した: ① AI ② マップ ③ 見た目と挙動）。
+- 2026-11-13 11:07 順番は効率で決めてよい。とにかく常に細かな点まで極力 BattleBit そのままで再現する意識で、徹底的にリサーチしながら進める（→ 順番は ① マップ（建物・遮蔽物）② AI ③ 見た目と挙動。research/WARBIT.md の 13）。
+- 2026-11-13 14:35 建物以外の高低差・地形・植生も BattleBit を参考にこだわる。マップは BattleBit そのままでなくても真似するイメージで。グラフィックは質感やポリゴンに加え、明暗・彩度・コントラストも再現。設定の「確認が必要な操作」の項目をなくす。リロードボタンのアイコンは主なスマホFPSと同じ弾丸に円形の矢印。キャラの挙動、銃の反動、サイトやスコープの覗き方・表示・揺れ、リコイル、できる動作（乗り越え・ジャンプ・しゃがみ・匍匐など）の種類と動き方も緻密に再現（→ 設定の項目とリロードのアイコン、地形と植生は 0.1.16 に入れる。15:09 に同じ要望がもう一度届き、順番を ① マップ（0.1.16）② 見た目（明暗・彩度・コントラスト）③ 挙動（反動・サイト・動作）④ AI と伝えた）。
 
 ## 約束（仕様・数値）— 必ず守る。守れなくなったら先に言う
 - 仮に決めて伝えたこと（15:20 送信）: ゲーム名「HARD ENTRY」（仮）。PvP は「SWAT 対 立てこもり犯」の攻守（シージの攻撃／防衛に相当）。掛け声・無線は英語の音声＋日本語字幕。血の表現あり（設定で消せる）。アプリ版のリポジトリはユーザーに作ってもらう（`hardentry`、Settings → Pages で main / root）。
@@ -343,7 +346,38 @@ HARD ENTRY ソース一式（2026-11-13T01:24:42.154Z）
 - 11-13 WAR BIT M1（世界と歩く・撃つ）: 調べもの（research/WARBIT.md の 1〜5）。世界（src/war/world.js: 地形 2m・箱・坂の板・円柱、8m の引き出し）・建物（src/war/buildings.js）・マップ「リバーベンド」（1400m 四方、範囲 小500・中800・大1200m、拠点8・本陣6）。描画（src/war/render.js ＋ renderer.setWar）: 64m の塊ごとに遠い形（地形 8m＋すそ・簡単な木・箱）をいつも持ち、近い形（地形 2m・道の帯と中央線・面ごとに平らな低ポリの木・箱・階段・土のう）は 170m 以内で作って 280m より遠くで捨てる。地形はなめらかな面に頂点の色（草のむら・土・岩・川床・道・踏み固めた地面）、建物の中の面は日が当たらない（頂点の room＝日の当たり方）、近くだけ太陽の影（半径 40〜48m、縁は薄く）、遠くはもやに溶かす（描く距離 低550・中800・高1050m）。三角形はおよそ 8〜11 万・描く回数 110〜170。エンジン: engine/world.js の調べる道具は w.war のとき war/world.js へ回し、体の動き・乗り越え・弾・投げ物・視線をそのまま使う。速さは大規模戦用（歩き 3.3・しゃがみ 2.0・伏せ 0.8・走る 5.9→まっすぐ 3 秒で 6.6・ADS ×0.52。BFV と BattleBit）。弾は 1500m・4 秒まで、地面は材質「地面」。ダメージは BattleBit 寄り（src/war/guns.js: 頭の倍率・距離の減衰・狙撃は遠いほど上がる）。モード war（engine/modes/war.js）: 本陣から出撃・範囲の外は 10 秒で死亡（白黒とざらつき）・倒されたら 5 秒で本陣へ。画面: タイトルに「WAR BIT（試作）」→ 人数（範囲）を選んで出撃。ミニマップと地図は全体の絵（1画素 2m・起伏の陰・建物・範囲の外は暗く・拠点と本陣）。単体テスト 7 件（war world 3・war engine 4）。ついでに直した: ミニマップの北の印が動かず、地図を開く印が回っていた。版 0.1.14（互換9のまま。今までのモードは変わらない）。
 - 11-13 WAR BIT M2（コンクエストとボット）: 拠点（1人で中立→確保 10 秒・敵の拠点は 20 秒・人数で速く最大4人分・同じ人数で止まる・誰もいないと持ち主の側へゆっくり戻る）、チケット（小 300・中 500・大 800。出撃で1減る。過半数の拠点で相手が 差×0.3/秒 減る。0 で負け）、旗（竿の布が進み具合で上下・持ち主の色・地面の輪）、上の帯（両チームのチケットと拠点、奪い合いは点滅、分隊の目標に印）、世界の上の印（拠点の文字と距離・味方の頭の上の印・分隊は緑）、倒れたら出撃の板（本陣か出撃できる自軍の拠点を選ぶ。7 秒）、勝敗と成績表。ボット（src/war/ai.js・nav.js）: 足りない人数を埋める（小で31体）。8人の分隊ごとに指揮が目標の拠点を割り当て（守る・取りに行く）、2m の格子の A* で外を歩き、拠点の中に散って見張る。見えた敵は反応の遅れのあとで撃つ（遠いほど丁寧・弾の落ちと移動の見越し・交戦距離の外では4割だけ止まって撃つ）。陣営で服の色が違う（味方 オリーブ・相手 砂色）。ボットだけの 16対16・2分: 射撃約5500・命中4.5%・ダウン42・キル26・1ステップ 1.3ms。橋は坂の板にした（西の岸が3m低く、平らな板では上がれなかった）。投げ物: 破片手榴弾（M67。約4秒・5mでほぼ致命・15mまで弱まる・35mまで投げられる）と衝撃手榴弾（当たった瞬間に爆発・8mまで）を足した（11-12 23:08 の「グレネード類も複数種類」の要望。閃光 M84・発煙はもとから。兵科ごとの持ち物は M3）。大規模戦のダウンは 10 秒（起こす仕組みは M3）。遠い銃声は 700m より先は鳴らさず、60m より遠い銃声は 0.25 秒に 10 発まで。
 - 11-13 WAR BIT 0.1.15（メニューとモードの入れ替え）: タイトルを WAR BIT だけに（独自のブロック文字のロゴ・PLAY／SHOOTING RANGE／SETTINGS・右上に名前・背景は射撃場の谷に立つ分隊5人）。PLAY はモードの札（CONQUEST 16・32・64 vs／DOMINATION 16・32 vs／TEAM DEATHMATCH 8・16 vs）と人数のボタンで、押すとすぐ始まる。試合は出撃の画面から（上の帯にマップ・モード・人数・点、地図の上の出撃の場所（本陣・持っている拠点）、左に分隊の欄、下に兵科6つ（分隊長は分隊の1人目だけ）、左下 LOADOUT で主の銃と拳銃、右下 DEPLOY。倒れると1.8秒あとに開き、待ちの秒数が出る。先に押すと時間が来たら出る）。開いている間は 3D を描かない。兵科（src/war/classes.js）: 体力 援護125・偵察90（ヘルメットなし）・ほか100、銃は兵科ごと、投げ物と包帯の数も兵科ごと（衛生の包帯16）。道具（弾薬箱・医療キット・RPG・双眼鏡）は M3 で、画面には「準備中」。ボットも兵科を持つ（分隊の1人目は分隊長・ほかは重みつき）。モード（engine/modes/war.js）: ドミネーション（工場・橋・町の広場の拠点3つ）・TDM（町の中 200m 四方。4人ずつの組で敵の近くへ）。旗と印の色は見る人から見て 味方 青・敵 赤・中立 白。上の帯の拠点は A から順、ドミネーション・TDM は残り時間と目標。上の帯を押すとスコア表（上位10人）。結果は VICTORY／DEFEAT・理由・両チームの表・PLAY AGAIN。一時停止は RESUME／MAP／SETTINGS／QUIT。射撃場（src/war/maps/range.js）: 420×1400m の谷。屋根つきの射台、10・25・50・75・100・150・200・300・400・500・650・800・1000m の人形（敵の服。倒れて3秒で同じ所に起き上がる）と距離の札（世界の上の印。重なる物は出さない）、50m より先の人形の後ろに土の山、横に動きの練習場（家・塔・コンテナ・高さ 1・1.4・2.2m の塀・土のう）。弾と投げ物は減らない。当てると上の帯と出来事に部位・ダメージ・距離。右上の兵科のボタンか一時停止の LOADOUT で出撃の画面へ戻って兵科・銃を変える（倒されたことにはしない）。遠くまで描く（1180m・もやを薄く）。分隊の名前はチーム 0 が A〜H、1 が O〜V（結果の表で見分ける）。HUD の弾は「残り／×予備の弾倉の数」と弾倉ごとの残り（BattleBit も弾倉で見せる。前は対戦と同じ ∞ だった）、射撃モードは AUTO・SEMI・BOLT。エイムアシストは設定の値が大規模戦にも効く（前は対戦の部屋の設定を見ていた）。アイコンを WAR BIT のブロック文字に（tools/mkicon.py）。単体テスト 5 件（war modes）。テスト一式を WAR BIT に合わせた（旧モードのブラウザと自動の試合の項目は外した）。版 0.1.15（互換9のまま）。
+- 11-13 WAR BIT 0.1.16（リバーベンドの作り直し・地形と植生・設定とリロードのアイコン）: 10:19・11:07・14:35 の要望。建物は 23 → 約 350（家・平屋・店・アパート・事務所・倉庫・納屋・小屋・礼拝堂・ガソリンスタンド・掩体壕・見張り塔・壊れた家。src/war/buildings.js）。町は道の格子にそって並べ（大通りは店とアパートをつめて並べる・裏庭の塀と生け垣・車道の車・小屋）、広場（D）は石畳・噴水・屋台・植え込み・土のう、南に礼拝堂。歩道（縁石）。工場はコンクリートの構内・倉庫4・事務所・サイロ・煙突・給水塔・コンテナの囲い・塀と門。丘は塔2・掩体壕2・兵舎・壕と縁の土のう・ヘスコ・対戦車の障害物。農場は納屋・サイロ・給水塔・干し草・柵、果樹園。村は礼拝堂と家・平屋・石垣・生け垣・給水塔、ぶどう畑。十字路はガソリンスタンド・食堂・家。本陣にテント。拠点の間に前哨・農家・壊れた家・掩体・焼けた車・電柱（src/war/props.js）。地形は3段の起伏と端の丘・尾根・段々の石切り場・乾いた小川3本・道の切り通しと盛り土。植生は森（芯が濃い）・茂み（通り抜けられる。約3000）・畑（麦・耕した土・牧草）・木の列・草の株（近くだけ。画質で距離）。岩は低ポリの塊。床の縁が壁の外に帯で見えるのを直した。設定の「確認が必要な操作」を消した（動きは今までの既定のまま）。リロードのアイコンを弾丸と円の矢印に。research/WARBIT.md の 13・14。版 0.1.16（互換9のまま）。
 - 次: WAR BIT M3（兵科の道具: 医療キットと蘇生・弾薬箱・RPG・双眼鏡の印・ラリーポイント、分隊の指示）→ M4（ボットの建物の中・中と大の重さ）→ オンライン（人どうし＋ボット）。オフィスの拡張（研究棟と渡り廊下）は途中まで作ってある（offx）。AI の弱いところ（後で）: 隊長役の AI は「移動の空振り」を続けての回数でなく通った回数で数えていて、何度も通る部屋（港の倉庫）をふさぐ（入れた部屋で数え直すやり方は、途中まで比べたところ、ほかのマップで終わるのが遅くなり完了も増えなかったので、別のやり方を試す）。小さい部屋の中から外へ突入すると、入った隊員が向こう側にいる味方に詰まり、突入した扉を自分で閉めて戻る、をくり返す（ガソリンスタンドの2階の物置）。
+
+@@@@ FILE dev/kitworld.mjs text 2163
+// 建物と小物の見本の世界（見た目の確認用。400×400m の平らな草地に並べる）
+import { makeWarWorld, finishWorld } from '../src/war/world.js';
+import * as K from '../src/war/buildings.js';
+import * as P from '../src/war/props.js';
+import { mulberry } from '../src/war/noise.js';
+
+export function buildKit() {
+  const ww = makeWarWorld({ sx: 400, sz: 400, hs: 2 });
+  ww.mapId = 'kit'; ww.areas = {}; ww.flagDefs = {}; ww.roads = [[[60, 200], [340, 200]]]; ww.trees = [];
+  ww.mountIn = [150, 150];
+  for (let i = 0; i < ww.h.length; i++) ww.h[i] = 0;
+  const rnd = mulberry(5);
+  // 建物の列（道の北）
+  const list = [['house', 80], ['house', 96], ['bungalow', 112], ['shop', 130], ['office', 150], ['apartment', 172], ['shed', 192], ['barn', 206], ['bunker', 224], ['ruin', 240], ['tower', 256], ['warehouse', 270]];
+  for (const [k, x] of list) K[k](ww, { x, z: 170, y: 0, rot: 0, floors: k === 'office' ? 3 : k === 'apartment' ? 3 : k === 'shop' ? 2 : undefined, rnd });
+  K.gasStation(ww, { x: 300, z: 168, y: 0, rot: 0, rnd });
+  // 小物の列（道の南）
+  let x = 80;
+  P.car(ww, x, 212, 0, { rnd }); P.car(ww, x + 6, 212, 0, { rnd }); P.pickup(ww, x + 13, 212, 0, { rnd }); P.truck(ww, x + 24, 212, 0, { rnd }); P.wreck(ww, x + 36, 212, 0, { rnd });
+  P.car(ww, x + 44, 214, 1, { rnd });
+  P.jerseyRun(ww, x + 50, 212, x + 62, 212); P.hesco(ww, x + 66, 212, x + 76, 212); P.hesco(ww, x + 66, 214, x + 76, 214, 2.2);
+  P.tankTrap(ww, x + 82, 212); P.tankTrap(ww, x + 85, 214); P.crates(ww, x + 90, 212, 5, { rnd }); P.pallets(ww, x + 95, 212); P.barrels(ww, x + 99, 212, 5, { rnd });
+  P.railFence(ww, x + 104, 210, x + 120, 210); P.boardFence(ww, x + 104, 214, x + 120, 214); P.stoneWall(ww, x + 124, 212, x + 138, 212); P.hedge(ww, x + 142, 212, x + 156, 212);
+  P.hay(ww, x + 160, 212, 4, { rnd }); P.logs(ww, x + 170, 212, 0); P.pole(ww, x + 176, 212); P.lamp(ww, x + 180, 212, 1); P.dumpster(ww, x + 184, 212, 0, { rnd }); P.busStop(ww, x + 190, 212, 0);
+  P.rubble(ww, x + 198, 212, 6, { rnd }); P.foxhole(ww, x + 208, 213, 's');
+  K.sandbags(ww, x + 214, 212, x + 220, 212, 0);
+  return finishWorld(ww);
+}
 
 @@@@ FILE dev/view.html text 446
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -403,10 +437,12 @@ frame();
 <body><canvas id="c"></canvas><div id="info"></div>
 <script type="module" src="./war.mjs"></script></body></html>
 
-@@@@ FILE dev/war.mjs text 1558
+@@@@ FILE dev/war.mjs text 1802
 // 大規模戦の世界の見た目の確認用（Playwright から window.__war を使う）
 import { Renderer, gfxOf } from '../src/render/renderer.js';
 import { buildRiverbend } from '../src/war/maps/riverbend.js';
+import { buildKit } from './kitworld.mjs';
+import { buildRange } from '../src/war/maps/range.js';
 import { heightAt } from '../src/war/world.js';
 
 const q = new URLSearchParams(location.search);
@@ -415,9 +451,9 @@ const W = innerWidth, H = innerHeight;
 const r = new Renderer(canvas, { gfx: gfxOf({ quality: q.get('q') || 'medium' }), preserve: true });
 r.resize(W, H, 1);
 let t0 = performance.now();
-const ww = buildRiverbend(7);
+const ww = q.get('map') === 'kit' ? buildKit() : q.get('map') === 'range' ? buildRange() : buildRiverbend(7);
 const worldMs = performance.now() - t0;
-r.setWar(ww, { viewDist: +(q.get('vd') || 900) });
+r.setWar(ww, { viewDist: +(q.get('vd') || 900), nearDist: +(q.get('nd') || 150), grassDist: +(q.get('gd') ?? 55) });
 const cam = { x: 700, y: 0, z: 760, yaw: Math.PI, pitch: -0.05, roll: 0, fov: 70 * Math.PI / 180 };
 function frame(o = {}) {
   if (o.x != null) { cam.x = o.x; cam.z = o.z; cam.y = heightAt(ww, cam.x, cam.z) + (o.h ?? 1.7); }
@@ -464,7 +500,7 @@ export async function getAssetURL(name, type) {
   return URL.createObjectURL(new Blob([buf], { type }));
 }
 
-@@@@ FILE src/app/game.js text 109417
+@@@@ FILE src/app/game.js text 109559
 // 1回の試合: エンジンを進め、入力を命令にし、出来事を音・効果・HUDへ。カメラ（一人称）と描画。
 import { createGame, step, load } from '../engine/engine.js';
 import { eyeOf, capsOf } from '../engine/combat.js';
@@ -496,7 +532,7 @@ import { WarFlags, FLAG_COL } from '../render/warflags.js';
 import { WAR_MAPS } from '../war/maps/index.js';
 
 // 大規模戦の描く距離（画質ごと）: 低 550m・中 800m・高 1050m（遠くはもやに溶かす）
-function warView(st) { const g = gfxOf(st); return { viewDist: { low: 550, medium: 800, high: 1050, max: 1200 }[g.detail] || 800, nearDist: g.detail === 'low' ? 130 : 170, shadowR: g.shadow === 'high' ? 48 : 40 }; }
+function warView(st) { const g = gfxOf(st); return { viewDist: { low: 550, medium: 800, high: 1050, max: 1200 }[g.detail] || 800, nearDist: g.detail === 'low' ? 120 : g.detail === 'medium' ? 150 : 180, shadowR: g.shadow === 'high' ? 48 : 40, grassDist: { low: 0, medium: 55, high: 80, max: 100 }[g.detail] ?? 55, grassDens: g.detail === 'low' ? 0.6 : 1 }; }
 
 const DEG = Math.PI / 180;
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
@@ -1831,7 +1867,7 @@ function mirrorHTML(e, S) {
 }
 function impSound(m) { return m === M.METAL || m === M.METALFURN || m === M.CAR || m === M.DOORMETAL ? 'impMetal' : m === M.WOOD || m === M.DOORWOOD || m === M.FURN ? 'impWood' : m === M.GLASS ? 'impGlass' : 'impHard'; }
 
-@@@@ FILE src/app/main.js text 17718
+@@@@ FILE src/app/main.js text 17822
 // アプリ全体: 起動・画面の切り替え・試合の開始と終了・保存・画面の作り直し（WebGLが落ちたとき）
 import { Stage } from '../ui/stage.js';
 import { Input, tapHooks } from '../ui/input.js';
@@ -2030,7 +2066,8 @@ class App {
   }
   saveProfile() { saveProfile(this.profile); }
   saveLoadouts() { saveLoadouts(this.loadouts); if (this.net && this.netLoadoutChanged) this.netLoadoutChanged(); }
-  confirmMode() { return this.settings.confirm || 'auto'; }
+  // 試合を出るなどの確認: 設定の項目はなくした（11-13 14:35）。タッチは2回押し、マウスは1回
+  confirmMode() { return 'auto'; }
   editHud(onDone) {
     this.screens.hide();
     const prevMode = this.hud.mode;
@@ -2625,7 +2662,7 @@ export function importCode(code) {
   } catch (e) { return false; }
 }
 
-@@@@ FILE src/app/scenes.js text 3748
+@@@@ FILE src/app/scenes.js text 3788
 // タイトルとメニューの背景（WAR BIT）: 射撃場の谷の草地に立つ分隊（分隊長・突撃・衛生・援護）を、ゆっくり回るカメラで写す。
 // 世界は射撃場（小さく、すぐ作れる。射撃場を選んだときにもそのまま使う）
 import { createGame, step } from '../engine/engine.js';
@@ -2663,7 +2700,7 @@ export class TitleScene {
     const r = this.app.renderer;
     this.detach();
     const g = gfxOf(this.app.settings);
-    r.setWar(this.G.w, { viewDist: g.detail === 'low' ? 450 : 650, nearDist: 120, shadowR: 30 });
+    r.setWar(this.G.w, { viewDist: g.detail === 'low' ? 450 : 650, nearDist: 120, shadowR: 30, grassDist: g.detail === 'low' ? 0 : 45 });
     r.warmWar(this.cx, this.cz);
     this.av = new ActorView(r); this.fx = new FX(r);
     this.entered = true;
@@ -6852,7 +6889,7 @@ export const PROPS = {
 
 @@@@ FILE src/engine/data/version.js text 207
 // 版番号: 互換（セーブ・オンラインの相性。上げたら古いセーブは捨てる）と表示用
-export const VERSION = '0.1.15';
+export const VERSION = '0.1.16';
 export const COMPAT = 9;
 export const TITLE = 'WAR BIT';
 
@@ -20330,7 +20367,7 @@ function car(B, G, col, van) {
   }
 }
 
-@@@@ FILE src/render/renderer.js text 40355
+@@@@ FILE src/render/renderer.js text 41504
 // 描画の司令塔: 太陽の影 → 本描画(HDR: 空・世界・扉・人・銃・粒子・ガラス) → 一人称 → 光のにじみ → 仕上げ（トーンマップ・暗視・閃光） → FXAA
 import { createGL, tex2D, fbo, depthTex } from './gl.js';
 import { m4, m4mul, m4persp, m4lookAt, m4invert, frustumPlanes, aabbVisible } from './math.js';
@@ -20341,7 +20378,7 @@ import { prepareLevel, buildChunk, doorLeafMesh, barPanelMesh, CHUNK } from './l
 import { WV, MeshBuilder, hex } from './build.js';
 import { bakeLight } from '../engine/light.js';
 import { CS, LH, CEIL, NB, DSHIELD } from '../engine/world.js';
-import { buildWarFar, buildWarNear } from '../war/render.js';
+import { buildWarFar, buildWarNear, buildWarGrass } from '../war/render.js';
 
 // 大規模戦の空（もやを薄く、遠くまで見える。日は少し低めで影が長い）
 export const WAR_SKY = { sky: [0.54, 0.67, 0.9], ground: [0.3, 0.29, 0.24], sun: [2.75, 2.5, 2.12], sunDir: (() => { const v = [0.5, 0.64, 0.36], l = Math.hypot(...v); return v.map(x => x / l); })(), fog: [0.7, 0.77, 0.86], fogD: 0.0011, amb: 0.03, exposure: 0.8, zenith: [0.23, 0.43, 0.86], horizon: [0.73, 0.8, 0.9], night: 0 };
@@ -20606,7 +20643,7 @@ export class Renderer {
   }
   clearMap() {
     const gl = this.gl;
-    for (const ch of this.chunks || []) { if ('far' in ch) { delMesh(gl, ch.far); delMesh(gl, ch.near); } else { delMesh(gl, ch.mesh); delMesh(gl, ch.glass); } }
+    for (const ch of this.chunks || []) { if ('far' in ch) { delMesh(gl, ch.far); delMesh(gl, ch.near); delMesh(gl, ch.grass); } else { delMesh(gl, ch.mesh); delMesh(gl, ch.glass); } }
     this.war = null;
     for (const d of this.doorMeshes || []) { for (const m of d.leaves) delMesh(gl, m); }
     for (const b of this.barMeshes || []) if (b) delMesh(gl, b.mesh);
@@ -20626,6 +20663,8 @@ export class Renderer {
     this.viewDist = o.viewDist || 900;
     this.nearDist = o.nearDist || 170;
     this.shR = o.shadowR || 44;
+    // 草を描く距離（0 で描かない）と濃さ
+    this.grassD = o.grassDist ?? 0; this.grassDens = o.grassDens ?? 1;
     // 使わない光の格子などは 1 画素の物を置く（シェーダーの決まりのため）
     const t3 = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_3D, t3);
@@ -20639,7 +20678,7 @@ export class Renderer {
     this.dlrData = new Uint8Array(MAX_DL);
     this.dlr = tex2D(gl, 1, MAX_DL, { internal: gl.R8, format: gl.RED, data: this.dlrData, filter: gl.NEAREST });
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
-    this.chunks = buildWarFar(ww).map(c => { const m = makeWorldMesh(gl, c.B); return { k: c.k, x0: c.x0, z0: c.z0, x1: c.x1, z1: c.z1, y0: c.y0, y1: c.y1, far: m, farTris: m ? m.n / 3 : 0, near: null, nearTris: 0, mesh: m, glass: null, tris: m ? m.n / 3 : 0, d: 1e9 }; });
+    this.chunks = buildWarFar(ww).map(c => { const m = makeWorldMesh(gl, c.B); return { k: c.k, x0: c.x0, z0: c.z0, x1: c.x1, z1: c.z1, y0: c.y0, y1: c.y1, far: m, farTris: m ? m.n / 3 : 0, near: null, nearTris: 0, grass: null, grassTris: 0, mesh: m, glass: null, tris: m ? m.n / 3 : 0, d: 1e9 }; });
     this.doorMeshes = []; this.barMeshes = []; this.outer = null;
     this.roofY = 1e9;
     this.buildMs = performance.now() - t0;
@@ -20656,6 +20695,18 @@ export class Renderer {
     want.sort((a, b) => a.d - b.d);
     const nb = budget < 0 ? want.length : Math.min(want.length, budget);
     for (let k = 0; k < nb; k++) { const ch = want[k]; ch.near = makeWorldMesh(gl, buildWarNear(this.war, ch.k)); ch.nearTris = ch.near ? ch.near.n / 3 : 0; }
+    // 草（近い塊だけ。塊の中心から grassD＋45m 以内）
+    const G = this.grassD;
+    if (G > 0) {
+      let gb = budget < 0 ? 1e9 : 1;
+      const gw = [];
+      for (const ch of this.chunks) {
+        if (ch.d < G + 45 && !ch.grass) gw.push(ch);
+        else if (ch.grass && ch.d > G + 110) { delMesh(gl, ch.grass); ch.grass = null; ch.grassTris = 0; }
+      }
+      gw.sort((a, b) => a.d - b.d);
+      for (const ch of gw) { if (gb-- <= 0) break; ch.grass = makeWorldMesh(gl, buildWarGrass(this.war, ch.k, this.grassDens)); ch.grassTris = ch.grass ? ch.grass.n / 3 : 0; }
+    }
     for (const ch of this.chunks) {
       const useNear = ch.near && ch.d < N + 40;
       ch.mesh = useNear ? ch.near : ch.far; ch.tris = useNear ? ch.nearTris : ch.farTris;
@@ -20686,6 +20737,7 @@ export class Renderer {
     if (u.uWar) gl.uniform1f(u.uWar, this.war ? 1 : 0);
     if (u.uOuter) gl.uniform1f(u.uOuter, this.war ? 1 : 0);
     if (u.uFogFar) gl.uniform1f(u.uFogFar, this.war ? this.viewDist : 0);
+    if (u.uGrassD) gl.uniform1f(u.uGrassD, this.war ? this.grassD || 1 : 1);
     if (u.uCam) gl.uniform3fv(u.uCam, this.camPos);
     if (u.uFogCol) gl.uniform3fv(u.uFogCol, sky.fog);
     if (u.uFogD) gl.uniform1f(u.uFogD, sky.fogD * (opts.fogMul ?? 1));
@@ -20781,6 +20833,12 @@ export class Renderer {
     }
     vis.sort((a, b) => a[0] - b[0]);
     for (const [, ch] of vis) { drawMesh(gl, ch.mesh); this.stats.draws++; this.stats.tris += ch.tris; this.stats.chunks++; }
+    // 草（裏も描く）
+    if (this.grassD > 0) {
+      gl.disable(gl.CULL_FACE);
+      for (const [, ch] of vis) if (ch.grass && ch.d < this.grassD + 45) { drawMesh(gl, ch.grass); this.stats.draws++; this.stats.tris += ch.grassTris; }
+      gl.enable(gl.CULL_FACE);
+    }
     if (this.outer && this.outer.mesh) { if (P.u.uOuter) gl.uniform1f(P.u.uOuter, 1); drawMesh(gl, this.outer.mesh); if (P.u.uOuter) gl.uniform1f(P.u.uOuter, 0); this.stats.draws++; this.stats.tris += this.outer.tris; }
     // 扉
     if (f.doors) { this._drawDoors(P, f.doors); this._drawBars(P, f.doors.bars); this._drawDeps(P, f.doors.deps); }
@@ -21074,7 +21132,7 @@ function wireMesh() {
   return B;
 }
 
-@@@@ FILE src/render/shaders.js text 21535
+@@@@ FILE src/render/shaders.js text 21933
 // シェーダー。照らし方は全部同じ関数（光の格子＋太陽の影＋動く光＋もや）で、壁・人・銃・扉が同じ明るさになる。
 export const MAX_DL = 8;
 
@@ -21095,7 +21153,7 @@ uniform highp sampler2D uDLR;     // 動く光ごとに、届く部屋（光が�
 uniform vec4 uLGd;                // W1, D1, NLy, NL
 uniform vec4 uMapD;               // W, D, CS, LH
 uniform vec3 uSunDir; uniform vec3 uSunCol; uniform float uShadowOn; uniform mat4 uShadowVP; uniform highp sampler2DShadow uShadow; uniform float uShadowTexel;
-uniform vec3 uSkyCol; uniform float uAmbMin; uniform float uOuter; uniform float uWar; uniform float uFogFar;
+uniform vec3 uSkyCol; uniform float uAmbMin; uniform float uOuter; uniform float uWar; uniform float uFogFar; uniform float uGrassD;
 uniform vec4 uDLp[${MAX_DL}]; uniform vec4 uDLc[${MAX_DL}]; uniform vec4 uDLd[${MAX_DL}]; uniform int uDLn;
 uniform vec3 uCam; uniform vec3 uFogCol; uniform float uFogD; uniform float uFogIn; uniform float uTime;
 uniform float uRoofY;
@@ -21234,7 +21292,11 @@ in vec3 vPos; in vec3 vNrm; in vec2 vUV; flat in float vLayer; in vec3 vCol; in 
 layout(location=0) out vec4 oCol;
 void main(){
   vec3 n = normalize(vNrm);
-  if (!gl_FrontFacing) n = -n;
+  // 草（emit < 0）: 遠い所から点を間引いて消す（塊の四角い境目を見せない）。裏も表と同じ向きの光
+  if (vEmit < -0.5) {
+    float gd = length(vPos.xz - uCam.xz), fade = clamp((gd - uGrassD * 0.55) / (uGrassD * 0.45), 0.0, 1.0);
+    if (fract(sin(dot(floor(vPos.xz * 9.0), vec2(12.9898, 78.233))) * 43758.5453) < fade) discard;
+  } else if (!gl_FrontFacing) n = -n;
   vec3 alb = texture(uTex, vec3(vUV, vLayer)).rgb * vCol * uTint;
   // 大規模戦の地面: 大きな模様を重ねて、くり返しを目立たせない
   if (uWar > 0.5 && abs(vLayer - 8.0) < 0.5) alb *= 0.72 + 0.4 * texture(uTex, vec3(vUV * 0.11 + 0.37, 9.0)).r;
@@ -23006,7 +23068,7 @@ export function buildPlan(w, def, s = 4) {
   return { levels, s };
 }
 
-@@@@ FILE src/ui/hudlayout.js text 8418
+@@@@ FILE src/ui/hudlayout.js text 8670
 // HUD のボタンの既定の配置（CODモバイル／PUBGモバイルを参考）。基準は 844×390 の横画面。
 // ax: 'l'|'r'|'c'（左右の基準）、ay: 't'|'b'|'c'。x, y は基準からの距離（中心まで）、s は直径、o は濃さ。
 // 設定の hud[id] = { x, y, s, o, hide } で上書きする（HUD の編集）。
@@ -23056,7 +23118,8 @@ export const ICONS = {
   expand: '<path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>',
   fire: '<circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2.2" fill="currentColor"/><path d="M12 1v5M12 18v5M1 12h5M18 12h5" stroke="currentColor" stroke-width="2"/>',
   ads: '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 5v4M12 15v4M5 12h4M15 12h4" stroke="currentColor" stroke-width="2"/>',
-  reload: '<path d="M8 3h8v4H8zM9 7h6v13H9z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 11h2M11 14h2M11 17h2" stroke="currentColor" stroke-width="1.5"/>',
+  // リロード: 弾丸を円の矢印が囲む（主なスマホFPSと同じ形。11-13 14:35）
+  reload: '<path d="M19.36 7.75A8.5 8.5 0 1 1 14.2 3.79" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M17.1 4.5L12.7 6.1 14 1z" fill="currentColor"/><path d="M9.7 11C9.7 9.1 10.85 7.55 12 7 13.15 7.55 14.3 9.1 14.3 11zM9.6 11.7h4.8v4.8H9.6zM9.1 16.9h5.8v1.3H9.1z" fill="currentColor"/>',
   crouch: '<circle cx="13" cy="5" r="2.5" fill="currentColor"/><path d="M12 8l-3 6h6l-2 6M9 14l-3 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
   vault: '<path d="M3 20h18M7 20v-7h10v7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 9c3-6 9-6 13-1l-2-3M18 8l-3 1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   leanL: '<path d="M10 4l-4 4 4 4M6 8h8a5 5 0 0 1 0 10h-3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
@@ -23569,7 +23632,7 @@ export function weaponCard(spec, kind) {
     <p class="desc">${esc(W.desc || '')}</p><p class="note">初速 ${W.vel || '-'} m/s · 重さ ${W.kg || '-'} kg</p>`;
 }
 
-@@@@ FILE src/ui/screens.js text 57039
+@@@@ FILE src/ui/screens.js text 56858
 // 画面: 読み込み・タイトル（WAR BIT）・PLAY（モードと人数）・一時停止・地図（タブレット）・結果・設定。
 // メニューの形と表記は BattleBit に合わせる（英語の大文字に日本語を小さく添える。research/WARBIT.md の 10）。
 // 旧 HARD ENTRY の画面（作戦・対戦・訓練・ロビー・資料室）はメニューから外した（11-13 03:10・03:15 の要望）。中身は後で消す
@@ -24099,7 +24162,6 @@ export class Screens {
       row('射撃ボタン（左）', '', 'leftFire'); ch('leftFire', [[true, '表示'], [false, '非表示']]);
       row('射撃ボタンで視点移動', '押したままドラッグ', 'fireLook'); ch('fireLook', [[true, 'オン'], [false, 'オフ']]);
       row('利き手', 'ボタンの左右を反転', 'handed'); ch('handed', [['right', '右'], ['left', '左']]);
-      row('確認が必要な操作', '試合を出る など', 'confirm'); ch('confirm', [['auto', '自動（タッチは2回）'], ['two', '常に2回'], ['one', '常に1回']]);
       note('キーボード: WASD 移動／Shift 走る／マウス 視点（画面をクリック）／左クリック 射撃／右クリック ADS／Q・E リーン／C しゃがみ／Z 伏せ／Space 乗り越え／R リロード（長押しで高速）／G 投げ物／1・2 武器／X 射撃モード／T ライト／Y 近接（銃床）／Tab スコア表／M 地図／Esc 一時停止');
     } else if (tab === 'sens') {
       row('視点', '', 'sens'); sl('sens', 0.2, 3, 0.05, (v) => v.toFixed(2));
@@ -25314,15 +25376,23 @@ function aimAtTgt(S, a, inp, b0, sk, dt, visible) {
   return Math.abs(angDiff(inp.yaw, wantYaw)) + Math.abs(inp.pitch - wantPitch);
 }
 
-@@@@ FILE src/war/buildings.js text 10841
-// WAR BIT の建物: 箱を組み立てて作る（独自の形。低ポリ・四角い）。
+@@@@ FILE src/war/buildings.js text 35851
+// WAR BIT の建物: 箱を組み立てて作る（独自の形。低ポリ・四角い。research/WARBIT.md の 4・13）。
 // 建物は「ローカル座標（幅 bw × 奥 bd、玄関は手前 z=0 の側）」で作り、置く向き rot（0〜3 = 90°ずつ）で世界へ写す。
-// 壁の厚さ T、階の高さ FH、床の板 SL。開口: 扉（幅1.2・高さ2.2）、窓（幅1.2・腰1.0〜2.2）。窓はガラスなし（撃てる・見える）
-import { addBox, addRamp } from './world.js';
+// 壁の厚さ T、階の高さ FH、床の板 SL。開口: 扉（幅1.2・高さ2.2）、窓（幅1.2・腰1.0〜2.2）。窓はガラスなし（撃てる・見える）。
+// 質の上げ方（BattleBit の建物に合わせる）: 外の窓と扉の枠（下枠・上枠）・土台の帯・切妻の屋根（坂の板2枚＋三角の壁）・煙突・
+// 色の違い・中の家具（遮蔽物）。枠・家具・小物は近くだけ描く（detail）。多くの建物は1〜2階（BattleBit の Mesa の方針）
+import { addBox, addRamp, addDeco, addCyl } from './world.js';
 import { M } from '../engine/data/materials.js';
 
 export const T = 0.3, FH = 3.0, SL = 0.25;
-const DOOR = { w: 1.2, y0: 0, y1: 2.2 }, WIN = { w: 1.2, y0: 1.0, y1: 2.2 };
+const DOOR = { w: 1.2, y0: 0, y1: 2.2 }, WIN = { w: 1.2, y0: 1.0, y1: 2.2 }, BIGWIN = { w: 2.6, y0: 0.6, y1: 2.5 };
+// 色（独自）
+export const PLASTER = ['#d3c7ad', '#dcd3bf', '#c9b79a', '#bdbbb0', '#d9c9a2', '#c5ccbf', '#cfc0b4', '#d6bfa6'];
+export const BRICKS = ['#a6654c', '#9a5a45', '#b07560', '#8c5a48', '#a87058'];
+export const ROOFS = ['#7a3f2f', '#5f5953', '#6b4a3a', '#4f5c64', '#86523b', '#5a4038'];
+const TRIM = '#e6e1d4', TRIM_DARK = '#7d776d';
+const pick = (L, r) => L[Math.floor(r() * L.length) % L.length];
 
 // ローカル → 世界（向き rot。bw×bd の箱を回して置く）
 function xf(B, lx, lz) {
@@ -25332,18 +25402,43 @@ function xf(B, lx, lz) {
   if (rot === 2) return [x + (bw - lx), z + (bd - lz)];
   return [x + lz, z + (bw - lx)];
 }
+// ローカルの向き（nx, nz）→ 世界の向き
+function nrm(B, nx, nz) {
+  if (B.rot === 0) return [nx, 0, nz];
+  if (B.rot === 1) return [-nz, 0, nx];
+  if (B.rot === 2) return [-nx, 0, -nz];
+  return [nz, 0, -nx];
+}
 function box(B, lx0, ly0, lz0, lx1, ly1, lz1, o = {}) {
   const [ax, az] = xf(B, lx0, lz0), [bx, bz] = xf(B, lx1, lz1);
-  return addBox(B.ww, { x0: ax, z0: az, x1: bx, z1: bz, y0: B.y + ly0, y1: B.y + ly1, mat: o.mat ?? B.mat, kind: o.kind || 'wall', bld: B.id, col: o.col || B.col, opaque: o.opaque, walk: o.walk });
+  return addBox(B.ww, { x0: ax, z0: az, x1: bx, z1: bz, y0: B.y + ly0, y1: B.y + ly1, mat: o.mat ?? B.mat, kind: o.kind || 'wall', bld: B.id, col: o.col || B.col, opaque: o.opaque, walk: o.walk, layer: o.layer ?? B.layer, detail: o.detail, hide: o.hide, bev: o.bev, far: o.far });
 }
 const DIRMAP = [{ n: 'n', s: 's', e: 'e', w: 'w' }, { n: 'e', s: 'w', e: 's', w: 'n' }, { n: 's', s: 'n', e: 'w', w: 'e' }, { n: 'w', s: 'e', e: 'n', w: 's' }];
-function ramp(B, lx0, lz0, lx1, lz1, ly0, ly1, dir) {
+function ramp(B, lx0, lz0, lx1, lz1, ly0, ly1, dir, o = {}) {
   const [ax, az] = xf(B, lx0, lz0), [bx, bz] = xf(B, lx1, lz1);
-  return addRamp(B.ww, { x0: ax, z0: az, x1: bx, z1: bz, y0: B.y + ly0, y1: B.y + ly1, dir: DIRMAP[B.rot][dir], mat: B.mat, bld: B.id, col: B.floorCol });
+  return addRamp(B.ww, { x0: ax, z0: az, x1: bx, z1: bz, y0: B.y + ly0, y1: B.y + ly1, dir: DIRMAP[B.rot][dir], mat: o.mat ?? B.mat, bld: B.id, col: o.col || B.floorCol, smooth: o.smooth, th: o.th, kind: o.kind, layer: o.layer });
 }
-// 壁の線（ローカルで x か z にそって）。ops: [{ at（線の始まりからの中心）, w, y0, y1 }]（扉・窓）
-function wallX(B, x0, x1, z, y0, y1, ops = [], o = {}) { wallLine(B, x0, x1, (a, b, ya, yb) => box(B, a, ya, z, b, yb, z + T, o), y0, y1, ops); }
-function wallZ(B, z0, z1, x, y0, y1, ops = [], o = {}) { wallLine(B, z0, z1, (a, b, ya, yb) => box(B, x, ya, a, x + T, yb, b, o), y0, y1, ops); }
+// 壁の線（ローカルで x か z にそって）。ops: [{ at（線の始まりからの中心）, w, y0, y1 }]（扉・窓）。
+// o.out（外壁の外の向き -1/+1）を渡すと、開口に枠（窓の下枠・上枠、扉の上枠）を付ける
+export function wallX(B, x0, x1, z, y0, y1, ops = [], o = {}) {
+  wallLine(B, x0, x1, (a, b, ya, yb) => box(B, a, ya, z, b, yb, z + T, o), y0, y1, ops);
+  if (o.out) for (const p of ops) {
+    const a = x0 + p.at - p.w / 2, b = x0 + p.at + p.w / 2, zf = o.out < 0 ? z : z + T, d = o.out;
+    trim(B, (u0, u1, v0, v1, w0, w1) => box(B, u0, v0, Math.min(zf + d * w0, zf + d * w1), u1, v1, Math.max(zf + d * w0, zf + d * w1), { kind: 'trim', detail: true, walk: false, col: B.trimCol, mat: B.mat }), a, b, y0, p);
+  }
+}
+export function wallZ(B, z0, z1, x, y0, y1, ops = [], o = {}) {
+  wallLine(B, z0, z1, (a, b, ya, yb) => box(B, x, ya, a, x + T, yb, b, o), y0, y1, ops);
+  if (o.out) for (const p of ops) {
+    const a = z0 + p.at - p.w / 2, b = z0 + p.at + p.w / 2, xf0 = o.out < 0 ? x : x + T, d = o.out;
+    trim(B, (u0, u1, v0, v1, w0, w1) => box(B, Math.min(xf0 + d * w0, xf0 + d * w1), v0, u0, Math.max(xf0 + d * w0, xf0 + d * w1), v1, u1, { kind: 'trim', detail: true, walk: false, col: B.trimCol, mat: B.mat }), a, b, y0, p);
+  }
+}
+// 枠: put(線にそった始め・終わり, 下・上, 壁の面からの出の始め・終わり)
+function trim(B, put, a, b, y0, p) {
+  if (p.y0 > 0.05) put(a - 0.1, b + 0.1, y0 + p.y0 - 0.1, y0 + p.y0 + 0.02, -0.02, 0.12); // 窓の下枠
+  put(a - 0.08, b + 0.08, y0 + p.y1, y0 + p.y1 + 0.14, -0.02, 0.07);                 // 上枠
+}
 function wallLine(B, s0, s1, put, y0, y1, ops) {
   const os = ops.map(p => ({ a: s0 + p.at - p.w / 2, b: s0 + p.at + p.w / 2, y0: y0 + p.y0, y1: Math.min(y1, y0 + p.y1) })).filter(p => p.a > s0 + 0.05 && p.b < s1 - 0.05).sort((p, q) => p.a - q.a);
   let s = s0;
@@ -25357,89 +25452,273 @@ function wallLine(B, s0, s1, put, y0, y1, ops) {
 }
 // 床の板（穴 hole: [x0,z0,x1,z1] のまわりに分けて置く）
 function slab(B, x0, z0, x1, z1, y, hole, o = {}) {
-  const put = (a, b, c, d) => { if (b - a > 0.05 && d - c > 0.05) box(B, a, y - SL, c, b, y, d, { kind: 'floor', mat: o.mat ?? M.CONCRETE, col: o.col || B.floorCol }); };
+  // 外の壁の面と同じ所の縁は少し内へ（床の縁が壁の外に帯のように見えるのを防ぐ）
+  const e = 0.03, ix = (v) => Math.abs(v) < 1e-6 ? e : Math.abs(v - B.bw) < 1e-6 ? B.bw - e : v, iz = (v) => Math.abs(v) < 1e-6 ? e : Math.abs(v - B.bd) < 1e-6 ? B.bd - e : v;
+  x0 = ix(x0); x1 = ix(x1); z0 = iz(z0); z1 = iz(z1);
+  const put = (a, b, c, d) => { if (b - a > 0.05 && d - c > 0.05) box(B, a, y - SL, c, b, y, d, { kind: 'floor', mat: o.mat ?? M.CONCRETE, col: o.col || B.floorCol, layer: o.layer }); };
   if (!hole) { put(x0, x1, z0, z1); return; }
   const [hx0, hz0, hx1, hz1] = hole;
   put(x0, x1, z0, hz0); put(x0, x1, hz1, z1); put(x0, hx0, hz0, hz1); put(hx1, x1, hz0, hz1);
 }
 function begin(ww, o, bw, bd, mat, col) {
-  const B = { ww, id: (ww._bld = (ww._bld || 0) + 1), x: o.x, z: o.z, y: o.y ?? 0, rot: o.rot || 0, bw, bd, mat, col, floorCol: o.floorCol || '#8d8a84' };
+  const r = o.rnd || Math.random;
+  const B = { ww, id: (ww._bld = (ww._bld || 0) + 1), x: o.x, z: o.z, y: o.y ?? 0, rot: o.rot || 0, bw, bd, mat, col, floorCol: o.floorCol || '#8d8a84', trimCol: o.trimCol || (mat === M.BRICK ? TRIM : TRIM), roofCol: o.roofCol || pick(ROOFS, r), layer: o.layer, r };
   // 世界の範囲（建物の下を平らにする・置き場所の重なりを見るのに使う）
   const c0 = xf(B, 0, 0), c1 = xf(B, bw, bd);
   B.rect = [Math.min(c0[0], c1[0]), Math.min(c0[1], c1[1]), Math.max(c0[0], c1[0]), Math.max(c0[1], c1[1])];
   (ww.blds || (ww.blds = [])).push({ id: B.id, kind: o.kind, rect: B.rect, y: B.y, floors: o.floors || 1, name: o.name || '' });
   return B;
 }
+// 土台の帯（外のまわり。高さ 0.32 で踏み越えられる）
+function plinth(B, h = 0.32) {
+  const e = 0.07, c = o => ({ kind: 'trim', col: B.plinthCol || '#8b867c', mat: M.CONCRETE, layer: 1, ...o });
+  box(B, -e, 0, -e, B.bw + e, h, 0, c());
+  box(B, -e, 0, B.bd, B.bw + e, h, B.bd + e, c());
+  box(B, -e, 0, 0, 0, h, B.bd, c());
+  box(B, B.bw, 0, 0, B.bw + e, h, B.bd, c());
+}
+// 切妻の屋根: 下の高さ y・棟までの高さ rh・軒の出 ov。棟は ridge: 'x'（x にそう＝坂は手前と奥へ）か 'z'
+// 坂の板2枚（上に乗れる）＋三角の壁（描くだけ）＋三角の当たり（隠れた段の箱）。o.x0..x1・z0..z1 で建物の一部だけにかけられる
+function gable(B, y, rh, ov = 0.45, ridge = 'x', o = {}) {
+  const gx0 = o.x0 ?? 0, gx1 = o.x1 ?? B.bw, gz0 = o.z0 ?? 0, gz1 = o.z1 ?? B.bd, th = 0.22, col = o.col || B.roofCol, wcol = o.wallCol || B.col, layer = 22;
+  if (ridge === 'x') {
+    const m = (gz0 + gz1) / 2, hd = (gz1 - gz0) / 2;
+    ramp(B, gx0 - ov, gz0 - ov, gx1 + ov, m, y - ov * rh / hd, y + rh, 's', { smooth: true, th, kind: 'roof', col, layer, mat: M.WOOD });
+    ramp(B, gx0 - ov, m, gx1 + ov, gz1 + ov, y - ov * rh / hd, y + rh, 'n', { smooth: true, th, kind: 'roof', col, layer, mat: M.WOOD });
+    for (const [lx, nx] of [[gx0, -1], [gx1, 1]]) {
+      const P = (lz, ly) => { const [wx, wz] = xf(B, lx, lz); return [wx, B.y + ly, wz]; };
+      addDeco(B.ww, { pts: [P(gz0, y), P(gz1, y), P(m, y + rh - 0.05)], n: nrm(B, nx, 0), col: wcol, layer: B.layer ?? 3, bld: B.id });
+      for (let k = 0; k < 3; k++) { const t = (k + 0.5) / 3, a = gz0 + t * hd, b = gz1 - t * hd; box(B, lx === gx0 ? gx0 : gx1 - T, y + rh * k / 3, a, lx === gx0 ? gx0 + T : gx1, y + rh * (k + 1) / 3, b, { hide: true, kind: 'wall', mat: B.mat }); }
+    }
+  } else {
+    const m = (gx0 + gx1) / 2, hw = (gx1 - gx0) / 2;
+    ramp(B, gx0 - ov, gz0 - ov, m, gz1 + ov, y - ov * rh / hw, y + rh, 'e', { smooth: true, th, kind: 'roof', col, layer, mat: M.WOOD });
+    ramp(B, m, gz0 - ov, gx1 + ov, gz1 + ov, y - ov * rh / hw, y + rh, 'w', { smooth: true, th, kind: 'roof', col, layer, mat: M.WOOD });
+    for (const [lz, nz] of [[gz0, -1], [gz1, 1]]) {
+      const P = (lx, ly) => { const [wx, wz] = xf(B, lx, lz); return [wx, B.y + ly, wz]; };
+      addDeco(B.ww, { pts: [P(gx0, y), P(gx1, y), P(m, y + rh - 0.05)], n: nrm(B, 0, nz), col: wcol, layer: B.layer ?? 3, bld: B.id });
+      for (let k = 0; k < 3; k++) { const t = (k + 0.5) / 3, a = gx0 + t * hw, b = gx1 - t * hw; box(B, a, y + rh * k / 3, lz === gz0 ? gz0 : gz1 - T, b, y + rh * (k + 1) / 3, lz === gz0 ? gz0 + T : gz1, { hide: true, kind: 'wall', mat: B.mat }); }
+    }
+  }
+}
+// 平らな屋根と低い縁（パラペット）
+function flatRoof(B, y, h = 0.5, o = {}) {
+  const { bw, bd } = B;
+  slab(B, -0.1, -0.1, bw + 0.1, bd + 0.1, y + SL, null, { col: o.col || '#8e9296' });
+  const c = { kind: 'roof', col: o.edgeCol || B.col, mat: B.mat };
+  box(B, -0.1, y + SL, -0.1, bw + 0.1, y + SL + h, 0.15, c); box(B, -0.1, y + SL, bd - 0.15, bw + 0.1, y + SL + h, bd + 0.1, c);
+  box(B, -0.1, y + SL, 0.15, 0.15, y + SL + h, bd - 0.15, c); box(B, bw - 0.15, y + SL, 0.15, bw + 0.1, y + SL + h, bd - 0.15, c);
+  // 縁の上の笠木（明るい線）
+  box(B, -0.14, y + SL + h, -0.14, bw + 0.14, y + SL + h + 0.08, bd + 0.14, { kind: 'trim', col: TRIM_DARK, mat: M.CONCRETE, detail: true, walk: false, hide: false });
+}
+// 家具（遮蔽物になる箱。近くだけ描く）。kind: sofa・table・bed・shelf・counter・wardrobe・desk・crate
+const FURN = {
+  sofa: [2.0, 0.85, 0.9, '#6d5a4a', M.FABRIC, 12], table: [1.4, 0.75, 0.8, '#8a6a44', M.FURN, 11], bed: [2.0, 0.55, 1.5, '#b8b2a6', M.FABRIC, 12],
+  shelf: [2.0, 1.8, 0.45, '#7a5e3e', M.FURN, 11], counter: [2.4, 0.92, 0.65, '#bdb7aa', M.CERAMIC, 1], wardrobe: [1.2, 2.0, 0.6, '#6e553a', M.FURN, 11],
+  desk: [1.5, 0.75, 0.75, '#77706a', M.METALFURN, 10], pew: [3.0, 0.9, 0.55, '#6e553a', M.FURN, 11], crate: [1.1, 1.1, 1.1, '#8a6a44', M.WOOD, 11], fridge: [0.8, 1.8, 0.7, '#d9dad6', M.METALFURN, 19],
+};
+function furn(B, kind, lx, ly, lz, along = 'x') {
+  const [w, h, d, col, mat, layer] = FURN[kind];
+  const [a, b] = along === 'x' ? [w, d] : [d, w];
+  box(B, lx, ly, lz, lx + a, ly + h, lz + b, { kind: 'furn', detail: true, col, mat, layer, bev: 0.05 });
+}
 
-// 2階建ての家（8×10m）: 1階は居間と台所、2階は寝室2つ。玄関は手前、裏口は奥。階段は奥の左
+// ---- 2階建ての家（8×10m）: 1階は居間と台所、2階は寝室2つ。玄関は手前、裏口は奥。階段は奥の左。切妻の屋根・煙突・ひさし
 export function house(ww, o) {
-  const bw = 8, bd = 10, F = o.floors || 2, H = F * FH;
-  const B = begin(ww, { ...o, kind: 'house', floors: F }, bw, bd, o.mat ?? M.BRICK, o.col || '#b9a58a');
+  const bw = 8, bd = 10, F = o.floors || 2, H = F * FH, r = o.rnd || Math.random;
+  const brick = o.mat === M.BRICK || (o.mat == null && r() < 0.3);
+  const B = begin(ww, { ...o, kind: 'house', floors: F }, bw, bd, brick ? M.BRICK : (o.mat ?? M.BRICK), o.col || (brick ? pick(BRICKS, r) : pick(PLASTER, r)));
+  if (!brick && o.mat !== M.WOOD) B.layer = 3; else if (o.mat === M.WOOD) B.layer = 22;
   for (let f = 0; f < F; f++) {
     const y0 = f * FH, y1 = y0 + FH, opsF = f === 0 ? [{ at: 3, ...DOOR }, { at: 6.2, ...WIN }] : [{ at: 2, ...WIN }, { at: 6, ...WIN }];
-    wallX(B, 0, bw, 0, y0, y1, opsF);                                        // 手前
-    wallX(B, 0, bw, bd - T, y0, y1, f === 0 ? [{ at: 6, ...DOOR }] : [{ at: 4, ...WIN }]); // 奥
-    wallZ(B, T, bd - T, 0, y0, y1, [{ at: 4.5, ...WIN }]);                   // 左
-    wallZ(B, T, bd - T, bw - T, y0, y1, [{ at: 3, ...WIN }, { at: 7, ...WIN }]); // 右
+    wallX(B, 0, bw, 0, y0, y1, opsF, { out: -1 });                                        // 手前
+    wallX(B, 0, bw, bd - T, y0, y1, f === 0 ? [{ at: 6, ...DOOR }, { at: 2.4, ...WIN }] : [{ at: 4, ...WIN }], { out: 1 }); // 奥
+    wallZ(B, T, bd - T, 0, y0, y1, [{ at: 4.5, ...WIN }], { out: -1 });                   // 左
+    wallZ(B, T, bd - T, bw - T, y0, y1, [{ at: 3, ...WIN }, { at: 7, ...WIN }], { out: 1 }); // 右
     // 中の仕切り（扉つき）
-    wallX(B, T, bw - T, 5, y0, y1, [{ at: 2.5, ...DOOR }, { at: 5.6, ...DOOR }], { mat: M.DRYWALL, col: '#d8d2c4' });
+    wallX(B, T, bw - T, 5, y0, y1, [{ at: 2.5, ...DOOR }, { at: 5.6, ...DOOR }], { mat: M.DRYWALL, col: '#d8d2c4', layer: 3 });
     if (f > 0) slab(B, 0, 0, bw, bd, y0, [T, 6.5, T + 1.1, bd - T]);
   }
   // 階段（奥の左。z=bd-T から 6.5 へ上がる）
   for (let f = 0; f + 1 < F; f++) ramp(B, T, 6.5, T + 1.1, bd - T, f * FH, (f + 1) * FH, 'n');
-  // 屋根（平ら＋低い縁）
-  slab(B, -0.2, -0.2, bw + 0.2, bd + 0.2, H + SL, null, { col: o.roofCol || '#6f4a3a' });
-  box(B, -0.2, H + SL, -0.2, bw + 0.2, H + SL + 0.4, 0.1, { col: o.roofCol || '#6f4a3a', kind: 'roof' });
-  box(B, -0.2, H + SL, bd - 0.1, bw + 0.2, H + SL + 0.4, bd + 0.2, { col: o.roofCol || '#6f4a3a', kind: 'roof' });
+  // 天井（屋根裏の床）と切妻の屋根・煙突
+  slab(B, 0, 0, bw, bd, H + SL, null, { col: '#8a857c' });
+  gable(B, H + SL, 2.2, 0.45, 'x');
+  box(B, 5.4, H + SL + 0.8, 6.2, 6.1, H + SL + 2.9, 6.9, { kind: 'roof', col: brick ? '#7f4b3a' : '#9b8f80', mat: M.BRICK, layer: 2 });
+  plinth(B);
+  // 玄関のひさし
+  box(B, 2.1, 2.45, -1.1, 3.9, 2.6, 0, { kind: 'trim', col: B.roofCol, mat: M.WOOD, walk: false });
+  // 家具
+  furn(B, 'sofa', 0.6, 0, 0.6); furn(B, 'table', 4.6, 0, 2.0); furn(B, 'counter', 4.8, 0, 9.0); furn(B, 'fridge', 7.0, 0, 8.4);
+  if (F > 1) { furn(B, 'bed', 4.6, FH, 0.6); furn(B, 'wardrobe', 0.6, FH, 4.0); furn(B, 'bed', 4.6, FH, 7.6); }
+  return B;
+}
+// 平屋（10×8m）: 居間・台所・寝室。切妻の屋根（棟は長い辺）・玄関のポーチ（柱2本）
+export function bungalow(ww, o) {
+  const bw = 10, bd = 8, H = FH, r = o.rnd || Math.random;
+  const wood = o.mat === M.WOOD || (o.mat == null && r() < 0.35);
+  const B = begin(ww, { ...o, kind: 'bungalow', floors: 1 }, bw, bd, wood ? M.WOOD : M.BRICK, o.col || pick(wood ? ['#b9b2a2', '#9eaab0', '#c4b58f', '#a7b49a', '#d1cbbd'] : PLASTER, r));
+  B.layer = wood ? 22 : 3;
+  wallX(B, 0, bw, 0, 0, H, [{ at: 2.4, ...WIN }, { at: 5, ...DOOR }, { at: 7.6, ...WIN }], { out: -1 });
+  wallX(B, 0, bw, bd - T, 0, H, [{ at: 2.5, ...WIN }, { at: 6.5, ...DOOR }, { at: 8.6, ...WIN }], { out: 1 });
+  wallZ(B, T, bd - T, 0, 0, H, [{ at: 4, ...WIN }], { out: -1 });
+  wallZ(B, T, bd - T, bw - T, 0, H, [{ at: 4, ...WIN }], { out: 1 });
+  wallZ(B, T, bd - T, 6, 0, H, [{ at: 2.2, ...DOOR }, { at: 5.6, ...DOOR }], { mat: M.DRYWALL, col: '#d8d2c4', layer: 3 });
+  slab(B, 0, 0, bw, bd, H + SL, null, { col: '#8a857c' });
+  gable(B, H + SL, 1.9, 0.5, 'x');
+  plinth(B);
+  // ポーチ（床・柱・屋根）
+  box(B, 3.2, 0, -2.0, 6.8, 0.25, 0, { kind: 'floor', col: '#8f8778', mat: M.WOOD, layer: 4 });
+  for (const px of [3.3, 6.5]) box(B, px, 0.25, -1.95, px + 0.2, 2.6, -1.75, { kind: 'pillar', col: TRIM, mat: M.WOOD });
+  box(B, 3.0, 2.6, -2.15, 7.0, 2.75, 0, { kind: 'trim', col: B.roofCol, mat: M.WOOD, walk: false });
+  furn(B, 'sofa', 0.6, 0, 0.6); furn(B, 'table', 2.5, 0, 3.4); furn(B, 'counter', 0.5, 0, 7.0); furn(B, 'bed', 7.6, 0, 0.6, 'z'); furn(B, 'wardrobe', 8.3, 0, 6.6);
   return B;
 }
 
-// アパート（12×18m、F階）: 中央の階段室、各階に2部屋。屋上へも上がれる（手すりの低い壁）
+// ---- アパート（12×18m、F階）: 中央の階段室、各階に2部屋。屋上へも上がれる（手すりの低い壁）・手前にベランダ・入口のひさし
 export function apartment(ww, o) {
-  const bw = 12, bd = 18, F = o.floors || 3, H = F * FH;
-  const B = begin(ww, { ...o, kind: 'apartment', floors: F }, bw, bd, o.mat ?? M.CONCRETE, o.col || '#a8aeb4');
+  const bw = 12, bd = 18, F = o.floors || 3, H = F * FH, r = o.rnd || Math.random;
+  const B = begin(ww, { ...o, kind: 'apartment', floors: F }, bw, bd, o.mat ?? M.CONCRETE, o.col || pick(['#a8aeb4', '#b9b2a4', '#c2b49a', '#9fa9a1', '#b7a99c', '#c9c2b3'], r));
+  B.layer = 3;
   for (let f = 0; f < F; f++) {
     const y0 = f * FH, y1 = y0 + FH;
-    wallX(B, 0, bw, 0, y0, y1, f === 0 ? [{ at: 2.5, ...WIN }, { at: 6, w: 1.6, y0: 0, y1: 2.4 }, { at: 9.5, ...WIN }] : [{ at: 2.5, ...WIN }, { at: 6, ...WIN }, { at: 9.5, ...WIN }]);
-    wallX(B, 0, bw, bd - T, y0, y1, [{ at: 2.5, ...WIN }, { at: 6, ...(f === 0 ? DOOR : WIN) }, { at: 9.5, ...WIN }]);
-    wallZ(B, T, bd - T, 0, y0, y1, [{ at: 3.5, ...WIN }, { at: 8.7, ...WIN }, { at: 14, ...WIN }]);
-    wallZ(B, T, bd - T, bw - T, y0, y1, [{ at: 3.5, ...WIN }, { at: 8.7, ...WIN }, { at: 14, ...WIN }]);
+    wallX(B, 0, bw, 0, y0, y1, f === 0 ? [{ at: 2.5, ...WIN }, { at: 6, w: 1.6, y0: 0, y1: 2.4 }, { at: 9.5, ...WIN }] : [{ at: 2.5, ...WIN }, { at: 6, ...WIN }, { at: 9.5, w: 1.0, y0: 0, y1: 2.2 }], { out: -1 });
+    wallX(B, 0, bw, bd - T, y0, y1, [{ at: 2.5, ...WIN }, { at: 6, ...(f === 0 ? DOOR : WIN) }, { at: 9.5, ...WIN }], { out: 1 });
+    wallZ(B, T, bd - T, 0, y0, y1, [{ at: 3.5, ...WIN }, { at: 8.7, ...WIN }, { at: 14, ...WIN }], { out: -1 });
+    wallZ(B, T, bd - T, bw - T, y0, y1, [{ at: 3.5, ...WIN }, { at: 8.7, ...WIN }, { at: 14, ...WIN }], { out: 1 });
     // 階段室（中央 x=4.5〜7.5、z=6.5〜11.5）の壁と、部屋への扉
     wallZ(B, 6.5, 11.5, 4.5, y0, y1, [{ at: 2.5, ...DOOR }], { mat: M.CONCRETE });
     wallZ(B, 6.5, 11.5, 7.5 - T, y0, y1, [{ at: 2.5, ...DOOR }], { mat: M.CONCRETE });
     // 部屋の仕切り（手前と奥）
     wallX(B, T, 4.5, 6.5, y0, y1, [{ at: 2, ...DOOR }], { mat: M.DRYWALL, col: '#d6d2c8' }); wallX(B, 7.5, bw - T, 6.5, y0, y1, [{ at: 2.2, ...DOOR }], { mat: M.DRYWALL, col: '#d6d2c8' });
     wallX(B, T, 4.5, 11.5 - T, y0, y1, [{ at: 2, ...DOOR }], { mat: M.DRYWALL, col: '#d6d2c8' }); wallX(B, 7.5, bw - T, 11.5 - T, y0, y1, [{ at: 2.2, ...DOOR }], { mat: M.DRYWALL, col: '#d6d2c8' });
-    if (f > 0) slab(B, 0, 0, bw, bd, y0, [4.5 + T, 6.5, 6.0, 11.5]);
+    if (f > 0) {
+      slab(B, 0, 0, bw, bd, y0, [4.5 + T, 6.5, 6.0, 11.5]);
+      // ベランダ（右の窓の扉の前。床と手すり）
+      box(B, 8.4, y0 - SL, -1.3, 10.6, y0, 0, { kind: 'floor', col: '#9a9a94' });
+      box(B, 8.4, y0, -1.3, 10.6, y0 + 1.0, -1.18, { kind: 'rail', col: TRIM_DARK, mat: M.METAL, opaque: false, layer: 10 });
+      box(B, 8.4, y0, -1.18, 8.52, y0 + 1.0, 0, { kind: 'rail', col: TRIM_DARK, mat: M.METAL, opaque: false, layer: 10 });
+      box(B, 10.48, y0, -1.18, 10.6, y0 + 1.0, 0, { kind: 'rail', col: TRIM_DARK, mat: M.METAL, opaque: false, layer: 10 });
+    }
+    // 部屋の家具
+    furn(B, 'table', 1.5, y0, 2.4); furn(B, 'sofa', 8.4, y0, 3.8); furn(B, 'shelf', 0.6, y0, 14.5, 'z'); furn(B, 'bed', 8.6, y0, 13.8);
   }
   // 階段（階段室の左半分。各階で z=11.5 → 6.5 へ）。屋上へも
   for (let f = 0; f < F; f++) ramp(B, 4.5 + T, 6.5, 6.0, 11.5, f * FH, (f + 1) * FH, 'n');
-  slab(B, 0, 0, bw, bd, H, [4.5 + T, 6.5, 6.0, 11.5], { col: '#8e9296' });
-  // 屋上の低い壁
-  wallX(B, 0, bw, 0, H, H + 1.0); wallX(B, 0, bw, bd - T, H, H + 1.0); wallZ(B, T, bd - T, 0, H, H + 1.0); wallZ(B, T, bd - T, bw - T, H, H + 1.0);
+  flatRoof(B, H - SL, 1.0);
+  plinth(B, 0.3);
+  // 入口のひさし・屋上の機械
+  box(B, 4.6, 2.6, -1.4, 7.4, 2.78, 0, { kind: 'trim', col: TRIM_DARK, mat: M.CONCRETE, walk: false });
+  box(B, 8.6, H + 0.25, 13, 10.4, H + 1.35, 15.4, { kind: 'roof', col: '#9aa0a2', mat: M.METAL, layer: 10, detail: true, bev: 0.06 });
   return B;
 }
 
-// 倉庫（20×30m、高さ7m）: 大きな開口2つ・小さな扉。中にキャットウォーク（片側）
+// ---- 店（12×9m、1〜2階）: 手前に大きな窓2つと扉・ひさし・看板の帯。中は棚とカウンター（遮蔽物）。平らな屋根
+export function shop(ww, o) {
+  const bw = 12, bd = 9, F = o.floors || 1, H = F * FH, r = o.rnd || Math.random;
+  const B = begin(ww, { ...o, kind: 'shop', floors: F }, bw, bd, o.mat ?? M.BRICK, o.col || pick([...PLASTER, ...BRICKS], r));
+  if (!BRICKS.includes(B.col)) B.layer = 3;
+  for (let f = 0; f < F; f++) {
+    const y0 = f * FH, y1 = y0 + FH;
+    wallX(B, 0, bw, 0, y0, y1, f === 0 ? [{ at: 2.6, ...BIGWIN }, { at: 6, ...DOOR, w: 1.6 }, { at: 9.4, ...BIGWIN }] : [{ at: 2.5, ...WIN }, { at: 6, ...WIN }, { at: 9.5, ...WIN }], { out: -1 });
+    wallX(B, 0, bw, bd - T, y0, y1, f === 0 ? [{ at: 9.8, ...DOOR }] : [{ at: 3, ...WIN }, { at: 9, ...WIN }], { out: 1 });
+    wallZ(B, T, bd - T, 0, y0, y1, f === 0 ? [] : [{ at: 4.5, ...WIN }], { out: -1 });
+    wallZ(B, T, bd - T, bw - T, y0, y1, [{ at: 4.5, ...WIN }], { out: 1 });
+    if (f > 0) slab(B, 0, 0, bw, bd, y0, [bw - 1.6, 1.2, bw - T, 6.4]);
+  }
+  if (F > 1) ramp(B, bw - 1.6, 1.2, bw - T, 6.4, 0, FH, 's');
+  flatRoof(B, H - SL, 0.6);
+  plinth(B, 0.25);
+  // ひさし（布）と看板の帯
+  const aw = pick(['#8a2f2a', '#2f5a7a', '#3d6b3a', '#a0702a', '#5a5a5a'], r);
+  box(B, 0.4, 2.75, -1.5, bw - 0.4, 2.9, 0, { kind: 'trim', col: aw, mat: M.FABRIC, layer: 12, walk: false });
+  box(B, 1.0, 3.0, -0.12, bw - 1.0, 3.7, 0, { kind: 'trim', col: pick(['#e9e2cf', '#2b2f33', '#c9a84a', '#b8463c'], r), mat: M.METAL, layer: 19 });
+  // 中: 棚の列とカウンター
+  furn(B, 'counter', 0.8, 0, 6.2); furn(B, 'shelf', 3.6, 0, 3.2); furn(B, 'shelf', 3.6, 0, 5.4); furn(B, 'shelf', 7.0, 0, 3.2); furn(B, 'shelf', 7.0, 0, 5.4, 'x');
+  return B;
+}
+
+// ---- 事務所（14×12m、F階）: 窓の列・中央の階段・平らな屋根と屋上の機械
+export function office(ww, o) {
+  const bw = 14, bd = 12, F = o.floors || 3, H = F * FH, r = o.rnd || Math.random;
+  const B = begin(ww, { ...o, kind: 'office', floors: F }, bw, bd, o.mat ?? M.CONCRETE, o.col || pick(['#b5b8b6', '#c8c1b0', '#a9b0b3', '#bdb2a0'], r));
+  B.layer = 1;
+  const row = (n, L, extra = []) => { const ops = []; for (let k = 0; k < n; k++) ops.push({ at: L * (k + 0.5) / n, ...WIN, w: 1.6 }); return ops.concat(extra); };
+  for (let f = 0; f < F; f++) {
+    const y0 = f * FH, y1 = y0 + FH;
+    wallX(B, 0, bw, 0, y0, y1, f === 0 ? [{ at: 2, ...WIN, w: 1.6 }, { at: 4.8, ...WIN, w: 1.6 }, { at: 7, w: 2.0, y0: 0, y1: 2.4 }, { at: 9.2, ...WIN, w: 1.6 }, { at: 12, ...WIN, w: 1.6 }] : row(5, bw), { out: -1 });
+    wallX(B, 0, bw, bd - T, y0, y1, f === 0 ? row(4, bw, []).slice(0, 3).concat([{ at: 12.2, ...DOOR }]) : row(5, bw), { out: 1 });
+    wallZ(B, T, bd - T, 0, y0, y1, row(3, bd - 2 * T), { out: -1 });
+    wallZ(B, T, bd - T, bw - T, y0, y1, row(3, bd - 2 * T), { out: 1 });
+    // 階段室（x=6〜8.5, z=4〜9）
+    wallZ(B, 4, 9, 6, y0, y1, [{ at: 1.2, ...DOOR }], { mat: M.CONCRETE });
+    if (f > 0) slab(B, 0, 0, bw, bd, y0, [6 + T, 4, 7.5, 9]);
+    furn(B, 'desk', 1.0, y0, 1.2); furn(B, 'desk', 3.2, y0, 1.2); furn(B, 'desk', 9.2, y0, 1.2); furn(B, 'desk', 11.4, y0, 1.2); furn(B, 'shelf', 9.4, y0, 10.8); furn(B, 'desk', 1.4, y0, 9.6);
+  }
+  for (let f = 0; f < F; f++) ramp(B, 6 + T, 4, 7.5, 9, f * FH, (f + 1) * FH, 'n');
+  flatRoof(B, H - SL, 1.0);
+  plinth(B, 0.3);
+  box(B, 2, H + 0.25, 7, 4.2, H + 1.6, 9.6, { kind: 'roof', col: '#9aa0a2', mat: M.METAL, layer: 10, bev: 0.06 });
+  box(B, 10, H + 0.25, 2, 11.2, H + 1.1, 3.4, { kind: 'roof', col: '#8d9396', mat: M.METAL, layer: 10, detail: true, bev: 0.06 });
+  return B;
+}
+
+// ---- 倉庫（20×30m、高さ7m）: 大きな開口2つ・小さな扉。中にキャットウォーク（片側）・荷の積み場・屋根の換気
 export function warehouse(ww, o) {
-  const bw = 20, bd = 30, H = 7;
-  const B = begin(ww, { ...o, kind: 'warehouse', floors: 1 }, bw, bd, o.mat ?? M.METAL, o.col || '#7f8a86');
-  wallX(B, 0, bw, 0, 0, H, [{ at: 10, w: 6, y0: 0, y1: 5 }]);
-  wallX(B, 0, bw, bd - T, 0, H, [{ at: 6, w: 5, y0: 0, y1: 4.5 }, { at: 16, ...DOOR }]);
-  wallZ(B, T, bd - T, 0, 0, H, [{ at: 8, ...DOOR }, { at: 15, w: 2, y0: 4.6, y1: 5.8 }, { at: 22, w: 2, y0: 4.6, y1: 5.8 }]);
-  wallZ(B, T, bd - T, bw - T, 0, H, [{ at: 15, w: 2, y0: 4.6, y1: 5.8 }, { at: 22, ...DOOR }]);
+  const bw = 20, bd = 30, H = 7, r = o.rnd || Math.random;
+  const B = begin(ww, { ...o, kind: 'warehouse', floors: 1 }, bw, bd, o.mat ?? M.METAL, o.col || pick(['#7f8a86', '#8a8478', '#6f7f8a', '#8f8a7c'], r));
+  B.layer = o.mat === M.WOOD ? 22 : 10;
+  wallX(B, 0, bw, 0, 0, H, [{ at: 10, w: 6, y0: 0, y1: 5 }], { out: -1 });
+  wallX(B, 0, bw, bd - T, 0, H, [{ at: 6, w: 5, y0: 0, y1: 4.5 }, { at: 16, ...DOOR }], { out: 1 });
+  wallZ(B, T, bd - T, 0, 0, H, [{ at: 8, ...DOOR }, { at: 15, w: 2, y0: 4.6, y1: 5.8 }, { at: 22, w: 2, y0: 4.6, y1: 5.8 }], { out: -1 });
+  wallZ(B, T, bd - T, bw - T, 0, H, [{ at: 15, w: 2, y0: 4.6, y1: 5.8 }, { at: 22, ...DOOR }], { out: 1 });
   // 右の壁ぞいのキャットウォーク（高さ3.5m・幅2m）と斜めの階段
   box(B, bw - 2.3, 3.25, 4, bw - T, 3.5, bd - 4, { kind: 'floor', mat: M.METAL, col: '#5d6466' });
   box(B, bw - 2.4, 3.5, 4, bw - 2.3, 4.5, bd - 4, { kind: 'rail', mat: M.METAL, col: '#5d6466', opaque: false });
   ramp(B, bw - 2.3, bd - 4, bw - T, bd - 0.5, 0, 3.5, 'n');
-  // 屋根
+  // 屋根（低い切妻）と換気の箱
   slab(B, 0, 0, bw, bd, H + SL, null, { col: '#5f6668', mat: M.METAL });
+  gable(B, H + SL, 1.6, 0.4, 'z', { col: o.roofCol || '#5f6668', wallCol: B.col });
+  // 荷の積み場（手前の開口の横・高さ1.1m）
+  box(B, 13.2, 0, -3.0, 19.8, 1.1, 0, { kind: 'floor', col: '#8e8d87', mat: M.CONCRETE });
   // 中の木箱・パレット
-  for (const [cx, cz] of [[5, 10], [7, 18], [12, 13], [4, 24]]) box(B, cx - 0.6, 0, cz - 0.6, cx + 0.6, 1.2, cz + 0.6, { kind: 'crate', mat: M.WOOD, col: '#8a6a44' });
+  for (const [cx, cz, h] of [[5, 10, 1.2], [7, 18, 2.4], [12, 13, 1.2], [4, 24, 1.2], [9, 24, 2.4], [13.5, 20, 1.2]]) box(B, cx - 0.6, 0, cz - 0.6, cx + 0.6, h, cz + 0.6, { kind: 'crate', mat: M.WOOD, col: '#8a6a44', layer: 11, bev: 0.04 });
+  return B;
+}
+// ---- 納屋（10×16m、木）: 高い1階（5m）と切妻の屋根（棟は長い辺）。両端に大きな戸口。半分に干し草の床（階段）
+export function barn(ww, o) {
+  const bw = 10, bd = 16, H = 5, r = o.rnd || Math.random;
+  const B = begin(ww, { ...o, kind: 'barn', floors: 1 }, bw, bd, M.WOOD, o.col || pick(['#8a3b2c', '#7b4a32', '#8f8676', '#6e3a2c'], r));
+  B.layer = 22; B.trimCol = '#e3ddcf';
+  wallX(B, 0, bw, 0, 0, H, [{ at: 5, w: 4, y0: 0, y1: 4 }], { out: -1 });
+  wallX(B, 0, bw, bd - T, 0, H, [{ at: 5, w: 4, y0: 0, y1: 4 }], { out: 1 });
+  wallZ(B, T, bd - T, 0, 0, H, [{ at: 4, ...DOOR }, { at: 11, w: 1.0, y0: 2.4, y1: 3.4 }], { out: -1 });
+  wallZ(B, T, bd - T, bw - T, 0, H, [{ at: 11, ...DOOR }, { at: 5, w: 1.0, y0: 2.4, y1: 3.4 }], { out: 1 });
+  // 干し草の床（奥の半分・高さ 2.8）と階段
+  box(B, T, 2.55, 9, bw - T, 2.8, bd - T, { kind: 'floor', col: '#7a6448', mat: M.WOOD, layer: 4 });
+  ramp(B, bw - 1.4, 3.6, bw - T, 9, 0, 2.8, 's', { col: '#7a6448' });
+  slab(B, 0, 0, bw, bd, H + SL, null, { col: '#6b5a44', mat: M.WOOD });
+  gable(B, H + SL, 3.0, 0.5, 'z', { col: o.roofCol || '#5a5a58' });
+  // 干し草（中と干し草の床）
+  for (const [x, z, y] of [[1.2, 12, 2.8], [2.6, 12.2, 2.8], [1.3, 13.5, 2.8], [7.2, 3, 0], [8.0, 4.4, 0]]) box(B, x, y, z, x + 1.2, y + 0.9, z + 0.8, { kind: 'crate', col: '#c9b56a', mat: M.FABRIC, layer: 12, bev: 0.08, detail: true });
+  return B;
+}
+// ---- 小屋・車庫（5×6m）: 片流れの屋根、手前に戸口
+export function shed(ww, o) {
+  const bw = 5, bd = 6, H = 2.7, r = o.rnd || Math.random;
+  const metal = o.mat === M.METAL || (o.mat == null && r() < 0.4);
+  const B = begin(ww, { ...o, kind: 'shed', floors: 1 }, bw, bd, metal ? M.METAL : M.WOOD, o.col || pick(metal ? ['#7d878a', '#6f7a72', '#8a8478'] : ['#8a6a44', '#7a5e3e', '#9a8466', '#6e553a'], r));
+  B.layer = metal ? 10 : 22;
+  wallX(B, 0, bw, 0, 0, H, [{ at: 2.5, w: 2.4, y0: 0, y1: 2.3 }], { out: -1 });
+  wallX(B, 0, bw, bd - T, 0, H, [], { out: 1 });
+  wallZ(B, T, bd - T, 0, 0, H, [{ at: 3, w: 0.9, y0: 1.2, y1: 1.9 }], { out: -1 });
+  wallZ(B, T, bd - T, bw - T, 0, H, [], { out: 1 });
+  ramp(B, -0.3, -0.4, bw + 0.3, bd + 0.4, H + 0.6, H, 's', { smooth: true, th: 0.15, kind: 'roof', col: B.roofCol, layer: 22, mat: M.METAL });
+  furn(B, 'shelf', 0.5, 0, 5.1); furn(B, 'crate', 3.4, 0, 4.2);
   return B;
 }
 
-// 見張り塔（4×4m、高さ9m）: 2段の踊り場、上は胸の高さの壁
+// ---- 見張り塔（4×4m、高さ9m）: 2段の踊り場、上は胸の高さの壁
 export function tower(ww, o) {
   const bw = 4, bd = 4, H = 9;
   const B = begin(ww, { ...o, kind: 'tower', floors: 3 }, bw, bd, o.mat ?? M.CONCRETE, o.col || '#9a9890');
@@ -25455,12 +25734,108 @@ export function tower(ww, o) {
   slab(B, -0.3, -0.3, bw + 0.3, bd + 0.3, H + 3.2, null, { col: '#6c6a64' });
   return B;
 }
+// ---- 掩体壕（8×6m、コンクリート）: 厚い壁に銃眼、奥に入口、屋根の上に土のう
+export function bunker(ww, o) {
+  const bw = 8, bd = 6, H = 2.5;
+  const B = begin(ww, { ...o, kind: 'bunker', floors: 1 }, bw, bd, M.CONCRETE, o.col || '#8f8e86');
+  B.layer = 1;
+  const W = 0.6, slit = { w: 1.4, y0: 1.25, y1: 1.6 };
+  const wx = (z, ops) => wallLine(B, 0, bw, (a, b, ya, yb) => box(B, a, ya, z, b, yb, z + W), 0, H, ops);
+  const wz = (x, ops) => wallLine(B, W, bd - W, (a, b, ya, yb) => box(B, x, ya, a, x + W, yb, b), 0, H, ops);
+  wx(0, [{ at: 2, ...slit }, { at: 6, ...slit }]); wx(bd - W, [{ at: 6.4, w: 1.2, y0: 0, y1: 2.1 }]);
+  wz(0, [{ at: 2.4, ...slit }]); wz(bw - W, [{ at: 2.4, ...slit }]);
+  slab(B, -0.3, -0.3, bw + 0.3, bd + 0.3, H + 0.4, null, { col: '#86857e' });
+  // 屋根の縁の土のう
+  for (const [a, b, c, d] of [[-0.2, -0.2, bw + 0.2, 0.5], [-0.2, 0.5, 0.5, bd - 0.5], [bw - 0.5, 0.5, bw + 0.2, bd - 0.5]]) box(B, a, H + 0.4, b, c, H + 0.95, d, { kind: 'sandbag', mat: M.FABRIC, col: '#a28f68', layer: 12 });
+  return B;
+}
+// ---- 壊れた家（8×10m）: 壁が欠け、屋根がない。中と外にがれき（遮蔽物の多い所）
+export function ruin(ww, o) {
+  const bw = 8, bd = 10, r = o.rnd || Math.random;
+  const B = begin(ww, { ...o, kind: 'ruin', floors: 1 }, bw, bd, M.BRICK, o.col || pick(BRICKS, r));
+  const hh = () => 0.8 + r() * 2.4;
+  // 壁を短い区切りで、高さをばらばらに（欠けた所は低い）
+  for (let s = 0; s < bw; s += 2) { const h = hh(); if (h > 1.0) box(B, s, 0, 0, Math.min(bw, s + 2), h, T); const h2 = hh(); if (h2 > 1.0) box(B, s, 0, bd - T, Math.min(bw, s + 2), h2, bd); }
+  for (let s = T; s < bd - T; s += 2) { const h = hh(); if (h > 1.0) box(B, 0, 0, s, T, h, Math.min(bd - T, s + 2)); const h2 = hh(); if (h2 > 1.0) box(B, bw - T, 0, s, bw, h2, Math.min(bd - T, s + 2)); }
+  // がれき
+  for (let k = 0; k < 7; k++) { const x = 0.8 + r() * (bw - 2), z = 0.8 + r() * (bd - 2), s = 0.5 + r() * 0.8; box(B, x, 0, z, x + s * 1.4, s * 0.8, z + s, { kind: 'rock', col: pick(['#8e8a80', '#9a7a66', '#7e7a72'], r), mat: M.BRICK }); }
+  return B;
+}
+// ---- ガソリンスタンド: 屋根（柱4本）・給油機の島2つ・売店（平らな屋根・大きな窓）
+export function gasStation(ww, o) {
+  const bw = 22, bd = 18, r = o.rnd || Math.random;
+  const B = begin(ww, { ...o, kind: 'gas', floors: 1 }, bw, bd, M.CONCRETE, o.col || '#d9d6cf');
+  B.layer = 3;
+  // 給油の屋根（手前の 16×9）
+  for (const [px, pz] of [[2.5, 1.5], [13.5, 1.5], [2.5, 7.5], [13.5, 7.5]]) box(B, px, 0, pz, px + 0.45, 4.6, pz + 0.45, { kind: 'pillar', col: '#d8d8d4', mat: M.METAL, layer: 19 });
+  box(B, 0.5, 4.6, -0.2, 16.5, 5.2, 9.6, { kind: 'roof', col: '#e6e4de', mat: M.METAL, layer: 19, cols: null });
+  box(B, 0.45, 4.95, -0.25, 16.55, 5.25, 9.65, { kind: 'trim', col: pick(['#b8322a', '#2a5d9a', '#2f7d4a'], r), mat: M.METAL, layer: 19, detail: false, walk: false });
+  // 給油機の島
+  for (const ix of [5.5, 10.5]) {
+    box(B, ix - 0.9, 0, 2.6, ix + 0.9, 0.22, 7.0, { kind: 'floor', col: '#9e9c96', mat: M.CONCRETE });
+    for (const pz of [3.4, 5.6]) box(B, ix - 0.35, 0.22, pz - 0.3, ix + 0.35, 1.75, pz + 0.3, { kind: 'pump', col: '#d6d4cc', mat: M.METAL, layer: 19, bev: 0.06 });
+  }
+  // 売店（奥・10×7。建物のローカル座標の中でずらして作る）
+  const sx = 11.5, sz = 10.6, sw = 10, sd = 7;
+  const sb = (lx0, ly0, lz0, lx1, ly1, lz1, o2 = {}) => box(B, sx + lx0, ly0, sz + lz0, sx + lx1, ly1, sz + lz1, o2);
+  // 売店の壁（手前に大きな窓と扉）
+  const front = [{ at: 2.4, ...BIGWIN, w: 3.2 }, { at: 6, ...DOOR, w: 1.4 }, { at: 8.6, ...BIGWIN, w: 1.6 }];
+  wallLine(B, 0, sw, (a, b, ya, yb) => sb(a, ya, 0, b, yb, T), 0, 3.2, front);
+  wallLine(B, 0, sw, (a, b, ya, yb) => sb(a, ya, sd - T, b, yb, sd), 0, 3.2, [{ at: 8.6, ...DOOR }]);
+  wallLine(B, T, sd - T, (a, b, ya, yb) => sb(0, ya, a, T, yb, b), 0, 3.2, [{ at: 3.2, ...WIN }]);
+  wallLine(B, T, sd - T, (a, b, ya, yb) => sb(sw - T, ya, a, sw, yb, b), 0, 3.2, []);
+  sb(-0.1, 3.2, -0.1, sw + 0.1, 3.45, sd + 0.1, { kind: 'floor', col: '#8e9296' });
+  sb(-0.1, 3.45, -0.1, sw + 0.1, 3.95, 0.12, { kind: 'roof', col: '#c9c6bd' });
+  sb(1.0, 0, 2.6, 3.4, 0.92, 3.25, { kind: 'furn', detail: true, col: '#bdb7aa', mat: M.CERAMIC, bev: 0.04 });
+  sb(4.4, 0, 4.0, 6.4, 1.8, 4.45, { kind: 'furn', detail: true, col: '#7a5e3e', mat: M.FURN, layer: 11, bev: 0.04 });
+  sb(7.0, 0, 4.0, 9.0, 1.8, 4.45, { kind: 'furn', detail: true, col: '#7a5e3e', mat: M.FURN, layer: 11, bev: 0.04 });
+  // 看板の柱
+  box(B, 19.5, 0, 1.0, 19.8, 7.0, 1.3, { kind: 'pillar', col: '#8d9396', mat: M.METAL, layer: 10 });
+  box(B, 18.6, 5.2, 0.95, 20.7, 6.8, 1.35, { kind: 'trim', col: '#e8e4d8', mat: M.METAL, layer: 19, walk: false });
+  return B;
+}
+
+// ---- 礼拝堂（10×22m）: 手前に鐘の塔（4×4・鐘の部屋の床 8m・中に急な階段・四方が開いた鐘の部屋・とがった屋根）、
+// 奥に高い広間（6m・縦長の窓・切妻の屋根・長いすの列）。町と村の目印で、塔は見張りの場所になる
+export function chapel(ww, o) {
+  const bw = 10, bd = 22, H = 6, r = o.rnd || Math.random;
+  const B = begin(ww, { ...o, kind: 'chapel', floors: 1 }, bw, bd, M.BRICK, o.col || pick(['#d8d0bf', '#cfc6b4', '#bdb5a5', '#a6654c', '#9a5a45'], r));
+  B.layer = B.col.startsWith('#a6') || B.col.startsWith('#9a') ? 2 : 3; B.trimCol = '#ece7da';
+  const TW = { w: 1.0, y0: 1.8, y1: 4.8 }, BELL = { w: 2.0, y0: 8.9, y1: 10.7 };
+  // 広間（z 4〜22）。前の壁は塔の両わき
+  wallX(B, 0, 3, 4, 0, H, [], { out: -1 }); wallX(B, 7, bw, 4, 0, H, [], { out: -1 });
+  wallX(B, 0, bw, bd - T, 0, H, [{ at: 5, ...TW }], { out: 1 });
+  wallZ(B, 4 + T, bd - T, 0, 0, H, [{ at: 3, ...TW }, { at: 7.5, ...TW }, { at: 12.5, ...DOOR }], { out: -1 });
+  wallZ(B, 4 + T, bd - T, bw - T, 0, H, [{ at: 3, ...TW }, { at: 7.5, ...TW }, { at: 12.5, ...TW }], { out: 1 });
+  slab(B, 0, 4, bw, bd, H + SL, null, { col: '#8a857c' });
+  gable(B, H + SL, 3.4, 0.45, 'z', { z0: 4, z1: bd });
+  // 鐘の塔（x 3〜7・z 0〜4）: 壁・床（4m・8m。階段の穴）・階段・鐘の部屋の開口・平らな屋根ととがった屋根
+  const TH = 11;
+  wallX(B, 3, 7, 0, 0, TH, [{ at: 2, w: 1.4, y0: 0, y1: 2.6 }, { at: 2, w: 0.5, y0: 5.0, y1: 6.4 }, { at: 2, ...BELL }], { out: -1 });
+  wallZ(B, T, 4, 3, 0, TH, [{ at: 1.85, ...BELL }, { at: 1.85, w: 0.4, y0: 5.0, y1: 6.2 }], { out: -1 });
+  wallZ(B, T, 4, 7 - T, 0, TH, [{ at: 1.85, ...BELL }, { at: 1.85, w: 0.4, y0: 5.0, y1: 6.2 }], { out: 1 });
+  wallX(B, 3, 7, 4, 0, TH, [{ at: 2.6, w: 1.2, y0: 0, y1: 2.3 }, { at: 2, ...BELL, y0: Math.max(BELL.y0, H + 3.7) }]);
+  slab(B, 3 + T, T, 7 - T, 4, 4, [3 + T, T, 4.4, 4]);
+  slab(B, 3 + T, T, 7 - T, 4, 8, [5.6, T, 7 - T, 4]);
+  ramp(B, 3 + T, T, 4.4, 4, 0, 4, 'n');
+  ramp(B, 5.6, T, 7 - T, 4, 4, 8, 's');
+  slab(B, 2.85, -0.15, 7.15, 4.45, TH + SL, null, { col: '#77726a' });
+  box(B, 2.8, TH + SL, -0.2, 7.2, TH + SL + 0.25, 4.5, { kind: 'trim', col: B.trimCol, mat: M.CONCRETE, walk: false });
+  const [sx, sz] = xf(B, 5, 2.15);
+  addCyl(ww, { x: sx, z: sz, r: 2.95, r1: 0.06, y0: B.y + TH + SL + 0.25, y1: B.y + TH + 5.4, mat: M.WOOD, kind: 'roof', col: B.roofCol, seg: 4, rot: Math.PI / 4, layer: 22, far: true });
+  plinth(B);
+  // 中: 長いすの列と祭壇
+  for (let k = 0; k < 6; k++) { furn(B, 'pew', 0.7, 0, 7.2 + k * 1.9); furn(B, 'pew', 6.3, 0, 7.2 + k * 1.9); }
+  box(B, 3.6, 0, 19.6, 6.4, 1.0, 20.6, { kind: 'furn', detail: true, col: '#d9d4c6', mat: M.CONCRETE, layer: 1, bev: 0.05 });
+  return B;
+}
 
 // 塀（世界の座標で直線。高さ h、厚さ th）
 export function wallRun(ww, x0, z0, x1, z1, h = 2.2, o = {}) {
   const th = o.th ?? 0.3, alongX = Math.abs(x1 - x0) >= Math.abs(z1 - z0), y = o.y ?? 0;
-  if (alongX) return addBox(ww, { x0: Math.min(x0, x1), z0: z0 - th / 2, x1: Math.max(x0, x1), z1: z0 + th / 2, y0: y, y1: y + h, mat: o.mat ?? M.CONCRETE, kind: 'fence', col: o.col || '#a9a59b', opaque: o.opaque });
-  return addBox(ww, { x0: x0 - th / 2, z0: Math.min(z0, z1), x1: x0 + th / 2, z1: Math.max(z0, z1), y0: y, y1: y + h, mat: o.mat ?? M.CONCRETE, kind: 'fence', col: o.col || '#a9a59b', opaque: o.opaque });
+  const ex = { layer: o.layer, bev: o.bev, detail: o.detail, far: o.far };
+  if (alongX) return addBox(ww, { x0: Math.min(x0, x1), z0: z0 - th / 2, x1: Math.max(x0, x1), z1: z0 + th / 2, y0: y, y1: y + h, mat: o.mat ?? M.CONCRETE, kind: o.kind || 'fence', col: o.col || '#a9a59b', opaque: o.opaque, ...ex });
+  return addBox(ww, { x0: x0 - th / 2, z0: Math.min(z0, z1), x1: x0 + th / 2, z1: Math.max(z0, z1), y0: y, y1: y + h, mat: o.mat ?? M.CONCRETE, kind: o.kind || 'fence', col: o.col || '#a9a59b', opaque: o.opaque, ...ex });
 }
 // 土のうの列（高さ1m）・コンテナ（6×2.4×2.6）
 export function sandbags(ww, x0, z0, x1, z1, y = 0) { const b = wallRun(ww, x0, z0, x1, z1, 1.0, { th: 0.7, mat: M.FABRIC, col: '#a28f68', y }); b.kind = 'sandbag'; return b; }
@@ -25682,11 +26057,19 @@ export function buildRange(seed = 3) {
   return finishWorld(ww);
 }
 
-@@@@ FILE src/war/maps/riverbend.js text 12547
-// リバーベンド（独自のマップ）: 南北に曲がって流れる川（今は水のない川床）と、その東の町・西の工場・農場・電波塔の丘・東の村・石切り場。
+@@@@ FILE src/war/maps/riverbend.js text 67683
+// リバーベンド（独自のマップ）: 南北に曲がって流れる川（今は水のない川床）と、その東の町・西の工場・農場・電波塔の丘・東の村・石切り場・十字路。
 // 世界 1400m 四方（まわり 100m は山。遊べるのは内側）。人数で範囲が3つ（小 500m・中 800m・大 1200m）。
-import { makeWarWorld, finishWorld, heightAt, addCyl, addBox, addRamp } from '../world.js';
-import { house, apartment, warehouse, tower, wallRun, sandbags, container } from '../buildings.js';
+// 2（11-13 の作り直し。research/WARBIT.md の 13）: 拠点のまわりを建物と遮蔽物で埋め、拠点の間にも遮蔽物を散らす。
+//   町は道の格子にそって家・店・アパート・事務所を並べ（裏庭の塀・生け垣・車道の車・小屋）、広場（D）は噴水と屋台と植え込み。
+//   工場はコンテナの囲いと倉庫・サイロ・煙突・塀、丘は塔と掩体壕と壕と土のう、農場は納屋とサイロと干し草、村と十字路は家とガソリンスタンド。
+//   道には焼けた車・電柱、畑には生け垣と石垣、ところどころに農家・壊れた家・掩体。
+// 置き方: まず建物（下の地面をならす。まわりはなだらかに）、次に小物（2m の升目で重ならないように。道・川・拠点の真ん中を避ける）、最後に木と岩
+import { makeWarWorld, finishWorld, heightAt, addCyl, addBox, addRamp, addBush } from '../world.js';
+import { house, bungalow, apartment, shop, office, warehouse, barn, shed, tower, bunker, ruin, gasStation, chapel, wallRun, sandbags, container } from '../buildings.js';
+import { car, pickup, truck, wreck, barrels, basin, busStop, crates, dumpster, foxhole, hay, hesco, jerseyRun, lamp, logs, pallets, planter, pole, rubble, silo, stall, stoneWall, tankTrap, tent, waterTower, boardFence, hedge, railFence, vineRow } from '../props.js';
+// 小物の一覧（名前で呼ぶ所があるので、まとめた物も持つ）
+const P = { car, pickup, truck, wreck, barrels, basin, busStop, crates, dumpster, foxhole, hay, hesco, jerseyRun, lamp, logs, pallets, planter, pole, rubble, silo, stall, stoneWall, tankTrap, tent, waterTower, boardFence, hedge, railFence, vineRow };
 import { fbm, mulberry } from '../noise.js';
 import { M } from '../../engine/data/materials.js';
 
@@ -25705,15 +26088,15 @@ export const AREAS = {
 // spawns: 出撃の場所の候補（敵が近い所は避けて選ぶ）
 export const MODE_AREAS = {
   dom: { name: 'ドミネーション', rect: [480, 540, 940, 860], hq: [[520, 700], [920, 700]], flags: ['B', 'C', 'D'],
-    spawns: [[[520, 700], [585, 745], [610, 672]], [[920, 700], [870, 780], [880, 640]]] },
-  tdm: { name: '町', rect: [690, 610, 890, 830], hq: [[712, 725], [875, 725]], flags: [],
-    spawns: [[[712, 645], [712, 700], [712, 755], [712, 810]], [[875, 645], [875, 700], [875, 755], [875, 810]]] },
+    spawns: [[[520, 700], [585, 745], [610, 672]], [[920, 700], [905, 785], [905, 625]]] },
+  tdm: { name: '町', rect: [692, 600, 906, 852], hq: [[704, 725], [896, 725]], flags: [],
+    spawns: [[[704, 662], [704, 700], [704, 742], [702, 790]], [[898, 650], [898, 700], [898, 745], [898, 800]]] },
 };
 export const FLAGS = {
   A: { name: '農場', x: 470, z: 860, r: 22 },
   B: { name: '工場', x: 560, z: 600, r: 26 },
   C: { name: '橋', x: 700, z: 700, r: 18 },
-  D: { name: '町の広場', x: 790, z: 720, r: 20 },
+  D: { name: '町の広場', x: 815, z: 736, r: 20 },
   E: { name: '電波塔の丘', x: 860, z: 500, r: 22 },
   F: { name: '東の村', x: 1010, z: 900, r: 22 },
   G: { name: '石切り場', x: 330, z: 470, r: 26 },
@@ -25721,39 +26104,104 @@ export const FLAGS = {
 };
 // 平らにする場所（中心・半径・高さは自然の高さの平均）
 const PADS = [
-  { x: 560, z: 600, r: 75 }, { x: 790, z: 720, r: 95 }, { x: 470, z: 860, r: 55 }, { x: 1010, z: 900, r: 60 }, { x: 650, z: 1000, r: 35 },
+  { x: 560, z: 600, r: 85 }, { x: 800, z: 728, r: 125 }, { x: 470, z: 860, r: 62 }, { x: 1010, z: 900, r: 70 }, { x: 650, z: 1000, r: 55 },
   { x: 160, z: 700, r: 45 }, { x: 1240, z: 700, r: 45 }, { x: 370, z: 700, r: 35 }, { x: 1070, z: 700, r: 35 }, { x: 520, z: 700, r: 30 }, { x: 920, z: 700, r: 30 },
 ];
-// 道（折れ線。幅8m）
+// 道（折れ線。幅8m）。町の中は格子
 const ROADS = [
-  [[100, 700], [370, 700], [520, 700], [640, 700], [760, 700], [920, 700], [1070, 700], [1300, 700]],
-  [[560, 600], [560, 700]], [[790, 720], [790, 600], [860, 520]], [[650, 700], [650, 1000], [650, 1300]], [[790, 720], [1010, 900]], [[470, 860], [560, 700]], [[330, 470], [520, 700]],
+  [[100, 700], [370, 700], [520, 700], [640, 700], [760, 700], [920, 700], [1070, 700], [1300, 700]], // 0 大通り（東西）
+  [[560, 600], [560, 700]],                 // 1 工場へ
+  [[790, 700], [790, 600], [860, 520]],     // 2 町から丘へ
+  [[650, 700], [650, 1000], [650, 1300]],   // 3 南へ（十字路）
+  [[884, 772], [1010, 900]],                // 4 町から村へ
+  [[470, 860], [560, 700]],                 // 5 農場へ
+  [[330, 470], [520, 700]],                 // 6 石切り場へ
+  // 町の格子
+  [[748, 612], [748, 846]], [[840, 608], [840, 846]], [[748, 652], [884, 652]], [[700, 772], [884, 772]], [[790, 772], [790, 846]],
+  // 工場の中・村・十字路
+  [[505, 560], [640, 560]], [[972, 885], [1052, 885]], [[1012, 860], [1012, 948]], [[520, 1000], [800, 1000]],
 ];
 
+// 地形（research/WARBIT.md の 14）: 大きなうねり＋中くらいの起伏（2〜3m の丘とくぼみ＝歩兵の隠れ場所）＋小さな凹凸。
+// 拠点のまわりは高低差を小さく、端に狙撃の丘（BattleBit の作り直しの考え方）。電波塔の丘・農場と工場の間の尾根・南の丘陵
+const gauss = (x, z, cx, cz, s) => Math.exp(-((x - cx) ** 2 + (z - cz) ** 2) / (2 * s * s));
+function ridgeAt(x, z, ax, az, bx, bz, w) { return Math.exp(-(segDist(x, z, ax, az, bx, bz) ** 2) / (2 * w * w)); }
 function naturalH(x, z) {
   let h = 14 * fbm(x, z, 420, 4, 3) + 5 * fbm(x, z, 120, 3, 9);
-  // 電波塔の丘
-  h += 26 * Math.exp(-((x - 860) ** 2 + (z - 500) ** 2) / (2 * 70 * 70));
+  h += 3.2 * fbm(x, z, 58, 3, 13) + 0.8 * fbm(x, z, 17, 2, 29);
+  // 電波塔の丘（頂きは少し岩がち）
+  const gE = gauss(x, z, 860, 500, 70);
+  h += 26 * gE + 2.5 * gE * fbm(x, z, 22, 2, 37);
+  // 端の丘（北西・北東・南西・南東）
+  h += 16 * gauss(x, z, 420, 330, 70) + 20 * gauss(x, z, 1130, 470, 85) + 15 * gauss(x, z, 290, 1110, 75) + 12 * gauss(x, z, 1150, 1180, 90) + 10 * gauss(x, z, 200, 470, 70);
+  // 農場と工場の間の低い尾根（道は切り通しで越える）
+  h += 7 * ridgeAt(x, z, 360, 760, 640, 800, 24);
   // 南の丘陵
-  h += 14 * Math.exp(-((x - 900) ** 2 + (z - 1150) ** 2) / (2 * 160 * 160));
-  // 石切り場（くぼみ）
-  h -= 9 * Math.exp(-((x - 330) ** 2 + (z - 470) ** 2) / (2 * 45 * 45));
+  h += 14 * gauss(x, z, 900, 1150, 160);
   // まわりの山（遊べる範囲の外）: 尾根と谷のある丘陵（壁のように見えないよう、高さと立ち上がりを場所ごとに変える）
   const e = Math.max(0, Math.max(Math.abs(x - CX), Math.abs(z - CZ)) - 590);
   if (e > 0) { const k = 0.55 + 0.45 * fbm(x, z, 140, 3, 55); h += e * e * 0.0042 * k + e * 0.12 * (0.5 + 0.5 * fbm(x, z, 60, 2, 61)); }
   return h;
+}
+// 石切り場: 段々の穴（3.5m ごとの段。縁は急）
+function quarryDepth(x, z) {
+  const qd = Math.hypot((x - 330) / 1.15, z - 470);
+  if (qd > 66) return 0;
+  const d = 14 * (1 - sstep(22, 64, qd)), st = 3.5, f = d / st;
+  return Math.floor(f) * st + st * sstep(0.62, 1, f - Math.floor(f));
+}
+// 乾いた小川（沢）: 底の幅 3m・深さ 2m・岸 4m。道を横切る所は道が盛り土で越える
+const CREEKS = [
+  [[905, 560], [955, 612], [992, 668], [1030, 722], [1058, 790], [1098, 858], [1160, 925], [1250, 990]],
+  [[230, 800], [300, 850], [360, 905], [430, 950], [500, 985], [548, 1012], [575, 1040], [590, 1062]],
+  [[828, 462], [792, 503], [762, 540], [740, 572], [726, 600]],
+];
+let CDG = null;
+export function creekDist(x, z) {
+  if (!CDG) CDG = distGrid(CREEKS, 2, 20);
+  return sampleGrid(CDG, x, z);
+}
+function creekDepth(x, z) {
+  const d = creekDist(x, z) + 0.8 * fbm(x, z, 9, 1, 71);
+  if (d > 6.5) return 0;
+  return 2.1 * (1 - sstep(1.5, 6.5, d));
 }
 function segDist(px, pz, ax, az, bx, bz) {
   const dx = bx - ax, dz = bz - az, l2 = dx * dx + dz * dz || 1;
   const t = Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / l2));
   return Math.hypot(px - (ax + dx * t), pz - (az + dz * t));
 }
+// 道・小川までの距離: 1回だけ升目（道 1m・小川 2m）に求めておき、近い所は升目の値を混ぜて返す（遠い所は「遠い」）
+function distGrid(lines, cell, R) {
+  const N = Math.ceil(SIZE / cell) + 1, g = new Float32Array(N * N).fill(R);
+  for (const r of lines) for (let k = 0; k + 1 < r.length; k++) {
+    const [ax, az] = r[k], [bx, bz] = r[k + 1];
+    const i0 = Math.max(0, Math.floor((Math.min(ax, bx) - R) / cell)), i1 = Math.min(N - 1, Math.ceil((Math.max(ax, bx) + R) / cell));
+    const j0 = Math.max(0, Math.floor((Math.min(az, bz) - R) / cell)), j1 = Math.min(N - 1, Math.ceil((Math.max(az, bz) + R) / cell));
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) { const d = segDist(i * cell, j * cell, ax, az, bx, bz); if (d < g[j * N + i]) g[j * N + i] = d; }
+  }
+  return { g, N, cell, R };
+}
+function sampleGrid(G, x, z) {
+  const fx = x / G.cell, fz = z / G.cell, i = Math.floor(fx), j = Math.floor(fz);
+  if (i < 0 || j < 0 || i >= G.N - 1 || j >= G.N - 1) return G.R;
+  const tx = fx - i, tz = fz - j, a = G.g[j * G.N + i], b = G.g[j * G.N + i + 1], c = G.g[(j + 1) * G.N + i], d = G.g[(j + 1) * G.N + i + 1];
+  return (a * (1 - tx) + b * tx) * (1 - tz) + (c * (1 - tx) + d * tx) * tz;
+}
+let RDG = null;
 export function roadDist(x, z) {
-  let d = 1e9;
-  for (const r of ROADS) for (let k = 0; k + 1 < r.length; k++) d = Math.min(d, segDist(x, z, r[k][0], r[k][1], r[k + 1][0], r[k + 1][1]));
-  return d;
+  // 20m より遠い所は 20 を返す（使う所はどれも 20m より近いかだけを見る）
+  if (!RDG) RDG = distGrid(ROADS, 1, 20);
+  return sampleGrid(RDG, x, z);
 }
 const sstep = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+
+// 建物の大きさ（ローカル bw × bd）と作る関数
+const DIMS = { house: [8, 10], bungalow: [10, 8], apartment: [12, 18], shop: [12, 9], office: [14, 12], warehouse: [20, 30], barn: [10, 16], shed: [5, 6], tower: [4, 4], bunker: [8, 6], ruin: [8, 10], gas: [22, 18], chapel: [10, 22] };
+const BUILD = { house, bungalow, apartment, shop, office, warehouse, barn, shed, tower, bunker, ruin, gas: gasStation, chapel };
+const FALLBACK = ['house', 'bungalow', 'shed'];
+// 正面の前の空き（ひさし・ポーチ・ベランダ・荷の積み場）
+const APRON = { house: 1.3, bungalow: 2.2, apartment: 1.5, shop: 1.7, office: 0.6, warehouse: 3.2, barn: 0.6, shed: 0.6, tower: 0.4, bunker: 0.6, ruin: 0.4, gas: 0.6, chapel: 0.6 };
 
 export const RIVERBEND_AREAS = AREAS;
 export function buildRiverbend(seed = 7) {
@@ -25761,49 +26209,570 @@ export function buildRiverbend(seed = 7) {
   ww.mapId = 'riverbend'; ww.areas = { ...AREAS, ...MODE_AREAS }; ww.flagDefs = FLAGS; ww.roads = ROADS; ww.riverX = riverX; ww.roadDist = roadDist;
   // 平らにする高さ（自然の高さの平均）
   for (const p of PADS) { let s = 0, n = 0; for (let a = 0; a < 16; a++) { const r = p.r * 0.6; s += naturalH(p.x + Math.cos(a) * r, p.z + Math.sin(a) * r); n++; } p.h = s / n; }
-  const W = ww.HW;
+  const W = ww.HW, hs = ww.hs;
+  // 1. 自然の高さ・平らにする場所・石切り場・小川
   for (let j = 0; j < ww.HD; j++) for (let i = 0; i < W; i++) {
-    const x = i * ww.hs, z = j * ww.hs;
+    const x = i * hs, z = j * hs;
     let h = naturalH(x, z);
     // 町など: 平らに（縁はなだらかに）
     for (const p of PADS) { const d = Math.hypot(x - p.x, z - p.z); const k = 1 - sstep(p.r * 0.75, p.r * 1.35, d); if (k > 0) h = h + (p.h - h) * k; }
-    // 道: 少し平らに
-    const rd = roadDist(x, z);
-    if (rd < 12) { const k = 1 - sstep(4, 12, rd); h = h * (1 - 0.35 * k) + (h - 0.15) * 0.35 * k; }
+    h -= quarryDepth(x, z);
+    h -= creekDepth(x, z);
+    ww.h[j * W + i] = h;
+  }
+  // 2. 道の高さ: 道ぞいに前後 26m をならした高さへ寄せる（尾根は切り通し・くぼみは盛り土。道の脇は土手になる）
+  const grades = ROADS.map(r => {
+    const S = []; let acc = 0;
+    for (let k = 0; k + 1 < r.length; k++) {
+      const [ax, az] = r[k], [bx, bz] = r[k + 1], L = Math.hypot(bx - ax, bz - az), n = Math.max(1, Math.ceil(L / 4));
+      for (let m = k ? 1 : 0; m <= n; m++) { const t = m / n; S.push({ x: ax + (bx - ax) * t, z: az + (bz - az) * t, s: acc + L * t }); }
+      acc += L;
+    }
+    for (const p of S) p.h = heightAt(ww, p.x, p.z);
+    const g = S.map(p => { let a = 0, w = 0; for (const q of S) { const d = Math.abs(q.s - p.s); if (d < 26) { const ww2 = 1 - d / 26; a += q.h * ww2; w += ww2; } } return a / w; });
+    return { S, g, segs: r.slice(0, -1).map((a, k) => ({ ax: a[0], az: a[1], bx: r[k + 1][0], bz: r[k + 1][1] })) };
+  });
+  const gradeAt = (G, x, z) => {
+    let best = 1e9, bs = 0, acc = 0;
+    for (const sg of G.segs) { const dx = sg.bx - sg.ax, dz = sg.bz - sg.az, L = Math.hypot(dx, dz) || 1; const t = Math.max(0, Math.min(1, ((x - sg.ax) * dx + (z - sg.az) * dz) / (L * L))); const d = Math.hypot(x - sg.ax - dx * t, z - sg.az - dz * t); if (d < best) { best = d; bs = acc + L * t; } acc += L; }
+    // 道ぞいの位置 bs のならした高さ
+    const S = G.S; let lo = 0, hi = S.length - 1;
+    while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (S[mid].s <= bs) lo = mid; else hi = mid; }
+    const t = (bs - S[lo].s) / Math.max(1e-6, S[hi].s - S[lo].s);
+    return [best, G.g[lo] + (G.g[hi] - G.g[lo]) * Math.max(0, Math.min(1, t))];
+  };
+  const h0 = ww.h.slice();
+  for (let j = 0; j < ww.HD; j++) for (let i = 0; i < W; i++) {
+    const x = i * hs, z = j * hs, q = j * W + i;
+    let h = h0[q];
+    // 道（近い道ほど強く。交わる所は重みで混ぜる）
+    if (roadDist(x, z) < 14) {
+      let wsum = 0, gsum = 0, kmax = 0;
+      for (const G of grades) { const [d, g] = gradeAt(G, x, z); if (d < 14) { const k = 1 - sstep(4.6, 14, d); wsum += k; gsum += g * k; kmax = Math.max(kmax, k); } }
+      if (wsum > 0) h = h + (gsum / wsum - 0.12 - h) * kmax;
+    }
     // 川床（幅24m・深さ3.5m。橋のあたりは土手）
     const dr = Math.abs(x - riverX(z));
     if (dr < 22) h -= 3.5 * (1 - sstep(8, 22, dr)) * (1 - sstep(560, 620, Math.max(Math.abs(x - CX), Math.abs(z - CZ))));
-    ww.h[j * W + i] = h;
+    ww.h[q] = h;
   }
+  ww.creekDist = creekDist;
   const rnd = mulberry(seed);
   const gy = (x, z) => heightAt(ww, x, z);
-  // ---- 町（川の東。広場のまわり）
-  const town = [
-    ['apartment', 740, 650, 0, 3], ['apartment', 760, 770, 2, 4], ['apartment', 830, 650, 1, 3],
-    ['house', 815, 760, 0, 2], ['house', 830, 780, 2, 2], ['house', 850, 740, 1, 2], ['house', 735, 735, 3, 2], ['house', 860, 690, 0, 1], ['house', 715, 790, 1, 2],
-  ];
-  for (const [k, x, z, rot, F] of town) placeBld(ww, k, x, z, rot, F);
-  // 広場の噴水の代わりに低い壁と土のう
-  sandbags(ww, 780, 712, 796, 712, gy(788, 712)); sandbags(ww, 780, 730, 796, 730, gy(788, 730));
-  // ---- 工場（川の西）
-  placeBld(ww, 'warehouse', 520, 560, 0); placeBld(ww, 'warehouse', 575, 610, 1); placeBld(ww, 'tower', 600, 560, 0);
-  for (const [x, z, r] of [[540, 640, 0], [548, 646, 1], [600, 640, 0], [512, 620, 1]]) container(ww, x, z, r, gy(x, z), ['#3f6f8f', '#8f3f3f', '#4f7f3f', '#8f7f3f'][Math.floor(rnd() * 4)]);
-  wallRun(ww, 495, 540, 625, 540, 2.4, { y: gy(560, 540) }); wallRun(ww, 495, 540, 495, 665, 2.4, { y: gy(495, 600) });
-  // ---- 農場
-  placeBld(ww, 'house', 455, 845, 0, 2); placeBld(ww, 'warehouse', 480, 880, 1, 1, { col: '#8a5a3c', mat: M.WOOD });
-  for (let k = 0; k < 6; k++) { const x = 420 + k * 6, z = 830; wallRun(ww, x, z, x + 4.5, z, 1.1, { th: 0.15, mat: M.WOOD, col: '#7a5a3a', y: gy(x, z) }); }
-  // ---- 電波塔の丘（塔2本と土のう）
-  placeBld(ww, 'tower', 850, 490, 0); placeBld(ww, 'tower', 872, 512, 1);
-  for (const [a, b] of [[[840, 470], [860, 470]], [[880, 500], [880, 520]], [[835, 520], [855, 520]]]) sandbags(ww, a[0], a[1], b[0], b[1], gy((a[0] + b[0]) / 2, (a[1] + b[1]) / 2));
-  // ---- 東の村
-  for (const [x, z, rot] of [[990, 880, 0], [1020, 885, 1], [1000, 915, 2], [1035, 915, 3], [975, 905, 1]]) placeBld(ww, 'house', x, z, rot, 1 + Math.floor(rnd() * 2));
-  // ---- 十字路（ガソリンスタンドの代わりの小屋と塀）
-  placeBld(ww, 'house', 660, 990, 1, 1); wallRun(ww, 630, 1012, 645, 1012, 1.4, { y: gy(638, 1012) });
-  // ---- 石切り場（大きな岩と小屋）
-  placeBld(ww, 'house', 300, 455, 0, 1);
-  for (let k = 0; k < 18; k++) { const a = rnd() * Math.PI * 2, r = 15 + rnd() * 35, x = 330 + Math.cos(a) * r, z = 470 + Math.sin(a) * r; rock(ww, x, z, 1.5 + rnd() * 3, rnd); }
-  // ---- 本陣（6つ）: 土のうの囲いとコンテナ
-  for (const s of Object.values(AREAS)) for (const [x, z] of s.hq) { container(ww, x - 12, z - 8, 0, gy(x - 12, z - 8), '#56604a'); container(ww, x + 12, z + 8, 0, gy(x + 12, z + 8), '#56604a'); sandbags(ww, x - 8, z + 14, x + 8, z + 14, gy(x, z + 14)); }
+  const pick = (L) => L[Math.floor(rnd() * L.length) % L.length];
+  const FL = Object.values(FLAGS), HQS = Object.values(AREAS).flatMap(s => s.hq);
+
+  // ---- 電波塔の丘の壕（建物より先に掘る）
+  const TRENCH = [[818, 470], [842, 455], [878, 459], [903, 482], [906, 528], [886, 550], [846, 550], [820, 530], [814, 498], [818, 470]];
+  carveTrench(ww, TRENCH, 1.1, 1.5);
+
+  // ---- 置き場所の管理（1m の升目。1: 小物・とっておく所、2: 建物の敷地＝地面をならした所）
+  const OW = SIZE, occ = new Uint8Array(OW * OW), E = 1e-6;
+  const occRect = (x0, z0, x1, z1, v = 1) => { for (let j = Math.max(0, Math.floor(z0)); j <= Math.min(OW - 1, Math.floor(z1 - E)); j++) for (let i = Math.max(0, Math.floor(x0)); i <= Math.min(OW - 1, Math.floor(x1 - E)); i++) if (occ[j * OW + i] < v) occ[j * OW + i] = v; };
+  const isFree = (x0, z0, x1, z1) => { for (let j = Math.max(0, Math.floor(z0)); j <= Math.min(OW - 1, Math.floor(z1 - E)); j++) for (let i = Math.max(0, Math.floor(x0)); i <= Math.min(OW - 1, Math.floor(x1 - E)); i++) if (occ[j * OW + i]) return false; return true; };
+  const rectOnRoad = (x0, z0, x1, z1, m = 4.5) => { for (const [x, z] of [[x0, z0], [x1, z0], [x0, z1], [x1, z1], [(x0 + x1) / 2, (z0 + z1) / 2], [(x0 + x1) / 2, z0], [(x0 + x1) / 2, z1], [x0, (z0 + z1) / 2], [x1, (z0 + z1) / 2]]) if (roadDist(x, z) < m) return true; return false; };
+  const nearRiver = (x0, z0, x1, z1, m = 16) => { for (const z of [z0, (z0 + z1) / 2, z1]) { const rx = riverX(z); if (x1 > rx - m && x0 < rx + m) return true; } return false; };
+  const flagCore = (x0, z0, x1, z1, k = 0.55) => FL.some(f => { const cx = Math.max(x0, Math.min(f.x, x1)), cz = Math.max(z0, Math.min(f.z, z1)); return Math.hypot(cx - f.x, cz - f.z) < f.r * k; });
+  // 地形の点（i, j: 2m ごと）のまわりの升目が建物の敷地か（ならした地面を後から崩さない）
+  const lockedV = (i, j) => { const x = i * hs, z = j * hs; for (let b = Math.floor(z - 1); b <= Math.floor(z); b++) for (let a = Math.floor(x - 1); a <= Math.floor(x); a++) if (a >= 0 && b >= 0 && a < OW && b < OW && occ[b * OW + a] === 2) return true; return false; };
+
+  // 建物を建てない所（広場など）
+  const keep = new Uint8Array(OW * OW);
+  const keepRect = (x0, z0, x1, z1) => { for (let j = Math.max(0, Math.floor(z0)); j <= Math.min(OW - 1, Math.floor(z1 - E)); j++) for (let i = Math.max(0, Math.floor(x0)); i <= Math.min(OW - 1, Math.floor(x1 - E)); i++) keep[j * OW + i] = 1; };
+  const kept = (x0, z0, x1, z1) => { for (let j = Math.max(0, Math.floor(z0)); j <= Math.min(OW - 1, Math.floor(z1 - E)); j++) for (let i = Math.max(0, Math.floor(x0)); i <= Math.min(OW - 1, Math.floor(x1 - E)); i++) if (keep[j * OW + i]) return true; return false; };
+  keepRect(794, 704, 836, 768);
+  // 本陣・出撃の場所・拠点の真ん中はとっておく
+  for (const [x, z] of HQS) occRect(x - 22, z - 22, x + 22, z + 22);
+  for (const A of Object.values(MODE_AREAS)) { for (const [x, z] of A.hq) occRect(x - 4, z - 4, x + 4, z + 4); for (const L of A.spawns || []) for (const [x, z] of L) occRect(x - 4, z - 4, x + 4, z + 4); }
+  for (const f of FL) occRect(f.x - f.r * 0.45, f.z - f.r * 0.45, f.x + f.r * 0.45, f.z + f.r * 0.45);
+
+  // ---- 建物を置く（中心と向き。下の地面をならし、まわり 6m はなだらかにつなぐ）。置けなければ null
+  const place = (kind, cx, cz, rot, o = {}) => {
+    const [bw0, bd0] = DIMS[kind], [bw, bd] = rot % 2 ? [bd0, bw0] : [bw0, bd0];
+    const x0 = cx - bw / 2, z0 = cz - bd / 2, x1 = x0 + bw, z1 = z0 + bd, mg = o.margin ?? 1, A = APRON[kind] ?? 0.6;
+    // 正面の前（ひさし・ポーチ）
+    const ap = rot === 0 ? [x0, z0 - A, x1, z0] : rot === 2 ? [x0, z1, x1, z1 + A] : rot === 1 ? [x1, z0, x1 + A, z1] : [x0 - A, z0, x0, z1];
+    if (!o.force) {
+      if (!isFree(x0 - mg, z0 - mg, x1 + mg, z1 + mg) || !isFree(ap[0], ap[1], ap[2], ap[3]) || kept(x0, z0, x1, z1)) return null;
+      if (rectOnRoad(x0, z0, x1, z1, o.roadM ?? 4.6)) return null;
+      if (nearRiver(x0, z0, x1, z1, o.riverM ?? 17)) return null;
+      if (flagCore(x0, z0, x1, z1, o.flagK ?? 0.6)) return null;
+      if (x0 < 60 || z0 < 60 || x1 > SIZE - 60 || z1 > SIZE - 60) return null;
+    }
+    let s = 0; const pts = [[x0, z0], [x1, z0], [x0, z1], [x1, z1], [cx, cz]];
+    for (const [px, pz] of pts) s += gy(px, pz);
+    const y = s / pts.length, R = 6;
+    const i0 = Math.max(0, Math.floor((x0 - 1 - R) / hs)), i1 = Math.min(ww.HW - 1, Math.ceil((x1 + 1 + R) / hs));
+    const j0 = Math.max(0, Math.floor((z0 - 1 - R) / hs)), j1 = Math.min(ww.HD - 1, Math.ceil((z1 + 1 + R) / hs));
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+      const x = i * hs, z = j * hs, q = j * ww.HW + i;
+      const d = Math.hypot(Math.max(x0 - 1 - x, 0, x - x1 - 1), Math.max(z0 - 1 - z, 0, z - z1 - 1));
+      if (d <= 0) { ww.h[q] = y - 0.02; continue; }
+      if (d > R || lockedV(i, j)) continue;
+      ww.h[q] += (y - 0.02 - ww.h[q]) * (1 - sstep(0, R, d));
+    }
+    occRect(x0 - mg, z0 - mg, x1 + mg, z1 + mg, 2);
+    occRect(ap[0], ap[1], ap[2], ap[3], 1);
+    const B = BUILD[kind](ww, { x: x0, z: z0, y, rot, floors: o.floors, rnd, mat: o.mat, col: o.col, roofCol: o.roofCol });
+    B.cx = cx; B.cz = cz; B.y0 = y; B.kindName = kind;
+    return B;
+  };
+  const floorsOf = (kind) => kind === 'house' ? (rnd() < 0.7 ? 2 : 1) : kind === 'apartment' ? 3 + (rnd() < 0.45 ? 1 : 0) : kind === 'shop' ? (rnd() < 0.55 ? 1 : 2) : kind === 'office' ? 2 + (rnd() < 0.6 ? 1 : 0) : undefined;
+  // 小物を置く前の確かめ（道・川・建物・拠点の真ん中を避ける）。置いたら升目を埋める
+  const spot = (x0, z0, x1, z1, o = {}) => {
+    if (!isFree(x0, z0, x1, z1)) return false;
+    if (!o.onRoad && rectOnRoad(x0, z0, x1, z1, o.roadM ?? 4.3)) return false;
+    if (nearRiver(x0, z0, x1, z1, o.riverM ?? 12)) return false;
+    if (!o.inFlag && flagCore(x0, z0, x1, z1, 0.35)) return false;
+    occRect(x0, z0, x1, z1);
+    return true;
+  };
+  // 車（rot 0・2: 長い方が x、1・3: z）。onRoad でなければ道の上には置かない
+  const carAt = (x, z, rot, kind = 'car', o = {}) => {
+    const lx = kind === 'truck' ? 4.6 : kind === 'pickup' ? 2.7 : 2.3, [hx, hz] = rot % 2 ? [1.1, lx] : [lx, 1.1];
+    if (!o.onRoad && roadDist(x, z) < 4.6) return false;
+    if (!spot(x - hx, z - hz, x + hx, z + hz, { onRoad: true, inFlag: o.inFlag })) return false;
+    P[kind](ww, x, z, rot, { rnd, ...(o.col ? { col: o.col, cab: o.cab } : {}) });
+    return true;
+  };
+  // 塀・生け垣・石垣・柵の直線（軸にそう）: 道・川・建物・拠点の真ん中にかかる所は切って、つながる所だけ置く
+  const fenceRun = (kind, x0, z0, x1, z1, o = {}) => {
+    const L = Math.hypot(x1 - x0, z1 - z0); if (L < 1) return 0;
+    const n = Math.max(1, Math.round(L / 2)), th = 0.5;
+    let run = null, placed = 0;
+    const flush = () => {
+      if (run && Math.hypot(run.bx - run.ax, run.bz - run.az) >= (o.min ?? 3)) {
+        if (kind === 'wall') {
+          // 長い塀は 6m ごとに地面に合わせる
+          const l = Math.hypot(run.bx - run.ax, run.bz - run.az), m = Math.max(1, Math.ceil(l / 6)), H = (o.h ?? 2.4) + 0.3;
+          for (let k = 0; k < m; k++) {
+            const ax = run.ax + (run.bx - run.ax) * k / m, az = run.az + (run.bz - run.az) * k / m, bx = run.ax + (run.bx - run.ax) * (k + 1) / m, bz = run.az + (run.bz - run.az) * (k + 1) / m;
+            const y = Math.min(gy(ax, az), gy(bx, bz)) - 0.3, ex = Math.abs(bx - ax) < 0.1 ? 0.22 : 0, ez = Math.abs(bz - az) < 0.1 ? 0.22 : 0;
+            wallRun(ww, ax, az, bx, bz, H, { y, col: o.col || '#a9a59b', far: true, layer: 1, th: o.th });
+            addBox(ww, { x0: Math.min(ax, bx) - ex, z0: Math.min(az, bz) - ez, x1: Math.max(ax, bx) + ex, z1: Math.max(az, bz) + ez, y0: y + H, y1: y + H + 0.12, mat: M.CONCRETE, kind: 'trim', col: '#8b867c', detail: true, walk: false });
+          }
+        } else P[kind](ww, run.ax, run.az, run.bx, run.bz, o);
+        occRect(Math.min(run.ax, run.bx) - th, Math.min(run.az, run.bz) - th, Math.max(run.ax, run.bx) + th, Math.max(run.az, run.bz) + th, 1);
+        placed++;
+      }
+      run = null;
+    };
+    for (let k = 0; k < n; k++) {
+      const ax = x0 + (x1 - x0) * k / n, az = z0 + (z1 - z0) * k / n, bx = x0 + (x1 - x0) * (k + 1) / n, bz = z0 + (z1 - z0) * (k + 1) / n;
+      const mx = (ax + bx) / 2, mz = (az + bz) / 2;
+      const okk = roadDist(mx, mz) > (o.roadM ?? 5.5) && Math.abs(mx - riverX(mz)) > 13
+        && isFree(Math.min(ax, bx) - th, Math.min(az, bz) - th, Math.max(ax, bx) + th, Math.max(az, bz) + th)
+        && !flagCore(Math.min(ax, bx), Math.min(az, bz), Math.max(ax, bx), Math.max(az, bz), o.flagK ?? 0.5);
+      if (okk) { if (!run) run = { ax, az, bx, bz }; else { run.bx = bx; run.bz = bz; } } else flush();
+    }
+    flush();
+    return placed;
+  };
+  // 斜めの線ぞいの土のう（2m ごとの短い列。壕の縁など）
+  const sandLine = (ax, az, bx, bz) => {
+    const L = Math.hypot(bx - ax, bz - az), n = Math.max(1, Math.round(L / 2.2)), alongX = Math.abs(bx - ax) >= Math.abs(bz - az);
+    for (let k = 0; k < n; k++) {
+      const xa = ax + (bx - ax) * k / n, za = az + (bz - az) * k / n, xb = ax + (bx - ax) * (k + 1) / n, zb = az + (bz - az) * (k + 1) / n;
+      const mx = (xa + xb) / 2, mz = (za + zb) / 2, y = Math.min(gy(xa, za), gy(xb, zb)) - 0.15;
+      if (alongX) sandbags(ww, xa - 0.2, mz, xb + 0.2, mz, y); else sandbags(ww, mx, za - 0.2, mx, zb + 0.2, y);
+    }
+  };
+  const yards = [], lines = [];
+  // 家の庭: 裏の塀（か生け垣・石垣・柵）と片側の塀、もう片側は車道（車）。ときどき裏に小屋
+  const yard = (B, kind, rot, alongX, side) => {
+    const [bw0, bd0] = DIMS[kind], [bw, bd] = rot % 2 ? [bd0, bw0] : [bw0, bd0];
+    const x0 = B.cx - bw / 2, z0 = B.cz - bd / 2, x1 = x0 + bw, z1 = z0 + bd;
+    const openLow = rnd() < 0.5;
+    let shedOk = false;
+    if (rnd() < 0.35) {
+      const cx = alongX ? (openLow ? x1 - 2.5 : x0 + 2.5) : (side > 0 ? x1 + 4.6 : x0 - 4.6);
+      const cz = alongX ? (side > 0 ? z1 + 4.6 : z0 - 4.6) : (openLow ? z1 - 2.5 : z0 + 2.5);
+      shedOk = !!place('shed', cx, cz, rot, { roadM: 3, flagK: 0.45 });
+    }
+    const back = (shedOk ? 10 : 6.5) + rnd() * 3, wide = 2.6;
+    const fence = pick(['boardFence', 'boardFence', 'boardFence', 'hedge', 'hedge', 'railFence', 'stoneWall']);
+    const fo = { h: fence === 'hedge' ? 1.5 + rnd() * 0.4 : undefined, min: 2 };
+    yards.push(() => {
+      if (alongX) {
+        const zb = side > 0 ? z1 + back : z0 - back, zf = side > 0 ? z1 : z0;
+        fenceRun(fence, x0 - wide, zb, x1 + wide, zb, fo);
+        const xs = openLow ? x1 + wide : x0 - wide;
+        fenceRun(fence, xs, Math.min(zf, zb), xs, Math.max(zf, zb), fo);
+        if (rnd() < 0.62) carAt(openLow ? x0 - 3.3 : x1 + 3.3, side > 0 ? z0 + 2.9 : z1 - 2.9, side > 0 ? 3 : 1, rnd() < 0.75 ? 'car' : 'pickup');
+      } else {
+        const xb = side > 0 ? x1 + back : x0 - back, xf = side > 0 ? x1 : x0;
+        fenceRun(fence, xb, z0 - wide, xb, z1 + wide, fo);
+        const zs = openLow ? z1 + wide : z0 - wide;
+        fenceRun(fence, Math.min(xf, xb), zs, Math.max(xf, xb), zs, fo);
+        if (rnd() < 0.62) carAt(side > 0 ? x0 + 2.9 : x1 - 2.9, openLow ? z0 - 3.3 : z1 + 3.3, side > 0 ? 2 : 0, rnd() < 0.75 ? 'car' : 'pickup');
+      }
+    });
+  };
+  // 道ぞいに建物を並べる。(x0,z0)→(x1,z1) は道の線（軸にそう）、side: +1（座標の大きい側）/ -1、pool: [[kind, 重み]]
+  const lotsAlong = (x0, z0, x1, z1, side, pool, o = {}) => {
+    const alongX = Math.abs(x1 - x0) >= Math.abs(z1 - z0);
+    const L = alongX ? Math.abs(x1 - x0) : Math.abs(z1 - z0), dir = Math.sign(alongX ? x1 - x0 : z1 - z0) || 1;
+    const setback = o.setback ?? 7.5, tot = pool.reduce((s, p) => s + p[1], 0);
+    let t = o.start ?? 3, n = 0;
+    while (t < L - 5) {
+      let rr = rnd() * tot, pk = pool[0][0];
+      for (const p of pool) { rr -= p[1]; if (rr <= 0) { pk = p[0]; break; } }
+      const avail = L - 2 - t;
+      const cands = [pk, ...FALLBACK.filter(k => k !== pk)].filter(k => DIMS[k][0] <= Math.min(DIMS[pk][0], avail) + 0.01);
+      if (!cands.length) break;
+      const w0 = DIMS[cands[0]][0];
+      let B = null;
+      for (const kind of cands) {
+        const [, bd] = DIMS[kind], c = t + w0 / 2;
+        let cx, cz, rot;
+        // 正面を道へ（x にそう道: 大きい側は rot 0・小さい側は rot 2。z にそう道: 大きい側は rot 3・小さい側は rot 1）
+        if (alongX) { cx = x0 + dir * c; cz = z0 + side * (setback + bd / 2); rot = side > 0 ? 0 : 2; }
+        else { cz = z0 + dir * c; cx = x0 + side * (setback + bd / 2); rot = side > 0 ? 3 : 1; }
+        B = place(kind, cx, cz, rot, { floors: floorsOf(kind), margin: o.margin });
+        if (B) { n++; if (o.yard !== false && (kind === 'house' || kind === 'bungalow')) yard(B, kind, rot, alongX, side); break; }
+      }
+      t += (B ? w0 : 5) + (o.gap ?? 3.5) + rnd() * (o.gapR ?? 3.5);
+    }
+    return n;
+  };
+  // 道の交わる所（車を止めない）
+  const JUNC = [];
+  for (let a = 0; a < ROADS.length; a++) for (let b = a + 1; b < ROADS.length; b++) for (let m = 0; m + 1 < ROADS[a].length; m++) for (let n = 0; n + 1 < ROADS[b].length; n++) {
+    const [p0, p1] = [ROADS[a][m], ROADS[a][m + 1]], [q0, q1] = [ROADS[b][n], ROADS[b][n + 1]];
+    for (const [px, pz] of [p0, p1]) if (segDist(px, pz, q0[0], q0[1], q1[0], q1[1]) < 1) JUNC.push([px, pz]);
+    for (const [px, pz] of [q0, q1]) if (segDist(px, pz, p0[0], p0[1], p1[0], p1[1]) < 1) JUNC.push([px, pz]);
+    const rx = p1[0] - p0[0], rz = p1[1] - p0[1], sx = q1[0] - q0[0], sz = q1[1] - q0[1], den = rx * sz - rz * sx;
+    if (Math.abs(den) > 1e-9) { const t = ((q0[0] - p0[0]) * sz - (q0[1] - p0[1]) * sx) / den, u = ((q0[0] - p0[0]) * rz - (q0[1] - p0[1]) * rx) / den; if (t > 0 && t < 1 && u > 0 && u < 1) JUNC.push([p0[0] + rx * t, p0[1] + rz * t]); }
+  }
+  const nearJunc = (x, z, m = 11) => JUNC.some(([jx, jz]) => Math.hypot(jx - x, jz - z) < m);
+  // 道ぞいの車。town: 町の通り（車道の端に止める）、ほかは路肩
+  const parkAlong = (x0, z0, x1, z1, prob = 0.45, town = false) => {
+    const alongX = Math.abs(x1 - x0) >= Math.abs(z1 - z0), L = alongX ? Math.abs(x1 - x0) : Math.abs(z1 - z0), off = town ? 2.95 : 4.9;
+    for (let t = 6; t < L - 6; t += 6.5 + rnd() * 8) {
+      if (rnd() > prob) continue;
+      const side = rnd() < 0.5 ? -1 : 1, kind = rnd() < 0.7 ? 'car' : rnd() < 0.7 ? 'pickup' : 'truck', flip = rnd() < 0.5 ? 0 : 2;
+      const px = alongX ? Math.min(x0, x1) + t : x0 + side * off, pz = alongX ? z0 + side * off : Math.min(z0, z1) + t;
+      if (nearJunc(px, pz)) continue;
+      carAt(px, pz, alongX ? flip : 1 + flip, kind, { onRoad: town });
+    }
+  };
+
+  // 一番近い道の方へ正面を向ける向き（rot）。道が遠ければ乱数
+  const faceRoad = (x, z, maxD = 60) => {
+    let best = 1e9, bx = 0, bz = 0;
+    for (const r of ROADS) for (let k = 0; k + 1 < r.length; k++) {
+      const [ax, az] = r[k], [ex, ez] = r[k + 1], dx = ex - ax, dz = ez - az, l2 = dx * dx + dz * dz || 1;
+      const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / l2)), px = ax + dx * t, pz = az + dz * t, d = Math.hypot(x - px, z - pz);
+      if (d < best) { best = d; bx = px; bz = pz; }
+    }
+    if (best > maxD) return Math.floor(rnd() * 4);
+    const dx = bx - x, dz = bz - z;
+    return Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 1 : 3) : (dz > 0 ? 2 : 0);
+  };
+  const pickW = (pool) => { const tot = pool.reduce((s2, p) => s2 + p[1], 0); let rr = rnd() * tot; for (const p of pool) { rr -= p[1]; if (rr <= 0) return p[0]; } return pool[0][0]; };
+  // 四角の中の空いた所に建物を足す（道の方を向く）
+  const fillArea = (x0, z0, x1, z1, pool, tries, o = {}) => {
+    let n = 0;
+    for (let k = 0; k < tries; k++) {
+      const kind = pickW(pool), x = x0 + rnd() * (x1 - x0), z = z0 + rnd() * (z1 - z0);
+      if (place(kind, x, z, o.rot ?? faceRoad(x, z, o.faceD ?? 60), { floors: floorsOf(kind), margin: o.margin, flagK: o.flagK, roadM: o.roadM })) n++;
+    }
+    return n;
+  };
+
+  // =============================== 1. 建物 ===============================
+  const C = [['shop', 4], ['apartment', 2.5], ['office', 1.2], ['house', 1.2]], R = [['house', 5], ['bungalow', 3], ['shop', 0.5]];
+  // ---- 町（川の東。大通り z=700、北の通り z=652、南の通り z=772、南北の通り x=748・790・840。広場 D は x 794〜836・z 704〜768）
+  {
+    const CC = { setback: 8, gap: 0.8, gapR: 1.6, margin: 0.4 }, RR = { gap: 2.5, gapR: 3 };
+    // 大通りの両側（店・アパート・事務所。間をつめて並べる）
+    lotsAlong(704, 700, 744, 700, -1, C, CC); lotsAlong(752, 700, 786, 700, -1, C, CC); lotsAlong(794, 700, 836, 700, -1, C, CC); lotsAlong(844, 700, 902, 700, -1, C, CC);
+    lotsAlong(704, 700, 744, 700, 1, C, CC); lotsAlong(752, 700, 786, 700, 1, C, CC); lotsAlong(844, 700, 902, 700, 1, C, CC);
+    // 礼拝堂（広場の南、通りの向こうから広場を向く）
+    place('chapel', 815, 791, 0, { flagK: 0.4 });
+    // 広場の東（x=840 の東側）と南（z=772 の南側）は広場を向く
+    lotsAlong(840, 706, 840, 768, 1, C, CC); lotsAlong(794, 772, 836, 772, 1, C, CC);
+    // 広場の西の区画（z=772 の北側）
+    lotsAlong(752, 772, 786, 772, -1, R, RR); lotsAlong(704, 772, 744, 772, -1, R, RR);
+    // 北の通り z=652（両側）と、その北
+    lotsAlong(752, 652, 786, 652, 1, C, CC); lotsAlong(794, 652, 836, 652, 1, C, CC); lotsAlong(844, 652, 884, 652, 1, R, RR);
+    lotsAlong(752, 652, 786, 652, -1, R, RR); lotsAlong(794, 652, 836, 652, -1, R, RR); lotsAlong(844, 652, 884, 652, -1, R, RR);
+    // 南の通り z=772 の南
+    lotsAlong(704, 772, 744, 772, 1, R, RR); lotsAlong(752, 772, 786, 772, 1, R, RR); lotsAlong(844, 772, 884, 772, 1, R, RR); lotsAlong(844, 772, 884, 772, -1, R, RR);
+    // 南北の通り
+    for (const [x, z0, z1] of [[748, 612, 648], [748, 656, 696], [748, 704, 768], [748, 776, 846], [790, 604, 648], [790, 656, 696], [790, 776, 846], [840, 612, 648], [840, 656, 696], [840, 776, 846]]) {
+      lotsAlong(x, z0, x, z1, -1, R, { start: 2, ...RR }); lotsAlong(x, z0, x, z1, 1, R, { start: 2, ...RR });
+    }
+    // 広場の売店（南東の角）と、区画の中の空いた所（車庫・小屋・家）
+    place('shed', 831, 762, 0, { flagK: 0.5, force: true });
+    fillArea(704, 606, 900, 848, [['shed', 4], ['house', 1.5], ['bungalow', 1]], 300, { margin: 0.8 });
+  }
+  // ---- 工場（川の西。B）: 倉庫3つ・事務所・小屋・見張り塔
+  {
+    place('warehouse', 528, 585, 0, { force: true }); place('warehouse', 600, 627, 1, { force: true });
+    place('warehouse', 600, 532, 1); place('warehouse', 532, 534, 1); place('office', 520, 633, 2, { floors: 3 });
+    place('office', 629, 585, 3, { floors: 2 }); place('tower', 610, 576, 0); place('warehouse', 528, 668, 1);
+    place('shed', 503, 513, 0); place('shed', 641, 610, 3); place('shed', 625, 662, 2);
+    place('office', 470, 655, 1, { floors: 2 }); place('warehouse', 462, 585, 0); place('shed', 478, 620, 3);
+    fillArea(498, 508, 644, 688, [['shed', 3], ['office', 1]], 40, { margin: 1.5 });
+  }
+  // ---- 電波塔の丘（E）: 塔2本・掩体壕2つ・兵舎
+  {
+    place('tower', 850, 490, 0, { force: true }); place('tower', 873, 513, 1, { force: true });
+    place('bunker', 836, 522, 2, { flagK: 0.4 }); place('bunker', 885, 484, 3, { flagK: 0.4 }); place('bungalow', 866, 535, 2, { flagK: 0.45 });
+  }
+  // ---- 農場（A）: 母屋・納屋2つ・小屋
+  {
+    place('house', 455, 840, 0, { force: true, floors: 2 }); place('barn', 488, 878, 1, { force: true }); place('barn', 440, 893, 0);
+    place('shed', 501, 846, 3); place('shed', 432, 860, 1); place('bungalow', 420, 830, 1); place('barn', 505, 828, 0); place('shed', 478, 905, 2);
+    fillArea(404, 812, 528, 924, [['shed', 3], ['barn', 1]], 25, { margin: 1.5, flagK: 0.55 });
+  }
+  // ---- 東の村（F）: 家と平屋・集会所（納屋の形）
+  {
+    const V = [['house', 4], ['bungalow', 4]];
+    place('chapel', 990, 934, 0, { flagK: 0.5 });
+    lotsAlong(972, 885, 1052, 885, -1, V, { gap: 3, start: 2 }); lotsAlong(972, 885, 1052, 885, 1, V, { gap: 3, start: 2 });
+    lotsAlong(1012, 860, 1012, 948, -1, V, { gap: 3 }); lotsAlong(1012, 860, 1012, 948, 1, V, { gap: 3 });
+    place('shop', 1040, 920, 3, { floors: 1 }); place('barn', 968, 870, 1, { col: '#8f8676' });
+    fillArea(958, 850, 1062, 956, [['house', 2], ['bungalow', 2], ['shed', 3]], 50, { margin: 1 });
+    fillArea(900, 785, 990, 880, [['house', 2], ['bungalow', 2], ['shed', 2]], 30, { margin: 1.2 });
+  }
+  // ---- 十字路（H）: ガソリンスタンド・食堂・家
+  {
+    place('gas', 684, 982, 2, { force: true }); place('shop', 616, 984, 2, { floors: 1 });
+    lotsAlong(520, 1000, 640, 1000, 1, [['house', 3], ['bungalow', 3]], { start: 10 }); lotsAlong(520, 1000, 640, 1000, -1, [['house', 3], ['bungalow', 3]], { start: 10 });
+    lotsAlong(660, 1000, 800, 1000, 1, [['house', 3], ['bungalow', 3]], { start: 4 }); lotsAlong(704, 1000, 800, 1000, -1, [['house', 3], ['bungalow', 3]], { start: 4 });
+    lotsAlong(650, 1012, 650, 1110, -1, [['house', 3], ['bungalow', 2]]); lotsAlong(650, 1012, 650, 1110, 1, [['house', 2], ['bungalow', 3]]);
+    lotsAlong(650, 900, 650, 988, -1, [['house', 2], ['bungalow', 2]]); lotsAlong(650, 900, 650, 988, 1, [['house', 2], ['bungalow', 2]]);
+    fillArea(560, 940, 760, 1080, [['shed', 3], ['house', 1], ['bungalow', 1]], 40, { margin: 1 });
+  }
+  // ---- 石切り場（G）: 小屋・事務所
+  { place('shed', 300, 455, 0, { force: true }); place('office', 362, 438, 2, { floors: 1 }); place('shed', 312, 502, 1); place('shed', 296, 492, 1);
+    place('warehouse', 290, 428, 1); place('shed', 372, 462, 3); place('tower', 352, 522, 0); }
+  // ---- 農家を散らす（家か平屋＋納屋か小屋）と壊れた家（前線になりやすい所）
+  for (const [x, z] of [[600, 820], [880, 612], [930, 820], [420, 640], [560, 420], [1080, 560], [760, 905], [300, 820], [1120, 840], [820, 1080], [430, 1040], [990, 640], [250, 600], [1150, 1000], [540, 1150], [760, 1180], [1000, 380], [700, 380], [380, 330], [1180, 450], [200, 920], [930, 1240]]) {
+    const r0 = Math.floor(rnd() * 4);
+    if (place(rnd() < 0.5 ? 'house' : 'bungalow', x, z, r0, { floors: rnd() < 0.5 ? 2 : 1 })) {
+      place(rnd() < 0.5 ? 'barn' : 'shed', x + (rnd() < 0.5 ? -17 : 17), z + (rnd() - 0.5) * 10, Math.floor(rnd() * 4));
+      if (rnd() < 0.5) place('shed', x + (rnd() - 0.5) * 12, z + (rnd() < 0.5 ? -15 : 15), Math.floor(rnd() * 4));
+    }
+  }
+  for (const [x, z] of [[640, 640], [740, 590], [700, 860], [620, 760], [900, 760], [560, 780], [820, 865], [610, 900], [960, 600], [500, 760], [930, 980], [380, 560]]) place('ruin', x, z, Math.floor(rnd() * 4), { roadM: 6 });
+
+  // =============================== 2. 小物 ===============================
+  for (const f of yards) f();
+  // ---- 町の通り: 路肩の車・街灯・ごみ箱・バス停
+  {
+    parkAlong(704, 700, 900, 700, 0.5, true); parkAlong(748, 652, 884, 652, 0.4, true); parkAlong(704, 772, 884, 772, 0.45, true);
+    parkAlong(748, 612, 748, 846, 0.35, true); parkAlong(840, 608, 840, 846, 0.35, true); parkAlong(790, 772, 790, 846, 0.35, true); parkAlong(790, 604, 790, 700, 0.3, true);
+    for (let x = 712; x <= 896; x += 24) { if (spot(x - 0.3, 705.3, x + 0.3, 705.9)) P.lamp(ww, x, 705.6, 3); if (spot(x + 12 - 0.3, 694.1, x + 12 + 0.3, 694.7)) P.lamp(ww, x + 12, 694.4, 1); }
+    for (let z = 620; z <= 840; z += 30) { if (spot(753.3, z - 0.3, 753.9, z + 0.3)) P.lamp(ww, 753.6, z, 2); if (spot(834.1, z + 15 - 0.3, 834.7, z + 15 + 0.3)) P.lamp(ww, 834.4, z + 15, 0); }
+    for (let k = 0; k < 40; k++) {
+      const x = 704 + rnd() * 196, z = 610 + rnd() * 236, rd = roadDist(x, z);
+      if (rd < 5.6 || rd > 9) continue;
+      if (spot(x - 1.2, z - 0.9, x + 1.2, z + 0.9)) P.dumpster(ww, x, z, rnd() < 0.5 ? 0 : 2, { rnd });
+    }
+    if (spot(812, 703.6, 818, 707.2, { onRoad: true, inFlag: true })) P.busStop(ww, 815, 705.6, 0);
+  }
+  // ---- 広場（D）: 噴水（旗の柱はこの真ん中）・屋台・植え込み・土のう・低い壁・車
+  {
+    const fx = FLAGS.D.x, fz = FLAGS.D.z;
+    P.basin(ww, fx, fz, 3.4);
+    for (const [x, z, r] of [[802, 713, 2], [808, 713, 2], [824, 713, 2], [830, 713, 2], [800, 752, 1], [830, 744, 3]]) if (spot(x - 1.7, z - 1.7, x + 1.7, z + 1.7, { inFlag: true })) P.stall(ww, x, z, r, { rnd });
+    for (const [x0, z0, x1, z1] of [[796, 722, 800, 723.4], [830, 726, 834, 727.4], [796, 760, 800, 761.4], [812, 752, 818, 753.4], [812, 718, 818, 719.4]]) if (spot(x0, z0, x1, z1, { inFlag: true })) { P.planter(ww, x0, z0, x1, z1); }
+    for (const [x0, z0, x1, z1] of [[805, 744, 811, 744], [819, 728, 825, 728], [804, 730, 804, 735], [826, 738, 826, 743]]) if (spot(Math.min(x0, x1) - 0.4, Math.min(z0, z1) - 0.4, Math.max(x0, x1) + 0.4, Math.max(z0, z1) + 0.4, { inFlag: true })) sandbags(ww, x0, z0, x1, z1, gy((x0 + x1) / 2, (z0 + z1) / 2) - 0.05);
+    for (const [x0, z0, x1, z1] of [[796, 732, 796, 742], [834, 750, 834, 758]]) if (spot(x0 - 0.4, z0, x1 + 0.4, z1, { inFlag: true })) P.stoneWall(ww, x0, z0, x1, z1, { h: 0.95, col: '#a8a196' });
+    if (spot(819.7, 755.4, 824.3, 757.6, { inFlag: true })) P.wreck(ww, 822, 756.5, 0, { rnd });
+    if (spot(798, 739, 801.6, 742.6, { inFlag: true })) P.crates(ww, 799, 740, 4, { rnd });
+    if (spot(827.5, 731, 830.5, 734, { inFlag: true })) P.barrels(ww, 828.5, 732, 4, { rnd });
+    // 広場の木（植え込みの横）
+    for (const [x, z] of [[798, 726], [832, 730], [798, 764], [815, 756]]) if (isFree(x - 0.6, z - 0.6, x + 0.6, z + 0.6)) { const y = gy(x, z), s = 0.75; const c = addCyl(ww, { x, z, r: 0.2 * s, y0: y - 0.2, y1: y + 6 * s, mat: M.WOOD, kind: 'oak' }); (ww.trees || (ww.trees = [])).push({ x, y, z, s, kind: 'oak', cyl: c.id }); occRect(x - 0.6, z - 0.6, x + 0.6, z + 0.6); }
+  }
+  // ---- 工場（B）: 旗のまわりのコンテナの囲い・サイロ・煙突・給水塔・トラック・木箱・塀（門をあける）
+  {
+    const ccols = ['#3f6f8f', '#8f3f3f', '#4f7f3f', '#8f7f3f', '#6f5f8f', '#a0592a', '#3f7f7f'];
+    for (const [x, z, r, two] of [[544, 599, 1, 1], [576, 604, 1, 0], [560, 584, 0, 1], [559, 616, 0, 0], [548, 640, 0, 1], [556, 647, 0, 0], [585, 652, 0, 1], [592, 659, 0, 0], [508, 612, 1, 1], [622, 612, 1, 1], [578, 565, 0, 1], [586, 572, 0, 0], [545, 568, 0, 0], [634, 640, 1, 0]]) {
+      const [hx, hz] = r ? [1.25, 3.05] : [3.05, 1.25];
+      if (!spot(x - hx, z - hz, x + hx, z + hz, { inFlag: true })) continue;
+      const y = Math.min(gy(x - hx, z - hz), gy(x + hx, z + hz), gy(x, z)) - 0.05; container(ww, x, z, r, y, pick(ccols));
+      if (two) container(ww, x + (rnd() - 0.5) * 0.4, z + (rnd() - 0.5) * 0.4, r, y + 2.6, pick(ccols));
+    }
+    for (const [x, z] of [[636, 530], [636, 545]]) { if (spot(x - 4.4, z - 4.4, x + 4.4, z + 4.4)) P.silo(ww, x, z, 4.2, 15); }
+    { const x = 556, z = 515, y = gy(x, z); if (spot(x - 2.2, z - 2.2, x + 2.2, z + 2.2)) { addBox(ww, { x0: x - 1.6, z0: z - 1.6, x1: x + 1.6, z1: z + 1.6, y0: y - 0.3, y1: y + 28, mat: M.BRICK, kind: 'wall', col: '#9a5a45', far: true, layer: 2 }); addBox(ww, { x0: x - 1.85, z0: z - 1.85, x1: x + 1.85, z1: z + 1.85, y0: y + 26.4, y1: y + 27.2, mat: M.BRICK, kind: 'trim', col: '#5a5450', far: true, walk: false }); addBox(ww, { x0: x - 2.2, z0: z - 2.2, x1: x + 2.2, z1: z + 2.2, y0: y - 0.3, y1: y + 1.2, mat: M.CONCRETE, kind: 'wall', col: '#8b867c', layer: 1 }); } }
+    if (spot(497, 676, 503, 682)) P.waterTower(ww, 500, 679);
+    for (const [x, z, r] of [[522, 549, 0], [598, 552, 2], [548, 668, 1]]) carAt(x, z, r, 'truck');
+    for (const [x, z] of [[566, 629], [548, 581], [580, 586], [532, 618], [590, 610], [540, 610]]) if (spot(x - 0.7, z - 0.7, x + 2, z + 2, { inFlag: true })) P.crates(ww, x, z, 2 + Math.floor(rnd() * 4), { rnd });
+    for (const [x, z] of [[572, 640], [530, 604], [604, 598], [571, 592]]) if (spot(x - 1, z - 1, x + 1.6, z + 1.6, { inFlag: true })) P.barrels(ww, x, z, 3 + Math.floor(rnd() * 3), { rnd });
+    for (const [x, z] of [[560, 652], [545, 576], [583, 620]]) if (spot(x - 0.8, z - 0.7, x + 0.8, z + 0.7, { inFlag: true })) P.pallets(ww, x, z, 0.5 + rnd() * 1.0);
+    // 塀（北と西と東の一部。道で切れて門になる）
+    fenceRun('wall', 494, 505, 646, 505, { h: 2.4 }); fenceRun('wall', 494, 505, 494, 690, { h: 2.4 }); fenceRun('wall', 646, 505, 646, 550, { h: 2.4 });
+    // 東の門の防護柵
+    P.jerseyRun(ww, 628, 690, 628, 696); P.jerseyRun(ww, 620, 704, 620, 710);
+  }
+  // ---- 橋（C）: 両岸の検問（ずらした防護柵・土のう・焼けた車・対戦車の障害物）・川床の岩
+  {
+    const xa = riverX(700) - 26, xb = riverX(700) + 26;
+    P.jerseyRun(ww, xa - 8, 694, xa - 8, 700); P.jerseyRun(ww, xa - 15, 700.5, xa - 15, 706.5);
+    P.jerseyRun(ww, xb + 8, 700.5, xb + 8, 706.5); P.jerseyRun(ww, xb + 15, 694, xb + 15, 700);
+    sandbags(ww, xa - 18, 712.5, xa - 11, 712.5, gy(xa - 14, 712.5)); sandbags(ww, xb + 11, 687.5, xb + 18, 687.5, gy(xb + 14, 687.5));
+    sandbags(ww, xa - 4, 686, xa - 4, 691, gy(xa - 4, 688)); sandbags(ww, xb + 4, 709, xb + 4, 714, gy(xb + 4, 712));
+    P.wreck(ww, xa - 24, 703, 0, { rnd }); P.wreck(ww, xb + 26, 697, 2, { rnd });
+    for (const [x, z] of [[xa - 6, 719], [xb + 7, 681], [xa - 9, 681], [xb + 9, 719], [xa - 20, 690], [xb + 21, 710]]) P.tankTrap(ww, x, z);
+    for (let k = 0; k < 34; k++) { const z = 540 + rnd() * 360, x = riverX(z) + (rnd() - 0.5) * 14; if (Math.abs(z - 700) < 12) continue; rock(ww, x, z, 0.9 + rnd() * 1.7, rnd); }
+  }
+  // ---- 電波塔の丘（E）: 壕の縁の土のう・ヘスコ・対戦車の障害物・掩体・アンテナ・トラック
+  {
+    const cxh = 860, czh = 503;
+    for (let k = 0; k + 1 < TRENCH.length; k++) {
+      const [ax, az] = TRENCH[k], [bx, bz] = TRENCH[k + 1];
+      // 外側（丘の中心から遠い側）へ 2.9m ずらした縁に土のう（両端は少し短く）
+      const L = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / L, uz = (bz - az) / L;
+      let nx = -uz, nz = ux; const mx = (ax + bx) / 2, mz = (az + bz) / 2; if ((mx - cxh) * nx + (mz - czh) * nz < 0) { nx = -nx; nz = -nz; }
+      const o = 2.9, t0 = L * 0.18, t1 = L * 0.82;
+      sandLine(ax + ux * t0 + nx * o, az + uz * t0 + nz * o, ax + ux * t1 + nx * o, az + uz * t1 + nz * o);
+    }
+    P.hesco(ww, 845, 474, 857, 474); P.hesco(ww, 866, 534, 878, 534); P.hesco(ww, 893, 498, 893, 508); P.hesco(ww, 826, 500, 826, 510);
+    for (const [x, z] of [[806, 486], [804, 514], [910, 455], [918, 540], [858, 440], [868, 562], [830, 452], [896, 566]]) P.tankTrap(ww, x, z);
+    P.foxhole(ww, 800, 500, 'e'); P.foxhole(ww, 920, 505, 'w');
+    { const x = 862, z = 503, y = gy(x, z); addBox(ww, { x0: x - 0.3, z0: z - 0.3, x1: x + 0.3, z1: z + 0.3, y0: y - 0.2, y1: y + 32, mat: M.METAL, kind: 'pole', col: '#a0a3a6', layer: 10, far: true, walk: false });
+      for (const hy of [10, 18, 26]) addBox(ww, { x0: x - 1.2, z0: z - 0.05, x1: x + 1.2, z1: z + 0.05, y0: y + hy, y1: y + hy + 0.1, mat: M.METAL, kind: 'pole', col: '#a0a3a6', layer: 10, detail: true, walk: false });
+      addBox(ww, { x0: x - 1.4, z0: z - 1.4, x1: x + 1.4, z1: z + 1.4, y0: y - 0.3, y1: y + 0.5, mat: M.CONCRETE, kind: 'wall', col: '#8f8e86', layer: 1 }); }
+    carAt(842, 540, 1, 'truck', { inFlag: true, col: '#56604a', cab: '#4a5440' });
+    for (const [x, z] of [[871, 483], [849, 520]]) if (spot(x - 0.7, z - 0.7, x + 2, z + 2, { inFlag: true })) P.crates(ww, x, z, 4, { rnd });
+    if (spot(876, 520, 878.6, 522.6, { inFlag: true })) P.barrels(ww, 877, 521, 4, { rnd });
+    P.jerseyRun(ww, 818, 540, 830, 540);
+  }
+  // ---- 農場（A）: サイロ・給水塔・干し草・丸太・柵・石垣・生け垣・トラック
+  {
+    for (const [x, z] of [[507, 900], [516, 900]]) if (spot(x - 3.4, z - 3.4, x + 3.4, z + 3.4)) P.silo(ww, x, z, 3.2, 12, { col: '#c9c6bd' });
+    if (spot(458, 905, 464, 911)) P.waterTower(ww, 461, 908, { h: 9, col: '#9c9a8e' });
+    for (const [x, z] of [[476, 846], [461, 874], [449, 870], [489, 857], [470, 885], [497, 866]]) if (spot(x - 1, z - 1, x + 4.2, z + 2.6, { inFlag: true })) P.hay(ww, x, z, 2 + Math.floor(rnd() * 3), { rnd });
+    if (spot(442.5, 846, 445.5, 852)) P.logs(ww, 444, 849, 1);
+    carAt(470, 830, 0, 'pickup'); carAt(503, 880, 1, 'truck', { col: '#a33a2c' });
+    fenceRun('railFence', 406, 818, 524, 818); fenceRun('railFence', 406, 818, 406, 922); fenceRun('railFence', 406, 922, 470, 922);
+    fenceRun('stoneWall', 380, 790, 520, 790); fenceRun('hedge', 532, 870, 532, 940);
+  }
+  // ---- 東の村（F）: 車・石垣・生け垣・給水塔・木箱・土のう
+  {
+    parkAlong(972, 885, 1052, 885, 0.5); parkAlong(1012, 860, 1012, 948, 0.45);
+    fenceRun('stoneWall', 955, 848, 1065, 848); fenceRun('hedge', 955, 958, 1060, 958); fenceRun('stoneWall', 955, 848, 955, 958);
+    if (spot(1046, 862, 1052, 868)) P.waterTower(ww, 1049, 865);
+    for (const [x, z] of [[1000, 910], [1022, 893]]) if (spot(x - 1, z - 1, x + 2, z + 2, { inFlag: true })) P.crates(ww, x, z, 3, { rnd });
+    for (const [x0, z0, x1, z1] of [[996, 896, 1001, 896], [1019, 906, 1019, 911]]) if (spot(Math.min(x0, x1) - 0.4, Math.min(z0, z1) - 0.4, Math.max(x0, x1) + 0.4, Math.max(z0, z1) + 0.4, { inFlag: true })) sandbags(ww, x0, z0, x1, z1, gy(x0, z0) - 0.05);
+  }
+  // ---- 十字路（H）: 給油機の車・路肩の車・防護柵
+  {
+    P.car(ww, 685, 986.5, 1, { rnd }); occRect(683, 983, 687, 990);
+    parkAlong(520, 1000, 800, 1000, 0.45); parkAlong(650, 900, 650, 1110, 0.35);
+    P.jerseyRun(ww, 640, 1014, 646, 1014); P.jerseyRun(ww, 655, 986, 661, 986);
+    for (const [x, z] of [[636, 990], [664, 1011]]) if (spot(x - 1, z - 1, x + 2, z + 2, { inFlag: true })) P.crates(ww, x, z, 3, { rnd });
+    if (spot(626, 1010, 632, 1013)) P.wreck(ww, 629, 1011.5, 0, { rnd });
+  }
+  // ---- 石切り場（G）: 大きな岩・砕く機械・ダンプ・砂利の山
+  {
+    for (let k = 0; k < 26; k++) { const a = rnd() * Math.PI * 2, r = 12 + rnd() * 40, x = 330 + Math.cos(a) * r, z = 470 + Math.sin(a) * r; if (spot(x - 3, z - 3, x + 3, z + 3, { inFlag: true })) rock(ww, x, z, 1.5 + rnd() * 3, rnd); }
+    { const x = 346, z = 497, y = gy(x, z); if (spot(x - 3.5, z - 3.5, x + 19, z + 3.5)) {
+      addBox(ww, { x0: x - 3, z0: z - 3, x1: x + 3, z1: z + 3, y0: y - 0.3, y1: y + 7, mat: M.METAL, kind: 'wall', col: '#b0892a', layer: 10, far: true });
+      addBox(ww, { x0: x - 3.3, z0: z - 3.3, x1: x + 3.3, z1: z + 3.3, y0: y + 7, y1: y + 7.4, mat: M.METAL, kind: 'trim', col: '#6d6f72', layer: 10, far: true, walk: false });
+      addBox(ww, { x0: x + 3, z0: z - 0.8, x1: x + 18, z1: z + 0.8, y0: y + 3.6, y1: y + 4.2, mat: M.METAL, kind: 'wall', col: '#6d6f72', layer: 10, far: true, walk: false });
+      for (const px of [x + 8, x + 13, x + 17.5]) addBox(ww, { x0: px - 0.15, z0: z - 0.15, x1: px + 0.15, z1: z + 0.15, y0: y - 0.2, y1: y + 3.6, mat: M.METAL, kind: 'pole', col: '#55585b', layer: 10, walk: false, detail: true }); } }
+    for (const [x, z, r] of [[318, 440, 0], [356, 470, 1], [306, 520, 2]]) carAt(x, z, r, 'truck', { inFlag: true, col: '#c9a84a', cab: '#c9a84a' });
+    for (const [x, z] of [[368, 502], [300, 482], [322, 452]]) P.rubble(ww, x, z, 9, { rnd });
+  }
+  // ---- 本陣（6つ）: テント・コンテナ・土のう・ヘスコ・トラック
+  for (const [x, z] of HQS) {
+    container(ww, x - 12, z - 8, 0, gy(x - 12, z - 8) - 0.05, '#56604a'); container(ww, x + 12, z + 8, 0, gy(x + 12, z + 8) - 0.05, '#56604a');
+    sandbags(ww, x - 8, z + 14, x + 8, z + 14, gy(x, z + 14) - 0.05);
+    P.hesco(ww, x - 18, z - 16, x - 4, z - 16); P.hesco(ww, x + 4, z + 18, x + 18, z + 18);
+    P.truck(ww, x + 14, z - 12, x < 700 ? 0 : 2, { rnd, col: '#56604a', cab: '#4a5440' });
+    P.tent(ww, x - 14, z + 10, 0); P.tent(ww, x + 16, z - 2, 1, { col: '#666b50' });
+    P.crates(ww, x - 4, z - 12, 4, { rnd });
+  }
+  // ---- 前哨（拠点の間）: ヘスコと土のうの囲い・テント・木箱
+  for (const [x, z] of [[515, 742], [655, 860], [925, 832], [722, 560], [405, 560], [1002, 760], [560, 965], [770, 1085], [960, 520], [420, 990]]) {
+    if (!isFree(x - 9, z - 9, x + 9, z + 9) || roadDist(x, z) < 12) continue;
+    occRect(x - 9, z - 9, x + 9, z + 9);
+    P.hesco(ww, x - 8, z - 8, x + 2, z - 8); P.hesco(ww, x - 8, z - 6.9, x - 8, z + 4);
+    sandbags(ww, x - 1, z + 7.5, x + 8, z + 7.5, gy(x + 3, z + 7.5) - 0.05); sandbags(ww, x + 7.5, z - 3, x + 7.5, z + 6.8, gy(x + 7.5, z + 2) - 0.05);
+    P.tent(ww, x - 3, z + 1, rnd() < 0.5 ? 0 : 1);
+    P.crates(ww, x + 3, z - 5, 3, { rnd }); if (rnd() < 0.5) P.barrels(ww, x + 4, z + 3, 3, { rnd });
+  }
+  // ---- 道: 焼けた車（道の上と路肩）・がれき・電柱
+  for (const ri of [0, 2, 3, 4, 5, 6]) {
+    const r = ROADS[ri];
+    for (let k = 0; k + 1 < r.length; k++) {
+      const [ax, az] = r[k], [bx, bz] = r[k + 1], L = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / L, uz = (bz - az) / L, rot0 = Math.abs(ux) > Math.abs(uz) ? 0 : 1;
+      for (let s = 15; s < L - 15; s += 32 + rnd() * 36) {
+        const x = ax + ux * s, z = az + uz * s, onRoad = rnd() < 0.4, side = rnd() < 0.5 ? -1 : 1, off = onRoad ? (rnd() - 0.5) * 3 : side * (6 + rnd() * 3);
+        const px = x - uz * off, pz = z + ux * off;
+        if (px > 700 && px < 905 && pz > 600 && pz < 850) continue; // 町の中は別に
+        const t = rnd();
+        if (t < 0.55) { const [hx, hz] = rot0 ? [1.0, 2.3] : [2.3, 1.0]; if (spot(px - hx, pz - hz, px + hx, pz + hz, { onRoad: true })) P.wreck(ww, px, pz, rot0 + (rnd() < 0.5 ? 0 : 2), { rnd }); }
+        else if (t < 0.75) { if (spot(px - 1.8, pz - 1.8, px + 1.8, pz + 1.8, { onRoad: true })) P.rubble(ww, px, pz, 6, { rnd }); }
+        else if (!onRoad) { if (spot(px - 2, pz - 2, px + 2, pz + 2)) P.crates(ww, px - 0.5, pz - 0.5, 2 + Math.floor(rnd() * 3), { rnd }); }
+      }
+      if (ri === 0 || ri === 3) for (let s = 10; s < L; s += 46) { const x = ax + ux * s - uz * 7.6, z = az + uz * s + ux * 7.6; if (!(x > 700 && x < 905 && z > 600 && z < 850) && spot(x - 0.4, z - 0.4, x + 0.4, z + 0.4)) P.pole(ww, x, z); }
+    }
+  }
+  // ---- 畑（research/WARBIT.md の 14）: 町・工場・村・十字路・石切り場・丘・森・川・本陣・拠点を避けた所を、少しずらした格子で区切る。
+  //   麦（高い草で伏せると隠れる）・耕した土・牧草・ただの草地。縁の一部に生け垣・石垣・柵、ときどき木の列
+  const NOFIELD = [[690, 595, 910, 855], [488, 500, 652, 696], [948, 840, 1072, 966], [556, 928, 772, 1122], [398, 806, 534, 928]];
+  const forestAt = (x, z) => fbm(x, z, 260, 3, 21) > 0.06;
+  ww.fields = [];
+  {
+    let z = 140;
+    while (z < 1260) {
+      const ch = 60 + rnd() * 40; let x = 140;
+      while (x < 1260) {
+        const cw = 70 + rnd() * 45, f = { x0: x + 3, z0: z + 3, x1: Math.min(1262, x + cw) - 3, z1: Math.min(1262, z + ch) - 3 };
+        x += cw;
+        const mx = (f.x0 + f.x1) / 2, mz = (f.z0 + f.z1) / 2;
+        if (f.x1 - f.x0 < 30 || f.z1 - f.z0 < 25) continue;
+        if (NOFIELD.some(([a, b, c, d]) => f.x1 > a && f.x0 < c && f.z1 > b && f.z0 < d)) continue;
+        if (Math.hypot((mx - 330) / 1.15, mz - 470) < 95 || Math.hypot(mx - 860, mz - 500) < 105) continue;
+        if (FL.some(fl => { const cx = Math.max(f.x0, Math.min(fl.x, f.x1)), cz = Math.max(f.z0, Math.min(fl.z, f.z1)); return Math.hypot(cx - fl.x, cz - fl.z) < fl.r + 12; })) continue;
+        if (HQS.some(([hx, hz]) => hx > f.x0 - 30 && hx < f.x1 + 30 && hz > f.z0 - 30 && hz < f.z1 + 30)) continue;
+        if (nearRiver(f.x0, f.z0, f.x1, f.z1, 18)) continue;
+        if ([[f.x0, f.z0], [f.x1, f.z0], [f.x0, f.z1], [f.x1, f.z1], [mx, mz]].filter(([px, pz]) => forestAt(px, pz)).length >= 2) continue;
+        const t = rnd();
+        f.kind = t < 0.28 ? 'wheat' : t < 0.48 ? 'plow' : t < 0.72 ? 'pasture' : null;
+        f.dir = rnd() < 0.5 ? 'x' : 'z';
+        if (f.kind) ww.fields.push(f);
+        // 縁（生け垣・石垣・柵）と木の列
+        for (const [ax, az, bx, bz] of [[f.x0 - 1.6, f.z0 - 1.6, f.x1 + 1.6, f.z0 - 1.6], [f.x0 - 1.6, f.z1 + 1.6, f.x1 + 1.6, f.z1 + 1.6], [f.x0 - 1.6, f.z0 - 1.6, f.x0 - 1.6, f.z1 + 1.6], [f.x1 + 1.6, f.z0 - 1.6, f.x1 + 1.6, f.z1 + 1.6]]) {
+          const e = rnd();
+          if (e < 0.22) fenceRun('hedge', ax, az, bx, bz, { h: 1.4 + rnd() * 0.7, min: 6 });
+          else if (e < 0.33) fenceRun('stoneWall', ax, az, bx, bz, { min: 6 });
+          else if (e < 0.4) fenceRun('railFence', ax, az, bx, bz, { min: 6 });
+          else if (e < 0.52) lines.push([ax, az, bx, bz, 'tree']);
+          else if (e < 0.68) lines.push([ax, az, bx, bz, 'bush']);
+        }
+      }
+      z += ch;
+    }
+  }
+  // 果樹園（農場の東）とぶどう畑（村の南）
+  ww.fields.push({ x0: 538, z0: 838, x1: 606, z1: 902, kind: 'orchard', dir: 'x' }, { x0: 960, z0: 972, x1: 1060, z1: 1036, kind: 'vine', dir: 'x' });
+  for (let x = 543; x < 604; x += 7) for (let z = 843; z < 900; z += 7) {
+    const px = x + (rnd() - 0.5) * 1.2, pz = z + (rnd() - 0.5) * 1.2;
+    if (!isFree(px - 1, pz - 1, px + 1, pz + 1) || roadDist(px, pz) < 6) continue;
+    const y = gy(px, pz), sc = 0.55 + rnd() * 0.15; const c = addCyl(ww, { x: px, z: pz, r: 0.18 * sc, y0: y - 0.2, y1: y + 6 * sc, mat: M.WOOD, kind: 'oak' });
+    (ww.trees || (ww.trees = [])).push({ x: px, y, z: pz, s: sc, kind: 'oak', cyl: c.id }); occRect(px - 0.6, pz - 0.6, px + 0.6, pz + 0.6);
+  }
+  for (let z = 976; z < 1034; z += 3.2) fenceRun('vineRow', 964, z, 1056, z, { min: 6 });
+  // ---- 掩体（拠点の間の開けた所）・干し草・丸太・焼けた車・がれき
+  for (const [x, z, o] of [[628, 676, 'w'], [744, 600, 'e'], [690, 620, 'n'], [702, 812, 's'], [600, 724, 'w'], [905, 742, 'e'], [520, 760, 'n'], [760, 470, 'e'], [940, 560, 'w'], [600, 470, 's'], [420, 760, 'e'], [960, 760, 'w'], [560, 940, 'n'], [820, 950, 's'], [380, 600, 'e'], [1100, 760, 'w']]) if (spot(x - 3, z - 3, x + 3, z + 3)) P.foxhole(ww, x, z, o);
+  for (let k = 0; k < 40; k++) {
+    const x = 160 + rnd() * 1080, z = 160 + rnd() * 1080;
+    if (FL.some(f => Math.hypot(f.x - x, f.z - z) < f.r + 10) || HQS.some(([hx, hz]) => Math.hypot(hx - x, hz - z) < 30)) continue;
+    if (x > 690 && x < 910 && z > 595 && z < 855) continue;
+    const t = rnd();
+    if (t < 0.45) { if (spot(x - 1, z - 1, x + 4.2, z + 2.6)) P.hay(ww, x, z, 2 + Math.floor(rnd() * 4), { rnd }); }
+    else if (t < 0.7) { if (spot(x - 2.2, z - 2.2, x + 2.2, z + 2.2)) P.logs(ww, x, z, Math.floor(rnd() * 2)); }
+    else if (t < 0.85) { if (spot(x - 2.4, z - 1.1, x + 2.4, z + 1.1)) P.wreck(ww, x, z, rnd() < 0.5 ? 0 : 2, { rnd }); }
+    else { if (spot(x - 1.8, z - 1.8, x + 1.8, z + 1.8)) P.rubble(ww, x, z, 6, { rnd }); }
+  }
+
   // ---- 橋（川の上の坂の板。両岸の高さが違うので、ゆるい坂でつなぐ。欄干は 4m ごとに坂に合わせる）
   { const z0 = 694, z1 = 706, xa = riverX(700) - 26, xb = riverX(700) + 26; const ya = gy(xa, 700) + 0.05, yb = gy(xb, 700) + 0.05;
     addRamp(ww, { x0: xa, z0, x1: xb, z1, y0: Math.min(ya, yb), y1: Math.max(ya, yb), dir: ya <= yb ? 'e' : 'w', th: 0.6, mat: M.CONCRETE, col: '#9b9a94', smooth: true, kind: 'bridge' });
@@ -25815,26 +26784,115 @@ export function buildRiverbend(seed = 7) {
     }
     // 橋脚（川床から板の下まで）
     for (const t of [0.33, 0.66]) { const x = xa + (xb - xa) * t, y = ya + (yb - ya) * t; addBox(ww, { x0: x - 0.6, z0: z0 + 1, x1: x + 0.6, z1: z1 - 1, y0: gy(x, 700) - 0.5, y1: y - 0.6, mat: M.CONCRETE, kind: 'pier', col: '#8c8b85' }); } }
-  // ---- 森と岩（道・建物・川・本陣から離れた所）
-  const near = (x, z) => {
-    if (roadDist(x, z) < 9) return true;
+
+  // =============================== 3. 木・茂み・岩 ===============================
+  // 植生（research/WARBIT.md の 14）: 森（針葉樹が多い・下草の茂み）、道ぞいの茂みと木の列（BattleBit の Valley のように道ぞいが隠れて進める道になる）、
+  // 小川と川岸の茂みと木、畑の縁の木の列と茂み、草地に散らばる茂みのかたまり、家のまわりの茂み
+  const near = (x, z, m = 9) => {
+    if (roadDist(x, z) < m) return true;
     if (Math.abs(x - riverX(z)) < 14) return true;
-    for (const b of ww.blds || []) { const r = b.rect; if (x > r[0] - 6 && x < r[2] + 6 && z > r[1] - 6 && z < r[3] + 6) return true; }
-    for (const s of Object.values(AREAS)) for (const [hx, hz] of s.hq) if (Math.hypot(x - hx, z - hz) < 30) return true;
-    for (const f of Object.values(FLAGS)) if (Math.hypot(x - f.x, z - f.z) < f.r + 6) return true;
+    const i = Math.floor(x), j = Math.floor(z);
+    for (let dj = -4; dj <= 4; dj += 2) for (let di = -4; di <= 4; di += 2) { const ii = i + di, jj = j + dj; if (ii >= 0 && jj >= 0 && ii < OW && jj < OW && occ[jj * OW + ii]) return true; }
+    for (const [hx, hz] of HQS) if (Math.hypot(x - hx, z - hz) < 30) return true;
+    for (const f of FL) if (Math.hypot(x - f.x, z - f.z) < f.r + 6) return true;
     return false;
   };
-  ww.trees = [];
-  for (let k = 0; k < 9000; k++) {
+  const inField = (x, z) => ww.fields.some(f => x > f.x0 - 1 && x < f.x1 + 1 && z > f.z0 - 1 && z < f.z1 + 1 && f.kind !== 'orchard');
+  ww.trees = ww.trees || [];
+  const tree = (x, z, s, kind) => { const y = gy(x, z); const c = addCyl(ww, { x, z, r: (kind === 'pine' ? 0.22 : 0.24) * s, y0: y - 0.2, y1: y + 6 * s, mat: M.WOOD, kind }); ww.trees.push({ x, y, z, s, kind, cyl: c.id }); };
+  // 茂み（1〜3つのかたまり）。重ならないよう小さく升目を埋める
+  const bush = (x, z, sc = 1) => {
+    const r = (0.8 + rnd() * 0.8) * sc, h = (0.9 + rnd() * 0.9) * sc;
+    if (roadDist(x, z) < 5.4 || Math.abs(x - riverX(z)) < 11 || !isFree(x - r * 0.7, z - r * 0.7, x + r * 0.7, z + r * 0.7)) return false;
+    if (FL.some(f => Math.hypot(x - f.x, z - f.z) < f.r * 0.45) || x < 70 || z < 70 || x > SIZE - 70 || z > SIZE - 70) return false;
+    addBush(ww, { x, z, y: gy(x, z), r, h });
+    occRect(x - 0.4, z - 0.4, x + 0.4, z + 0.4);
+    return true;
+  };
+  const clump = (x, z, n, spread = 2.2, sc = 1) => { let k = 0; for (let m = 0; m < n; m++) if (bush(x + (rnd() - 0.5) * spread * 2, z + (rnd() - 0.5) * spread * 2, sc)) k++; return k; };
+  const TOWNS = [[692, 598, 908, 852], [950, 842, 1070, 962], [558, 930, 770, 1120]];
+  const inTown = (x, z) => TOWNS.some(([a, b, c, d]) => x > a && x < c && z > b && z < d);
+  // 森（密度の濃い所。丘の上と端は針葉樹）と、まばらな木
+  for (let k = 0; k < 14000; k++) {
     const x = 60 + rnd() * (SIZE - 120), z = 60 + rnd() * (SIZE - 120);
     const dens = fbm(x, z, 260, 3, 21);
-    if (dens < 0.12 && rnd() > 0.04) continue;
-    if (near(x, z)) continue;
-    const y = gy(x, z), s = 0.8 + rnd() * 0.6, kind = rnd() < 0.7 ? 'pine' : 'oak';
-    const c = addCyl(ww, { x, z, r: 0.22 * s, y0: y - 0.2, y1: y + 6 * s, mat: M.WOOD, kind });
-    ww.trees.push({ x, y, z, s, kind, cyl: c.id });
+    // 森の芯は濃く、縁はまばら、外はたまに1本
+    if (dens < 0.1 ? rnd() > 0.03 : rnd() > 0.45 + (dens - 0.1) * 4) continue;
+    if (near(x, z) || inField(x, z) || inTown(x, z)) continue;
+    const hill = gy(x, z) > 18 || Math.max(Math.abs(x - CX), Math.abs(z - CZ)) > 560;
+    tree(x, z, 0.8 + rnd() * 0.65, rnd() < (hill ? 0.85 : 0.6) ? 'pine' : 'oak');
+    if (dens > 0.16 && rnd() < 0.35) clump(x + (rnd() - 0.5) * 6, z + (rnd() - 0.5) * 6, 1 + Math.floor(rnd() * 2), 1.5);
   }
-  for (let k = 0; k < 220; k++) { const x = 80 + rnd() * (SIZE - 160), z = 80 + rnd() * (SIZE - 160); if (near(x, z)) continue; rock(ww, x, z, 0.8 + rnd() * 2.2, rnd); }
+  // 道ぞい（町の外）: 両側に茂みのかたまり、ところどころ木の列
+  for (const ri of [0, 1, 2, 3, 4, 5, 6]) {
+    const r = ROADS[ri];
+    for (let k = 0; k + 1 < r.length; k++) {
+      const [ax, az] = r[k], [bx, bz] = r[k + 1], L = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / L, uz = (bz - az) / L;
+      for (let s2 = 4; s2 < L - 4; s2 += 5 + rnd() * 7) for (const sd of [-1, 1]) {
+        const off = 6.4 + rnd() * 2.8, x = ax + ux * s2 - uz * sd * off, z = az + uz * s2 + ux * sd * off;
+        if (inTown(x, z) || nearJunc(x, z, 14)) continue;
+        const t = rnd();
+        if (t < 0.5) clump(x, z, 1 + Math.floor(rnd() * 3), 1.6);
+        else if (t < 0.62 && !near(x - uz * sd * 3, z + ux * sd * 3, 9.5)) tree(x - uz * sd * 3.2, z + ux * sd * 3.2, 0.75 + rnd() * 0.4, rnd() < 0.65 ? 'oak' : 'pine');
+      }
+    }
+  }
+  // 小川: 両岸に茂みと木
+  for (const c of CREEKS) for (let k = 0; k + 1 < c.length; k++) {
+    const [ax, az] = c[k], [bx, bz] = c[k + 1], L = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / L, uz = (bz - az) / L;
+    for (let s2 = 2; s2 < L; s2 += 3.5 + rnd() * 4) for (const sd of [-1, 1]) {
+      const off = 3.6 + rnd() * 3.5, x = ax + ux * s2 - uz * sd * off, z = az + uz * s2 + ux * sd * off;
+      if (inTown(x, z)) continue;
+      const t = rnd();
+      if (t < 0.55) clump(x, z, 1 + Math.floor(rnd() * 2), 1.3);
+      else if (t < 0.75 && !near(x, z, 8)) tree(x, z, 0.75 + rnd() * 0.5, rnd() < 0.7 ? 'oak' : 'pine');
+    }
+  }
+  // 川岸
+  for (let z = 120; z < 1280; z += 5 + rnd() * 7) for (const sd of [-1, 1]) {
+    const x = riverX(z) + sd * (13 + rnd() * 6);
+    if (inTown(x, z) || Math.abs(z - 700) < 26) continue;
+    if (rnd() < 0.5) clump(x, z, 1 + Math.floor(rnd() * 2), 1.5);
+    else if (rnd() < 0.25 && !near(x + sd * 3, z, 8)) tree(x + sd * 3, z, 0.8 + rnd() * 0.5, 'oak');
+  }
+  // 畑の縁の木の列と茂みの列
+  for (const [ax, az, bx, bz, kind] of lines) {
+    const L = Math.hypot(bx - ax, bz - az);
+    for (let s2 = 3; s2 < L - 2; s2 += kind === 'tree' ? 8 + rnd() * 6 : 3 + rnd() * 4) {
+      const x = ax + (bx - ax) * s2 / L + (rnd() - 0.5), z = az + (bz - az) * s2 / L + (rnd() - 0.5);
+      if (kind === 'tree') { if (!near(x, z, 7)) tree(x, z, 0.8 + rnd() * 0.5, rnd() < 0.7 ? 'oak' : 'pine'); }
+      else if (rnd() < 0.8) clump(x, z, 1 + Math.floor(rnd() * 2), 1.2);
+    }
+  }
+  // 草地に散らばる茂みのかたまり
+  for (let k = 0; k < 520; k++) {
+    const x = 120 + rnd() * (SIZE - 240), z = 120 + rnd() * (SIZE - 240);
+    if (inTown(x, z) || inField(x, z) || FL.some(f => Math.hypot(x - f.x, z - f.z) < f.r * 0.7)) continue;
+    clump(x, z, 2 + Math.floor(rnd() * 4), 2.6);
+  }
+  // 家・納屋・小屋のまわり（庭の隅）
+  for (const bd of ww.blds || []) {
+    if (!['house', 'bungalow', 'barn', 'shed', 'chapel', 'ruin'].includes(bd.kind)) continue;
+    const [x0, z0, x1, z1] = bd.rect;
+    for (let m = 0; m < 2; m++) { if (rnd() < 0.45) continue; const sx = rnd() < 0.5 ? x0 - 1.8 : x1 + 1.8, sz = z0 + rnd() * (z1 - z0); bush(sx, sz, 0.75); }
+  }
+  // 町と村の庭の木
+  for (let k = 0; k < 220; k++) {
+    const [cx, cz, Rr] = pick([[800, 730, 105], [1010, 905, 55], [650, 1010, 60], [470, 865, 45]]);
+    const x = cx + (rnd() - 0.5) * 2 * Rr, z = cz + (rnd() - 0.5) * 2 * Rr;
+    if (roadDist(x, z) < 6.5 || !isFree(x - 1.5, z - 1.5, x + 1.5, z + 1.5) || FL.some(f => Math.hypot(x - f.x, z - f.z) < f.r * 0.6)) continue;
+    tree(x, z, 0.65 + rnd() * 0.4, 'oak');
+    occRect(x - 1, z - 1, x + 1, z + 1);
+  }
+  // 岩（ばらばらに・群れで。丘と端に多い）
+  for (let k = 0; k < 260; k++) { const x = 80 + rnd() * (SIZE - 160), z = 80 + rnd() * (SIZE - 160); if (near(x, z) || inField(x, z) || inTown(x, z)) continue; rock(ww, x, z, 0.8 + rnd() * 2.2, rnd); }
+  for (let k = 0; k < 40; k++) {
+    const x = 160 + rnd() * 1080, z = 160 + rnd() * 1080; if (near(x, z) || inField(x, z) || inTown(x, z)) continue;
+    for (let m = 0; m < 4 + Math.floor(rnd() * 4); m++) { const px = x + (rnd() - 0.5) * 12, pz = z + (rnd() - 0.5) * 12; if (!near(px, pz)) rock(ww, px, pz, 1 + rnd() * 2.4, rnd); }
+  }
+  // 舗装（広場は石畳・工場の構内はコンクリート）と歩道（町の通り）
+  ww.paved = [[794, 704, 836, 768, 'plaza'], [498, 508, 644, 688, 'yard']];
+  ww.walks = [[[704, 700], [902, 700]], [[748, 612], [748, 846]], [[840, 608], [840, 846]], [[748, 652], [884, 652]], [[700, 772], [884, 772]], [[790, 772], [790, 846]], [[790, 604], [790, 700]]];
   return finishWorld(ww);
 }
 
@@ -25844,20 +26902,20 @@ function rock(ww, x, z, s, rnd) {
   addBox(ww, { x0: x - s, z0: z - s * 0.8, x1: x + s, z1: z + s * 0.8, y0: y, y1: y + s * 1.1, mat: M.CONCRETE, kind: 'rock', col });
   if (s > 1.4) addBox(ww, { x0: x - s * 0.5, z0: z - s * 0.4, x1: x + s * 0.7, z1: z + s * 0.6, y0: y + s * 1.1, y1: y + s * 1.6, mat: M.CONCRETE, kind: 'rock', col });
 }
-// 建物を置く（下の地形の一番低い所に合わせ、建物の下を平らにならす）
-function placeBld(ww, kind, cx, cz, rot, floors = 1, o = {}) {
-  const dims = { house: [8, 10], apartment: [12, 18], warehouse: [20, 30], tower: [4, 4] }[kind];
-  const [bw, bd] = rot % 2 ? [dims[1], dims[0]] : dims;
-  const x = cx - bw / 2, z = cz - bd / 2;
-  // 足もとの高さ: 四隅と中心の平均。建物の下と1m外まで、その高さにならす
-  let s = 0; const pts = [[x, z], [x + bw, z], [x, z + bd], [x + bw, z + bd], [cx, cz]];
-  for (const [px, pz] of pts) s += heightAt(ww, px, pz);
-  const y = s / pts.length;
-  const i0 = Math.max(0, Math.floor((x - 2) / ww.hs)), i1 = Math.min(ww.HW - 1, Math.ceil((x + bw + 2) / ww.hs));
-  const j0 = Math.max(0, Math.floor((z - 2) / ww.hs)), j1 = Math.min(ww.HD - 1, Math.ceil((z + bd + 2) / ww.hs));
-  for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) ww.h[j * ww.HW + i] = y - 0.02;
-  const f = { house, apartment, warehouse, tower }[kind];
-  return f(ww, { x, z, y, rot, floors, ...o });
+// 壕を掘る（折れ線ぞいに、底の半分の幅 w・深さ dp。底は平ら、縁は 1.6m でなだらか）。点ごとに一番近い線までの距離で一度だけ下げる
+function carveTrench(ww, pts, w, dp) {
+  let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9;
+  for (const [x, z] of pts) { x0 = Math.min(x0, x); z0 = Math.min(z0, z); x1 = Math.max(x1, x); z1 = Math.max(z1, z); }
+  const i0 = Math.max(0, Math.floor((x0 - 6) / ww.hs)), i1 = Math.min(ww.HW - 1, Math.ceil((x1 + 6) / ww.hs));
+  const j0 = Math.max(0, Math.floor((z0 - 6) / ww.hs)), j1 = Math.min(ww.HD - 1, Math.ceil((z1 + 6) / ww.hs));
+  for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+    const x = i * ww.hs, z = j * ww.hs;
+    let d = 1e9;
+    for (let k = 0; k + 1 < pts.length; k++) d = Math.min(d, segDist(x, z, pts[k][0], pts[k][1], pts[k + 1][0], pts[k + 1][1]));
+    if (d > w + 1.6) continue;
+    const k2 = d <= w ? 1 : 1 - (d - w) / 1.6;
+    ww.h[j * ww.HW + i] -= dp * k2;
+  }
 }
 
 @@@@ FILE src/war/nav.js text 7776
@@ -26017,7 +27075,303 @@ export function fbm(x, z, wl, oct = 4, s = 0) {
   return sum / norm;
 }
 
-@@@@ FILE src/war/render.js text 21313
+@@@@ FILE src/war/props.js text 24762
+// WAR BIT の小物（遮蔽物）: 車・トラック・焼けた車・防護柵・ヘスコ・対戦車の障害物・木箱・パレット・ドラム缶・柵・石垣・生け垣・
+// 干し草・丸太・電柱・街灯・ごみ箱・バス停・がれき・サイロ・給水塔・屋台・植え込み・噴水・テント（research/WARBIT.md の 13）。形は独自（低ポリ・角を落とした箱）。
+// 箱は軸にそう（rot 0: 長い方が x、1: 長い方が z）。遮蔽物になる物は遠くでも描く（far）。車輪・枠などの細かい物は近くだけ（detail）
+import { addBox, addCyl, addRamp, addDeco, heightAt } from './world.js';
+import { M } from '../engine/data/materials.js';
+
+export const CARCOL = ['#b8322a', '#2a5d9a', '#d9d6cf', '#3a3d40', '#6b7f5e', '#c9a84a', '#8c8f93', '#5a3f6a', '#1f4a3a', '#e3e0d6', '#7a2a2a'];
+const GLASS = '#2b3138', TIRE = '#1d1f21';
+const pick = (L, r) => L[Math.floor(r() * L.length) % L.length];
+// 地面の高さ（四隅のいちばん低い所。坂でも浮かない）
+function ground(ww, cx, cz, hx, hz) { return Math.min(heightAt(ww, cx - hx, cz - hz), heightAt(ww, cx + hx, cz - hz), heightAt(ww, cx - hx, cz + hz), heightAt(ww, cx + hx, cz + hz), heightAt(ww, cx, cz)); }
+// ローカル（lx: 長い方・lz: 横）→ 世界の箱
+// rot 2・3 は 0・1 を前後に裏返した向き（運転台や台の向きが逆になる）
+function part(ww, cx, cz, rot, y, lx0, ly0, lz0, lx1, ly1, lz1, o) {
+  const r = rot & 3;
+  const [x0, z0, x1, z1] = r === 0 ? [cx + lx0, cz + lz0, cx + lx1, cz + lz1] : r === 1 ? [cx + lz0, cz + lx0, cx + lz1, cz + lx1]
+    : r === 2 ? [cx - lx1, cz - lz1, cx - lx0, cz - lz0] : [cx - lz1, cz - lx1, cx - lz0, cz - lx0];
+  return addBox(ww, { x0, z0, x1, z1, y0: y + ly0, y1: y + ly1, ...o });
+}
+const glassCols = (body) => [GLASS, GLASS, body, body, GLASS, GLASS];
+function wheels(ww, cx, cz, rot, y, xs, wz, r = 0.33) {
+  for (const lx of xs) for (const s of [-1, 1]) part(ww, cx, cz, rot, y, lx - r, 0, s * wz - 0.13, lx + r, r * 2, s * wz + 0.13, { kind: 'car', mat: M.CAR, col: TIRE, layer: 20, detail: true, walk: false, bev: 0.08 });
+}
+
+// 乗用車（4.4×1.8m）
+export function car(ww, cx, cz, rot = 0, o = {}) {
+  const r = o.rnd || Math.random, col = o.col || pick(CARCOL, r), y = o.y ?? ground(ww, cx, cz, 2.2, 1.0);
+  part(ww, cx, cz, rot, y, -2.2, 0.32, -0.9, 2.2, 0.95, 0.9, { kind: 'car', mat: M.CAR, col, layer: 19, bev: 0.12, far: true });
+  part(ww, cx, cz, rot, y, -1.15, 0.95, -0.82, 0.95, 1.43, 0.82, { kind: 'car', mat: M.CAR, col, layer: 19, bev: 0.14, far: true, cols: glassCols(col) });
+  for (const s of [-1, 1]) part(ww, cx, cz, rot, y, s > 0 ? 2.18 : -2.3, 0.36, -0.86, s > 0 ? 2.3 : -2.18, 0.6, 0.86, { kind: 'car', mat: M.CAR, col: '#33363a', layer: 20, detail: true, walk: false });
+  wheels(ww, cx, cz, rot, y, [-1.35, 1.35], 0.8);
+}
+// 小型トラック（5.2×1.9m。荷台つき）
+export function pickup(ww, cx, cz, rot = 0, o = {}) {
+  const r = o.rnd || Math.random, col = o.col || pick(CARCOL, r), y = o.y ?? ground(ww, cx, cz, 2.6, 1.0);
+  part(ww, cx, cz, rot, y, -2.6, 0.4, -0.95, 2.6, 1.05, 0.95, { kind: 'car', mat: M.CAR, col, layer: 19, bev: 0.1, far: true });
+  part(ww, cx, cz, rot, y, 0.2, 1.05, -0.88, 1.9, 1.62, 0.88, { kind: 'car', mat: M.CAR, col, layer: 19, bev: 0.12, far: true, cols: glassCols(col) });
+  // 荷台の縁
+  part(ww, cx, cz, rot, y, -2.6, 1.05, -0.95, 0.1, 1.45, -0.85, { kind: 'car', mat: M.CAR, col, layer: 19, walk: false, detail: true });
+  part(ww, cx, cz, rot, y, -2.6, 1.05, 0.85, 0.1, 1.45, 0.95, { kind: 'car', mat: M.CAR, col, layer: 19, walk: false, detail: true });
+  part(ww, cx, cz, rot, y, -2.6, 1.05, -0.85, -2.5, 1.45, 0.85, { kind: 'car', mat: M.CAR, col, layer: 19, walk: false, detail: true });
+  wheels(ww, cx, cz, rot, y, [-1.6, 1.6], 0.86, 0.37);
+}
+// 大型トラック（9×2.5m。運転台と荷箱）
+export function truck(ww, cx, cz, rot = 0, o = {}) {
+  const r = o.rnd || Math.random, col = o.col || pick(['#c9c6bd', '#7f8a86', '#a33a2c', '#3d5c7a', '#6b6f45'], r), y = o.y ?? ground(ww, cx, cz, 4.5, 1.3);
+  const cab = o.cab || pick(['#d9d6cf', '#2a5d9a', '#b8322a', '#3a3d40'], r);
+  part(ww, cx, cz, rot, y, -4.5, 0.5, -1.15, 4.5, 1.05, 1.15, { kind: 'car', mat: M.METAL, col: '#3b3d40', layer: 10, far: true });
+  part(ww, cx, cz, rot, y, 2.4, 1.05, -1.2, 4.5, 2.4, 1.2, { kind: 'car', mat: M.CAR, col: cab, layer: 19, bev: 0.12, far: true });
+  part(ww, cx, cz, rot, y, 2.6, 2.4, -1.15, 4.4, 3.1, 1.15, { kind: 'car', mat: M.CAR, col: cab, layer: 19, bev: 0.12, far: true, cols: glassCols(cab) });
+  part(ww, cx, cz, rot, y, -4.5, 1.05, -1.25, 2.3, 3.6, 1.25, { kind: 'car', mat: M.METAL, col, layer: 10, bev: 0.06, far: true });
+  wheels(ww, cx, cz, rot, y, [-3.2, -2.0, 3.3], 1.05, 0.48);
+}
+// 焼けた車（車輪なし・煤けた色）
+export function wreck(ww, cx, cz, rot = 0, o = {}) {
+  const r = o.rnd || Math.random, y = o.y ?? ground(ww, cx, cz, 2.2, 1.0);
+  const col = pick(['#3b3632', '#4a4038', '#55473c', '#3a3a38'], r);
+  part(ww, cx, cz, rot, y, -2.2, 0.08, -0.9, 2.2, 0.8, 0.9, { kind: 'car', mat: M.CAR, col, layer: 9, bev: 0.12, far: true });
+  part(ww, cx, cz, rot, y, -1.0, 0.8, -0.8, 0.9, 1.2, 0.8, { kind: 'car', mat: M.CAR, col: '#2a2826', layer: 9, bev: 0.12, far: true });
+}
+// コンクリートの防護柵（長さ len・高さ 0.82。下が広い）
+export function jersey(ww, cx, cz, rot = 0, len = 3, o = {}) {
+  const y = o.y ?? ground(ww, cx, cz, len / 2, 0.3), col = o.col || '#b9b6ad', h = len / 2;
+  part(ww, cx, cz, rot, y, -h, 0, -0.3, h, 0.3, 0.3, { kind: 'barrier', mat: M.CONCRETE, col, layer: 1, bev: 0.04, far: true });
+  part(ww, cx, cz, rot, y, -h + 0.02, 0.3, -0.16, h - 0.02, 0.82, 0.16, { kind: 'barrier', mat: M.CONCRETE, col, layer: 1, bev: 0.05, far: true });
+}
+// 防護柵を並べる（x0,z0 から x1,z1 へ、すき間 gap）
+export function jerseyRun(ww, x0, z0, x1, z1, gap = 0.15, o = {}) {
+  const L = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.round(L / (3 + gap))), rot = Math.abs(x1 - x0) >= Math.abs(z1 - z0) ? 0 : 1;
+  for (let k = 0; k < n; k++) { const t = (k + 0.5) / n; jersey(ww, x0 + (x1 - x0) * t, z0 + (z1 - z0) * t, rot, 3, o); }
+}
+// ヘスコ（土の籠。1.1m 角を並べる。高さ h）
+export function hesco(ww, x0, z0, x1, z1, h = 1.3, o = {}) {
+  const L = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.round(L / 1.1));
+  for (let k = 0; k < n; k++) {
+    const t = (k + 0.5) / n, cx = x0 + (x1 - x0) * t, cz = z0 + (z1 - z0) * t, y = o.y ?? ground(ww, cx, cz, 0.55, 0.55);
+    addBox(ww, { x0: cx - 0.54, z0: cz - 0.54, x1: cx + 0.54, z1: cz + 0.54, y0: y - 0.1, y1: y + h, mat: M.EARTH, kind: 'hesco', col: o.col || '#b4a37a', layer: 12, bev: 0.05, far: true });
+  }
+}
+// 対戦車の障害物（鉄骨の十字）
+export function tankTrap(ww, cx, cz, o = {}) {
+  const y = o.y ?? ground(ww, cx, cz, 0.8, 0.8), c = { kind: 'trap', mat: M.METAL, col: '#55585b', layer: 10, walk: false };
+  addBox(ww, { x0: cx - 0.85, z0: cz - 0.09, x1: cx + 0.85, z1: cz + 0.09, y0: y + 0.1, y1: y + 0.28, ...c });
+  addBox(ww, { x0: cx - 0.09, z0: cz - 0.85, x1: cx + 0.09, z1: cz + 0.85, y0: y + 0.28, y1: y + 0.46, ...c });
+  addBox(ww, { x0: cx - 0.09, z0: cz - 0.09, x1: cx + 0.09, z1: cz + 0.09, y0: y, y1: y + 1.0, ...c });
+}
+// 木箱の山（1.1m 角。n 個を2段まで）
+export function crates(ww, cx, cz, n = 3, o = {}) {
+  const r = o.rnd || Math.random, y = o.y ?? ground(ww, cx, cz, 1.2, 1.2);
+  const spots = [[0, 0, 0], [1.15, 0, 0], [0, 0, 1.15], [0.55, 1.1, 0.3], [1.15, 0, 1.15], [0.6, 1.1, 1.0]];
+  for (let k = 0; k < Math.min(n, spots.length); k++) {
+    const [dx, dy, dz] = spots[k], s = 1.1;
+    addBox(ww, { x0: cx + dx - s / 2, z0: cz + dz - s / 2, x1: cx + dx + s / 2, z1: cz + dz + s / 2, y0: y + dy, y1: y + dy + s, mat: M.WOOD, kind: 'cover', col: pick(['#8a6a44', '#7a5e3e', '#9a7a52', '#6f6a4a'], r), layer: 11, bev: 0.04, far: true });
+  }
+}
+// パレットの山
+export function pallets(ww, cx, cz, h = 0.9, o = {}) {
+  const y = o.y ?? ground(ww, cx, cz, 0.6, 0.5);
+  addBox(ww, { x0: cx - 0.6, z0: cz - 0.5, x1: cx + 0.6, z1: cz + 0.5, y0: y, y1: y + h, mat: M.WOOD, kind: 'cover', col: '#a58a62', layer: 4, bev: 0.03, far: true });
+}
+// ドラム缶（n 本をまとめて）
+export function barrels(ww, cx, cz, n = 3, o = {}) {
+  const r = o.rnd || Math.random, y = o.y ?? ground(ww, cx, cz, 0.8, 0.8);
+  const spots = [[0, 0], [0.66, 0.1], [0.3, 0.62], [-0.4, 0.55], [0.95, 0.75], [-0.6, -0.1]];
+  const col = o.col || pick(['#2f5a8a', '#8a2f2a', '#3d6b3a', '#6d6f72', '#b0892a'], r);
+  for (let k = 0; k < Math.min(n, spots.length); k++) addCyl(ww, { x: cx + spots[k][0], z: cz + spots[k][1], r: 0.3, y0: y, y1: y + 0.9, mat: M.METAL, kind: 'barrel', col: r() < 0.2 ? pick(['#2f5a8a', '#8a2f2a', '#6d6f72'], r) : col, seg: 8, layer: 10 });
+}
+// 木の柵（柱 2.5m ごと＋横木2本。向こうが見える）
+export function railFence(ww, x0, z0, x1, z1, o = {}) {
+  const h = o.h ?? 1.1, col = o.col || '#7a5e3e', L = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.round(L / 2.5));
+  const alongX = Math.abs(x1 - x0) >= Math.abs(z1 - z0);
+  for (let k = 0; k <= n; k++) {
+    const t = k / n, x = x0 + (x1 - x0) * t, z = z0 + (z1 - z0) * t, y = heightAt(ww, x, z);
+    addBox(ww, { x0: x - 0.07, z0: z - 0.07, x1: x + 0.07, z1: z + 0.07, y0: y - 0.2, y1: y + h, mat: M.WOOD, kind: 'fence', col, layer: 11, opaque: false, walk: false, detail: true });
+  }
+  // 横木（区切りごと。地形の高さに合わせる）
+  for (let k = 0; k < n; k++) {
+    const ta = k / n, tb = (k + 1) / n, xa = x0 + (x1 - x0) * ta, za = z0 + (z1 - z0) * ta, xb = x0 + (x1 - x0) * tb, zb = z0 + (z1 - z0) * tb;
+    const y = (heightAt(ww, xa, za) + heightAt(ww, xb, zb)) / 2;
+    for (const yy of [h * 0.42, h * 0.86]) {
+      if (alongX) addBox(ww, { x0: Math.min(xa, xb), z0: za - 0.03, x1: Math.max(xa, xb), z1: za + 0.03, y0: y + yy - 0.06, y1: y + yy + 0.06, mat: M.WOOD, kind: 'fence', col, layer: 11, opaque: false, walk: false, detail: true });
+      else addBox(ww, { x0: xa - 0.03, z0: Math.min(za, zb), x1: xa + 0.03, z1: Math.max(za, zb), y0: y + yy - 0.06, y1: y + yy + 0.06, mat: M.WOOD, kind: 'fence', col, layer: 11, opaque: false, walk: false, detail: true });
+    }
+  }
+}
+// 板の塀（目隠し。1.8m）・石垣（1.0m）・生け垣（1.5m）: 区切り（最大 8m）ごとに地形の高さへ合わせる
+function segRun(ww, x0, z0, x1, z1, seg, put) {
+  const L = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.ceil(L / seg)), alongX = Math.abs(x1 - x0) >= Math.abs(z1 - z0);
+  for (let k = 0; k < n; k++) {
+    const ta = k / n, tb = (k + 1) / n, xa = x0 + (x1 - x0) * ta, za = z0 + (z1 - z0) * ta, xb = x0 + (x1 - x0) * tb, zb = z0 + (z1 - z0) * tb;
+    const y = Math.min(heightAt(ww, xa, za), heightAt(ww, xb, zb));
+    put(alongX, Math.min(xa, xb), Math.min(za, zb), Math.max(xa, xb), Math.max(za, zb), y, k);
+  }
+}
+export function boardFence(ww, x0, z0, x1, z1, o = {}) {
+  const h = o.h ?? 1.8, col = o.col || '#8a6a44';
+  segRun(ww, x0, z0, x1, z1, 6, (ax, a, b, c, d, y) => addBox(ww, ax
+    ? { x0: a, z0: b - 0.05, x1: c, z1: b + 0.05, y0: y - 0.1, y1: y + h, mat: M.WOOD, kind: 'fence', col, layer: 22, far: true }
+    : { x0: a - 0.05, z0: b, x1: a + 0.05, z1: d, y0: y - 0.1, y1: y + h, mat: M.WOOD, kind: 'fence', col, layer: 22, far: true }));
+}
+export function stoneWall(ww, x0, z0, x1, z1, o = {}) {
+  const h = o.h ?? 1.0, th = o.th ?? 0.55, col = o.col || '#8e8a80';
+  segRun(ww, x0, z0, x1, z1, 7, (ax, a, b, c, d, y, k) => {
+    const hh = h * (0.9 + ((k * 7) % 5) * 0.04);
+    addBox(ww, ax ? { x0: a, z0: b - th / 2, x1: c, z1: b + th / 2, y0: y - 0.15, y1: y + hh, mat: M.CONCRETE, kind: 'cover', col, layer: 1, bev: 0.08, far: true } : { x0: a - th / 2, z0: b, x1: a + th / 2, z1: d, y0: y - 0.15, y1: y + hh, mat: M.CONCRETE, kind: 'cover', col, layer: 1, bev: 0.08, far: true });
+  });
+}
+export function hedge(ww, x0, z0, x1, z1, o = {}) {
+  const h = o.h ?? 1.5, th = o.th ?? 1.0, col = o.col || '#3d5c2b';
+  segRun(ww, x0, z0, x1, z1, 8, (ax, a, b, c, d, y, k) => {
+    const hh = h * (0.92 + ((k * 3) % 4) * 0.05);
+    addBox(ww, ax ? { x0: a, z0: b - th / 2, x1: c, z1: b + th / 2, y0: y - 0.1, y1: y + hh, mat: M.FABRIC, kind: 'hedge', col, layer: 21, bev: 0.18, far: true } : { x0: a - th / 2, z0: b, x1: a + th / 2, z1: d, y0: y - 0.1, y1: y + hh, mat: M.FABRIC, kind: 'hedge', col, layer: 21, bev: 0.18, far: true });
+  });
+}
+// ぶどう畑の列（低い葉の列と、5m ごとの杭。15m ごとに 1.2m の切れ目＝列をまたいで通れる）
+export function vineRow(ww, x0, z0, x1, z1, o = {}) {
+  const h = o.h ?? 1.05, th = 0.45, col = o.col || '#55702f';
+  segRun(ww, x0, z0, x1, z1, 5, (ax, a, b, c, d, y, k) => {
+    if (k % 3 === 2) { if (ax) a += 1.2; else b += 1.2; }
+    const hh = h * (0.92 + ((k * 5) % 3) * 0.05);
+    addBox(ww, ax ? { x0: a, z0: b - th / 2, x1: c, z1: b + th / 2, y0: y + 0.3, y1: y + hh, mat: M.FABRIC, kind: 'vine', col, layer: 21, bev: 0.1, far: true } : { x0: a - th / 2, z0: b, x1: a + th / 2, z1: d, y0: y + 0.3, y1: y + hh, mat: M.FABRIC, kind: 'vine', col, layer: 21, bev: 0.1, far: true });
+    addBox(ww, ax ? { x0: a - 0.05, z0: b - 0.05, x1: a + 0.05, z1: b + 0.05, y0: y - 0.2, y1: y + hh + 0.15, mat: M.WOOD, kind: 'pole', col: '#6b5236', layer: 11, walk: false, detail: true } : { x0: a - 0.05, z0: b - 0.05, x1: a + 0.05, z1: b + 0.05, y0: y - 0.2, y1: y + hh + 0.15, mat: M.WOOD, kind: 'pole', col: '#6b5236', layer: 11, walk: false, detail: true });
+  });
+}
+// 干し草の丸いロール
+export function hay(ww, cx, cz, n = 1, o = {}) {
+  const r = o.rnd || Math.random;
+  for (let k = 0; k < n; k++) {
+    const x = cx + (k % 3) * 1.6 + (r() - 0.5) * 0.3, z = cz + Math.floor(k / 3) * 1.6 + (r() - 0.5) * 0.3, y = heightAt(ww, x, z);
+    addCyl(ww, { x, z, r: 0.72, y0: y - 0.05, y1: y + 1.25, mat: M.FABRIC, kind: 'hay', col: pick(['#c4ae63', '#b9a35a', '#cbb873'], r), seg: 10, layer: 12, far: true });
+  }
+}
+// 丸太の山（長さ 4m）
+export function logs(ww, cx, cz, rot = 0, o = {}) {
+  const y = o.y ?? ground(ww, cx, cz, 2, 1);
+  const c = { mat: M.WOOD, kind: 'cover', col: '#6b5236', layer: 11, bev: 0.16, far: true };
+  part(ww, cx, cz, rot, y, -2, 0, -1.0, 2, 0.5, 1.0, c);
+  part(ww, cx, cz, rot, y, -1.9, 0.5, -0.75, 1.9, 1.0, 0.75, c);
+  part(ww, cx, cz, rot, y, -1.8, 1.0, -0.4, 1.8, 1.45, 0.4, c);
+}
+// 電柱（木。上に腕木）
+export function pole(ww, cx, cz, o = {}) {
+  const y = heightAt(ww, cx, cz), h = o.h ?? 9;
+  addCyl(ww, { x: cx, z: cz, r: 0.15, r1: 0.11, y0: y - 0.3, y1: y + h, mat: M.WOOD, kind: 'pole', col: '#5f4b34', seg: 6, layer: 11, far: true });
+  addBox(ww, { x0: cx - 1.0, z0: cz - 0.06, x1: cx + 1.0, z1: cz + 0.06, y0: y + h - 0.7, y1: y + h - 0.55, mat: M.WOOD, kind: 'pole', col: '#5f4b34', layer: 11, walk: false, detail: true });
+}
+// 街灯（細い柱・腕・灯り）
+export function lamp(ww, cx, cz, rot = 0, o = {}) {
+  const y = heightAt(ww, cx, cz), c = { mat: M.METAL, kind: 'pole', col: '#5a5e62', layer: 10, walk: false, detail: true };
+  addBox(ww, { x0: cx - 0.08, z0: cz - 0.08, x1: cx + 0.08, z1: cz + 0.08, y0: y, y1: y + 6, ...c });
+  const [dx, dz] = [[1, 0], [0, 1], [-1, 0], [0, -1]][rot % 4];
+  addBox(ww, { x0: Math.min(cx, cx + dx * 1.4) - 0.05, z0: Math.min(cz, cz + dz * 1.4) - 0.05, x1: Math.max(cx, cx + dx * 1.4) + 0.05, z1: Math.max(cz, cz + dz * 1.4) + 0.05, y0: y + 5.85, y1: y + 5.97, ...c });
+  addBox(ww, { x0: cx + dx * 1.4 - 0.25, z0: cz + dz * 1.4 - 0.18, x1: cx + dx * 1.4 + 0.25, z1: cz + dz * 1.4 + 0.18, y0: y + 5.7, y1: y + 5.88, ...c, col: '#e8e4d0' });
+}
+// ごみ箱（大きい金属の箱）
+export function dumpster(ww, cx, cz, rot = 0, o = {}) {
+  const r = o.rnd || Math.random, y = o.y ?? ground(ww, cx, cz, 1, 0.7), col = o.col || pick(['#2f5a3a', '#2f4a6a', '#5a5e62', '#7a4a2a'], r);
+  part(ww, cx, cz, rot, y, -1.0, 0, -0.65, 1.0, 1.15, 0.65, { kind: 'cover', mat: M.METAL, col, layer: 10, bev: 0.06, far: true });
+  part(ww, cx, cz, rot, y, -1.04, 1.15, -0.7, 1.04, 1.25, 0.7, { kind: 'cover', mat: M.METAL, col: '#2b2e30', layer: 20, detail: true, walk: false });
+}
+// バス停（屋根・背の板・腰掛け）
+export function busStop(ww, cx, cz, rot = 0) {
+  const y = ground(ww, cx, cz, 1.6, 0.8), c = { kind: 'cover', mat: M.METAL, col: '#6f7477', layer: 10 };
+  part(ww, cx, cz, rot, y, -1.6, 2.4, -0.8, 1.6, 2.55, 0.8, { ...c, far: true, walk: false });
+  part(ww, cx, cz, rot, y, -1.55, 0, 0.62, 1.55, 2.4, 0.72, { ...c, col: '#39424a', far: true });
+  part(ww, cx, cz, rot, y, -1.2, 0.45, 0.2, 1.2, 0.55, 0.6, { ...c, detail: true });
+}
+// がれき（小さい塊をいくつか）
+export function rubble(ww, cx, cz, n = 5, o = {}) {
+  const r = o.rnd || Math.random;
+  for (let k = 0; k < n; k++) {
+    const x = cx + (r() - 0.5) * 3, z = cz + (r() - 0.5) * 3, s = 0.35 + r() * 0.7, y = heightAt(ww, x, z) - 0.15;
+    addBox(ww, { x0: x - s, z0: z - s * 0.8, x1: x + s, z1: z + s * 0.8, y0: y, y1: y + s * (0.6 + r() * 0.6), mat: M.CONCRETE, kind: 'rock', col: pick(['#8e8a80', '#9a7a66', '#7e7a72', '#a39d92'], r), far: true });
+  }
+}
+// 掩体の囲い（四角の土のう。口を1つあける）
+export function foxhole(ww, cx, cz, open = 's', o = {}) {
+  const s = o.s ?? 2.4, y = o.y ?? heightAt(ww, cx, cz);
+  const L = [['n', cx - s, cz - s, cx + s, cz - s], ['s', cx - s, cz + s, cx + s, cz + s], ['w', cx - s, cz - s + 0.4, cx - s, cz + s - 0.4], ['e', cx + s, cz - s + 0.4, cx + s, cz + s - 0.4]];
+  for (const [d, a, b, c, e] of L) {
+    if (d === open) { // 口の両側だけ
+      if (a === c) { addSand(ww, a, b, a, (b + e) / 2 - 0.8, y); addSand(ww, a, (b + e) / 2 + 0.8, a, e, y); }
+      else { addSand(ww, a, b, (a + c) / 2 - 0.8, b, y); addSand(ww, (a + c) / 2 + 0.8, b, c, b, y); }
+    } else addSand(ww, a, b, c, e, y);
+  }
+}
+function addSand(ww, x0, z0, x1, z1, y) {
+  const th = 0.7, h = 1.0, alongX = Math.abs(x1 - x0) >= Math.abs(z1 - z0);
+  if (alongX) addBox(ww, { x0: Math.min(x0, x1), z0: z0 - th / 2, x1: Math.max(x0, x1), z1: z0 + th / 2, y0: y, y1: y + h, mat: M.FABRIC, kind: 'sandbag', col: '#a28f68' });
+  else addBox(ww, { x0: x0 - th / 2, z0: Math.min(z0, z1), x1: x0 + th / 2, z1: Math.max(z0, z1), y0: y, y1: y + h, mat: M.FABRIC, kind: 'sandbag', col: '#a28f68' });
+}
+
+// サイロ（円柱＋円すいの屋根＋外の梯子）
+export function silo(ww, cx, cz, r = 3.5, h = 14, o = {}) {
+  const y = o.y ?? ground(ww, cx, cz, r * 0.7, r * 0.7), col = o.col || '#b9bcb8';
+  addCyl(ww, { x: cx, z: cz, r, y0: y - 0.3, y1: y + h, mat: M.METAL, kind: 'silo', col, seg: 14, layer: 10, far: true });
+  addCyl(ww, { x: cx, z: cz, r: r + 0.12, r1: 0.45, y0: y + h, y1: y + h + r * 0.55, mat: M.METAL, kind: 'silo', col: o.top || '#8d9195', seg: 14, layer: 10, far: true });
+  addBox(ww, { x0: cx + r - 0.02, z0: cz - 0.25, x1: cx + r + 0.14, z1: cz + 0.25, y0: y + 0.6, y1: y + h, mat: M.METAL, kind: 'rail', col: '#55585b', layer: 10, walk: false, opaque: false, detail: true });
+}
+// 給水塔（脚4本と筋交い・筒の槽・円すいの屋根）
+export function waterTower(ww, cx, cz, o = {}) {
+  const y = o.y ?? heightAt(ww, cx, cz), H = o.h ?? 10, r = 2.6, col = o.col || '#8e9aa0', leg = { mat: M.METAL, kind: 'pole', col: '#5f6467', layer: 10, walk: false };
+  for (const [dx, dz] of [[-1.8, -1.8], [1.8, -1.8], [-1.8, 1.8], [1.8, 1.8]]) addBox(ww, { x0: cx + dx - 0.15, z0: cz + dz - 0.15, x1: cx + dx + 0.15, z1: cz + dz + 0.15, y0: y - 0.3, y1: y + H, ...leg, far: true });
+  for (const hy of [H * 0.35, H * 0.7]) {
+    addBox(ww, { x0: cx - 1.8, z0: cz - 1.86, x1: cx + 1.8, z1: cz - 1.74, y0: y + hy, y1: y + hy + 0.12, ...leg, detail: true });
+    addBox(ww, { x0: cx - 1.8, z0: cz + 1.74, x1: cx + 1.8, z1: cz + 1.86, y0: y + hy, y1: y + hy + 0.12, ...leg, detail: true });
+    addBox(ww, { x0: cx - 1.86, z0: cz - 1.8, x1: cx - 1.74, z1: cz + 1.8, y0: y + hy, y1: y + hy + 0.12, ...leg, detail: true });
+    addBox(ww, { x0: cx + 1.74, z0: cz - 1.8, x1: cx + 1.86, z1: cz + 1.8, y0: y + hy, y1: y + hy + 0.12, ...leg, detail: true });
+  }
+  addCyl(ww, { x: cx, z: cz, r, y0: y + H, y1: y + H + 4, mat: M.METAL, kind: 'silo', col, seg: 12, layer: 10, far: true });
+  addCyl(ww, { x: cx, z: cz, r: r + 0.1, r1: 0.3, y0: y + H + 4, y1: y + H + 5.2, mat: M.METAL, kind: 'silo', col: o.top || '#6d777c', seg: 12, layer: 10, far: true });
+}
+// 市場の屋台（3×2.3m。柱4本・布の屋根・台。台の前は -z（rot で回す））
+export function stall(ww, cx, cz, rot = 0, o = {}) {
+  const r = o.rnd || Math.random, y = o.y ?? ground(ww, cx, cz, 1.6, 1.2), col = o.col || pick(['#b8463c', '#2f6a8a', '#d0a23a', '#3d7a4a', '#d9d6cf'], r);
+  const post = { mat: M.WOOD, kind: 'pole', col: '#6b5236', layer: 11, walk: false, detail: true };
+  for (const [lx, lz] of [[-1.45, -1.05], [1.45, -1.05], [-1.45, 1.05], [1.45, 1.05]]) part(ww, cx, cz, rot, y, lx - 0.06, 0, lz - 0.06, lx + 0.06, 2.3, lz + 0.06, post);
+  part(ww, cx, cz, rot, y, -1.55, 2.3, -1.3, 1.55, 2.42, 1.2, { kind: 'trim', mat: M.FABRIC, col, layer: 12, walk: false, far: true });
+  part(ww, cx, cz, rot, y, -1.4, 0, -1.0, 1.4, 0.95, -0.4, { kind: 'cover', mat: M.WOOD, col: '#8a6a44', layer: 11, bev: 0.03, far: true });
+  for (let k = 0; k < 3; k++) part(ww, cx, cz, rot, y, -1.25 + k * 0.85, 0.95, -0.92, -0.7 + k * 0.85, 1.22, -0.48, { kind: 'cover', mat: M.FABRIC, col: pick(['#c9a84a', '#a6654c', '#6b7f5e', '#d9d6cf', '#b8463c'], r), layer: 12, detail: true, walk: false });
+  part(ww, cx, cz, rot, y, -1.4, 0, 0.75, -0.3, 0.8, 1.0, { kind: 'cover', mat: M.WOOD, col: '#7a5e3e', layer: 11, detail: true });
+}
+// 植え込み（コンクリートの枠＋低い茂み）
+export function planter(ww, x0, z0, x1, z1, o = {}) {
+  const y = o.y ?? Math.min(heightAt(ww, x0, z0), heightAt(ww, x1, z1), heightAt(ww, x0, z1), heightAt(ww, x1, z0)), h = o.h ?? 0.7;
+  addBox(ww, { x0, z0, x1, z1, y0: y - 0.15, y1: y + h, mat: M.CONCRETE, kind: 'cover', col: o.col || '#b5b0a5', layer: 1, bev: 0.06, far: true });
+  if (o.bush !== false) addBox(ww, { x0: x0 + 0.25, z0: z0 + 0.25, x1: x1 - 0.25, z1: z1 - 0.25, y0: y + h, y1: y + h + 0.5, mat: M.FABRIC, kind: 'hedge', col: '#4a6b33', layer: 21, bev: 0.15, far: true });
+  else addBox(ww, { x0: x0 + 0.15, z0: z0 + 0.15, x1: x1 - 0.15, z1: z1 - 0.15, y0: y + h, y1: y + h + 0.04, mat: M.EARTH, kind: 'trim', col: '#5a4a36', layer: 9, detail: true, walk: false });
+}
+// 噴水（丸い石の縁・水の面・真ん中の台）。拠点の旗の柱はこの真ん中に立つ
+export function basin(ww, cx, cz, r = 3.4, o = {}) {
+  const y = o.y ?? heightAt(ww, cx, cz);
+  addCyl(ww, { x: cx, z: cz, r, y0: y - 0.2, y1: y + 0.75, mat: M.CONCRETE, kind: 'cover', col: '#b8b2a6', seg: 16, layer: 1, far: true });
+  addCyl(ww, { x: cx, z: cz, r: r - 0.35, y0: y + 0.6, y1: y + 0.78, mat: M.CONCRETE, kind: 'cover', col: '#5d7f8a', seg: 16, layer: 19, far: true, opaque: false });
+  addCyl(ww, { x: cx, z: cz, r: 0.75, y0: y + 0.7, y1: y + 1.6, mat: M.CONCRETE, kind: 'cover', col: '#a9a398', seg: 10, layer: 1, far: true });
+  addCyl(ww, { x: cx, z: cz, r: 1.3, r1: 1.5, y0: y + 1.6, y1: y + 1.85, mat: M.CONCRETE, kind: 'cover', col: '#b8b2a6', seg: 12, layer: 1, far: true });
+}
+// テント（4.2×6m の三角。棟は rot 0 で z の向き）
+export function tent(ww, cx, cz, rot = 0, o = {}) {
+  const y = o.y ?? ground(ww, cx, cz, 2.2, 3.1), col = o.col || '#5d6247', W = 2.1, L = 3.0, H = 2.3;
+  const c = { th: 0.08, mat: M.FABRIC, col, smooth: true, kind: 'roof', layer: 18 };
+  const dark = '#' + [1, 3, 5].map(i => Math.round(parseInt(col.slice(i, i + 2), 16) * 0.72).toString(16).padStart(2, '0')).join('');
+  if (rot % 2 === 0) {
+    addRamp(ww, { x0: cx - W, z0: cz - L, x1: cx, z1: cz + L, y0: y, y1: y + H, dir: 'e', ...c });
+    addRamp(ww, { x0: cx, z0: cz - L, x1: cx + W, z1: cz + L, y0: y, y1: y + H, dir: 'w', ...c });
+    addDeco(ww, { pts: [[cx - W, y, cz + L], [cx + W, y, cz + L], [cx, y + H, cz + L]], n: [0, 0, 1], col: dark, layer: 18 });
+    addDeco(ww, { pts: [[cx - W, y, cz - L], [cx - 0.5, y, cz - L], [cx, y + H, cz - L]], n: [0, 0, -1], col: dark, layer: 18 });
+  } else {
+    addRamp(ww, { x0: cx - L, z0: cz - W, x1: cx + L, z1: cz, y0: y, y1: y + H, dir: 's', ...c });
+    addRamp(ww, { x0: cx - L, z0: cz, x1: cx + L, z1: cz + W, y0: y, y1: y + H, dir: 'n', ...c });
+    addDeco(ww, { pts: [[cx + L, y, cz - W], [cx + L, y, cz + W], [cx + L, y + H, cz]], n: [1, 0, 0], col: dark, layer: 18 });
+    addDeco(ww, { pts: [[cx - L, y, cz - W], [cx - L, y, cz - 0.5], [cx - L, y + H, cz]], n: [-1, 0, 0], col: dark, layer: 18 });
+  }
+}
+
+@@@@ FILE src/war/render.js text 35408
 // WAR BIT の世界の形（描く物）。64m の塊ごとに:
 //   遠い形（いつも持つ）: 地形 8m ごと＋すそ（つなぎ目のすき間を隠す）・簡単な木・箱（建物・塀・岩）
 //   近い形（近づいたときだけ作る）: 地形 2m ごと・道の帯（アスファルトと中央線）・細かい木・箱・階段
@@ -26034,10 +27388,13 @@ export const CH = 64;
 // 色（独自）
 const C = {
   lush: hex('#4f6b33'), dry: hex('#6d7041'), dark: hex('#405a2c'), dirt: hex('#6f5c43'), rock: hex('#6e6a63'), mount: hex('#55603f'),
-  sand: hex('#8e7d5e'), road: hex('#3f3e3b'), edge: hex('#69645a'), pad: hex('#6f6653'),
+  sand: hex('#8e7d5e'), road: hex('#3f3e3b'), edge: hex('#69645a'), pad: hex('#6f6653'), mud: hex('#5e4f3b'),
+  wheat: hex('#a69a55'), wheat2: hex('#968a49'), plow: hex('#5d4a35'), plow2: hex('#6e5940'), pasture: hex('#476532'), paved: hex('#a39d90'), yard: hex('#8c8a83'),
 };
-const MATCOL = { [M.BRICK]: '#a77a5e', [M.CONCRETE]: '#a3a39b', [M.DRYWALL]: '#d6d0c2', [M.WOOD]: '#8a6a44', [M.METAL]: '#7d878a', [M.FABRIC]: '#a28f68' };
-const MATLAYER = { [M.BRICK]: LAYER.brick, [M.CONCRETE]: LAYER.concrete, [M.DRYWALL]: LAYER.plaster, [M.WOOD]: LAYER.wood, [M.METAL]: LAYER.metal, [M.FABRIC]: LAYER.fabric };
+const BUSH = [hex('#3e5b2b'), hex('#46652f'), hex('#365226'), hex('#4c6a31')];
+const WALKC = hex('#a29d91');
+const MATCOL = { [M.BRICK]: '#a77a5e', [M.CONCRETE]: '#a3a39b', [M.DRYWALL]: '#d6d0c2', [M.WOOD]: '#8a6a44', [M.METAL]: '#7d878a', [M.FABRIC]: '#a28f68', [M.EARTH]: '#6f5c43', [M.FENCE]: '#8a9094', [M.CAR]: '#6c7a86' };
+const MATLAYER = { [M.BRICK]: LAYER.brick, [M.CONCRETE]: LAYER.concrete, [M.DRYWALL]: LAYER.plaster, [M.WOOD]: LAYER.wood, [M.METAL]: LAYER.metal, [M.FABRIC]: LAYER.fabric, [M.EARTH]: LAYER.dirt, [M.FENCE]: LAYER.metal, [M.CAR]: LAYER.paint };
 const PINE = [hex('#355f33'), hex('#3c6a37'), hex('#2f5630')], OAK = [hex('#557f36'), hex('#5f8a3b'), hex('#4d7532')], TRUNK = hex('#5a4330');
 const ROADC = hex('#4a4845'), LINEC = hex('#d8d2b8');
 
@@ -26055,6 +27412,8 @@ function bldTops(ww) {
   const m = new Map();
   for (const bd of ww.blds || []) m.set(bd.id, { ...bd, top: bd.y });
   for (const b of ww.boxes) if (b.bld >= 0 && b.kind === 'floor') { const q = m.get(b.bld); if (q) q.top = Math.max(q.top, b.y1); }
+  // 切妻の屋根（坂の板）: 屋根裏まで中
+  for (const r of ww.ramps) if (r.bld >= 0 && r.kind === 'roof') { const q = m.get(r.bld); if (q) q.top = Math.max(q.top, Math.min(r.y0, r.y1) + 0.5); }
   ww._bldTop = m;
   return m;
 }
@@ -26093,6 +27452,17 @@ export function prepGround(ww) {
   for (const [x0, z0, x1, z1] of ww.pads || [])
     for (let j = Math.max(0, Math.floor(z0 / hs)); j <= Math.min(HD - 1, Math.ceil(z1 / hs)); j++)
       for (let i = Math.max(0, Math.floor(x0 / hs)); i <= Math.min(HW - 1, Math.ceil(x1 / hs)); i++) near[j * HW + i] = 1;
+  // 畑（ww.fields: { x0,z0,x1,z1, kind: wheat 麦・plow 耕した土・pasture 牧草・vine ぶどう・orchard 果樹, dir: 列の向き 'x'|'z' }）と舗装（ww.paved: [x0,z0,x1,z1,kind]）
+  const fieldAt = new Int16Array(n).fill(-1), pavedAt = new Uint8Array(n);
+  (ww.fields || []).forEach((f, fi) => {
+    for (let j = Math.max(0, Math.ceil(f.z0 / hs)); j <= Math.min(HD - 1, Math.floor(f.z1 / hs)); j++)
+      for (let i = Math.max(0, Math.ceil(f.x0 / hs)); i <= Math.min(HW - 1, Math.floor(f.x1 / hs)); i++) fieldAt[j * HW + i] = fi;
+  });
+  for (const [x0, z0, x1, z1, kind] of ww.paved || [])
+    for (let j = Math.max(0, Math.ceil(z0 / hs)); j <= Math.min(HD - 1, Math.floor(z1 / hs)); j++)
+      for (let i = Math.max(0, Math.ceil(x0 / hs)); i <= Math.min(HW - 1, Math.floor(x1 / hs)); i++) pavedAt[j * HW + i] = kind === 'yard' ? 2 : 1;
+  // 地面の面の種類（草か土）と、草の生え方（0〜1・1 は麦）
+  const lay = new Uint8Array(n).fill(LAYER.grass), gw = new Float32Array(n), gk = new Uint8Array(n);
   // 山の色が始まる所（中心からの距離。正方形でないマップは x と z で別に）
   const cx = ww.sx / 2, cz = ww.sz / 2, [mx, mz] = ww.mountIn || [ww.sx / 2 - 110, ww.sz / 2 - 110];
   const r = mulberry(91);
@@ -26104,24 +27474,42 @@ export function prepGround(ww) {
     const p = fbm(x, z, 95, 3, 41), p2 = fbm(x, z, 33, 2, 77);
     let c = mixc(C.lush, C.dry, sstep(-0.15, 0.55, p));
     c = mixc(c, C.dark, sstep(0.25, 0.7, p2) * 0.6);
+    let g = 1 - sstep(0.14, 0.3, slope), dirt = false;
+    // 畑（列の縞は 2m ごとの点で交互）
+    const fi = fieldAt[q];
+    if (fi >= 0) {
+      const fd = ww.fields[fi], u = Math.round((fd.dir === 'x' ? z : x) / hs);
+      if (fd.kind === 'wheat') { c = mixc(C.wheat, C.wheat2, u % 2 ? 0.75 : 0.15); gk[q] = 1; g = 1; }
+      else if (fd.kind === 'plow') { c = u % 2 ? C.plow : C.plow2; g = 0.04; dirt = true; }
+      else if (fd.kind === 'pasture') { c = mixc(c, C.pasture, 0.75); g = Math.min(1, g * 1.1); }
+      else if (fd.kind === 'vine') { c = mixc(c, u % 2 ? C.dirt : C.dry, 0.55); g *= 0.45; }
+      else if (fd.kind === 'orchard') { c = mixc(c, C.lush, 0.5); }
+    }
     // 坂は土、急な所は岩
     c = mixc(c, C.dirt, sstep(0.1, 0.22, slope));
     c = mixc(c, C.rock, sstep(0.26, 0.42, slope));
+    if (slope > 0.3) dirt = true;
     // 遊べる範囲の外の山
     const e = Math.max(Math.abs(x - cx) - mx, Math.abs(z - cz) - mz);
     c = mixc(c, C.mount, sstep(0, 60, e) * 0.7);
+    g *= 1 - sstep(-20, 30, e) * 0.6;
     // 川床（山の中までは続けない）
-    if (ww.riverX) { const dr = Math.abs(x - ww.riverX(z)); c = mixc(c, C.sand, (1 - sstep(8, 15, dr)) * (1 - sstep(-40, 10, e))); }
+    if (ww.riverX) { const dr = Math.abs(x - ww.riverX(z)), kr = (1 - sstep(8, 15, dr)) * (1 - sstep(-40, 10, e)); c = mixc(c, C.sand, kr); g *= 1 - kr; if (kr > 0.5) dirt = true; }
+    // 小川の底（乾いた泥）と、岸の濃い草
+    if (ww.creekDist) { const dc = ww.creekDist(x, z); if (dc < 7) { const km = 1 - sstep(1.2, 3.6, dc); c = mixc(mixc(c, C.dark, (1 - sstep(3, 7, dc)) * 0.6), C.mud, km); g *= 1 - km * 0.8; if (km > 0.5) dirt = true; } }
+    // 舗装（広場・工場の構内）
+    if (pavedAt[q]) { c = pavedAt[q] === 2 ? C.yard : C.paved; g = 0; dirt = true; }
     // 建物のまわり
-    if (near[q]) c = mixc(c, C.pad, 0.65);
+    if (near[q]) { c = mixc(c, C.pad, 0.65); g *= 0.15; dirt = true; }
     // 道（帯は近くだけ描くので、遠くでも道に見えるよう地面の色も変える）
     const d = rd[q];
-    if (d < 6) c = mixc(c, C.edge, 1 - sstep(4.2, 6, d));
+    if (d < 6) { c = mixc(c, C.edge, 1 - sstep(4.2, 6, d)); g *= sstep(4.6, 7.5, d); if (d < 5.2) dirt = true; }
     if (d < 4.4) c = mixc(c, C.road, 1 - sstep(3.4, 4.4, d));
+    gw[q] = Math.max(0, Math.min(1, g)); if (dirt) lay[q] = LAYER.dirt;
     const f = 1 + (r() * 2 - 1) * 0.035;
     col[q * 3] = c[0] * f; col[q * 3 + 1] = c[1] * f; col[q * 3 + 2] = c[2] * f;
   }
-  ww._gcol = col;
+  ww._gcol = col; ww._glay = lay; ww._gw = gw; ww._gk = gk;
   // 道の帯の切れ端（2m ごと）を塊へ
   const NX = Math.ceil(ww.sx / CH), NZ = Math.ceil(ww.sz / CH);
   const pieces = Array.from({ length: NX * NZ }, () => []);
@@ -26137,6 +27525,33 @@ export function prepGround(ww) {
     }
   }
   ww._roadPieces = pieces;
+  // 歩道（ww.walks: 町の通りの折れ線）: 道の両側 4.0〜6.2m。交わる道の上は描かない
+  const walks = Array.from({ length: NX * NZ }, () => []);
+  for (const wl of ww.walks || []) for (let k = 0; k + 1 < wl.length; k++) {
+    const [ax, az] = wl[k], [bx, bz] = wl[k + 1], L = Math.hypot(bx - ax, bz - az), N = Math.max(1, Math.round(L / 2));
+    const ux = (bx - ax) / L, uz = (bz - az) / L, px = -uz, pz = ux;
+    for (let s = 0; s < N; s++) for (const sd of [-1, 1]) {
+      const t0 = s / N * L, t1 = (s + 1) / N * L;
+      const pts = [[ax + ux * t0 + px * sd * 4, az + uz * t0 + pz * sd * 4], [ax + ux * t1 + px * sd * 4, az + uz * t1 + pz * sd * 4], [ax + ux * t1 + px * sd * 6.2, az + uz * t1 + pz * sd * 6.2], [ax + ux * t0 + px * sd * 6.2, az + uz * t0 + pz * sd * 6.2]];
+      // ほかの道の上（交差点）は描かない
+      let cross = false;
+      for (const rl of ww.roads || []) {
+        for (let m = 0; m + 1 < rl.length && !cross; m++) {
+          const [cx0, cz0] = rl[m], [cx1, cz1] = rl[m + 1], sl = Math.hypot(cx1 - cx0, cz1 - cz0) || 1;
+          // 同じ線の上の道（この歩道の道）は数えない
+          const par = Math.abs((cx1 - cx0) * uz - (cz1 - cz0) * ux) / sl < 0.01, onLine = Math.abs((ax - cx0) * (cz1 - cz0) - (az - cz0) * (cx1 - cx0)) / sl < 0.5;
+          if (par && onLine) continue;
+          for (const [qx, qz] of pts) if (segDist(qx, qz, cx0, cz0, cx1, cz1) < 4.2) { cross = true; break; }
+        }
+        if (cross) break;
+      }
+      if (cross) continue;
+      const mxw = (pts[0][0] + pts[2][0]) / 2, mzw = (pts[0][1] + pts[2][1]) / 2;
+      const ci = Math.min(NX - 1, Math.max(0, Math.floor(mxw / CH))), cj = Math.min(NZ - 1, Math.max(0, Math.floor(mzw / CH)));
+      walks[cj * NX + ci].push({ pts, sd, px: px * sd, pz: pz * sd });
+    }
+  }
+  ww._walkPieces = walks;
 }
 
 // 地形の格子（なめらかな面）。step は ww.hs の倍数。skirt: すその深さ（0 なら作らない）
@@ -26151,7 +27566,7 @@ function terrainMesh(B, ww, x0, z0, x1, z1, step, skirt) {
     const il = Math.max(0, gi - k), ir = Math.min(HW - 1, gi + k), ju = Math.max(0, gj - k), jd = Math.min(HD - 1, gj + k);
     const dx = (h[gj * HW + ir] - h[gj * HW + il]) / ((ir - il) * hs), dz = (h[jd * HW + gi] - h[ju * HW + gi]) / ((jd - ju) * hs);
     const l = Math.hypot(dx, 1, dz), x = gi * hs, z = gj * hs;
-    B.vert([x, h[q], z], [-dx / l, 1 / l, -dz / l], x * 0.3, z * 0.3, LAYER.grass, [col[q * 3], col[q * 3 + 1], col[q * 3 + 2]], 1);
+    B.vert([x, h[q], z], [-dx / l, 1 / l, -dz / l], x * 0.3, z * 0.3, ww._glay ? ww._glay[q] : LAYER.grass, [col[q * 3], col[q * 3 + 1], col[q * 3 + 2]], 1);
   }
   for (let b = 0; b < nz; b++) for (let a = 0; a < nx; a++) {
     const p00 = base + b * W1 + a, p10 = p00 + 1, p01 = p00 + W1, p11 = p01 + 1;
@@ -26194,6 +27609,31 @@ function roadMesh(B, ww, pieces) {
   }
 }
 
+// 歩道（近い形だけ）: 縁石の高さ 0.13m の帯と、道の側の縁石の面
+function walkMesh(B, ww, pieces) {
+  B.room = 1;
+  const top = 0.13;
+  for (const p of pieces) {
+    const P = p.pts.map(([x, z]) => [x, heightAt(ww, x, z) + top, z]);
+    B.poly(P, [0, 1, 0], LAYER.sidewalk, WALKC);
+    // 縁石（道の側: pts[0]→pts[1]）
+    const a = p.pts[0], b = p.pts[1], ya = heightAt(ww, a[0], a[1]), yb = heightAt(ww, b[0], b[1]);
+    B.poly([[a[0], ya, a[1]], [b[0], yb, b[1]], [b[0], yb + top, b[1]], [a[0], ya + top, a[1]]], [-p.px, 0, -p.pz], LAYER.concrete, mulc(WALKC, 0.86));
+  }
+}
+// 舗装（近い形だけ）: 2m ごとに地形に沿わせた板（広場は石畳、構内はコンクリート）
+function pavedMesh(B, ww, rect, x0, z0, x1, z1) {
+  const [px0, pz0, px1, pz1, kind] = rect, a0 = Math.max(px0, x0), b0 = Math.max(pz0, z0), a1 = Math.min(px1, x1), b1 = Math.min(pz1, z1);
+  if (a1 <= a0 || b1 <= b0) return;
+  B.room = 1;
+  const lift = 0.05, st = 2, col = kind === 'yard' ? C.yard : C.paved, layer = kind === 'yard' ? LAYER.concrete : LAYER.sidewalk;
+  for (let z = b0; z < b1 - 1e-6; z += st) for (let x = a0; x < a1 - 1e-6; x += st) {
+    const xa = x, xb = Math.min(a1, x + st), za = z, zb = Math.min(b1, z + st);
+    const P = [[xa, za], [xb, za], [xb, zb], [xa, zb]].map(([px, pz]) => [px, heightAt(ww, px, pz) + lift, pz]);
+    B.poly(P, [0, 1, 0], layer, col);
+  }
+}
+
 // 面ごとに平らな光の円すい台（木の葉・幹）。r1=0 で円すい
 function facetCyl(B, x, z, y0, y1, r0, r1, seg, layer, col, o = {}) {
   const rot = o.rot || 0;
@@ -26232,20 +27672,71 @@ function treeMesh(B, t, far) {
   }
 }
 
+// 茂み: 葉のかたまり（下がすぼまり上が丸い、面ごとに平らな光）を2〜3つ重ねる。遠くは1つ
+function blob(B, x, y, z, r, h, seg, col, rot) {
+  facetCyl(B, x, z, y, y + h * 0.42, r * 0.6, r, seg, LAYER.leaves, mulc(col, 0.86), { rot, shade: true });
+  facetCyl(B, x, z, y + h * 0.42, y + h, r, r * 0.36, seg, LAYER.leaves, col, { rot, capT: true, shade: true });
+}
+function bushMesh(B, b, far) {
+  const r = mulberry(7000 + Math.round(b.x * 13 + b.z * 7));
+  const c0 = b.col ? hex(b.col) : jitter(BUSH[Math.floor(r() * BUSH.length)], r, 0.07);
+  B.room = 1;
+  if (far) { blob(B, b.x, b.y - 0.1, b.z, b.r * 0.95, b.h, 5, c0, r() * 6.28); return; }
+  const n = b.n || 2 + Math.floor(r() * 2);
+  for (let k = 0; k < n; k++) {
+    const a = r() * 6.28, d = k ? b.r * (0.3 + r() * 0.3) : 0;
+    const rr = b.r * (k ? 0.55 + r() * 0.25 : 0.85), hh = b.h * (k ? 0.62 + r() * 0.3 : 1);
+    blob(B, b.x + Math.cos(a) * d, b.y - 0.12, b.z + Math.sin(a) * d, rr, hh, 7, mulc(c0, 0.92 + r() * 0.16), r() * 6.28);
+  }
+}
+// 岩: 箱の中に収まる低ポリの塊（下・中・上の輪を少しずつずらし、面ごとに平らな光）
+function rockMesh(B, b, col, onGround) {
+  const r = mulberry(3000 + b.id * 7);
+  const cx = (b.x0 + b.x1) / 2, cz = (b.z0 + b.z1) / 2, rx = (b.x1 - b.x0) / 2, rz = (b.z1 - b.z0) / 2, H = b.y1 - b.y0, n = 7, rot = r() * 6.28;
+  const ring = (t, s, j) => Array.from({ length: n }, (_, k) => { const a = rot + (k / n) * Math.PI * 2 + (r() - 0.5) * 0.35, f = s * (0.82 + r() * 0.22); return [cx + Math.cos(a) * rx * f, b.y0 + H * t + (r() - 0.5) * H * j, cz + Math.sin(a) * rz * f]; });
+  const R0 = ring(0, 0.9, 0), R1 = ring(0.5, 1.0, 0.14), R2 = ring(0.88, 0.62, 0.08), peak = [cx + (r() - 0.5) * rx * 0.3, b.y1, cz + (r() - 0.5) * rz * 0.3];
+  const tri = (a, b2, c) => {
+    const u = [b2[0] - a[0], b2[1] - a[1], b2[2] - a[2]], v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+    let nn = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]]; const l = Math.hypot(...nn) || 1; nn = nn.map(q => q / l);
+    const mx = (a[0] + b2[0] + c[0]) / 3 - cx, my = (a[1] + b2[1] + c[1]) / 3 - (b.y0 + H * 0.4), mz = (a[2] + b2[2] + c[2]) / 3 - cz;
+    if (nn[0] * mx + nn[1] * my + nn[2] * mz < 0) nn = nn.map(q => -q);
+    B.poly([a, b2, c], nn, LAYER.concrete, mulc(col, 0.86 + 0.22 * Math.max(0, nn[1]) + r() * 0.06));
+  };
+  B.room = 1;
+  for (let k = 0; k < n; k++) {
+    const k1 = (k + 1) % n;
+    tri(R0[k], R0[k1], R1[k1]); tri(R0[k], R1[k1], R1[k]);
+    tri(R1[k], R1[k1], R2[k1]); tri(R1[k], R2[k1], R2[k]);
+    tri(R2[k], R2[k1], peak);
+  }
+  if (!onGround) { const pts = R0.slice().reverse(); B.poly(pts, [0, -1, 0], LAYER.concrete, mulc(col, 0.7)); }
+}
+
 // 箱（建物の壁・床・屋根・塀・コンテナ・岩）。建物の中の面は日が当たらない（room 0）・暗め（ao）
 function boxMesh(B, ww, b, tops, near) {
+  if (b.hide) return;
   const r = mulberry(1000 + b.id * 13);
-  const col = jitter(hex(b.col || MATCOL[b.mat] || '#a0a0a0'), r, 0.05);
+  const col = jitter(hex(b.col || MATCOL[b.mat] || '#a0a0a0'), r, b.kind === 'trim' ? 0.02 : 0.05);
   const gy = heightAt(ww, (b.x0 + b.x1) / 2, (b.z0 + b.z1) / 2);
   const onGround = b.y0 <= gy + 0.05;
   B.room = 1;
-  if (b.kind === 'rock') {
-    const s = Math.min(b.x1 - b.x0, b.y1 - b.y0, b.z1 - b.z0);
-    B.bbox(b.x0, b.y0, b.z0, b.x1, b.y1, b.z1, s * 0.28, LAYER.concrete, col, { faces: onGround ? 63 & ~8 : 63, uv: 0.5 });
+  if (b.bev && b.bld < 0) {
+    // 小物（車・防護柵・木箱など）: 角を落とした箱。面ごとの色（cols）も使える
+    const cols = b.cols ? b.cols.map(c => c && jitter(hex(c), r, 0.03)) : null;
+    B.bbox(b.x0, b.y0, b.z0, b.x1, b.y1, b.z1, b.bev, b.layer ?? (MATLAYER[b.mat] ?? LAYER.concrete), col, { faces: onGround ? 63 & ~8 : 63, uv: 0.5, cols });
+    // 生け垣の上の葉のかたまり（近くだけ。四角い上面をくずす）
+    if (near && b.kind === 'hedge') {
+      const alongX = b.x1 - b.x0 >= b.z1 - b.z0, L = alongX ? b.x1 - b.x0 : b.z1 - b.z0, th = alongX ? b.z1 - b.z0 : b.x1 - b.x0, m = Math.max(1, Math.round(L / 1.6));
+      for (let k = 0; k < m; k++) {
+        const t = (k + 0.5) / m, x = alongX ? b.x0 + L * t : (b.x0 + b.x1) / 2, z = alongX ? (b.z0 + b.z1) / 2 : b.z0 + L * t;
+        blob(B, x + (r() - 0.5) * 0.3, b.y1 - 0.28, z + (r() - 0.5) * 0.3, th * (0.42 + r() * 0.12), 0.45 + r() * 0.25, 6, mulc(col, 0.95 + r() * 0.12), r() * 6.28);
+      }
+    }
     return;
   }
+  if (b.kind === 'rock') { rockMesh(B, b, col, onGround); return; }
   if (b.kind === 'sandbag' && near) { sandbagMesh(B, b, r, col); return; }
-  const layer = b.kind === 'container' ? LAYER.metal : (MATLAYER[b.mat] ?? LAYER.concrete);
+  const layer = b.layer ?? (b.kind === 'container' ? LAYER.metal : (MATLAYER[b.mat] ?? LAYER.concrete));
   const q = b.bld >= 0 ? tops.get(b.bld) : null;
   const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2, cz = (b.z0 + b.z1) / 2, e = 0.15;
   const pts = [[b.x1 + e, cy, cz], [b.x0 - e, cy, cz], [cx, b.y1 + e, cz], [cx, b.y0 - e, cz], [cx, cy, b.z1 + e], [cx, cy, b.z0 - e]];
@@ -26280,7 +27771,7 @@ function rampMesh(B, rp, r, tops) {
   const q = rp.bld >= 0 ? tops.get(rp.bld) : null;
   B.room = q ? 0 : 1;
   const ao = q ? 0.6 : 1;
-  if (rp.smooth) { smoothRamp(B, rp, col); B.room = 1; return; }
+  if (rp.smooth) { B.room = 1; smoothRamp(B, rp, col, rp.layer); B.room = 1; return; }
   const len = rp.dir === 'n' || rp.dir === 's' ? rp.z1 - rp.z0 : rp.x1 - rp.x0, n = Math.max(2, Math.round((rp.y1 - rp.y0) / 0.25));
   for (let k = 0; k < n; k++) {
     const t0 = k / n, t1 = (k + 1) / n, y = rp.y0 + (rp.y1 - rp.y0) * (k + 1) / n;
@@ -26295,25 +27786,44 @@ function rampMesh(B, rp, r, tops) {
 }
 
 // なめらかな坂の板（橋）: 上面・下面・両側・両端
-function smoothRamp(B, rp, col) {
+function smoothRamp(B, rp, col, layer = LAYER.concrete) {
   const H = (x, z) => { let t; if (rp.dir === 'n') t = (rp.z1 - z) / (rp.z1 - rp.z0); else if (rp.dir === 's') t = (z - rp.z0) / (rp.z1 - rp.z0); else if (rp.dir === 'e') t = (x - rp.x0) / (rp.x1 - rp.x0); else t = (rp.x1 - x) / (rp.x1 - rp.x0); return rp.y0 + (rp.y1 - rp.y0) * Math.max(0, Math.min(1, t)); };
   const c = [[rp.x0, rp.z0], [rp.x1, rp.z0], [rp.x1, rp.z1], [rp.x0, rp.z1]];
   const top = c.map(([x, z]) => [x, H(x, z), z]), bot = c.map(([x, z]) => [x, H(x, z) - rp.th, z]);
   const n = (a, b, d) => { const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], v = [d[0] - a[0], d[1] - a[1], d[2] - a[2]]; let w = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]]; const l = Math.hypot(...w) || 1; return w.map(q => q / l); };
   let nt = n(top[0], top[3], top[1]); if (nt[1] < 0) nt = nt.map(q => -q);
-  B.poly(top, nt, LAYER.concrete, col);
-  B.poly(bot, nt.map(q => -q), LAYER.concrete, mulc(col, 0.7));
-  for (let k = 0; k < 4; k++) { const a = k, b = (k + 1) % 4; const mx = (c[a][0] + c[b][0]) / 2 - (rp.x0 + rp.x1) / 2, mz = (c[a][1] + c[b][1]) / 2 - (rp.z0 + rp.z1) / 2, l = Math.hypot(mx, mz) || 1; B.poly([top[a], top[b], bot[b], bot[a]], [mx / l, 0, mz / l], LAYER.concrete, mulc(col, 0.85)); }
+  B.poly(top, nt, layer, col);
+  B.poly(bot, nt.map(q => -q), layer, mulc(col, 0.7));
+  for (let k = 0; k < 4; k++) { const a = k, b = (k + 1) % 4; const mx = (c[a][0] + c[b][0]) / 2 - (rp.x0 + rp.x1) / 2, mz = (c[a][1] + c[b][1]) / 2 - (rp.z0 + rp.z1) / 2, l = Math.hypot(mx, mz) || 1; B.poly([top[a], top[b], bot[b], bot[a]], [mx / l, 0, mz / l], layer, mulc(col, 0.85)); }
+}
+// 小物の円柱（ドラム缶・電柱・サイロ・干し草）
+function cylMesh(B, c) {
+  const col = hex(c.col);
+  B.room = 1;
+  facetCyl(B, c.x, c.z, c.y0, c.y1, c.r, c.r1 ?? c.r, c.seg || 8, c.layer ?? LAYER.metal, col, { capT: true, shade: true, rot: c.rot || 0 });
+}
+// 描くだけの面（切妻の三角の壁など）
+function decoMesh(B, d, tops) {
+  const q = d.bld >= 0 ? tops.get(d.bld) : null;
+  B.room = 1;
+  B.poly(d.pts, d.n, d.layer ?? LAYER.concrete, hex(d.col));
+  // 裏側（中から見たとき）は暗く
+  B.room = q ? 0 : 1;
+  B.poly(d.pts.slice().reverse(), d.n.map(v => -v), d.layer ?? LAYER.concrete, mulc(hex(d.col), 0.6));
+  B.room = 1;
 }
 // 塊の割り当て（箱・坂・木を中心のある塊へ）
 function sortIn(ww) {
   if (ww._chunkItems) return ww._chunkItems;
   const NX = Math.ceil(ww.sx / CH), NZ = Math.ceil(ww.sz / CH);
-  const it = Array.from({ length: NX * NZ }, () => ({ boxes: [], ramps: [], trees: [] }));
+  const it = Array.from({ length: NX * NZ }, () => ({ boxes: [], ramps: [], trees: [], cyls: [], decos: [], bushes: [] }));
   const ck = (x, z) => Math.min(NZ - 1, Math.max(0, Math.floor(z / CH))) * NX + Math.min(NX - 1, Math.max(0, Math.floor(x / CH)));
   for (const b of ww.boxes) if (b.alive) it[ck((b.x0 + b.x1) / 2, (b.z0 + b.z1) / 2)].boxes.push(b);
   for (const rp of ww.ramps) it[ck((rp.x0 + rp.x1) / 2, (rp.z0 + rp.z1) / 2)].ramps.push(rp);
   for (const t of ww.trees || []) it[ck(t.x, t.z)].trees.push(t);
+  for (const c of ww.cyls) if (c.col && c.alive) it[ck(c.x, c.z)].cyls.push(c);
+  for (const d of ww.decos || []) { let x = 0, z = 0; for (const p of d.pts) { x += p[0]; z += p[2]; } it[ck(x / d.pts.length, z / d.pts.length)].decos.push(d); }
+  for (const b of ww.bushes || []) it[ck(b.x, b.z)].bushes.push(b);
   ww._chunkItems = { NX, NZ, it };
   return ww._chunkItems;
 }
@@ -26328,8 +27838,13 @@ export function buildWarFar(ww) {
     terrainMesh(B, ww, x0, z0, x1, z1, 8, 6);
     let y0 = 1e9, y1 = -1e9;
     for (let j = Math.floor(z0 / ww.hs); j <= Math.min(ww.HD - 1, Math.ceil(z1 / ww.hs)); j++) for (let i = Math.floor(x0 / ww.hs); i <= Math.min(ww.HW - 1, Math.ceil(x1 / ww.hs)); i++) { const hv = ww.h[j * ww.HW + i]; if (hv < y0) y0 = hv; if (hv > y1) y1 = hv; }
-    for (const b of it[k].boxes) { if (b.kind === 'crate' || b.kind === 'rail') continue; boxMesh(B, ww, b, tops, false); y1 = Math.max(y1, b.y1); y0 = Math.min(y0, b.y0); }
+    for (const b of it[k].boxes) { if ((b.kind === 'crate' || b.kind === 'rail' || b.detail) && !b.far) continue; boxMesh(B, ww, b, tops, false); y1 = Math.max(y1, b.y1); y0 = Math.min(y0, b.y0); }
+    for (const rp of it[k].ramps) if (rp.kind === 'roof' || rp.kind === 'bridge') { smoothRamp(B, rp, hex(rp.col || '#8d8a84'), rp.layer ?? LAYER.concrete); y1 = Math.max(y1, rp.y1); }
+    for (const c of it[k].cyls) if (c.far) { cylMesh(B, c); y1 = Math.max(y1, c.y1); }
+    for (const d of it[k].decos) if (d.far) { decoMesh(B, d, tops); for (const p of d.pts) y1 = Math.max(y1, p[1]); }
     for (const t of it[k].trees) { treeMesh(B, t, true); y1 = Math.max(y1, t.y + 7 * t.s); }
+    // 茂みは大きい物だけ遠い形にも入れる（小さい物は近い形だけ）
+    for (const b of it[k].bushes) if (b.h > 1.45 && b.r > 1.25) { bushMesh(B, b, true); y1 = Math.max(y1, b.y + b.h); }
     out.push({ k, x0, z0, x1, z1, y0: y0 - 7, y1: y1 + 1, B });
   }
   return out;
@@ -26342,14 +27857,48 @@ export function buildWarNear(ww, k) {
   const B = new MeshBuilder();
   terrainMesh(B, ww, x0, z0, x1, z1, ww.hs, 1.5);
   roadMesh(B, ww, ww._roadPieces[k] || []);
+  walkMesh(B, ww, ww._walkPieces ? ww._walkPieces[k] || [] : []);
+  for (const pr of ww.paved || []) pavedMesh(B, ww, pr, x0, z0, x1, z1);
   for (const b of it[k].boxes) boxMesh(B, ww, b, tops, true);
   const rr = mulberry(8000 + k);
   for (const rp of it[k].ramps) rampMesh(B, rp, rr, tops);
+  for (const c of it[k].cyls) cylMesh(B, c);
+  for (const d of it[k].decos) decoMesh(B, d, tops);
   for (const t of it[k].trees) treeMesh(B, t, false);
+  for (const b of it[k].bushes) bushMesh(B, b, false);
+  return B;
+}
+// 草（見る位置のまわりの塊だけ）: 地面の草の生え方（gw）に合わせて、細い葉3〜4枚の株を散らす。麦畑は高い金色の株。
+// 頂点の emit = -1 が草のしるし（シェーダーで遠い所から少しずつ消す・裏も同じ明るさ）
+export function buildWarGrass(ww, k, dens = 1) {
+  prepGround(ww);
+  const NX = Math.ceil(ww.sx / CH), cx = k % NX, cz = Math.floor(k / NX), x0 = cx * CH, z0 = cz * CH;
+  const B = new MeshBuilder(), { HW, HD, hs } = ww, gw = ww._gw, gk = ww._gk, col = ww._gcol, r = mulberry(91000 + k);
+  B.room = 1; B.emit = -1;
+  const N = Math.round(1150 * dens);
+  for (let t = 0; t < N; t++) {
+    const x = x0 + r() * CH, z = z0 + r() * CH, i = Math.min(HW - 1, Math.round(x / hs)), j = Math.min(HD - 1, Math.round(z / hs)), q = j * HW + i;
+    const w = gw[q];
+    if (!(w > 0.02) || r() > w) continue;
+    const y = heightAt(ww, x, z) - 0.04, wheat = gk[q] === 1;
+    const H = wheat ? 0.78 + r() * 0.32 : 0.2 + r() * 0.36;
+    const base = [col[q * 3], col[q * 3 + 1], col[q * 3 + 2]];
+    const cB = mulc(base, 0.72), cT = wheat ? mixc(base, [0.86, 0.77, 0.45], 0.45) : mixc(mulc(base, 1.3), [0.62, 0.68, 0.32], 0.18 + r() * 0.15);
+    const nb = wheat ? 4 : 3, rot = r() * 6.283;
+    for (let b = 0; b < nb; b++) {
+      const a = rot + b * (6.283 / nb) + (r() - 0.5) * 0.6, wd = (wheat ? 0.035 : 0.055) + r() * 0.03;
+      const lx = Math.cos(a), lz = Math.sin(a), tx = -lz, tz = lx, lean = (0.12 + r() * 0.3) * H, ox = (r() - 0.5) * 0.18, oz = (r() - 0.5) * 0.18;
+      const nU = [lx * 0.35, 0.94, lz * 0.35];
+      const p0 = [x + ox + tx * wd, y, z + oz + tz * wd], p1 = [x + ox - tx * wd, y, z + oz - tz * wd], p2 = [x + ox + lx * lean, y + H, z + oz + lz * lean];
+      const i0 = B.vert(p0, nU, p0[0], p0[2], LAYER.grass, cB, 1); B.vert(p1, nU, p1[0], p1[2], LAYER.grass, cB, 1); B.vert(p2, nU, p2[0], p2[2], LAYER.grass, cT, 1);
+      B.i.push(i0, i0 + 1, i0 + 2, i0, i0 + 2, i0 + 1);
+    }
+  }
+  B.emit = 0;
   return B;
 }
 
-@@@@ FILE src/war/world.js text 18198
+@@@@ FILE src/war/world.js text 19748
 // WAR BIT の世界: 地形（hs m ごとの高さの格子）＋箱（壁・床・屋根・塀・岩など。材質と耐久つき）＋坂の板（階段）＋円柱（木・柱）。
 // G m の格子（引き出し）で引く。弾・視線（raycast）・足もと（groundAt）・天井（ceilAt）・体の押し出し（pushOut）はみなここ。
 // 0.5m のマスの建物（engine/world.js）とは別物。engine/world.js の関数は w.war のときここへ回す。
@@ -26367,7 +27916,7 @@ export function makeWarWorld(o) {
   const ww = {
     war: true, sx, sz, hs, HW, HD, GW, GD,
     h: o.heights || new Float32Array(HW * HD),
-    boxes: [], ramps: [], cyls: [],
+    boxes: [], ramps: [], cyls: [], decos: [], bushes: [],
     cellBox: null, cellRamp: null, cellCyl: null, cellMaxH: null,
     stamp: new Uint32Array(0), stampN: 1,
     // engine の w と同じ名前で持つ物（使わない物は空）
@@ -26377,21 +27926,43 @@ export function makeWarWorld(o) {
 }
 
 // 箱: { x0,y0,z0,x1,y1,z1, mat, hp?, kind?, bld?, opaque?(既定 true), walk?(上に立てる。既定 true) }
+// 描き方（当たりには関係ない）: col（色）・layer（模様。既定は材質から）・bev（角を落とす幅）・detail（近くだけ描く小物・枠・家具）・
+// hide（描かない。三角の破風の当たりなど）・far（遠くでも描く小物。車など）
 export function addBox(ww, b) {
   const x0 = Math.min(b.x0, b.x1), x1 = Math.max(b.x0, b.x1), z0 = Math.min(b.z0, b.z1), z1 = Math.max(b.z0, b.z1), y0 = Math.min(b.y0, b.y1), y1 = Math.max(b.y0, b.y1);
   const box = { id: ww.boxes.length, x0, y0, z0, x1, y1, z1, mat: b.mat ?? M.CONCRETE, hp: b.hp ?? 1e9, kind: b.kind || 'wall', bld: b.bld ?? -1, opaque: b.opaque !== false, walk: b.walk !== false, alive: true, col: b.col || null };
+  if (b.layer != null) box.layer = b.layer;
+  if (b.bev) box.bev = b.bev;
+  if (b.detail) box.detail = true;
+  if (b.hide) box.hide = true;
+  if (b.far) box.far = true;
+  if (b.cols) box.cols = b.cols;
   ww.boxes.push(box);
   return box;
+}
+// 描くだけの面（当たりなし）: 切妻の屋根の三角の壁など。pts は凸の多角形（世界の座標）、n は向き。far: 遠くでも描く
+export function addDeco(ww, d) {
+  const o = { pts: d.pts, n: d.n, col: d.col || '#a0a0a0', layer: d.layer ?? 1, far: d.far !== false, bld: d.bld ?? -1 };
+  ww.decos.push(o);
+  return o;
+}
+// 茂み（通り抜けられる・弾も通る。姿は隠れる）: x・z・下の高さ y・半径 r・高さ h
+export function addBush(ww, b) {
+  const o = { x: b.x, z: b.z, y: b.y ?? heightAt(ww, b.x, b.z), r: b.r ?? 1.2, h: b.h ?? 1.3, col: b.col || null, n: b.n || 0 };
+  (ww.bushes || (ww.bushes = [])).push(o);
+  return o;
 }
 // 坂の板（階段・斜路）: 四角 x0..x1 × z0..z1 で、dir の向きへ y0 から y1 へ上がる（'n' -z・'s' +z・'e' +x・'w' -x）。厚み th
 export function addRamp(ww, r) {
   const ramp = { id: ww.ramps.length, x0: Math.min(r.x0, r.x1), x1: Math.max(r.x0, r.x1), z0: Math.min(r.z0, r.z1), z1: Math.max(r.z0, r.z1), y0: r.y0, y1: r.y1, dir: r.dir, th: r.th ?? 0.25, mat: r.mat ?? M.CONCRETE, bld: r.bld ?? -1, col: r.col || null, smooth: !!r.smooth, kind: r.kind || 'stair' };
+  if (r.layer != null) ramp.layer = r.layer;
   ww.ramps.push(ramp);
   return ramp;
 }
-// 円柱（木の幹・柱・電柱）
+// 円柱（木の幹・柱・電柱・ドラム缶・サイロ・干し草）。木の幹は ww.trees が描く。ほかは col があれば render.js が描く（seg: 角の数）
 export function addCyl(ww, c) {
   const cyl = { id: ww.cyls.length, x: c.x, z: c.z, r: c.r, y0: c.y0, y1: c.y1, mat: c.mat ?? M.WOOD, kind: c.kind || 'tree', alive: true, opaque: c.opaque !== false };
+  if (c.col) { cyl.col = c.col; cyl.seg = c.seg || 8; cyl.layer = c.layer; cyl.far = !!c.far; cyl.r1 = c.r1 ?? c.r; if (c.rot) cyl.rot = c.rot; }
   ww.cyls.push(cyl);
   return cyl;
 }
